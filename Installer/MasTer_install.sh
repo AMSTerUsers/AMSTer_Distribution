@@ -119,13 +119,15 @@
 # New in 2.10:	- add MasTer Toolbox organizer 
 # 				- Rename _Sources_ME dir
 # New in 2.11:	- typos in several remarks 
+# New in 2.12:	- add gnu parallel
+#				- typo PortInstall instead of PortInsatll
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version Beta 2.11 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye', (c)2020, Last modified on Oct 19 2022"
+VER="version Beta 2.12 - Interactive Mac/Linux installation of MasTer Toolbox"
+AUT="Nicolas d'Oreye', (c)2020, Last modified on Oct 26 2022"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -200,7 +202,7 @@ function CheckLastAptVersion()
 	apt show ${APTNAME} 2>/dev/null | grep Version
 	}
 
-function PortInsatll()
+function PortInstall()
 	{
 	unset PORTNAME
 	unset NEWPORTNAME
@@ -1586,6 +1588,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 								sudo sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
 								sudo sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick-6/policy.xml 
 							fi
+							AptInsatll "parallel"
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2097,7 +2100,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 											case $yn in
 												[Yy]* ) 
 													echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
-													PortInsatll "gimp2" 
+													PortInstall "gimp2" 
 													#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
 													#brew install --cask gimp
 													break ;;
@@ -2116,7 +2119,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 								break ;;
 						[Ii]* ) 				
 								echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
-								PortInsatll "gimp2" 
+								PortInstall "gimp2" 
 								#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
 								#brew install --cask gimp
 								break ;;
@@ -2139,9 +2142,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, install GMT6 (change script if you want another version) and GDAL..."
-							PortInsatll "gdal +hdf5 +netcdf +openjpeg" 
-							PortInsatll "gmt6"
-							PortInsatll "graphicsmagick ffmpeg"
+							PortInstall "gdal +hdf5 +netcdf +openjpeg" 
+							PortInstall "gmt6"
+							PortInstall "graphicsmagick ffmpeg"
 							# make link for portability
 							GMTPATH=`which gmt6`
 							mkdir -p /opt/local/bin
@@ -2174,7 +2177,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Requires clang v14 (mandataory to allows parallel processing). Do you want to install/update clang v14 compiler ? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							PortInsatll "clang-14"
+							PortInstall "clang-14"
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2233,13 +2236,13 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, install gnu utilities and make appropriate alias."
-							PortInsatll "gsed"
-							PortInsatll "gawk"
-							PortInsatll "coreutils"  	#(i.e. for gdate, gstat)
-							PortInsatll "findutils"		#(i.e. for find)
-							PortInsatll "grep"			#(i.e. for ggrep)
-							PortInsatll "wget"			#(needed i.e. to download the S1 orbits)
-							PortInsatll "curl"			
+							PortInstall "gsed"
+							PortInstall "gawk"
+							PortInstall "coreutils"  	#(i.e. for gdate, gstat)
+							PortInstall "findutils"		#(i.e. for find)
+							PortInstall "grep"			#(i.e. for ggrep)
+							PortInstall "wget"			#(needed i.e. to download the S1 orbits)
+							PortInstall "curl"			
 
 							# To be sure, prepare to add curl in PATH (see at the bottom of the script)
 							WHEREISCURL=`which curl`
@@ -2286,16 +2289,18 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I install mandatory libraries"
-							PortInsatll "fftw-3-long"
-							PortInsatll "fftw-3-single" 
-							PortInsatll "hdf5"
-							PortInsatll "tiff"
-							PortInsatll "libgeotiff"
-							PortInsatll "libxml2"
-							PortInsatll "lapack"
-							PortInsatll "libomp-devel"
-							PortInsatll "ImageMagick"
-							PortInsatll "gdal +libkml"			
+							PortInstall "fftw-3-long"
+							PortInstall "fftw-3-single" 
+							PortInstall "hdf5"
+							PortInstall "tiff"
+							PortInstall "libgeotiff"
+							PortInstall "libxml2"
+							PortInstall "lapack"
+							PortInstall "libomp-devel"
+							PortInstall "ImageMagick"
+							PortInstall "gdal +libkml"			
+							PortInstall "parallel"
+							
 							
 							WHEREISCONV=`which convert`					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
 							PATHCONV=`dirname ${WHEREISCONV}`
@@ -2314,7 +2319,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				# ....
 				
 				EchoInverted "  // Java is required for some processings using Fiji or ImageMagick. "
-				PortInsatll jdk19 
+				PortInstall jdk19 
 				
 				echo "  // In case of instalation problem, you can also try manual install from http://www.java.com (e.g. jre-8u341-macosx-x64.dmg) following the instructions"
 				echo "  //"
@@ -2399,7 +2404,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I do it."
-							PortInsatll "gnuplot"
+							PortInstall "gnuplot"
 							TstPathGnuFctMac "gnuplot" 
 							echo "  // "
 							break ;;
@@ -2420,14 +2425,14 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I do it."
-							PortInsatll "python310"
+							PortInstall "python310"
 							sudo port select --set python python310 	# To make this the default Python or Python 3
 							sudo port select --set python3 python310 	# To make this the default Python or Python 3
-							PortInsatll "py310-opencv4"
-							PortInsatll "py-numpy"
-							PortInsatll "py310-scipy"
-							PortInsatll "py310-matplotlib"
-							PortInsatll "py310-gdal"
+							PortInstall "py310-opencv4"
+							PortInstall "py-numpy"
+							PortInstall "py310-scipy"
+							PortInstall "py310-matplotlib"
+							PortInstall "py310-gdal"
 					
 							echo "  // Check python3 version:"
 							python -c 'import sys ; print(sys.path)'
