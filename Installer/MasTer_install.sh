@@ -121,13 +121,14 @@
 # New in 2.11:	- typos in several remarks 
 # New in 2.12:	- add gnu parallel
 #				- typo PortInstall instead of PortInsatll
+# New in 2.13:	- also increase max width image size in Linux for ImageJ 
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version Beta 2.12 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye', (c)2020, Last modified on Oct 26 2022"
+VER="version Beta 2.13 - Interactive Mac/Linux installation of MasTer Toolbox"
+AUT="Nicolas d'Oreye', (c)2020, Last modified on Jan 09 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -1580,12 +1581,14 @@ if [ "${TYPERUN}" == "I" ] ; then
 								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick/policy.xml 
 								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick/policy.xml 
 								sudo sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
+								sudo sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
 								sudo sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick/policy.xml 
 							fi
 							if [ -f /etc/ImageMagick-6/policy.xml ] ; then 
 								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick-6/policy.xml
 								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick-6/policy.xml
 								sudo sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
+								sudo sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
 								sudo sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick-6/policy.xml 
 							fi
 							AptInsatll "parallel"
