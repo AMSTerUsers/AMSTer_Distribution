@@ -122,13 +122,16 @@
 # New in 2.12:	- add gnu parallel
 #				- typo PortInstall instead of PortInsatll
 # New in 2.13:	- also increase max width image size in Linux for ImageJ 
+# New in 2.14:	- debug symbolic link to g-functions in Linux
+#				- to avoid possible problem while sourcing bashrc, recompute OS after each source
+# New in 2.15:	- install msbas version Optimized_v1.1_Gilles, that is using g++ instaed of clang
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version Beta 2.13 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye', (c)2020, Last modified on Jan 09 2023"
+VER="version Beta 2.15 - Interactive Mac/Linux installation of MasTer Toolbox"
+AUT="Nicolas d'Oreye', (c)2020, Last modified on April 20 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -347,6 +350,7 @@ function InsertBelowVARIABLESTitle()
 		fi
 		
 		source ${HOMEDIR}/.bashrc
+		OS=`uname -a | cut -d " " -f 1 `
 	}
 
 function InsertBelowPATHTitle()
@@ -380,6 +384,7 @@ function InsertBelowPATHTitle()
 		fi
 
 		source ${HOMEDIR}/.bashrc
+		OS=`uname -a | cut -d " " -f 1 `
 	}
 
 function UpdateVARIABLESBashrc()
@@ -474,6 +479,7 @@ function UpdateVARIABLESBashrc()
 				done
 			fi
 		source ${HOMEDIR}/.bashrc
+		OS=`uname -a | cut -d " " -f 1 `
 		echo
 	}
 
@@ -538,6 +544,7 @@ function UpdatePATHBashrcBEFORE()
 				fi
 		fi
 		source ${HOMEDIR}/.bashrc
+		OS=`uname -a | cut -d " " -f 1 `
 		echo
 	}
 	
@@ -570,6 +577,7 @@ function UpdatePATHBashrcAFTER()
 				fi
 		fi
 		source ${HOMEDIR}/.bashrc
+		OS=`uname -a | cut -d " " -f 1 `
 		echo
 	}
 
@@ -676,6 +684,7 @@ function NecessaryDisk()
 		fi
 		echo ""
 		source ${HOMEDIR}/.bashrc
+		OS=`uname -a | cut -d " " -f 1 `
 	}
 
 function InstallSnaphu()
@@ -1042,41 +1051,41 @@ function TstPathGnuFctLinux()
 				sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null 
 			else 
 				echo "Link ${FCT} to ${GFCT} in ${PATHGNU} for security" 
-				sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${GFCT} 2>/dev/null
+				sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null
 		fi
 	}
 
 
 DoInstallMSBAS()
 	{
-		echo "  // OK, I will try to install msbasv4 and msbas_extract using msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip which source was prepared to be Mac and Linux compliant for this installer." 
+		echo "  // OK, I will try to install msbasv4 and msbas_extract using msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip which source was prepared to be Mac and Linux compliant for this installer." 
 		echo "  // It will run msbas in parallel on ALL the available cores for a maximum of efficiency." 
 		echo "  // Note that another version named msbas_20201009_wExtract_Unified_20220818-Gilles.zip would run on a LIMITED number of cores (max 12 threads). "
 		echo "  //   If you want that less optimized version, please install it manually -. "
 		echo "  //   You can contact directely the autor (sergey.samsonov@NRCan-RNCan.gc.ca) for other version or for more info. In that case, you will have to comile it manually "
 		echo "  //   i.e.: unzip the package, go to sources subdirs and run make; move binaries in MSBAS dir)"
-		AskExternalComponent "msbas (msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip)" "Github or contact ndo@ecgs.lu "
+		AskExternalComponent "msbas (msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip)" "Github or contact ndo@ecgs.lu "
 		if [ "${SKIP}" == "No" ] ; then 
 			FILEXT="${RAWFILE##*.}"
  
 			if [ "${FILEXT}" == "zip" ] 
 				then 
-					if [ "${RAWFILE}" != "msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip" ] ; then 
-							echo "msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip; can't continue. Please proceed manually"
+					if [ "${RAWFILE}" != "msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip" ] ; then 
+							echo "msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip; can't continue. Please proceed manually"
 						else
 							unzip ${HOMEDIR}/SAR/EXEC/${RAWFILE}
-							cd ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles
+							cd ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles
 							make all 
-							cp ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles/msbasv4 ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
+							cp ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles/msbasv4 ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
 							
 							cd msbas_extract
 							make
-							cp ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles/msbas_extract/msbas_extract ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
+							cp ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles/msbas_extract/msbas_extract ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
 							cd ${HOMEDIR} 
 							
 							mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-							mv -f ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip ${HOMEDIR}/SAR/EXEC/Sources_Installed
-							rm -rf ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles 
+							mv -f ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip ${HOMEDIR}/SAR/EXEC/Sources_Installed
+							rm -rf ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles 
 							rm -rf ${HOMEDIR}/SAR/EXEC/__MACOSX
 					fi
 					echo "  // "
@@ -3069,6 +3078,7 @@ while true; do
 			[Aa]* ) 				
 					echo "  // OK, Let's sync the whole S1 orbit data base"
 					source ${HOMEDIR}/.bashrc
+					OS=`uname -a | cut -d " " -f 1 `
 					updateS1Orbits ${S1_ORBITS_DIR}
 					break ;;
 			[Dd]* ) 
@@ -3080,7 +3090,8 @@ while true; do
 					re='^[0-9]+$'
 					if ! [[ ${STARTDATE} =~ $re ]] ; then echo "Sorry, the date must be in the form of 8 digits as YYYYMMDD" >&2 ; echo "Try again later or use yourself the command: updateS1Orbits ${S1_ORBITS_DIR} from=YYYYMMDD " ; break  ; fi
 
-					source ${HOMEDIR}/.bashrc					
+					source ${HOMEDIR}/.bashrc	
+					OS=`uname -a | cut -d " " -f 1 `				
 					updateS1Orbits ${S1_ORBITS_DIR} from=${STARTDATE}
 					
 					break ;;
