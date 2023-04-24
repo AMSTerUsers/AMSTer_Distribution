@@ -74,3 +74,19 @@ Develloppers of MasTer:
     Delphine Smittarello (modules for pair selection optimisation or recursive unwrapping)
     Maxime Jaspard (web interface)
     
+Updates:
+- New in V 20230421:
+  1. Scripts:
+    + Read_All_Img.sh: add CSK 2nd generation and correct/improve reading of several formats 
+    + Prepa_MSBAS.sh: now can build basline plot and pair selection table based on a second sets of temporal and spatial baseline criteria from a given table. This is unseful e.g. since the lost of S1B, which may require to increase the orbital tube
+    + installer: use g++ to compile msbas 
+    + Linux: replace Helvetica font now unavailable for convert function used in some scripts to build time series grpahs 
+    + several cosmetic and minor imporvements in various scripts
+    + several corrections and improvements in cron job scripts 
+    + addition of small utilities 
+  2. msbas: compilation with g++ in Linux
+  3. MasTer Engine:
+    + some add/corrections in DataReaders (ERS, RS1, RS2 CSK 2nd generation)
+    + some parallelistaion are now possible (S1 Coregistration) 
+  4. DOC: 
+    + revised and updated according to recent changes
