@@ -1,0 +1,115 @@
+Return-Path: <gilles@ecgs.lu>
+Delivered-To: nicolas@ecgs.lu
+Received: from localhost (unknown [127.0.0.1])
+	by terra2.ecgs.lu (Postfix) with ESMTP id 11A4910F854B4C;
+	Thu, 17 Sep 2020 16:41:53 +0200 (CEST)
+X-Virus-Scanned: amavisd-new at ecgs.lu
+Received: from terra2.ecgs.lu ([127.0.0.1])
+	by localhost (terra2.ecgs.lu [127.0.0.1]) (amavisd-new, port 10024)
+	with ESMTP id qsWLpBwVfnMh; Thu, 17 Sep 2020 16:41:48 +0200 (CEST)
+Received: from [192.168.178.26] (unknown [185.6.234.6])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+	(No client certificate requested)
+	by terra2.ecgs.lu (Postfix) with ESMTPSA id 9722310F854B2B;
+	Thu, 17 Sep 2020 16:41:48 +0200 (CEST)
+From: Gilles Celli <gilles@ecgs.lu>
+Content-Type: multipart/alternative;
+	boundary="Apple-Mail=_91BEBA69-47CA-4727-8EF6-6ECC14D2377D"
+Mime-Version: 1.0 (Mac OS X Mail 12.4 \(3445.104.15\))
+Subject: [doris-pro] msbas_extract compilation for macOS 
+Message-Id: <4E951640-3C6B-468E-A155-B70334CECF98@ecgs.lu>
+Date: Thu, 17 Sep 2020 16:41:47 +0200
+Cc: Nicolas d'Oreye <ndo@ecgs.lu>
+To: Gilles Celli <gilles.celli@ecgs.lu>
+X-Mailer: Apple Mail (2.3445.104.15)
+
+
+--Apple-Mail=_91BEBA69-47CA-4727-8EF6-6ECC14D2377D
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain;
+	charset=us-ascii
+
+
+On doris-pro compile msbas_extract (with Macports and GDAL installed):
+#sudo port install gdal
+
+Compile msbas_extract:
+
+In /Applications/3Dsbas/MSBAS3/msbas_20190121/MSBAS_EXTRACT/nbproject
+
+1. First edit the file =
+/Applications/3Dsbas/MSBAS3/msbas_20190121/MSBAS_EXTRACT/nbproject/Makefil=
+e-impl.mk
+
+Change "DEFAULTCONF" from Debug to Release:
+
+# Active Configuration
+DEFAULTCONF=3DRelease
+CONF=3D${DEFAULTCONF}
+
+
+In  /Applications/3Dsbas/MSBAS3/msbas_20190121/MSBAS_EXTRACT/nbproject
+
+2. Edit the file Makefile-Release.mk
+
+#vim Makefile-Release.mk
+
+#Add c++11=20
+
+CXXFLAGS=3D-std=3Dc++11
+
+# Link Libraries and Options from Macports
+LDLIBSOPTIONS=3D-L/opt/local/lib/ -lgdal
+
+${OBJECTDIR}/main.o: main.cpp
+        ${MKDIR} -p ${OBJECTDIR}
+        ${RM} "$@.d"
+        $(COMPILE.cc) -O2 -I/opt/local/include/ -MMD -MP -MF "$@.d" -o =
+${OBJECTDIR}/main.o main.cpp
+
+
+
+--Apple-Mail=_91BEBA69-47CA-4727-8EF6-6ECC14D2377D
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html;
+	charset=us-ascii
+
+<html><head><meta http-equiv=3D"Content-Type" content=3D"text/html; =
+charset=3Dus-ascii"></head><body style=3D"word-wrap: break-word; =
+-webkit-nbsp-mode: space; line-break: after-white-space;" class=3D""><div =
+class=3D""><br class=3D""></div><div class=3D"">On doris-pro compile =
+msbas_extract (with Macports and GDAL installed):</div><div =
+class=3D"">#sudo port install gdal</div><div class=3D""><br =
+class=3D""></div><div class=3D"">Compile msbas_extract:</div><div =
+class=3D""><br class=3D""></div><div class=3D""><b class=3D"">In =
+/Applications/3Dsbas/MSBAS3/msbas_20190121/MSBAS_EXTRACT/nbproject</b></di=
+v><div class=3D""><br class=3D""></div><div class=3D"">1. First edit the =
+file&nbsp;/Applications/3Dsbas/MSBAS3/msbas_20190121/MSBAS_EXTRACT/nbproje=
+ct/Makefile-impl.mk</div><div class=3D""><br class=3D""></div><div =
+class=3D"">Change "DEFAULTCONF" from Debug to Release:</div><div =
+class=3D""><div class=3D""><br class=3D""></div><div class=3D""># Active =
+Configuration</div><div class=3D"">DEFAULTCONF=3DRelease</div><div =
+class=3D"">CONF=3D${DEFAULTCONF}</div></div><div class=3D""><br =
+class=3D""></div><div class=3D""><br class=3D""></div><div class=3D""><b =
+class=3D"">In =
+&nbsp;/Applications/3Dsbas/MSBAS3/msbas_20190121/MSBAS_EXTRACT/nbproject</=
+b></div><div class=3D""><b class=3D""><br class=3D""></b></div><div =
+class=3D""><b class=3D"">2. Edit the =
+file&nbsp;Makefile-Release.mk</b></div><div class=3D""><br =
+class=3D""></div><div class=3D"">#vim Makefile-Release.mk</div><div =
+class=3D""><br class=3D""></div><div class=3D"">#Add =
+c++11&nbsp;</div><div class=3D""><br class=3D""></div><div =
+class=3D"">CXXFLAGS=3D-std=3Dc++11</div><div class=3D""><div =
+class=3D""><br class=3D""></div><div class=3D""># Link Libraries and =
+Options from Macports</div><div class=3D"">LDLIBSOPTIONS=3D-L/opt/local/li=
+b/ -lgdal</div></div><div class=3D""><br class=3D""></div><div =
+class=3D""><div class=3D"">${OBJECTDIR}/main.o: main.cpp</div><div =
+class=3D"">&nbsp; &nbsp; &nbsp; &nbsp; ${MKDIR} -p =
+${OBJECTDIR}</div><div class=3D"">&nbsp; &nbsp; &nbsp; &nbsp; ${RM} =
+"$@.d"</div><div class=3D"">&nbsp; &nbsp; &nbsp; &nbsp; $(<a =
+href=3D"http://COMPILE.cc" class=3D"">COMPILE.cc</a>) -O2 =
+-I/opt/local/include/ -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o =
+main.cpp</div></div><div class=3D""><br class=3D""></div><div =
+class=3D""><br class=3D""></div></body></html>=
+
+--Apple-Mail=_91BEBA69-47CA-4727-8EF6-6ECC14D2377D--

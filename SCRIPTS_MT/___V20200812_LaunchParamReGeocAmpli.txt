@@ -1,0 +1,19 @@
+# PARAMETERS TO RUN SCRIPT Geocode_from_ALL2GIF.sh. 
+# PARAMETERS MUST BE FOLLOWED BY A # AND ITS VAR NAME FOLLOWED BY COMA. 
+#           (DESCRIPTION, THOUGH THIS IS OPTIONAL)
+# AS READING THIS FILE IS MADE USING FIRST OCCURENCE OF SEARCH CRITERIA, 
+#           DO NOT ADD TEXT WTH VARIABLE NAME FOLLOWED BY COMA. 
+#
+# VERSION August 12 2020
+
+# GEOCODING
+###########
+UTM						# PROJ, Chosen projection (UTM or GEOC - both are ok here)
+TRI						# RESAMPMETHD, TRI = Triangulation; AV = weighted average; NN = nearest neighbour
+LORENTZ					# WEIGHTMETHD, Weighting method : ID = inverse distance; LORENTZ = lorentzian
+1.0						# IDSMOOTH,  ID smoothing factor 
+1.0						# IDWEIGHT, ID weighting exponent
+0.1						# FWHM, Lorentzian Full Width at Half Maximum
+15						# XPIX, Easting sampling [m] if UTM or Longitude sampling [dd] if LatLong
+15						# YPIX, Northing sampling [m] if UTM or Latitude sampling [dd] if LatLong
+pathToKmlFile   		# AREAOFINT, Forced footprint of geocoded product : Path_to_a_kml_file or pathToKmlFile to ignore forcing

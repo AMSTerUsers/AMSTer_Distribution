@@ -1,0 +1,10 @@
+FORMAT = 0
+FILE_SIZE = 1931, 1701
+WINDOW_SIZE = 0, 1930, 0, 1700
+R_FLAG = 2, 0.04
+T_FLAG = 0
+C_FLAG = 0
+V_FLAG=0
+I_FLAG = 0
+SET = 0, 162039, 335.57, 35.7519, DefoInterpolx2Detrend1.txt
+SET = 0, 034438, -163.121, 38.7521, DefoInterpolx2Detrend2.txt

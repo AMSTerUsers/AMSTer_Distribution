@@ -1,0 +1,95 @@
+#!/bin/bash
+# Script to rename (in parameters text files) external HD path such as /$PATH_1650 into mnt/1650 (from Linux)
+#    in order to be readable for MT when MT does not interprete links in parameters files. 
+#
+# This may have an interest in case of replaying some steps in MASS_PROCESS directories 
+#
+# Need to be run in dir where all files are stored in /SUBDIRS/i12/TextFiles/InSARParameters.txt, 
+#   e.g. /.../SAR_SM/RESAMPLED/SAT/TRK/CROPDIR/
+#
+# Parameters : - none  
+#
+# Dependencies:	- gnu sed and awk for more compatibility. 
+#				- __HardCodedLines.sh for Path to disks and volumes to rename
+#
+# New in Distro V 1.0:	- Based on developpement version and Beta V1.0.0
+#               V1.0.1: - also for usage in SAR_MASSPROCESS (avoid dir with Geocoded etc..)
+# New in Distro V 2.0: - Use hard coded lines definition from __HardCodedLines.sh
+# New in Distro V 2.1: - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
+#								- Replace CIS by MT in names 
+#								- Renamed FUNCTIONS_FOR_MT.sh
+#
+# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# NdO (c) 2017/12/29 - could make better... when time.
+# -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V3.0 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " "
+
+# vvv ----- Hard coded lines to check --- vvv 
+source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
+	# See below: 
+	# - RenamePathToMnt to rename PATH variable name by Linux mounting point
+# ^^^ ----- Hard coded lines to check --- ^^^ 
+
+NEWDIR="$(pwd)"
+
+ls -d */ | ${PATHGNU}/grep -v ModulesForCoreg  | ${PATHGNU}/grep -v _Check  | ${PATHGNU}/grep -v Geocoded  | ${PATHGNU}/grep -v __Back    > Files_To_Rename.txt
+
+# Test if process CSL images (for DEM infos) or RESAMPLED images
+TSTDIR=`tail -1 Files_To_Rename.txt`
+
+if [ -d ${TSTDIR}/i12/TextFiles ] 
+	then  
+		echo "I guess we are renaming path in RESAMPLED directories..."
+		for DIR in `cat -s Files_To_Rename.txt` 
+		do 
+			cd ${DIR}/i12/TextFiles
+			cp -n InSARParameters.txt InSARParameters_original_ExtHDpath.txt # do not copy if exist already
+			RenamePathToMnt InSARParameters_original_ExtHDpath.txt InSARParameters.txt
+# 			${PATHGNU}/gsed -e 	"s%\/\$PATH_1650%\/mnt\/1650%g 
+# 								 s%\/\$PATH_3600%\/mnt\/3600%g 
+# 								 s%\/\$PATH_3601%\/mnt\/3601%g 
+# 								 s%\/\$PATH_3602%\/mnt\/3602%g" InSARParameters_original_ExtHDpath.txt > InSARParameters.txt
+			if [ -f geoProjectionParameters.txt ] && [ -s geoProjectionParameters.txt ] ; then
+				cp -n geoProjectionParameters.txt geoProjectionParameters_original_ExtHDpath.txt # do not copy if exist already
+				RenamePathToMnt geoProjectionParameters_original_ExtHDpath.txt geoProjectionParameters.txt
+# 				${PATHGNU}/gsed -e 	"s%\/\$PATH_1650%\/mnt\/1650%g 
+# 									 s%\/\$PATH_3600%\/mnt\/3600%g 
+# 									 s%\/\$PATH_3601%\/mnt\/3601%g 
+# 									 s%\/\$PATH_3602%\/mnt\/3602%g" geoProjectionParameters_original_ExtHDpath.txt > geoProjectionParameters.txt
+			fi
+			echo "Files in ${DIR}/i12/TextFiles renamed."
+			cd ${NEWDIR}
+		done 
+	else   
+		if [ -d ${TSTDIR}/Info ] 
+			then 
+				echo "I guess we are renaming path in CSL images directories..."
+				for DIR in `cat -s Files_To_Rename.txt` 
+					do 
+						cd ${DIR}/Info
+						for MASKSANDDEM in `ls *.txt | ${PATHGNU}/grep -v readme | ${PATHGNU}/grep -v SLC | ${PATHGNU}/grep -v Pattern | ${PATHGNU}/grep -v original` 
+							do
+								cp -n ${MASKSANDDEM} ${MASKSANDDEM}_original_ExtHDpath.txt # do not copy if exist already
+								RenamePathToMnt ${MASKSANDDEM}_original_ExtHDpath.txt ${MASKSANDDEM}
+# 								${PATHGNU}/gsed -e 	"s%\/\$PATH_1650%\/mnt\/1650%g 
+# 													 s%\/\$PATH_3600%\/mnt\/3600%g 
+# 													 s%\/\$PATH_3601%\/mnt\/3601%g 
+# 													 s%\/\$PATH_3602%\/mnt\/3602%g" ${MASKSANDDEM}_original_ExtHDpath.txt > ${MASKSANDDEM}
+							done
+						echo "Files in ${DIR}/Info renamed."
+						cd ${NEWDIR}
+				done 		
+			else 
+				echo "Not sure what kind of files you want to modify. Please revise path and adapt script"
+		fi
+	fi
+		
+rm -f Files_To_Rename.txt
+

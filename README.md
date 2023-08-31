@@ -2,7 +2,7 @@
 
 "If you need InSAR, MasTer it"
 
-This repo contains the shell scripts, codes, binaries and doc required for installing and 
+This repo contains the shell scripts, codes and doc required for installing and 
 running MasTer. 
 (MasTer: InSAR automated Mass processing Toolbox for Multidimensional time series).
 
@@ -17,6 +17,7 @@ al., 2017, 2020] in order to obtain the desired 2D or 3D deformation maps and ti
 
 Of course, MasTer can also perform individual differential interferograms (for deformation 
 measurement or DEM creation purposes). 
+
 MasTer can also create time series of coherence or amplitude maps coregistered on a Global 
 Primary (both in radar geometry or in geographic coordinates). 
 
@@ -42,8 +43,8 @@ new capabilities. It has interesting features such as :
 - tools for TOPSAR coherence tracking, or spectral coherence estimation 
 - adaptive filtering and masking procedure, automatic layover masking …  
 
-In the MasTer Toolbox repository, you will find more scripts in SCRIPTS_OK than what is 
-required for a "normal" use of MasTer because this is the copy of my developpment scripts 
+In the MasTer Toolbox repository, you will find more scripts in SCRIPTS_MT than what is 
+required for a "normal" use of MasTer because this is the copy of my development scripts 
 directory. Hence it also contains several scripts and tools that you may never need. 
 
 Nevertheless, if you need a specific tool that wouldn't be documented in the manual, feel 
@@ -53,7 +54,8 @@ be easy for me to adapt some of these existing scripts to satisfy your needs.
 At least I can try on the best effort basis... 
 
 
-References: Please cite 
+References: Please cite at least the following references. More can be found in 
+/MasTerToolbox_Distribution/DOC/How_To_Cite_MasTer.txt
 
 Derauw D., d’Oreye N., Jaspard M., Caselli A. and Samsonov S. (2020)
 Ongoing automated Ground Deformation monitoring of Domuyo – Laguna del Maule area 
@@ -88,5 +90,22 @@ Updates:
   3. MasTer Engine:
     + some add/corrections in DataReaders (ERS, RS1, RS2 CSK 2nd generation)
     + some parallelistaion are now possible (S1 Coregistration) 
+  4. DOC: 
+    + revised and updated according to recent changes
+    
+- New in V 20230828 (non exhaustive list...):
+  1. Scripts:
+    + Important changes in directories and file naming
+    + Add optimisation module 
+    + Manage hard coded lines in scripts by sourcing a single file containing the hard coded lines
+    + Several modifictions to cope with recent upgrades in MasTer Engine
+    + Some new tools 
+  2. msbas: source code for msbas 3D and 4D inversions. These are however not
+  	 (yet) integrated within the MasTer Toolbox scripts
+  3. MasTer Engine:
+    + half pixel offset bug in geoprojection removed 
+    + more parallelistaion are now possible 
+    + takes into account new CSK format
+    + can force UTM zone at geoprojection 
   4. DOC: 
     + revised and updated according to recent changes

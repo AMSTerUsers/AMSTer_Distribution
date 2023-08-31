@@ -1,0 +1,53 @@
+8 # MAX_BUTTON (Maximum number Button per line)
+
+# Line 1 = top button area for direct access to data folder (RAW, SAR, AMPLI ...)
+
+1_RAW_DATA 		# /$PATH_3600/SAR_DATA
+1_CSL_DATA 		# /$PATH_1650/SAR_CSL
+1_RESAMPLED 	# /$PATH_1650/SAR_SM/RESAMPLED
+1_SETi 			# /$PATH_1650/SAR_SM/MSBAS
+1_AMPLI 		# /$PATH_1650/SAR_SM/AMPLITUDES
+1_MASSPROCESS 	# /$PATH_3601/SAR_MASSPROCESS
+1_MSBAS 		# /$PATH_3602/MSBAS
+
+1_SPACE						#
+1_RAW_DATA_Other_Zones 		# /$PATH_3601/SAR_DATA_Other_Zones
+1_CSL_DATA_Other_Zones 		# /$PATH_3601/SAR_CSL_Other_Zones
+1_RESAMPLED_Other_Zones 	# /$PATH_3602/SAR_SM_Other_Zones/RESAMPLED
+1_MASSPROCESS_Other_Zones 	# /$PATH_3601/SAR_MASSPROCESS
+1_SPACE						#
+1_SPACE						#
+1_SPACE						#
+1_SPACE						#
+
+1_RAW_DATA_Other_Zones_2 	# /$PATH_3602/SAR_DATA_Other_Zones_2
+1_SAR_CSL_Other_Zones_2 	# /$PATH_3602/SAR_CSL_Other_Zones_2
+1_RESAMPLED_2 				# /$PATH_3602/SAR_SM_2/RESAMPLED
+1_AMPLI_2 					# /$PATH_3602/SAR_SM_2/AMPLITUDES
+1_MASSPROCESS_2 			# /$PATH_3602/SAR_MASSPROCESS_2
+1_SPACE						#
+1_SPACE						#
+1_SPACE						#
+
+# Line 2 = middle button area for direct access to scripts folder (cron, script_ok, utilities...)
+
+2_SCRIPTS_MT 	# /$HOME/SAR/MasTerToolbox/SCRIPTS_MT
+2_CRON 			# /$HOME/SAR/MasTerToolbox/SCRIPTS_MT/_cron_scripts
+2_PARAM_FILES 	# /$PATH_1650/Param_files_SuperMaster
+2_DEM 			# /$PATH_DataSAR/SAR_AUX_FILES/DEM
+2_MASKS 		# /$PATH_DataSAR/SAR_AUX_FILES/MASKS
+2_KML 			# /$PATH_1650/kml
+2_EVENTS 		# /$PATH_1650/EVENTS_TABLES
+2_POINTS_TS 	# /$PATH_1650/Data_Points
+
+# Line 3 = lowbutton area for direct access to folder from which we want to run scripts (ex: PlotTS.sh ...)
+
+3_HOME					# /$HOME/PROCESS
+3_RUN_1650 				# /$PATH_1650/PROCESS
+3_RUN_3600 				# /$PATH_3600/PROCESS
+3_RUN_3601 				# /$PATH_3601/PROCESS
+3_RUN_3602 				# /$PATH_3602/PROCESS
+3_RUN_DellRack_DiskData # /Volumes/dellrack_data/PROCESS
+3_RUN_Dell3_DiskData 	# /Volumes/dell3raid5/PROCESS
+3_RUN_HP385_DiskData 	# /Volumes/HP385RAID5/PROCESS
+

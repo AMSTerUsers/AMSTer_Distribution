@@ -1,0 +1,292 @@
+#!/bin/bash
+# -- psn --------------------------------------------------------------
+# Script to know which processes are running in background 
+# and get several useful information FOR LUX PROCESSING WITH SPLIT SESSION. 
+#
+# Parameters: 
+# 	- none
+#
+# New in V2 : OK for split session
+# New in V2.0.1: take newest log file 
+# New in V2.0.2: tells the last pair in process				
+# New in V2.0.3: bug fix in taking newest log file and do it for regular processing as well as split session
+# New in V2.0.4: display processing pair instead of last processed pair
+# New in V2.0.5: mute error while listing inexistant Log file
+# New in V2.0.6: suggest command line to get the date/time when a PID was started 
+# New in V2.0.7: provide additional processes with start time
+# New in V2.1.0: check also all processes from within SAR other than SCRIPTS and avoid possible answer from Linux Kate editor
+# New in V2.2.0: - remove stray \ before _ while calling grep to cope with new grep syntax and avoid waring
+# New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
+#								- Replace CIS by MT in names 
+#								- Renamed FUNCTIONS_FOR_MT.sh
+#
+# NdO - June 16, 2020; last revision Sept 21 2022
+# -----------------------------------------------
+
+source $HOME/.bashrc
+clear
+
+# fct get all PID's of a given process
+function GetAllPIDs()
+	{
+	unset PROCESSMODE 
+	PROCESSMODE=$1
+
+	X=`ps -eaf | ${PATHGNU}/grep ${PROCESSMODE} | ${PATHGNU}/grep -v "grep"  | ${PATHGNU}/grep -v "LaunchTerminal.sh" | wc -l`
+	if [ ${X} -gt "1" ] 
+		then
+			ps -ax | ${PATHGNU}/grep "${PROCESSMODE}" | ${PATHGNU}/grep -v "grep"  | ${PATHGNU}/grep -v "LaunchTerminal.sh"  > tmp.txt
+			i=1
+			while IFS= read -r line
+				do
+					ID[$i]=`echo ${line} | cut -d " " -f1`
+					LAUNCHF[$i]=`echo  ${line} | gsed 's/.* \///' | ${PATHGNU}/grep -o '^\S*'`  # first take everything after last occurrence of " /" then remove everything after first space
+					if [ ! -z ${LAUNCHF}[$i] ] ; then HD[$i]=`cat /${LAUNCHF[$i]} | ${PATHGNU}/grep -m1 "PROROOTPATH" | ${PATHGNU}/grep -Eo "[0-9]{4}"` ; fi
+					i=`echo "$i + 1" | bc -l`
+			done < tmp.txt
+			i=`echo "$i - 1" | bc -l`
+
+			for n in $(seq 1 $i) 
+				do 
+					PID=`echo -e "${ID[$i]} $PID"`
+					PHD=`echo -e "${HD[$i]}-$PHD"`
+				done
+			ID=${PID}
+			HD=${PHD}
+
+		else
+			ID=`ps -ax | ${PATHGNU}/grep ${PROCESSMODE} | ${PATHGNU}/grep -v "grep"  | ${PATHGNU}/grep -v "LaunchTerminal.sh" | cut -d " " -f1`
+
+			if [ ${PROCESSMODE} != "Read_All_Img.sh" ]  # because in that case the processing dir is where CSL data must be stored...
+				then 
+					LAUNCHF=`ps -eaf | ${PATHGNU}/grep ${PROCESSMODE} | ${PATHGNU}/grep -v "grep"  | ${PATHGNU}/grep -v "LaunchTerminal.sh" | gsed 's/.* \///' | ${PATHGNU}/grep -o '^\S*'`  # first take everything after last occurrence of " /" then remove everything after first space
+			fi
+
+			if [ ! -z ${LAUNCHF} ] ; then HD=`cat /${LAUNCHF} | ${PATHGNU}/grep -m1 "PROROOTPATH" | ${PATHGNU}/grep -Eo "[0-9]{4}"` ; fi
+	fi
+	}
+
+
+# unused fct
+function RemDoubleSlash()
+	{
+	unset NAMETOCLEAN
+	local NAMETOCLEAN
+	NAMETOCLEAN=$1
+	echo ${NAMETOCLEAN} | ${PATHGNU}/gsed 's%\/\/%\/%g' 
+	}
+
+function WhenStarted()
+	{
+	unset PIDNR
+	local PIDNR
+	PIDNR=$1
+	# get the start date, time and cmd name
+	ps -eo pid,lstart,command | ${PATHGNU}/grep ${PIDNR} | ${PATHGNU}/grep -v grep
+
+	}
+
+# Get how many running process from SCRIPTS
+#XTOT=`ps -ax | ${PATHGNU}/grep SCRIPTS | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | wc -l`
+#echo "// Number of processes running on this computer: 	${XTOT}"
+
+# List all processes that are running either from SCRIPTS_MT or SCRIPTS_MT/_cron_scripts but SuperMaster_MassProc.sh and __SplitSession.sh
+ps -ax | ${PATHGNU}/grep SCRIPTS | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "LaunchTerminal.sh"  | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" > Other_Running.txt
+# List SuperMaster_MassProc.sh are running either from SCRIPTS_MT
+ps -ax | ${PATHGNU}/grep "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | sort > SM_Running.txt
+
+echo "// MasTer processes running on this computer: 		      Nr     PID     HD-    		Status                                  	Processing Pair"
+echo "//____________________________________________________________________________________________________________________________________________________________________________"
+# __SplitSession.sh
+	# Nr of Split sessions 
+	GetAllPIDs __SplitSession.sh
+	#echo "// __SplitSession.sh:					${X}    ${ID}"
+	if [ ${X} -ge "1" ] 
+		then
+		#	if [ ${X} -eq "1" ] ; then 
+		#			printf "%-62s%-7s%-8s%-8s \n" "// __SplitSession.sh" "${X}" "${ID}" "${HD}-" 
+		#		else
+					printf "%-62s%-7s%-15s%-15s \n" "// __SplitSession.sh" "${X}" "${ID}" "${HD}-"
+		#	fi 
+	fi
+	
+
+
+# SuperMaster_MassProc.sh (either from Split or from manual)
+	i=1
+	while IFS= read -r line
+		do
+			# get the PID
+			ID[$i]=`echo ${line} | sed 's@^[^0-9]*\([0-9]\+\).*@\1@'`
+
+			# get the Launch Param file
+			LAUNCH[$i]=`echo ${line} | awk -F".txt " '/.txt /{print $2}'`
+				# and some infos out of it
+				SATDIR=`cat ${LAUNCH[$i]} | ${PATHGNU}/grep -m1 "SATDIR" | awk '{ print $1 }'`
+				TRKDIR=`cat ${LAUNCH[$i]} | ${PATHGNU}/grep -m1 "TRKDIR" | awk '{ print $1 }'`
+				SUPERMASTER=`cat ${LAUNCH[$i]} | ${PATHGNU}/grep -m1 SUPERMASTER | awk '{ print $1 }'`
+				MLAMPLI=`cat ${LAUNCH[$i]} | ${PATHGNU}/grep -m1 "INTERFML" | awk '{ print $1 }'`
+			# get the Log file
+			# if LaunchParam contains "_Part", this is from SplitSession and one must identify where it is processed to get the log file
+			if [[ ${LAUNCH[$i]} == *"_Part"* ]]
+				then
+					PROROOTPATH=`cat ${LAUNCH[$i]} | ${PATHGNU}/grep -m1 PROROOTPATH | awk '{ print $1 }'`
+					eval PROROOTPATH=${PROROOTPATH}
+					# Just in case more than one log file exist, take the newest
+					LOGFILE[$i]=$(ls -1t ${PROROOTPATH}/${SATDIR}/${TRKDIR}/SM*_${SUPERMASTER}_*${MLAMPLI}/LogFile_MassProcess_Super_*.txt 2>/dev/null | head -1) 
+					#LOGFILE[$i]=${PROROOTPATH}/${SATDIR}/${TRKDIR}/SM*_${SUPERMASTER}_*${MLAMPLI}/LogFile_MassProcess_Super_*.txt
+					eval LOGFILE[$i]=${LOGFILE[$i]}
+					PART[$i]="${LAUNCH[$i]##*Part}"
+					PART[$i]=`echo "${PART[$i]}" | cut -d "_" -f1`
+				else 
+					PROROOTPATH=`cat ${LAUNCH[$i]} | ${PATHGNU}/grep -m1 PROROOTPATH | awk '{ print $1 }'`
+					eval PROROOTPATH=${PROROOTPATH}
+					#LOGFILE[$i]=${PROROOTPATH}/${SATDIR}/${TRKDIR}/SM*_${SUPERMASTER}_*/LogFile_MassProcess_Super_*.txt
+					# Just in case more than one log file exist, take the newest
+					LOGFILE[$i]=$(ls -1t ${PROROOTPATH}/${SATDIR}/${TRKDIR}/SM*_${SUPERMASTER}_*/LogFile_MassProcess_Super_*.txt 2>/dev/null | head -1)
+					eval LOGFILE[$i]=${LOGFILE[$i]}
+					
+			fi
+			# get from the log file the number of pair processed / total and when it started. 
+			if [ -f ${LOGFILE[$i]} ] 
+				then 
+					CREATED[$i]=`cat ${LOGFILE[$i]} | ${PATHGNU}/grep "Processing launched on" | ${PATHGNU}/grep -Eo "[0-9]{2}_[0-9]{2}_[0-9]{4}_[0-9]{2}[a-z]{1}[0-9]{2}[a-z]{1}"`
+					PAIRSTOPROCESS[$i]=`cat ${LOGFILE[$i]}  | ${PATHGNU}/grep "Shall process" | tail -1 | cut -d ";" -f 3` 
+					#HD[$i]=`cat ${LOGFILE[$i]} | ${PATHGNU}/grep -m1 "Change in "   | ${PATHGNU}/grep -Eo "[0-9]{4}\-"`
+					# remove double or triple slash before cutting to slash, then remove from HD name everything after two - or _ because naming is cmearer without all details
+					HD[$i]=`cat ${LOGFILE[$i]} | ${PATHGNU}/grep -m1 "Change in " | ${PATHGNU}/gsed 's%\/\/%\/%g' | ${PATHGNU}/gsed 's%\/\/%\/%g' | cut -d / -f 4 | cut -d - -f 1-2  | cut -d _ -f 1-2`
+					
+					if [[ ${PAIRSTOPROCESS[$i]} =~ "$" ]] 
+						then 
+							PROCESSED[$i]=`cat ${LOGFILE[$i]}  | ${PATHGNU}/grep "Shall process" | tail -2 | head -1 | cut -d ";" -f 3 | cut -d "/" -f2`
+							PAIRSTOPROCESS[$i]=" ${PROCESSED[$i]} pairs finished... Moving files" 
+						else 
+							PAIRSTOPROCESS[$i]=" ${PAIRSTOPROCESS[$i]} since ${CREATED[$i]} " 
+							#PROCESSINGMAS[$i]=`cat ${LOGFILE[$i]}  | ${PATHGNU}/grep "Shall process" | tail -2 | head -1 | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
+							#PROCESSINGSLV[$i]=`cat ${LOGFILE[$i]}  | ${PATHGNU}/grep "Shall process" | tail -2 | head -1 | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -2 | tail -1`
+							PROCESSINGMAS[$i]=`cat ${LOGFILE[$i]}  | ${PATHGNU}/grep "Shall process" | tail -1 | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
+							PROCESSINGSLV[$i]=`cat ${LOGFILE[$i]}  | ${PATHGNU}/grep "Shall process" | tail -1 | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -2 | tail -1`
+
+							PROCESSING[$i]="${PROCESSINGMAS[$i]}_${PROCESSINGSLV[$i]}"
+
+					fi
+					#CREATED=`GetFileInfo ${LOGFILE} | ${PATHGNU}/grep created | cut -d : -f 2-5`
+					
+					#echo "// SuperMaster_MassProc.sh for ${MSG} part ${SESSION[$i]}:		   ${ID[$i]}	${PAIRSTOPROCESS[$i]} since ${CREATED[$i]}"
+					#printf "%-30s %-15s %-8s %-4s %-20s \n" "// SuperMaster_MassProc.sh " "${TRKDIR}" "${ID[$i]}" "${PAIRSTOPROCESS[$i]}" "since ${CREATED[$i]}" 
+				else 
+					PAIRSTOPROCES[$i]=""
+					PROCESSED[$i]=""
+					CREATED[$i]=""
+				#	echo "// SuperMaster_MassProc.sh for ${MSG} part ${SESSION[$i]}:		${X}    ${ID[$i]}"
+			fi
+			if [[ ${LAUNCH[$i]} == *"_Part"* ]]
+				then	
+					printf "%-30s%-32s%-15s%-15s%-30s%-25s \n" "// SuperMaster_MassProc.sh " "${TRKDIR}   Part ${PART[$i]}" "1      ${ID[$i]}" "   ${HD[$i]}" "${PAIRSTOPROCESS[$i]}" "${PROCESSING[$i]}"
+				else 
+					printf "%-30s%-32s%-15s%-15s%-30s%25s \n" "// SuperMaster_MassProc.sh " "${TRKDIR}" "1      ${ID[$i]}" "   ${HD[$i]}" "${PAIRSTOPROCESS[$i]}" "${PROCESSING[$i]}" 
+			fi		
+			i=`echo "$i + 1" | bc -l`
+	done < SM_Running.txt 
+
+# Nr of Read_All_Img.sh
+	GetAllPIDs Read_All_Img.sh
+	#echo "// Read_All_Img.sh:					${X}    ${ID}"
+	if [ ${X} -ge "1" ] 
+		then
+#			printf "%-62s%-7s%-20s \n" "// Read_All_Img.sh " "${X}" "${ID[$i]}"
+			#printf "%-62s%-7s%-8s%-8s \n" "// Read_All_Img.sh " "${X}" "${ID[$i]}" "${HD}-"
+			if [ ${X} -eq "1" ] ; then 
+					printf "%-62s%-7s%-8s%-8s \n" "// Read_All_Img.sh" "${X}" "${ID}" "${HD}-" 
+				else
+					printf "%-62s%-7s%-20s%-20s \n" "// Read_All_Img.sh" "${X}" "${ID}" "${HD}-"
+			fi 
+
+	fi
+
+# Nr of SuperMasterCoreg.sh
+	GetAllPIDs SuperMasterCoreg.sh
+	#echo "// SuperMasterCoreg.sh:					${X}    ${ID}"
+	if [ ${X} -ge "1" ] 
+		then
+			#printf "%-62s%-7s%-20s \n" "// SuperMasterCoreg.sh " "${X}" "${ID[$i]}"
+			#printf "%-62s%-7s%-8s%-8s \n" "// SuperMasterCoreg.sh " "${X}" "${ID[$i]}" "${HD}-"
+			if [ ${X} -eq "1" ] ; then 
+					printf "%-62s%-7s%-8s%-8s \n" "// SuperMasterCoreg.sh" "${X}" "${ID}" "${HD}-" 
+				else
+					printf "%-62s%-7s%-20s%-20s \n" "// SuperMasterCoreg.sh" "${X}" "${ID}" "${HD}-"
+			fi 
+
+	fi
+	
+# Nr of MasterDEM.sh
+	GetAllPIDs MasterDEM.sh
+	#echo "// MasterDEM.sh:					${X}    ${ID}"
+	if [ ${X} -ge "1" ] 
+		then
+			#printf "%-62s%-7s%-20s \n" "// MasterDEM.sh " "${X}" "${ID[$i]}"
+			#printf "%-62s%-7s%-8s%-8s \n" "// MasterDEM.sh " "${X}" "${ID[$i]}" "${HD}-"
+			if [ ${X} -eq "1" ] ; then 
+					printf "%-62s%-7s%-8s%-8s \n" "// MasterDEM.sh" "${X}" "${ID}" "${HD}-" 
+				else
+					printf "%-62s%-7s%-20s%-20s \n" "// MasterDEM.sh" "${X}" "${ID}" "${HD}-"
+			fi 
+
+	fi
+
+# Other SCRIPTS  
+	X=`ps -eaf | ${PATHGNU}/grep SCRIPT | ${PATHGNU}/grep -v "grep"  | ${PATHGNU}/grep -v "$0"  | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "kate" | wc -l`  # linux using kate to edit scripts  may answer to this call hence avoid it
+	if [ ${X} -ge "1" ] 
+		then
+			echo "//						------------------"
+			# Any other process from SCRIPTS_MT 
+			echo "// Total nr of all MasTer shell scripts:		      ${X}"
+			echo "//" 
+			Y=`ps -ax | ${PATHGNU}/grep SCRIPT | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" | ${PATHGNU}/grep -v "kate" | wc -l`
+			if [ ${Y} -ge "1" ] 
+				then
+					echo "//  Additional processes not described above are which are :"
+					echo ""
+					#ps -ax | ${PATHGNU}/grep SCRIPT | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" #| cut -d / -f 8
+					ps -eo pid,lstart,command | ${PATHGNU}/grep SCRIPT | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" | ${PATHGNU}/grep -v "kate" #| cut -d / -f 8
+					echo ""
+ 			fi
+			echo "// Type  ps PID    to see details about the running process"
+			echo "// Type  ps -eo pid,lstart | ${PATHGNU}/grep PID to see when a PID process was launched"
+			echo "//   or  kill PID  to end it"
+			echo ""
+		else 
+			echo "// Total nr of all MasTer shell scripts:		${X}"
+			echo ""
+		
+	fi
+
+# Other processes  
+	X=`ps -eaf | ${PATHGNU}/grep SAR | ${PATHGNU}/grep -v "SCRIPT" | ${PATHGNU}/grep -v "grep"  | ${PATHGNU}/grep -v "$0"  | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "kate" | wc -l`
+	if [ ${X} -ge "1" ] 
+		then
+			echo "//						------------------"
+			# Any other process from SAR DIR 
+			echo "// Total nr of all MasTer Toolbox software (other than SCRIPTS):		      ${X}"
+			echo "//" 
+			Y=`ps -ax | ${PATHGNU}/grep SAR | ${PATHGNU}/grep -v "SCRIPT" | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" | ${PATHGNU}/grep -v "kate" | wc -l`
+			if [ ${Y} -ge "1" ] 
+				then
+					echo "//  Additional processes not described above are which are :"
+					echo ""
+					#ps -ax | ${PATHGNU}/grep SCRIPT | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" #| cut -d / -f 8
+					ps -eo pid,lstart,command | ${PATHGNU}/grep SAR | ${PATHGNU}/grep -v "SCRIPT"  | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" | ${PATHGNU}/grep -v "kate" #| cut -d / -f 8
+					echo ""
+ 			fi
+			echo "// Type  ps PID    to see details about the running process"
+			echo "// Type  ps -eo pid,lstart | ${PATHGNU}/grep PID to see when a PID process was launched"
+			echo "//   or  kill PID  to end it"
+			echo ""
+		else 
+			echo "// Total nr of all MasTer shell scripts:		${X}"
+			echo ""
+		
+	fi
+
+
+

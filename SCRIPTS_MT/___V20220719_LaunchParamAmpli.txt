@@ -1,0 +1,32 @@
+# PARAMETERS TO RUN SCRIPT MakeAmpliPlotSingleImg.sh. 
+# PARAMETERS MUST BE FOLLOWED BY A # AND ITS VAR NAME FOLLOWED BY COMA. 
+#           (DESCRIPTION, THOUGH THIS IS OPTIONAL)
+# AS READING THIS FILE IS MADE USING FIRST OCCURENCE OF SEARCH CRITERIA, 
+#           DO NOT ADD TEXT WTH VARIABLE NAME FOLLOWED BY COMA. 
+#
+# VERSION July 19 2022
+
+
+# OUTPUT PIX SHAPE AND SIZE
+###########################
+3						# ML, multilooking factor 
+2						# ZOOM, zoom factor
+ORIGINAL				# PIXFORM, shape of output pixel (SQUARE or ORIGINAL)
+
+# WINDOWING
+###########
+CROPno											# CROP, CROPyes or CROPno 
+GEO                                     		# COORDSYST, Coordinate system [SRA if crop given below in pix/ GEO if crop given below in lat long]
+0                                       		# LLXC, lower left corner X coordinate
+0                                       		# LLYC, lower left corner Y coordinate 
+0                                       		# URXC, upper right corner X coordinate
+0                                       		# URYX, upper right corner Y coordinate
+pathToKMLFile                           		# KML, kml file path (.kml polygon saved from Google Earth)
+NyigoCrater										# REGION, name of cropped region 
+
+
+# Digital Elevation Model
+#########################
+${PATH_DataSAR}/SAR_AUX_FILES/DEM/SRTM30/ALL/GrandKivuAug2020_CorrGeoid					# DEM, path to DEM 
+
+

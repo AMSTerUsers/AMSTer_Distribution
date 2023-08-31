@@ -1,0 +1,75 @@
+install : 
+$ cd /Users/nicolas/SAR/MasTerToolbox
+$ unzip optimtoolbox.zip
+$ chmod u+x /Users/nicolas/SAR/MasTerToolbox/optimtoolbox/*.py
+$ chmod u+x /Users/nicolas/SAR/MasTerToolbox/optimtoolbox/*.sh
+
+add in .bashrc
+$ PATH=$PATH:/Users/nicolas/SAR/MasTerToolbox/optimtoolbox
+source .bashrc
+
+
+
+$ cd /Volumes/3601/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_A_18_SAMPLE/SMNoCrop_SM_20180512_Zoom1_ML4/Geocoded/Coh
+
+$ Baseline_Coh_Table.sh /Volumes/1650/kml/ARGENTINA/Domuyo_Edifice.kml
+
+$ ls -lt *.txt
+-rw-r--r-- 1 nicolas staff      4978 May 15 15:24 Baseline_Coh_Table_Domuyo_Edifice.kml.txt
+-rw-r--r-- 1 nicolas staff       162 May 15 15:23 CommandLine_Baseline_Coh_Table.sh_05_15_2023_15h23m_2553.txt
+
+$ cd /Volumes/1650/SAR_SM/MSBAS/ARGENTINE/set1
+
+Check if table.orig exists
+Run with Coherence proxy : 
+$ Run_optim_module.sh /Volumes/1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450.txt /Volumes/3601/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_A_18_SAMPLE/SMNoCrop_SM_20180512_Zoom1_ML4/Geocoded/Coh/Baseline_Coh_Table_Domuyo_Edifice.kml.txt 3 230 1 0.0125 0.02 0.72 0.22 0
+
+$ ls -lt table*.txt
+-rw-r--r--  1 nicolas staff   33266 May 15 16:48  table_0_20_0_450.txt
+-rw-r--r--  1 nicolas staff   11122 May 15 16:48  table_0_20_0_450_listPR2rm4optim_3_th0_optimized.txt
+-rw-r--r--  1 nicolas staff   12456 May 15 16:48  table_0_20_0_450_listPR2rm4optim_3_th0.txt
+-rw-r--r--  1 nicolas staff   33266 May 15 16:32  table_0_20_0_450_orig.txt
+
+Or Run with Coherence values
+$ Run_optim_module.sh /Volumes/1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450.txt_For_Optim.txt /Volumes/3601/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_A_18_SAMPLE/SMNoCrop_SM_20180512_Zoom1_ML4/Geocoded/Coh/Baseline_Coh_Table_Domuyo_Edifice.kml.txt 3 0
+-rw-r--r-- 1 nicolas staff  4289 May 15 18:31 table_0_20_0_450.txt_For_Optim.txt
+-rw-r--r-- 1 nicolas staff   918 May 15 18:31 table_0_20_0_450_listPR2rm4optim_3_th0.txt
+-rw-r--r-- 1 nicolas staff  2657 May 15 18:31 table_0_20_0_450_listPR2rm4optim_3_th0_optimized.txt
+-rw-r--r-- 1 nicolas staff  4289 May 15 18:22 table_0_20_0_450_orig.txt
+
+if a module is missing : install with pip
+python -m pip install networkx
+
+
+
+
+
+
+Prepare MSBAS ! 
+
+$ cd  /Volumes/3602/MSBAS/_Argentina_S1_20m_450days 
+
+If not already done : build header
+
+$ Remove_Pairs_From_BaselinePlotOptimisation.sh DefoInterpolx2Detrend1 /Volumes/1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450_listPR2rm4optim_3_th0.txt
+
+Check header
+here only one mode
+
+cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_orig.txt
+cp DefoInterpolx2Detrend1_Optimized_table_0_20_0_450_listPR2rm4optim_3_th0.txt_05_16_2023_13h43m.txt DefoInterpolx2Detrend1.txt
+
+mv zz_LOS zz_LOS_set1_beforeoptim
+
+MSBAS.sh
+
+mv zz_LOS zz_LOS_set1_afteroptim
+
+cd zz_LOS_set1_beforeoptim
+PlotTS.sh 2851 2696 3050 2700 -f -r -t
+
+cd zz_LOS_set1_afteroptim
+PlotTS.sh 2851 2696 3050 2700 -f -r -t
+
+
+Open maps with QGIS and plot the difference

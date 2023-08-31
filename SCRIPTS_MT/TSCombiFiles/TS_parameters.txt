@@ -1,0 +1,45 @@
+# Data related to HP server path
+
+
+defo-domuyo			# WebPage
+
+
+# Fiji_Amp_Defo_Coh script and ImageCreator.sh
+# Value used to build the legend of the deformation maps
+1.3		# IJAmpMin	(Minimum value for brightness to build amplitude image using ImageJ)
+2.7		# IJAmpMax  (Maximum value for brightness to build amplitude image using ImageJ)
+40		# MarkUp	(Legend vertical bar position Up)
+90		# MarkDown	(Legend vertical bar position Down)
+125		# LegValPosH	(Vertical Position of the value in the legend)
+125		# LegUnitPosH	(Vertical Position of the unity in the legend)
+35		# LegTxtPosH	(Vertical Position of the text info in the legend)
+8		# LegAdjZero	(Fine adjustment of the horizontal positionnement of Zero)
+60		# LegAdjMin	(Fine adjustment of the horizontal positionnement of Min Val)
+10		# LegAdjMax	(Fine adjustment of the horizontal positionnement of Max Val)
+70		# LegAdjLOS	(Fine adjustment of the horizontal positionnement of Max Val for LOS maps)
+200		# LegAdjUnit	(Fine adjustment of the horizontal positionnement of Unity related to the left)
+
+# CreateColorFrame script + Fiji_Amp_Defo_Coh script
+100		# Margin
+800		# LegendWidth
+0.6		# ColorBackgrdLegnd (0 = white --> 1 = grey) 
+35		# LegendTxtSize (Size of the text in the legend)
+140		# LegendHeight (Height of the legend in pixels margin include)
+40		# FrameTop (distance between top of color frame and top of the legend)
+60		# FrameBott (distance between bottom of color frame and top of the legend)
+
+# ImageCreator.sh and TimeSeriesInfo.sh 
+1000		# Crop_X (Top left X coordinate of the cropped zone)
+1000		# Crop_Y (Top left Y coordinate of the cropped zone)
+3361	# Crop_L (Horizontal size of the cropped zone)
+2800	# Crop_H (Vertical size of the cropped zone)
+
+# TimeSeriesInfo.sh 
+100		# CrossTresh (Distance between 2 points (Vert or Horiz) which determine the size of the cross)
+15		# CrossBig Size of the cross in defo map as thumbnail if spacement between 2 pts are > treshold)
+15		# CrossSmall Size of the cross in defo map as thumbnail if spacement between 2 pts are < treshold)
+
+
+
+
+

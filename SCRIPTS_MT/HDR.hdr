@@ -1,0 +1,15 @@
+ENVI
+File type = ENVI Standard
+Description = {deformationMap.interpolated.flattened.UTM.30x30.bil.interpolated
+InSAR processing:
+Master sensor = S1A	Slave sensor = S1A
+Master acquisition time = 20141017T16:20:20	 Slave acquisition time = 20141110T00:00:00
+Heading direction = Ascending pass}
+Header offset = 0
+Bands = 1
+Data type = 4
+byte order = 1
+Samples = 328
+Lines = 369
+Map info = {UTM, 1.0, 1.0, 702990.000000, 9727020.000000, 30.000000, 30.000000, 35, South, WGS84, units=Meters}
+Data ignore value = NAN

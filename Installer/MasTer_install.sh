@@ -82,7 +82,7 @@
 #				- chack last version of available apt and ports
 # New in 1.2:	- remove call $PATHGNU/gsed
 #				- cd in SAR/EXEC before changing line for Linux
-#				- properly unzip SCRIPTS in SCRIPTS_OK
+#				- properly unzip SCRIPTS in SCRIPTS_MT
 #				- install gitkraken with snap 
 #				- avoid using ${HOMEDIR} which seems a problem in some cases
 #				- optional definition of EXTERNAL_DEMS_DIR
@@ -125,19 +125,71 @@
 # New in 2.14:	- debug symbolic link to g-functions in Linux
 #				- to avoid possible problem while sourcing bashrc, recompute OS after each source
 # New in 2.15:	- install msbas version Optimized_v1.1_Gilles, that is using g++ instaed of clang
+# New in 2.16:	- add module optimisation
+#				- Linux libgdal30 instead of libgdal26
+# New in 2.17:	- Define path to MasTer Toolbox scripts in the right order (do not change it!)
+#				- test Mac OSX bash at the beginning just in case 
+# New in 3.00:	- Change fct to search for existing PATH in .bashrc (in UpdatePATHBashrcAFTER). Now can change order or search
+#				- use PATHGNU/sed in every fct
+#				- compile sources for MasTer Engine
+#				- Check all type of compressed msbas versions 
+#				- linux was installing GitKraken from snap & apt
+#				- ask where MasTerToolbox_Distribution is stored
+#				- check msbas version till v20
+#				- allows installing msbasv10 (need mpich) 
+#				- reclaim old ports
+#				- offer to install more disks (for ECGS needs)
+#				- update DOC from Distribution and store at right place (in MasTerToolbox)
+# New in 3.01:	- In Mac, search for Figi* and QGIS* instead of Fiji.app and Fiji.app because old OSX had no .app extension 
+# New in 3.02:	- Linux: remove DISPLAY definition as it may prevent usage of __SplitSession.sh or __SplitCoerg.sh
+#				- Linux: more robust search of DISPLAY values
+# New in 3.03:  - was not escaping the DISPLAY selection loop
+# New in 3.04:  - improve search/display for GitKralen version in Mac
+#				- debug getting directory where MasTer Toolbox sources are stored 
+#				- more robust way to get GIMP version with Mac OSX 
+#				- show Fiji version when available with Mac OSX
+# New in 3.05:  - add gsl libraries for Mac and Linux
+# New in 3.06:  - When OS was Linux, it was offering to change Zsh...
+# New in 3.07:  - Allows option for compilation ME with parallelisation 
+# New in 3.08:  - Use new makefile with variable for parallelisation  
+# New in 3.09:  - manage the parallelisation option as requested from MasTerEngine V20230826
+# New in Distro V 4.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
+#								- Replace CIS by MT in names 
+#								- Renamed FUNCTIONS_FOR_MT.sh
+#
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version Beta 2.15 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye', (c)2020, Last modified on April 20 2023"
+VER="version 4.0 - Interactive Mac/Linux installation of MasTer Toolbox"
+AUT="Nicolas d'Oreye', (c)2020, Last modified on Aug 30 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
 clear
 echo
+
+############
+# Check OS #
+############
+OS=`uname -a | cut -d " " -f 1 `
+
+TSTSH=`echo "$SHELL"`
+if [ "${OS}" == "Darwin" ] 
+	then 
+		if [ "${TSTSH}" == "/bin/bash" ] 
+			then 
+				echo " // Your OS is probably older than v 10.15 or shell was already changed to bash. No action required. "
+			else	
+				echo " // Your OS is probably v 10.15 or more recent. Need to change default shell Zsh with bash for scripts compatibility issues. "
+				chsh -s /bin/bash 	
+				echo " // It will only be effective in a new Terminal, hence close the present Terminal and relaunch the prensent script in that new terminal"
+				exit
+		fi
+fi
+				
 
 eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm%Ss" | sed "s/ //g"`
 
@@ -285,6 +337,36 @@ function AskExternalComponent()
 		done
 	}
 
+function AskDistroComponent()
+	{
+		local COMPONENT
+		local LOCATION
+		
+		COMPONENT=$1
+		LOCATION=$2
+
+		cd ${PATHDISTRO}/${COMPONENT}_sources
+		read -e -p "Enter the name of the ${COMPONENT} source file (without path!) downloaded from ${LOCATION}. It must be in ${PATHDISTRO}/${COMPONENT}_sources. You can use Tab for autocompletion: " RAWFILE
+			
+		while true ; do
+		read -p  "Press [y] if you want to use it or [s] to skip [y/s]" ys
+			case $ys in
+				[Yy]* ) 
+					echo "  // OK, I will try to install ${COMPONENT} using "
+					echo "  // ${PATHDISTRO}/${COMPONENT}_sources/${RAWFILE}"
+					SKIP="No"
+					break ;;
+				[Ssn]*)
+					echo "  // OK, you know..." 
+					SKIP="Yes"
+					break ;;
+				* ) 
+					echo "Please answer [y]es when done or [s]kip." ;;
+			esac
+		done
+	}
+
+
 function SearchForSimilar()
 	{
 		RAWFILE=$1
@@ -343,7 +425,7 @@ function InsertBelowVARIABLESTitle()
 						echo "  // Let's add the variable after the section named # MasTer VARIABLES in /.bashrc. "
 						TITLEPOS=`grep -n "# MasTer VARIABLES" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
 						WHERETOINSTERT=`echo "${TITLEPOS} + 3" | bc -l`
-						sudo sed -i ''"${WHERETOINSTERT}"' i '"${EXPECTED}"'' ${HOMEDIR}/.bashrc
+						sudo ${PATHGNU}/sed -i ''"${WHERETOINSTERT}"' i '"${EXPECTED}"'' ${HOMEDIR}/.bashrc
 				fi
 			else 
 				echo "  // ${EXPECTED} already in /.bashrc. "
@@ -376,7 +458,7 @@ function InsertBelowPATHTitle()
 				echo "  // Let's add the variable after the section named # MasTer PATHS in /.bashrc. "
 				TITLEPOS=`grep -n "# MasTer PATHS" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
 				WHERETOINSTERT=`echo "${TITLEPOS} + 3" | bc -l`
-				sudo sed -i ''"${WHERETOINSTERT}"' i PATH=\$PATH:'"${STRINGTOSEARCH}"'' ${HOMEDIR}/.bashrc
+				sudo ${PATHGNU}/sed -i ''"${WHERETOINSTERT}"' i PATH=\$PATH:'"${STRINGTOSEARCH}"'' ${HOMEDIR}/.bashrc
 
 				# to avoid problem of interpreting search and replace, do it in two steps
 				#sudo sed -i ''"${WHERETOINSTERT}"' i PATH=\$PATH:STRINGTOREPLACEATNEXTLINEAFTERTITLE' ${HOMEDIR}/.bashrc
@@ -490,7 +572,7 @@ function UpdatePATHBashrcBEFORE()
 		local OCCUR
 		
 		STRINGTOSEARCH=$1
-		
+				
 		TST=$(grep "PATH=" ${HOMEDIR}/.bashrc)
 
 		if [ `echo "${TST}" | wc -w` -eq 0 ] 
@@ -552,9 +634,11 @@ function UpdatePATHBashrcAFTER()
 	{
 		local STRINGTOSEARCH
 		local TST
-		
+		local PATTERN	
+			
 		STRINGTOSEARCH=$1
-		
+		PATTERN="^PATH=${STRINGTOSEARCH}$"
+	
 		TST=$(grep "PATH=" ${HOMEDIR}/.bashrc)
 
 		if [ `echo "${TST}" | wc -w` -eq 0 ] 
@@ -565,16 +649,36 @@ function UpdatePATHBashrcAFTER()
 				#sudo echo "PATH=\$PATH:/${STRINGTOSEARCH}" >> ${HOMEDIR}/.bashrc 
 				InsertBelowPATHTitle "${STRINGTOSEARCH}"
 			else 
-				TST=`grep "PATH=" ${HOMEDIR}/.bashrc | grep "${STRINGTOSEARCH}"`
-				if [ `echo "${TST}" | wc -w` -eq 0 ] 
+				while IFS= read -r line ; do
+ 					if [[ ${line} =~ ${PATTERN} ]]
+ 						then
+    						echo "  // OK, /.bashrc already contains PATH with ${smso}${STRINGTOSEARCH}${rmso}. "
+    						ADD="NO"
+    						break
+						else 
+							ADD="YES"
+  					fi
+				done < ${HOMEDIR}/.bashrc
+				
+				if [ "${ADD}" == "YES" ] 
 					then 
-						echo "  // /.bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}. Will add here new path AFTER existing PATH (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
-						
-						#sudo sed -i '/.*PATH=.*/a PATH=\$PATH:\/'"${${STRINGTOSEARCH}}"' ' ${HOMEDIR}/.bashrc
-						InsertBelowPATHTitle "${STRINGTOSEARCH}"
-					else
-						echo "  // OK, /.bashrc already contains PATH with ${smso}${STRINGTOSEARCH}${rmso}. "
+						echo "  // .bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}."
+						echo "  //  Will add here new path AFTER existing PATH (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+						InsertBelowPATHTitle "${STRINGTOSEARCH}" 
+					else 
+						echo "  // No need to add it to PATH. " 
 				fi
+				ADD=""
+				#TST=`grep "PATH=" ${HOMEDIR}/.bashrc | grep "${STRINGTOSEARCH}"`
+				#if [ `echo "${TST}" | wc -w` -eq 0 ] 
+				#	then 
+				#		echo "  // /.bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}. Will add here new path AFTER existing PATH (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+				#		
+				#		#sudo sed -i '/.*PATH=.*/a PATH=\$PATH:\/'"${${STRINGTOSEARCH}}"' ' ${HOMEDIR}/.bashrc
+				#		InsertBelowPATHTitle "${STRINGTOSEARCH}"
+				#	else
+				#		echo "  // OK, /.bashrc already contains PATH with ${smso}${STRINGTOSEARCH}${rmso}. "
+				#fi
 		fi
 		source ${HOMEDIR}/.bashrc
 		OS=`uname -a | cut -d " " -f 1 `
@@ -694,7 +798,7 @@ function InstallSnaphu()
 			read -p "Do you want to [c]heck, [i]nstall or [s]kip snaphu ? [c/i/s] "  cis
 			case $cis in
 			[Cc]* ) 	
-				echo "  // OK, let's check its version. It is your responsability to verify that it is the last one though..."
+				echo "  // OK, let's check its version. "
 				SNAPHUVER=`snaphu 2>/dev/null | grep snaphu | head -1`
 				if [ "${SNAPHUVER}" == "" ] 
 					then 
@@ -801,7 +905,7 @@ DoInstallCpxfiddle()
 					if [ "${OS}" == "Linux" ] ; then 													
 						ORIGINAL="if (argv\[optind\]==" 
 						NEW="if (argv\[optind\]==0 || argv\[optind\]\[0\]==\'\\\0\'\)" 		# this is a tricky one... 
-						sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' ${RAWFILE}				# this is a tricky one... 
+						${PATHGNU}/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' ${RAWFILE}				# this is a tricky one... 
 					fi
 					make -n cpxfiddle
 					g++ -O -c -ocpxfiddle.o cpxfiddle.cc  
@@ -823,7 +927,7 @@ function InstallCpxfiddle()
 			read -p "Do you want to [c]heck, [i]nstall or [s]kip cpxfiddle  ? [c/i/s] "  cis
 			case $cis in
 			[Cc]* ) 	
-					echo "  // OK, let's check its version. It is your responsability to verify that it is the last one though..."
+					echo "  // OK, let's check its version."
 					cpxfiddle 2> tmp_cpx.txt
 					CPXVER=`cat tmp_cpx.txt | grep version | cut -d " " -f6` 
 					rm -f tmp_cpx.txt
@@ -867,11 +971,13 @@ function InstallCpxfiddle()
 
 DoInstallMasTerEngine()
 	{
-		AskExternalComponent "MasTerEngine" "Github or contact dderauw@ecgs.lu"
+		# Below assign MasTer Engine to install as RAWFILE
+		AskDistroComponent "MasTerEngine" "https://github.com/ndoreye/MasTerToolbox_Distribution"
+
 		if [ "${SKIP}" == "No" ] ; then 
 			# just if there is a typo in the version, or name... hoping that at least the main name is OK					
-			if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
-				FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*MasTerEngine*" 2>/dev/null`
+			if [ ! -f  ${PATHDISTRO}/MasTerEngine_sources/"${RAWFILE}" ] ; then 
+				FILETOINSTALL=`find ${PATHDISTRO}/MasTerEngine_sources/ -maxdepth 1 -type f -name "*MasTerEngine*" 2>/dev/null`
 				SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
 			fi
 
@@ -883,7 +989,7 @@ DoInstallMasTerEngine()
 		
 					MESOURCEDIR="${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older/V${MASTERENGINEDATE}_MasterEngine/"
 					mkdir -p "${MESOURCEDIR}"
-					mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${MESOURCEDIR}
+					cp -f ${PATHDISTRO}/MasTerEngine_sources/${RAWFILE} ${MESOURCEDIR}
 					cd ${MESOURCEDIR}
 					TARDIRNAME=`ls -t *.tar.xz | head -1 | cut -d . -f 1`
 					echo "  // Decompress ${TARDIRNAME}.tar.xz..."
@@ -895,7 +1001,7 @@ DoInstallMasTerEngine()
 					fi
 					if [ ${NRSUBDIR} -eq 0 ]
 						then 
-							echo "  // Install MasTerEngine binaries "	
+							echo "  // It seems that you install MasTerEngine binaries... Let's move the executables to the appropriate place "	
 							cd ${MESOURCEDIR}/${TARDIRNAME}
 							mv -f * ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
 						else 
@@ -922,7 +1028,15 @@ DoInstallMasTerEngine()
 							fi 
 
 							echo "  // Compile MasTerEngine "
-							make 
+
+							if [ "${PARALLELOPTION}" == "-p" ]
+								then 
+									ParalleliseME "YES" 
+								else 
+									ParalleliseME "NO" 
+							fi
+
+							#make 
 							cp _History.txt ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
 							cd ../bin
 							mv -f * ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
@@ -930,7 +1044,15 @@ DoInstallMasTerEngine()
 
 							echo "  // Compile MSBAS Tools as well "
 							cd MSBASTools/sources
-							make 
+							
+							if [ "${PARALLELOPTION}" == "-p" ]
+								then 
+									ParalleliseME "YES" 
+								else 
+									ParalleliseME "NO" 
+							fi
+							#make 
+
 							cd ../bin
 							mv -f * ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
 							cd ../..
@@ -1058,41 +1180,77 @@ function TstPathGnuFctLinux()
 
 DoInstallMSBAS()
 	{
-		echo "  // OK, I will try to install msbasv4 and msbas_extract using msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip which source was prepared to be Mac and Linux compliant for this installer." 
-		echo "  // It will run msbas in parallel on ALL the available cores for a maximum of efficiency." 
-		echo "  // Note that another version named msbas_20201009_wExtract_Unified_20220818-Gilles.zip would run on a LIMITED number of cores (max 12 threads). "
-		echo "  //   If you want that less optimized version, please install it manually -. "
-		echo "  //   You can contact directely the autor (sergey.samsonov@NRCan-RNCan.gc.ca) for other version or for more info. In that case, you will have to comile it manually "
+		echo "  // msbas software performs the svd inversion for the ground deformation time series." 
+		echo "  //     The sources were prepared to be Mac and Linux compliant for this installer." 
+		echo "  // Several versions are possible, e.g.: " 
+		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip runs msbasv4 (2D) in parallel on ALL the available cores for a maximum of efficiency. "
+		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip runs msbasv4 (2D) on only one core. "
+		echo "  //      msbas_20201009_wExtract_Unified_20220818-Gilles.zip runs msbasv4 (2D) on a LIMITED number of cores (max 12 threads). "
+		echo "  //      msbas_v10_20230601_Gilles.zip runs msbasv10 (3/4D)... Not ready for the MasTer Toolbox yet, i.e. for manual usage only . "
+		echo "  //   If you want another version, please install it manually. "
+		echo "  //   You can contact directely the autor (sergey.samsonov@NRCan-RNCan.gc.ca) for other version or for more info. In that case, you will have to compile it manually "
 		echo "  //   i.e.: unzip the package, go to sources subdirs and run make; move binaries in MSBAS dir)"
-		AskExternalComponent "msbas (msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip)" "Github or contact ndo@ecgs.lu "
+
+		# Below assign msbas zipped version to install as RAWFILE
+		AskDistroComponent "msbas" "https://github.com/ndoreye/MasTerToolbox_Distribution"
+
+		echo "  // OK, I will try to install msbas and msbas_extract using ${RAWFILE}. "
+
 		if [ "${SKIP}" == "No" ] ; then 
 			FILEXT="${RAWFILE##*.}"
- 
+ 			FILENOXT=`echo "${RAWFILE%.*}"`
 			if [ "${FILEXT}" == "zip" ] 
 				then 
-					if [ "${RAWFILE}" != "msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip" ] ; then 
-							echo "msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip; can't continue. Please proceed manually"
-						else
-							unzip ${HOMEDIR}/SAR/EXEC/${RAWFILE}
-							cd ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles
-							make all 
-							cp ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles/msbasv4 ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
-							
+					# Save possible former versions
+					FORMERVERSION=`ls ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/msbasv* 2>/dev/null | grep -v "zip"`
+					if [ "${FORMERVERSION}" != "" ] ; then
+						echo "  // Save former version in SAR/MasTerToolbox/MSBAS/Former_version/. "
+						mkdir -p ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/Former_version
+						mv -f ${FORMERVERSION} ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/Former_version/
+					fi
+
+					unzip ${PATHDISTRO}/msbas_sources/${RAWFILE}
+					cd ${PATHDISTRO}/msbas_sources/${FILENOXT}
+					
+					make all 
+					
+					# Check version 
+					MSBASVERSION=`ls msbasv* | grep -v "zip" | cut -d v -f2`
+					echo "  // msbas version ${MSBASVERSION} compiled. "
+
+	
+					# store compiled msbas in SAR/MasTerToolbox/MSBAS/
+					echo "  // store compiled msbasv${MSBASVERSION} in SAR/MasTerToolbox/MSBAS/"
+					cp ${PATHDISTRO}/msbas_sources/${FILENOXT}/msbasv${MSBASVERSION} ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
+
+					case ${MSBASVERSION} in 
+						"4")
+							# msbas_extract only available in v4
+							echo "  // msbas_extract available with msbasv${MSBASVERSION}; Compile it now "
 							cd msbas_extract
 							make
-							cp ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles/msbas_extract/msbas_extract ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
+							cp ${PATHDISTRO}/msbas_sources/${FILENOXT}/msbas_extract/msbas_extract ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
 							cd ${HOMEDIR} 
-							
-							mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-							mv -f ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip ${HOMEDIR}/SAR/EXEC/Sources_Installed
-							rm -rf ${HOMEDIR}/SAR/EXEC/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles 
-							rm -rf ${HOMEDIR}/SAR/EXEC/__MACOSX
-					fi
-					echo "  // "
+							;;
+						"10")
+							echo "  // msbas_extract not available with msbasv${MSBASVERSION}; Compile it with a former version if needed... "
+							;;
+						*) 
+							echo " Unknown version. Please do manually"	
+							;;
+					esac
+					
+					# Keep sources
+					mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
+					cp -f ${PATHDISTRO}/msbas_sources/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed
+					rm -rf ${PATHDISTRO}/msbas_sources/${FILENOXT}
+					rm -rf ${PATHDISTRO}/msbas_sources/${FILENOXT}/__MACOSX
+					
 				else 
 					echo " Format not as expected (zip). May not be genuine file ? Please do manually"		
 			fi	
 		fi
+		echo "  // "
 	}
 
 function InstallMSBAS()
@@ -1105,7 +1263,7 @@ function InstallMSBAS()
 						echo "  // OK, let's check its version. It is your responsability to verify that it is the last one though..."
 					
 						which msbas > List_msbas.txt
-						for i in `seq 1 10` ; do which msbasv$i; done >> List_msbas.txt
+						for i in `seq 1 20` ; do which msbasv${i}; done >> List_msbas.txt
 						NROFMSBAS=$(cat List_msbas.txt | wc -l)
 						if [ ${NROFMSBAS} -gt 0 ]
 							then
@@ -1134,6 +1292,19 @@ function InstallMSBAS()
 								done
 							else 
 								echo "last msbas version installed is ${MSBASVER}"
+								while true ; do
+								read -p "Do you want to install a new version [y]es or [n]o ? "  yn
+									case $yn in
+										[Yy]* ) 
+											DoInstallMSBAS
+											break ;;
+										[Nn]*)
+											echo "  // OK" 
+											break ;;
+										* ) 
+											echo "Please answer [y]es or [n]o." ;;
+									esac
+								done
 
 						fi
 						break ;;
@@ -1150,6 +1321,36 @@ function InstallMSBAS()
 		echo ""	
 	}
 	
+function ParalleliseME()
+	{
+		SEARCHSTRING=$1 	# YES or NO
+		
+		# Check if the line for parallelisation exists in the makefile 
+ 		if ${PATHGNU}/ggrep -qF "USEOPENMP = " makefile 
+ 			then
+ 				if [ "${SEARCHSTRING}" == "YES" ]
+					then 
+						echo " using the parallelistaion option"
+						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = YES
+						# ${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = YES"'/' makefile
+						make USEOPENMP=YES
+					else 
+						echo " without using the parallelistaion option"
+						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = NO
+						# ${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = NO"'/' makefile
+						make
+				fi
+			else
+			    if [ "${SEARCHSTRING}" == "YES" ]
+			    	then 
+			  			echo "The parallelistaion option line doesn't exist in the makefile ? It must have a line like this: "
+			    		echo "USEOPENMP = ... or USEOPENMP?=..."
+			    		echo "If your version of MasTer Engine is not planned for parallelistaion, just run the script without the -p option."
+			    		exit
+			    fi
+		fi
+	}
+
 	
 ###############
 # Some advice #
@@ -1196,9 +1397,6 @@ done
 ############
 # Check OS #
 ############
-OS=`uname -a | cut -d " " -f 1 `
-
-
 case ${OS} in 
 	"Linux") 
 		EchoInverted "  // We shall install/update MasTer Toolbox on this Linux Computer. Your OS is:  "
@@ -1234,13 +1432,13 @@ echo
 ################################
 cd ${HOMEDIR}
 mkdir -p SAR
-mkdir -p SAR/DOC
 mkdir -p SAR/EXEC
+mkdir -p SAR/MasTerToolbox/DOC
 mkdir -p SAR/MasTerToolbox/MasTerEngine
 mkdir -p SAR/MasTerToolbox/MasTerEngine/_Sources_ME
 mkdir -p SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older
 mkdir -p SAR/MasTerToolbox/MSBAS
-mkdir -p SAR/MasTerToolbox/SCRIPTS_OK
+mkdir -p SAR/MasTerToolbox/SCRIPTS_MT
 
 #########################
 # Check type of install #
@@ -1379,7 +1577,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 								break ;;
 						[Ii]* ) 				
 								sudo snap install gitkraken --classic
-								AptInsatll "gitkraken --classic"
+								#AptInsatll "gitkraken --classic"
 								break ;;
 						[Ssn]* ) 
 								echo "  // OK, I skip it."
@@ -1455,7 +1653,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 							echo "  // OK, install GMT (last version ?) and GDAL..."
 							AptInsatll "gdal-bin" 
 							AptInsatll "libgdal-dev"
-							AptInsatll "libgdal26" 
+							#AptInsatll "libgdal26" 
+							AptInsatll "libgdal30" 
 							AptInsatll "libhdf5-dev" 
 							AptInsatll "gmt"
 							AptInsatll "libnetcdf-dev"
@@ -1587,20 +1786,23 @@ if [ "${TYPERUN}" == "I" ] ; then
 							sudo apt install "g++"
 							AptInsatll "espeak -y" 		#(to make your computer talking during mass processing)
 							if [ -f /etc/ImageMagick/policy.xml ] ; then 
-								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick/policy.xml 
-								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick/policy.xml 
-								sudo sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
-								sudo sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
-								sudo sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick/policy.xml 
 							fi
 							if [ -f /etc/ImageMagick-6/policy.xml ] ; then 
-								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick-6/policy.xml
-								sudo sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick-6/policy.xml
-								sudo sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
-								sudo sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
-								sudo sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick-6/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick-6/policy.xml
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick-6/policy.xml
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
+								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick-6/policy.xml 
 							fi
 							AptInsatll "parallel"
+							AptInsatll "mpich"
+							AptInsatll "libgsl-dev"	
+							
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -1798,6 +2000,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 							
 							# MasTer Toolbox Organizer
 							/opt/local/bin/python -m pip install pyqt6
+							
+							# MasTer Toolbox Optimisation 
+							/opt/local/bin/python -m pip install networkx
+							
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -1898,6 +2104,26 @@ if [ "${TYPERUN}" == "I" ] ; then
 
 				eval MYDISPLAY=`who -m | cut -d "(" -f 2  | cut -d ")" -f 1`
 
+				if [ "$MYDISPLAY" == "" ]
+					then 
+						eval MYDISPLAY=`who | cut -d "(" -f 2  | cut -d ")" -f 1`
+						TSTNRDISPL=`who | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l`
+				fi 
+				if [ "$MYDISPLAY" == "" ] || [ ${TSTNRDISPL} -gt 1 ]
+					then 
+						echo "I can't find out which is your current DISPLAY value. "
+						echo "I can however see that you have the following DISPLAYs on your server:"
+						# The following line list all the DISPLAYs:
+						ps -u $(id -u) -o pid=     | xargs -I PID -r cat /proc/PID/environ 2> /dev/null     | tr '\0' '\n'     | grep ^DISPLAY=:     | sort -u
+						
+						while true; do
+							read -p "Which one do you want to use (answer someting like \":0.0\" without the quotes) ? "  MYDISPLAY
+							echo "If no Terminal pops up here after, cancel the current script and start again with another DISPLAY"
+							break
+						done
+						eval MYDISPLAY=`echo ${MYDISPLAY}`
+				fi 
+
 				echo "  // Your current session runs on DISPLAY ${MYDISPLAY}"
 
 				while true; do
@@ -1963,17 +2189,6 @@ if [ "${TYPERUN}" == "I" ] ; then
 
 				# Need bash as default shell - must change Zsh in bash from Catalina (i.e. 10.15)
 				
-				TSTSH=`echo "$SHELL"`
-				if [ "${TSTSH}" == "/bin/bash" ] 
-					then 
-						echo " // Your OS is probably older than v 10.15 or shell was already changed to bash. No action required. "
-					else	
-						echo " // Your OS is probably v 10.15 or more recent. Need to change default shell Zsh with bash for scripts compatibility issues. "
-						chsh -s /bin/bash 	
-						echo " // It will only be effective in a new Terminal, hence close the present Terminal and relaunch the prensent script in that new terminal"
-						exit
-				fi
-				
 				echo ""
 				echo "  // Watch the messages displayed during installations as it may inform you about errors and/or warnings that may require your attention and actions."
 				echo ""
@@ -2033,6 +2248,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 							echo ""
 							echo "  // Upgrading outdated ports. May take time... "
 							sudo port upgrade outdated
+							echo "  // Reclaiming outdated ports... "
+							sudo port reclaim
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2077,7 +2294,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 										done
 
 									else 
-										echo "Gitkraken version ${GITVER} is installed"
+										if [ "${GITVER}" == "" ]
+											then 
+												echo "Gitkraken version ${GITVER2} is installed"
+											else 
+												echo "Gitkraken version ${GITVER} is installed"
+										fi
 										echo "  // It is your responsability to verify that it is the last one though..."
 								fi
 								break ;;
@@ -2106,23 +2328,31 @@ if [ "${TYPERUN}" == "I" ] ; then
 								GIMPVER=`gimp -version 2>/dev/null`
 								if [ "${GIMPVER}" == "" ] 
 									then 
-										echo "Gimp seems not installed. "
-										while true ; do
-										read -p "Do you want to install it now [y]es or [n]o ? "  yn
-											case $yn in
-												[Yy]* ) 
-													echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
-													PortInstall "gimp2" 
-													#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
-													#brew install --cask gimp
-													break ;;
-												[Nn]*)
-													echo "  // OK, you know..." 
-													break ;;
-												* ) 
-													echo "Please answer [y]es or [n]o." ;;
-											esac
-										done
+										if [ `port list 2>/dev/null | ${PATHGNU}/grep gimp2 | wc -l` -gt 0 ] 
+											then 
+												GIMPVER=$(port info 'gimp2' 2>/dev/null | ${PATHGNU}/grep " @" | ${PATHGNU}/gawk '{ print $2 }' )
+												echo "GIMP version ${GIMPVER} is installed"
+												echo "  // It is your responsability to compare your version with the last one available..."
+												#printf "%-60s%-20s\n" "--> GIMP (gimp2):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
+											else
+												echo "Gimp seems not installed. "
+												while true ; do
+												read -p "Do you want to install it now [y]es or [n]o ? "  yn
+													case $yn in
+														[Yy]* ) 
+															echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
+															PortInstall "gimp2" 
+															#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
+															#brew install --cask gimp
+															break ;;
+														[Nn]*)
+															echo "  // OK, you know..." 
+															break ;;
+														* ) 
+															echo "Please answer [y]es or [n]o." ;;
+													esac
+												done
+										fi
 									else 
 										echo "${GIMPVER} is installed"
 										CheckLasPortVersion "gimp2" 
@@ -2313,6 +2543,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PortInstall "gdal +libkml"			
 							PortInstall "parallel"
 							
+							PortInstall "mpich"
+							PortInstall "libomp"
+							
+							PortInstall "gsl"
 							
 							WHEREISCONV=`which convert`					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
 							PATHCONV=`dirname ${WHEREISCONV}`
@@ -2359,7 +2593,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to [c]heck, [i]nstall or [s]kip Fiji/ImageJ  ? [c/i/s] "  cis
 					case $cis in
 						[Cc]* ) 
-							FIJIEXEC=`find /Applications/Fiji.app/Contents/MacOS/  -type f -name "ImageJ-macosx*" 2>/dev/null`
+							echo "  // OK, let's check its version. "
+							FIJIEXEC=`find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*" 2>/dev/null`
 							if [ "${FIJIEXEC}" == "" ] 
 								then
 									echo "Fiji/ImageJ seems not installed. "
@@ -2380,7 +2615,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 											esac
 										done
 									else 
-										echo "Fiji/ImageJ seems installed"
+										FIJIVERMAC=`${PATHFIJI}/ImageJ-macosx --headless -h 2>&1 > /dev/null | grep launcher`
+										echo "Fiji/ImageJ seems installed and is version ${FIJIVERMAC}"
+										echo  "  // It is your responsability to verify that it is the last one though..."
+										
 								fi
 								break ;;
 						[Ii]* ) 				
@@ -2466,7 +2704,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 							# MasTer Toolbox Organizer
 							/opt/local/bin/python -m pip install pyqt6
 							/opt/local/bin/python -m pip install appscript
-							
+	
+							# MasTer Toolbox Optimisation
+							/opt/local/bin/python -m pip install networkx
+						
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2485,9 +2726,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to [c]heck, [i]nstall or [s]kip QGIS  ? [c/i/s] "  cis
 					case $cis in
 					[Cc]* ) 				
-							echo "  // OK, let's check its version. It is your responsability to verify that it is the last one though..."
-							QGISVER=`/Applications/QGIS.app/Contents/MacOS/QGIS --version 2>/dev/null`
-							QGISVER2=`find /Applications/QGIS.app/  -type f -name "QGIS" 2>/dev/null`
+							echo "  // OK, let's check its version. "
+							QGISVER=`/Applications/QGIS*/Contents/MacOS/QGIS --version 2>/dev/null`
+							QGISVER2=`find /Applications/QGIS*/  -type f -name "QGIS" 2>/dev/null`
 							if [ "${QGISVER}" == "" ] && [ "${QGISVER2}" == "" ] 
 								then 
 									echo "QGIS seems not installed. "
@@ -2509,12 +2750,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 														LISTING=$(sudo hdiutil attach ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr | grep Volumes) # exec and store output in variable 
     													VOL=$(echo "$LISTING" | cut -f 3)		# take 3rd element 
 														
-														echo " // move /SAR/EXEC/QGIS.app in /Applications. "
-														if [ -d /Applications/QGIS.app ] ; then 
+														echo " // move /SAR/EXEC/QGIS(.app) in /Applications. "
+														if [ -d /Applications/QGIS.app ] || [ -d /Applications/QGIS ] ; then 
 															echo "  // backup first the former version available in /Applications..." 
-															sudo mv -f /Applications/QGIS.app /Applications/QGIS.app.bak.${RUNDATE}
+															sudo mv -f /Applications/QGIS* /Applications/QGIS.bak.${RUNDATE}
 														fi 
-														sudo cp -rf ${VOL}/QGIS.app /Applications/
+														sudo cp -rf ${VOL}/QGIS* /Applications/
 														#sudo cp -rf ${VOL}/QGIS.app ${HOMEDIR}/SAR/EXEC/
 														#mv -f /SAR/EXEC/QGIS.app /Applications/
 
@@ -2571,12 +2812,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 									LISTING=$(sudo hdiutil attach ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr | grep Volumes) # exec and store output in variable 
     								VOL=$(echo "$LISTING" | cut -f 3)		# take 3rd element 
 
-									echo " // move /SAR/EXEC/QGIS.app in /Applications. "
-									if [ -d /Applications/QGIS.app ] ; then 
+									echo " // move /SAR/EXEC/QGIS(.app) in /Applications. "
+									if [ -d /Applications/QGIS.app ] || [ -d /Applications/QGIS ] ; then 
 										echo "  // backup first the former version available in /Applications..." 
-										sudo mv -f /Applications/QGIS.app /Applications/QGIS.app.bak.${RUNDATE} 
+										sudo mv -f /Applications/QGIS* /Applications/QGIS.bak.${RUNDATE} 
 									fi 
-									sudo cp -rf ${VOL}/QGIS.app /Applications/
+									sudo cp -rf ${VOL}/QGIS* /Applications/
 									#sudo cp -rf ${VOL}/QGIS.app ${HOMEDIR}/SAR/EXEC/
 									#mv -f /SAR/EXEC/QGIS.app /Applications/
 
@@ -2623,121 +2864,113 @@ fi
 #####################################################
 # Now install/update MasTer Toolbox main components #
 #####################################################
-echo 
+
+EchoInverted "  // MasTer Toolbox main components:"
 echo 
 echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+echo "  // MasTer Toolbox is freely available (under GPL licence) from https://github.com/ndoreye/MasTerToolbox_Distribution."
 
-case ${OS} in 
-	"Linux") 
-		echo "  // We shall install/update MasTer Toolbox main components on this Linux Computer"
-		echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
-		
-		# MASTER Engine - Linux
-		# -------------
+	cd
+   	read -e -p "Enter the path to the MasTerToolbox_Distribution (that is the directory synchronised from github). You can use Tab for autocompletion (e.g. SAR/MasTerToolbox/MasTerToolbox_DIstribution): " PATHDISTRO
 
-		InstallMasTerEngine
-		
-		# MSBAS and EXTRACT TOOL - Linux
-		# ----------------------
-		InstallMSBAS	
+	while true; do
+	    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] ; then # [[ -d ${PATHDISTRO} ]] only test if exist
+	        echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
+	        break
+	    else
+	        echo "Directory ${PATHDISTRO} does not exist or is empty. Please try again."
+  			read -e -p "Enter the path to the MasTerToolbox_Distribution (that is the directory synchronised from github). You can use Tab for autocompletion (e.g. SAR/MasTerToolbox/MasTerToolbox_DIstribution): " PATHDISTRO
+	        break
+	    fi
+	done
 
-		# SCRIPTS - Linux
-		# -------
-			EchoInverted "  // MasTer Toolbox scrpits are required for interfacing MasTerEngine, msbas and their automation.   "
-			while true; do
-				read -p "Do you want to install MasTer Toolbox SCRIPTS ? [y/n] "  yn
-				case $yn in
-					[Yy]* ) 				
-							echo "  // OK, I do it."
-							AskExternalComponent "SCRIPTS_OK" "Github or contact ndo@ecgs.lu"
-							if [ "${SKIP}" == "No" ] ; then 
-								if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
-									FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*SCRIPTS*" 2>/dev/null`
-									SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
-								fi
 
-								FILEXT="${RAWFILE##*.}"
- 
-								if [ "${FILEXT}" == "zip" ] ; then 
-										ZIPDIRNAME=`basename ${RAWFILE} .zip`
-										cd ${HOMEDIR}/SAR/EXEC/
-										unzip ${RAWFILE}
-										mv -f ${HOMEDIR}/SAR/EXEC/${ZIPDIRNAME}/* ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_OK/
-																			  /Users/nicolas/SAR/MasTerToolbox/SCRIPTS_OK
-										rm -f ${HOMEDIR}/SAR/EXEC/${ZIPDIRNAME}
-										mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/
-										mv -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
-										echo "  // "
-									else 
-										echo " Format not as expected (zip). May not be genuine file ? Please do manually"			
-								fi	
-							fi
-							break ;;
-					[Nn]* ) 
-							echo "  // OK, I skip it."
-							break ;;
-						* )  
-							echo "Please answer [y]es or [n]o.";;
-					esac	
-				done							
-				echo ""			
-		;;
-	"Darwin")
-		echo "  // We shall install/update MasTer Toolbox main components on this Mac Computer"		
-		echo "  //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
-		
-		# MASTER Engine - Mac OS X
-		# -------------
 
-		InstallMasTerEngine
 
-		# MSBAS and EXTRACT TOOL - Mac
-		# ----------------------
-		InstallMSBAS	
+echo
+echo "  // OK, I will try to install/update MasTer Toolbox from ${PATHDISTRO}."
+echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
 
-		# SCRIPTS - Mac OS X
-		# -------
-			EchoInverted "  // MasTer Toolbox scrpits are required for interfacing MasTerEngine, msbas and their automation.   "
-			while true; do
-				read -p "Do you want to install MasTer Toolbox SCRIPTS ? [y/n] "  yn
-				case $yn in
-					[Yy]* ) 				
-							echo "  // OK, I do it."
-							AskExternalComponent "SCRIPTS_OK" "Github or contact ndo@ecgs.lu"
-							if [ "${SKIP}" == "No" ] ; then 
-								if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
-									FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*SCRIPTS*" 2>/dev/null`
-									SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
-								fi
+	# MASTER Engine 
+	# -------------
+	while true; do
+		read -p "Do you want to compile MasTer Engine with the parallelisation option ? [Y/N] "  yn
+		case $yn in
+			[Yy]* ) 				
+					echo "  // OK, I will do it."
+					PARALLELOPTION="-p"
+					break ;;
+			[Nn]* ) 
+					echo "  // OK, I will compile it without the parallel option."
+					PARALLELOPTION=""
+					break ;;
+				* )  
+					echo "Please answer [y]es or [n]o.";;
+			esac	
+		done							
+	InstallMasTerEngine
+	
+	# MSBAS and EXTRACT TOOL 
+	# ----------------------
+	InstallMSBAS	
+	
+	# SCRIPTS 
+	# -------
+	EchoInverted "  // MasTer Toolbox scrpits are required for interfacing MasTerEngine, msbas and their automation.   "
+	while true; do
+		echo "Do you want to install/update MasTer Toolbox SCRIPTS using those from https://github.com/ndoreye/MasTerToolbox_Distribution ?"
+		echo "  Scripts will be copied from ${PATHDISTRO}/SCRIPTS_sources to ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT"
+		echo "      and sources will be kept in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/"
+		echo "  If former scripts exist, they will be strored in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/"
 
-								FILEXT="${RAWFILE##*.}"
- 
-								if [ "${FILEXT}" == "zip" ] ; then 
-										ZIPDIRNAME=`basename ${RAWFILE} .zip`
-										cd ${HOMEDIR}/SAR/EXEC/
-										unzip ${RAWFILE}
-										mv -f ${HOMEDIR}/SAR/EXEC/${ZIPDIRNAME}/* ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_OK
-										rm -f ${HOMEDIR}/SAR/EXEC/${ZIPDIRNAME}
-										mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/
-										mv -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
-										echo "  // "
-									else 
-										echo " Format not as expected (zip). May not be genuine file ? Please do manually"			
-								fi	
-							fi
-							break ;;
-					[Nn]* ) 
-							echo "  // OK, I skip it."
-							break ;;
-						* )  
-							echo "Please answer [y]es or [n]o.";;
-					esac	
-				done							
-				echo ""			
+		read -p " Proceed ? [y/n] "  yn
+		case $yn in
+			[Yy]* ) 				
+					echo "  // OK, I do it."
+					
+					if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT | wc -l ` -gt 0 ] ; then 
+						# Save former scripts to ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/SCRIPTS_DATE
+						mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}
+						mv ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/
+					fi 
+					# install
+					cp -Rf ${PATHDISTRO}/SCRIPTS_sources/* ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/
+					# keep installed sources 
+					mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
+					cp -Rf ${PATHDISTRO}/SCRIPTS_sources/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
 
-		;;
-esac
+					break ;;
+			[Nn]* ) 
+					echo "  // OK, I skip it."
+					break ;;
+				* )  
+					echo "Please answer [y]es or [n]o.";;
+			esac	
+		done							
+		echo ""			
 
+	# DOC 
+	# -------
+	EchoInverted "  // Documentation for MasTer Toolbox is stored in ${PATHDISTRO}/DOC.   "
+	while true; do
+		echo "Do you want to copy/update MasTer Toolbox documentation using those from https://github.com/ndoreye/MasTerToolbox_Distribution ?"
+
+		read -p " Proceed ? [y/n] "  yn
+		case $yn in
+			[Yy]* ) 
+					cp -Rf ${PATHDISTRO}/DOC/* ${HOMEDIR}/SAR/MasTerToolbox/DOC/
+					break
+					;;
+			[Nn]* ) 
+					echo " OK, you know..."
+					break
+					;;					
+				* )  
+					echo "Please answer [y]es or [n]o."
+					break
+					;;
+		esac
+	done
 echo 
 
 ##########################################
@@ -2751,7 +2984,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 		EchoInverted "  // Update now some PATH in /.bashrc"
 		echo "  // "
 		echo "  // The /.bashrc contains the following PATH:"		
-		grep "PATH=" ${HOMEDIR}/.bashrc | grep -v "export" | grep -v "#"  | sed -e "s/^[ \t]*//" | sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
+		grep "PATH=" ${HOMEDIR}/.bashrc | grep -v "export" | grep -v "#"  | ${PATHGNU}/sed -e "s/^[ \t]*//" | ${PATHGNU}/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
 		echo "  // "
 		EchoInverted "  // Let's review and update the PATH state variable if needed"	
 
@@ -2774,18 +3007,19 @@ if [ "${TYPERUN}" == "I" ] ; then
 		UpdatePATHBashrcBEFORE "/opt/local/bin" 
 
 		
-		# scripts
+		# scripts 
 		# -------
-		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_OK"
-		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_OK/MasTerOrganizer"
-		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_OK/_cron_scripts"
-		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_OK/zz_Utilities_CIS"
-		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_OK/zz_Utilities_CIS_Ndo"
-	
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/optimtoolbox"
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/MasTerOrganizer"	
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/_cron_scripts"	
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/zz_Utilities_MT_Ndo"			
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/zz_Utilities_MT"
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT"	
+			
 		# MasTerEngine sources
 		# --------------------
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME"	
 		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine"	
-		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME"		
 	
 		# msbas
 		# -----
@@ -2812,7 +3046,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 		EchoInverted "  // Update now some VARIABLES in /.bashrc"
 		echo "  // "
 		echo "  // Currently, the state variables in the /.bashrc are :"
-		cat ${HOMEDIR}/.bashrc | grep export | grep -v "#"  | sed -e "s/^[ \t]*//" | sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
+		cat ${HOMEDIR}/.bashrc | grep export | grep -v "#"  | ${PATHGNU}/sed -e "s/^[ \t]*//" | ${PATHGNU}/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
 		echo "  // "
 		echo "  // Let's review and update the ${smso}other state variables${rmso} if needed."	
 		
@@ -2831,7 +3065,13 @@ if [ "${TYPERUN}" == "I" ] ; then
 		if [ "${PATHFIJI}" != "" ] ; then 
 				UpdateVARIABLESBashrc "PATHFIJI" "export PATHFIJI=${PATHFIJI}"
 			else 
-				FIJIEXEC=`find ${HOMEDIR}/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*"`
+				if [ "${OS}" == "Linux" ] 
+					then 													
+						FIJIEXEC=`find ${HOMEDIR}/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*"`
+					else 
+						FIJIEXEC=`find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*"`
+				fi
+
 				PATHFIJI=`dirname ${FIJIEXEC}`	
 				UpdateVARIABLESBashrc "PATHFIJI" "export PATHFIJI=${PATHFIJI}"
 		fi
@@ -2895,6 +3135,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 					
 				echo "  // If you have more directories or disks where you want to run more processes, you can add them also." 
 				echo "  //    I suggest here two names but feel free to change the present script if you want to give them other names or add more of them. "					
+					NecessaryDisk "1660" "/mnt/1660 where 1660 mounting point is defined in /etc/fstab; you can also add a path instead of a disk /Path/To_Your/Dir5"
+					NecessaryDisk "3610" "/mnt/3610 where 3610 mounting point is defined in /etc/fstab; you can also add a path instead of a disk /Path/To_Your/Dir6"
+
 					NecessaryDisk "SynoData" "/mnt/syno_data where syno_data mounting point is defined in /etc/fstab"
 					NecessaryDisk "HOMEDATA" "/mnt/dellrack_data where dellrack_data mounting point is defined in /etc/fstab"
 				;;
@@ -2913,6 +3156,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 					NecessaryDisk "3602" "/Volumes/You_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
 				echo "  // If you have more directories or disks where you want to run more processes, you can add them also. "
 				echo "  //    I suggest here two names but feel free to change the present script if you want to give them other names or add more of them. "					
+					NecessaryDisk "1660" "/Volumes/You_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
+					NecessaryDisk "3610" "/Volumes/You_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
 
 					NecessaryDisk "SynoData" "/Volumes/ou_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
 					NecessaryDisk "HOMEDATA" "Path to an additionnal internal disk if any"
@@ -2947,16 +3192,16 @@ if [ "${TYPERUN}" == "I" ] ; then
 						echo "alias say='echo "$1" | espeak -s 120 2>/dev/null'" >> ${HOMEDIR}/.bashrc 
 				fi 
 
-				TST=$(grep "# Trick to solve possible ImageJ issues" ${HOMEDIR}/.bashrc)
-				if [ `echo "${TST}" | wc -w` -eq 0 ]  
-					then				
-						# Back it up first if not done yet
-						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
-
-						echo "# Trick to solve possible ImageJ issues. In case of prblm opening Terminal windows from command line, " >> ${HOMEDIR}/.bashrc 
-						echo "#   check you DISPLAY value using the command who (shows all displays) or who -m (shows your current display) and change below accordingly" >> ${HOMEDIR}/.bashrc 
-						echo "export DISPLAY=:0.0" >> ${HOMEDIR}/.bashrc 
-				fi
+# 				TST=$(grep "# Trick to solve possible ImageJ issues" ${HOMEDIR}/.bashrc)
+# 				if [ `echo "${TST}" | wc -w` -eq 0 ]  
+# 					then				
+# 						# Back it up first if not done yet
+# 						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+# 
+# 						echo "# Trick to solve possible ImageJ issues. In case of prblm opening Terminal windows from command line, " >> ${HOMEDIR}/.bashrc 
+# 						echo "#   check you DISPLAY value using the command who (shows all displays) or who -m (shows your current display) and change below accordingly" >> ${HOMEDIR}/.bashrc 
+# 						echo "export DISPLAY=:0.0" >> ${HOMEDIR}/.bashrc 
+# 				fi
 				
 				UpdatePATHBashrcAFTER "/usr/local/tigervnc/bin/"			# in case of usage of tigervnc 
 				echo " "

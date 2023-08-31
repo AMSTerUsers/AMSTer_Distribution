@@ -1,0 +1,65 @@
+#
+# .bashrc
+#
+
+# User specific aliases and functions
+# Source global definitions
+
+# Set prompt
+PS1="[\u@\h \$PWD]>"
+PS2="[\u@\h \$PWD]#"
+
+# User specific environment and startup programs
+PATH=/opt/local/bin:$PATH
+PATH="$PATH:/opt/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+BASH_ENV=$HOME/.bashrc
+USERNAME=""
+LANG=C
+
+# export EDITOR=/usr/bin/edit
+export EDITOR=/usr/bin/nano
+export PAGER=/usr/bin/less
+
+export USERNAME LANG BASH_ENV PATH 
+
+export JAVA_HOME=/Library/Internet\ Plug-Ins/JavaAppletPlugin.plugin/Contents/Home
+
+
+# MasTer PATHS
+##################
+
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/MasTerOrganizer
+PATH=$PATH:/Users/doris/SAR/EXEC
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/MSBAS
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/MasTerEngine/_Sources_ME
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/MasTerEngine
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/zz_Utilities_MT_Ndo
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/zz_Utilities_MT
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/_cron_scripts
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT
+PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/optimtoolbox
+
+# MasTer VARIABLES
+##################
+
+export PATH_HOMEDATA=/Users/doris/
+export PATH_3602=/Volumes/hp-D3602-Data_RAID5/
+export PATH_3601=/Volumes/hp-D3601-Data_RAID6/
+export PATH_3600=/Volumes/hp-D3600-Data_Share1/
+export PATH_1650=/Volumes/hp-1650-Data_Share1/
+export PATH_3610=/Volumes/D3610/
+export PATH_1660=/Volumes/hp1660/
+
+export PATH_DataSAR=/Volumes/DataSAR/
+export EARTH_GRAVITATIONAL_MODELS_DIR=${PATH_DataSAR}/SAR_AUX_FILES/EGM
+export ENVISAT_PRECISES_ORBITS_DIR=${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ENV_ORB
+export S1_ORBITS_DIR=${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB
+export PATH_SCRIPTS=/Users/doris/SAR/MasTerToolbox
+export PATHCONV=/opt/local/bin
+export PATHFIJI=/Applications/Fiji.app/Contents/MacOS/
+export PATHGNU=/opt/local/bin
+export PATHTOCPXFIDDLE=/Users/doris/SAR/EXEC/
+export PATH=$PATH 
+#export OMP_NUM_THREADS=10,8,4
+#export OMP_NUM_THREADS=4,3,2
