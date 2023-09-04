@@ -103,6 +103,7 @@ Updates:
   2. msbas: source code for msbas 3D and 4D inversions. These are however not
   	 (yet) integrated within the MasTer Toolbox scripts
   3. MasTer Engine:
+    + new way to read S1 images in IW
     + half pixel offset bug in geoprojection removed 
     + more parallelistaion are now possible 
     + takes into account new CSK format
