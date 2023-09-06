@@ -73,14 +73,16 @@
 # New in Distro V 6.1:  - correct bug in indices for calculation of heading etc
 # New in Distro V 7.0:  - run as much in parallel as there are CPUs minus one (to be sure...) using only bash fct
 # New in Distro V 7.1: - replace if -s as -f -s && -f to be compatible with mac os if 
-
+# New in Distro V 8.0: - order of listing MAS and SLV dates in DefoInterpolx2Detrendi.txt was wrong 
+#						 in some rare cases, that is when MAS was the SM and was after the date of the SLV. 
+#						 Note that it was not an issue for S1 WS though.  
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/03/08 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V7.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V8.0 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 06, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -460,7 +462,13 @@ PrepareModeI()
  								ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
  								echo "${LINE} copied (link)" 
  								# put in file
- 								echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 								if [ ${MASTERDATE} -lt ${SLAVEDATE} ] 
+ 									then
+ 										echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 									else 
+										echo "Slave date appears before Master date. I guess you are dealing with non S1 WS and using a pair with the Super Master..."
+ 										echo "${LINE} ${BPERP} ${SLAVEDATE} ${MASTERDATE}" >> ../${MODETOCP}.txt
+ 								fi
  							else 
  								echo "${LINE} exist"
  						fi
@@ -512,7 +520,15 @@ PrepareModeI()
  												ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
  												echo "${LINE} copied (link)" 
  												# put in file
- 												echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 												#echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 												if [ ${MASTERDATE} -lt ${SLAVEDATE} ] 
+ 													then
+ 														echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 													else 
+														echo "Slave date appears before Master date. I guess you are dealing with non S1 WS and using a pair with the Super Master..."
+ 														echo "${LINE} ${BPERP} ${SLAVEDATE} ${MASTERDATE}" >> ../${MODETOCP}.txt
+ 												fi
+
  											else 
  												echo "${LINE} exist"
  										fi

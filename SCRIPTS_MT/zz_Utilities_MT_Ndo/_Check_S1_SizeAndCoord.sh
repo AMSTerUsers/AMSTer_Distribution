@@ -41,8 +41,8 @@
 # NdO (c) 2019/12/05 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Sept 26, 2022"
+VER="Distro V2.0 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Sept 01, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

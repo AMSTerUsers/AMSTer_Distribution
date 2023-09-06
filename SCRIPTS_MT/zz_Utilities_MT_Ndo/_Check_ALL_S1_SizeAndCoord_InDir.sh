@@ -28,17 +28,20 @@
 # New in V 1.1:	- typo in __Good and __Wrong images files to remove when older than 15 days
 # New in V 1.2:	- yet another typo in __Wrong images files to remove when older than 15 days
 # New in V 1.3:	- do not need TOLERANCE and may work with coordinates from AoI 
+# New in V 1.4:	- get TOLERANCE from  _Check_S1_SizeAndCoord.sh for display at the beginning of the script
 #
 # I know, it is a bit messy and can be improved.. when time. But it works..
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2019/12/05 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.3 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Jul 25, 2023"
+VER="Distro V1.4 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Sept 01, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
+
+TOLERANCEDISPLAY=`${PATHGNU}/ggrep "TOLERANCE=" ${PATH_SCRIPTS}/SCRIPTS_MT/zz_Utilities_MT_Ndo/_Check_S1_SizeAndCoord.sh`
 
 # Check parameters
 	case $# in
@@ -46,7 +49,7 @@ echo " "
 			echo " // Probably searching image footprint against AOI coordinates; no TOLERANCE needed"	
 			;;
 		10)
-			echo " // Probably searching image footprint against expected bursts, within TOLERANCE of ${TOLERANCE}"
+			echo " // Probably searching image footprint against expected bursts, within TORELANCE from _Check_S1_SizeAndCoord.sh, that is ${TOLERANCEDISPLAY}"
 			;;
 		*) 
 			if [ "$2" != "Dummy" ] ; then 

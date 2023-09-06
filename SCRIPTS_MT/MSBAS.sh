@@ -33,13 +33,15 @@
 # New in Distro V 2.3:	- check header.txt if it exist and ensure compatibility with msbas version
 # New in Distro V 3.0:	- if last param = --msbasvi (where i = version nr), then takes that one (if exist); if no 
 #						  3rd param, takes the highest version of msbas available 
+# New in Distro V 3.1:	- search for msbas version was missing in case of 2 param
+#						- and an exit for test was left in the script...
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/03/08 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 29, 2023"
+VER="Distro V3.1 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 06, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -72,6 +74,7 @@ if [ $# -eq 2 ] ; then
 		then
 			echo "2nd param seems to be the pix list."
 			PIXFILELIST="$2"
+			LastMsbasV
 		else
 			echo "Request specific msbas version $@."
 			MSBAS=`echo $@ | cut -d - -f3`
@@ -121,8 +124,6 @@ echo
 echo "Comment is: ${PARAMNAME}"
 echo "msbas is: ${MSBAS}"
 echo "pixlist is: ${PIXFILELIST}"
-
-exit
 
 if [ ! -f header_original.txt ] ; then cp header.txt header_original.txt ; fi
 

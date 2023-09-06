@@ -60,13 +60,15 @@
 # New in Distro V2.4.1: - display the number of image / total images to process 
 # New in Distro V2.5.0: - avoid confusion when no new data to process (error of if ! -s)
 # New in Distro V2.6.0: - read UTM zone for geocoding
+# New in Distro V2.6.1: - quote search for FORCES1DEM param to avoid "unary operator" error message
+#						- try to create PROROOTPATH just in case 
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2015/08/24 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.6.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 29, 2023"
+VER="Distro V2.6.1 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sep 01, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -99,7 +101,7 @@ FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are s
 
 DEMDIR=`GetParam DEMDIR`					# DEMDIR, path to dir where DEM is stored
 
-if [ ${FORCES1DEM} == "FORCE" ] 
+if [ "${FORCES1DEM}" == "FORCE" ] 
  then 
 	RECOMPDEM="FORCE"			# RECOMPDEM, recompute DEM even if already there (FORCE), or trust the one that would exist (KEEP)
  else 
@@ -301,6 +303,7 @@ SUPERMASDIR=${SUPERMASNAME}.csl
 # Check required dir:
 #####################
 	# Where data will be processed for the coregistration computation
+	mkdir -p ${PROROOTPATH}
 	if [ -d "${PROROOTPATH}/" ]
 	then
  	  echo "  //  OK: a directory exist where I can create a processing dir." 
