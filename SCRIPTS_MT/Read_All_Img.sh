@@ -111,6 +111,8 @@
 # New in Distro V 4.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 4.1 20230912:	- Cope with possible multiple CSK acquisitions on the same day
+#								- check that possible former S1, TDX, SAOCOM or ICEYE  links at reading are from the same OS
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/02/29 - could make better... when time.
@@ -436,6 +438,31 @@ function ChangeInPlace()
     fi
 	}	
 	
+function TestLink()
+	{
+	unset LINK
+	local LINK=$1
+	local TARGET=$(readlink -f "${LINK}")
+
+	EchoTee ""
+	if [ -e "${TARGET}" ]
+		then
+   			EchoTee " No problems with links in current SAR_CSL dir." 
+   			EchoTee  "  ${LINK} -> ${TARGET}"		# this may trigger weird message if no link exist such as  -> (stdin)
+   			EchoTee "I can securely carry on... "
+   		else 
+ 			EchoTee "Links in dir do not seem valid. At least the first lnik tries to point toward a ghost file: " 
+   			EchoTee  "  ${LINK} -> ${TARGET}"
+   			EchoTee "Either you are runningt this script from a computer with another type of OS (Linux vs mac), or another problem occurred. "
+   			EchoTee "In any case, I must stop here to let you sort it out. " 
+   			EchoTee "If you really want to read new images from a computer using a different OS, then you must first update all the existing links."
+   			EchoTee " You can do that e.g. with:    ReCreateLink_S1_Read.sh (which is not only for S1). See script for usage."
+	  		
+	  		exit 1
+    fi
+	EchoTee ""
+	}	
+	
 # Change parameters in Parameters txt files
 # function ChangeParamRead()
 # 	{
@@ -473,6 +500,10 @@ case ${SAT} in
 		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
 		REGION=`basename ${PARENTCSL}`
 
+		# Check with the first encountered link that the links are OK, eg. not from the wrong OS
+		FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ?? 
+		TestLink ${FIRSTLINK}
+ 
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${TRK}/NoCrop/)
 		# if not, remove broken link
 		EchoTee "Remove possible broken links"
@@ -535,6 +566,11 @@ case ${SAT} in
 		REGION=`basename ${PARENTCSL}`
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/)
 		# if not, remove broken link
+		
+		# Check with the first encountered link that the links are OK, eg. not from the wrong OS
+		FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ?? 
+		TestLink ${FIRSTLINK}
+ 
 		EchoTee "Remove possible broken links"
 		for LINKS in `ls -d *.csl 2>/dev/null`
 			do
@@ -1175,6 +1211,11 @@ case ${SAT} in
 			
 			PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
 			REGION=`basename ${PARENTCSL}`
+		
+			# Check with the first encountered link that the links are OK, eg. not from the wrong OS
+			FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ?? 
+			TestLink ${FIRSTLINK}
+ 	
 			# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_TX/NoCrop/  or ${PARENTCSL}_RX/NoCrop/ )
 			# if not, remove broken link
 			EchoTee "Remove possible broken links"
@@ -1316,6 +1357,11 @@ case ${SAT} in
 		# Use the bulk reader
 		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
 		REGION=`basename ${PARENTCSL}`
+		
+		# Check with the first encountered link that the links are OK, eg. not from the wrong OS
+		FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ?? 
+		TestLink ${FIRSTLINK}
+ 
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/)
 		# if not, remove broken link
 		EchoTee "Remove possible broken links"
@@ -1491,17 +1537,39 @@ case ${SAT} in
 	
 					"CSK") 
 								IMG=`GetDateOnly ${IMGDIR}`
-								CSKDataReader ${CSL}/Read_${IMG}.txt -create
-								ChangeInPlace PathToHDF5File ${RAW}/${IMGDIR}/*.h5  ${CSL}/Read_${IMG}.txt
-								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
-								CSKDataReader ${CSL}/Read_${IMG}.txt
-								TRKHEADING=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt Heading | cut -d c -f1`
-								TRKHEADING=${TRKHEADING}c
-								SCENELOCATION=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt "Scene location"`
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
-								EchoTee " Track of ${IMG} : ${TRKHEADING}" 
-								EchoTee "Image ${IMG} red"
-								EchoTee "Image ${IMG} : ${TRKHEADING}  : ${SCENELOCATION}" >> List_Files_Trk_Location_${RUNDATE}.txt
+								NRCSK=`ls ${RAW}/${IMGDIR}/*.h5 | wc -l |  ${PATHGNU}/gsed 's/[^0-9]*//g'`
+								if [ ${NRCSK} -gt 1 ]
+									EchoTee "WARNING: there are ${NRCSK} csk images acquired on ${IMG}; Processing them with additional index in SAR_CSL/ dir naming. " 
+									i=0
+									then 
+										for IMGH5 in `ls ${RAW}/${IMGDIR}/*.h5`	# with path 
+											do 
+												i=`echo "${i} + 1" | bc -l`
+												CSKDataReader ${CSL}/Read_${IMG}_${i}.txt -create
+												ChangeInPlace PathToHDF5File ${IMGH5}  ${CSL}/Read_${IMG}_${i}.txt
+												ChangeInPlace outputFilePath ${CSL}/${IMG}_${i} ${CSL}/Read_${IMG}_${i}.txt
+												CSKDataReader ${CSL}/Read_${IMG}_${i}.txt
+												TRKHEADING=`updateParameterFile ${CSL}/${IMG}_${i}.csl/Info/SLCImageInfo.txt Heading | cut -d c -f1`
+												TRKHEADING=${TRKHEADING}c
+												SCENELOCATION=`updateParameterFile ${CSL}/${IMG}_${i}.csl/Info/SLCImageInfo.txt "Scene location"`
+												echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+												EchoTee " Track of ${IMG}_${i} : ${TRKHEADING}" 
+												EchoTee "Image ${IMG}_${i} red"
+												EchoTee "Image ${IMG}_${i} : ${TRKHEADING}  : ${SCENELOCATION}" >> List_Files_Trk_Location_${RUNDATE}.txt
+											done
+									else 
+										CSKDataReader ${CSL}/Read_${IMG}.txt -create
+										ChangeInPlace PathToHDF5File ${RAW}/${IMGDIR}/*.h5  ${CSL}/Read_${IMG}.txt
+										ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
+										CSKDataReader ${CSL}/Read_${IMG}.txt
+										TRKHEADING=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt Heading | cut -d c -f1`
+										TRKHEADING=${TRKHEADING}c
+										SCENELOCATION=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt "Scene location"`
+										echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+										EchoTee " Track of ${IMG} : ${TRKHEADING}" 
+										EchoTee "Image ${IMG} red"
+										EchoTee "Image ${IMG} : ${TRKHEADING}  : ${SCENELOCATION}" >> List_Files_Trk_Location_${RUNDATE}.txt
+								fi
 								;;
 
 					"K5"|"KOMPSAT") 

@@ -2,6 +2,9 @@
 # -----------------------------------------------------------------------------------------
 # This script is aiming at re-creating the link of S1 images in REGION after reading in csl 
 #      format and stored in REGION_MODE where they will be used by the cis automated scripts. 
+#
+# It can actually do it also for ICEYE, SAOCOM or TDX images.
+#
 # The script will do this from S1 images in Asc and Desc specific dir. This script is based on 
 # Read_All_Img.sh, which can explain some useless stuffs here and there...
 #
@@ -14,6 +17,7 @@
 # Hard coded:	- 
 #
 # New in Distro V 1.1:	- Mute error while atemmpting to delete old links 
+# New in Distro V 1.2:	- cosmetic: it can works also for ICEYE, SAOCOM or TDX
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/02/29 - could make better... when time.
@@ -29,7 +33,6 @@ echo " "
 CSL_MODE=$1				# path to dir where images in csl format are stored  (in SAR_CSL/../REGION_MODE/NoCrop)
 CSL=$2					# path to dir where images should be stored as links (in SAR_CSL/../REGION/NoCrop)
 
-SAT=S1					# satellite can only be S1
 
 # vvv ----- Hard coded lines to check --- vvv 
 #source /$HOME/.bashrc 
