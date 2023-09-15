@@ -25,13 +25,15 @@
 #						 - search for msbas v 1-20
 #						 - add test pyqt6, networkx, mpich, pip, gsl and appscript (Mac)
 #						 - tells that osgeo is test for gdal
-#
+# New in Distro V 3.0 20230916:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
+#								- Replace CIS by MT in names 
+#								- Renamed FUNCTIONS_FOR_MT.sh#
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2020/06/15 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.5.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on June 28, 2023"
+VER="Distro V3.0 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Sept 16, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -456,14 +458,14 @@ echo "Directories in \$PATH in bashrc:"
 	fi
 
 
-	WHICHSCRIPTS=$(dirname $(which FUNCTIONS_FOR_CIS.sh))
+	WHICHSCRIPTS=$(dirname $(which FUNCTIONS_FOR_MT.sh))
 	TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 	if [ $TMP -ge 1 ] 
 		then 
 			printf "%-60s%-20s\n" "--> MasTer Toolbox SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS)$(tput sgr 0)"
 
 			# test if utilities ok as well 
-			WHICHSCRIPTSUTIL=zz_Utilities_CIS
+			WHICHSCRIPTSUTIL=zz_Utilities_MT
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
@@ -472,7 +474,7 @@ echo "Directories in \$PATH in bashrc:"
 					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox SCRIPTS Utilities in \$PATH:" "failed $(tput sgr 0)"
 			fi
 			# test if utilities_Ndo ok as well 
-			WHICHSCRIPTSUTIL=zz_Utilities_CIS_Ndo
+			WHICHSCRIPTSUTIL=zz_Utilities_MT_Ndo
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
@@ -596,13 +598,13 @@ echo "Directories in \$PATH in bashrc:"
 	fi
 
 # SCRIPTS
-	type -t FUNCTIONS_FOR_CIS.sh  >/dev/null
+	type -t FUNCTIONS_FOR_MT.sh  >/dev/null
 	if [ `echo $?` == "0" ]
 		then
-			WHICHVAR=$(which FUNCTIONS_FOR_CIS.sh)
-			printf "%-60s%-20s\n" "--> MasTer Toolbox SCRIPTS : " "$(tput setaf 2)passed$(tput sgr 0) 	(At least FUNCTIONS_FOR_CIS.sh is in: $(dirname ${WHICHVAR}))"
+			WHICHVAR=$(which FUNCTIONS_FOR_MT.sh)
+			printf "%-60s%-20s\n" "--> MasTer Toolbox SCRIPTS : " "$(tput setaf 2)passed$(tput sgr 0) 	(At least FUNCTIONS_FOR_MT.sh is in: $(dirname ${WHICHVAR}))"
 		else 
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox SCRIPTS" "failed: missing at least FUNCTIONS_FOR_CIS.sh is in: $(dirname ${WHICHVAR}) $(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox SCRIPTS" "failed: missing at least FUNCTIONS_FOR_MT.sh is in: $(dirname ${WHICHVAR}) $(tput sgr 0)"
 	fi
 
 # MSBAS

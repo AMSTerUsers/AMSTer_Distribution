@@ -22,6 +22,7 @@
 #		- Max Btemp
 #		- path to each mode
 #
+# ex: build_header_msbas.sh DefoInterpolx2Detrend 2 150 50 /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Asc/Resampled_20160223_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML4 /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Desc/Resampled_20160111_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML4 
 #       
 # Dependencies:	- python 
 #				- checkOnlyNaN.py script
@@ -61,20 +62,25 @@
 # New in Distro V 4.2:	- space was missing in test of non existance of ln
 # New in Distro V 4.3:	- find out original path to file before running python scripts because it does not follow links 
 # New in Distro V 4.4:	- accounts for usage with msbasv4 (i.e. that requires additional info in header files) or former ones
-# New in Distro V 4.5:	- while creating the MODEi.txt file, LINE was not a link, hence no need to search for ORIGINALTARGET
-# New in Distro V 4.6:	- cosmetic
+# New in Distro V 4.5:	- cosmetic
+# New in Distro V 4.6:	- while creating the MODEi.txt file, LINE was not a link, hence no need to search for ORIGINALTARGET
 # New in Distro V 4.7:	- revised and simplified
 # New in Distro V 4.7.1: - search for img date from file name with 8 digits instead of 6. Should be OK as long as crop is not defined with 8 decimals
 # New in Distro V 5.0:  - check if defo file contains ONLY nan using new python script checkOnlyNaN.py (instead of checkNanNpy), which now needs the input file format as parameter
 # New in Distro V 5.2:  - remove empty lines from header, incid and acq time files to avoid error when computing average 
 # New in Distro V 5.3: - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 8.0: - jump in V number to be consistennt with the version from pair dirs, i.e. also with acq time 
+#					   - add pairs from table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt if any
+#					   - ensure that MAS date is before slave date in MODEi.txt
+#					   - make parallel computing 
+#					   - correct a confusion between FILEONLY and LINENOPATH	
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/03/08 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V8.0 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 14, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -84,7 +90,7 @@ echo " "
 source $HOME/.bashrc 
 # ^^^ ----- Hard coded lines to check -- ^^^ 
 
-
+	
 MODE=$1				# eg Defo, DefoInterpolDetrend or DefoInterpolx2Detrend...
 NRMODES=$2			# Nr of modes
 MAXBP=$3			# Max Bperp
@@ -117,9 +123,10 @@ if [ ${CHECKMSBASV4} -gt 0 ] ; then MSBAS="msbasv4" ; fi
 # To speed up, make first all dirs
 for ((i=1;i<=${NRMODES};i++));
 do 
-	n=`expr "$i" + 4`;					# Start counting from 4 because 4 first parameters are not mode paths, i.e. $n = 5th param which is path to 1st mode, $n+1= 2nd mode etc... 
+	n=`expr "${i}" + 4`;					# Start counting from 4 because 4 first parameters are not mode paths, i.e. $n = 5th param which is path to 1st mode, $n+1= 2nd mode etc... 
+	ROOTPATH[${i}]=${!n}
 	PATHMODE=${!n}/Geocoded/${MODE}		# path to dir where defo maps of ith mode are stored : e.g. /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Virunga_Asc/Resampled_20120702_Crop_NyigoCrater_-1.520_-1.540_29.200_29.220_Zoom1_ML4/Geocoded/Defo 
-	PATHMODE[$i]=${PATHMODE}			# same as before but named with an index for further call
+	PATHMODE[${i}]=${PATHMODE}			# same as before but named with an index for further call
 	HDRMOD=`find ${PATHMODE} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info
 	#HDRMOD=`ls ${PATHMODE}/*.hdr | head -n 1`	# one envi header file for that mode to get some info 
 	MODETOCP=`echo $MODE${i}` 			# get only the name without path (that is Defo" and with index, i.e. Defo1)
@@ -133,23 +140,127 @@ do
 	cd ..
 done
 
+# pseudo parallel by running on all but one CPU (fatser than gnuparallel) 
+#-------------------------------------------------------------------------
+# test nr of CPUs
+# Check OS
+OS=`uname -a | cut -d " " -f 1 `
 
-for ((i=1;i<=${NRMODES};i++));
-do 
-	n=`expr "$i" + 4`;					# Start counting from 4 because 4 first parameters are not mode paths, i.e. $n = 5th param which is path to 1st mode, $n+1= 2nd mode etc... 
-	PATHMODE=${!n}/Geocoded/${MODE}		# path to dir where defo maps of ith mode are stored : e.g. /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Virunga_Asc/Resampled_20120702_Crop_NyigoCrater_-1.520_-1.540_29.200_29.220_Zoom1_ML4/Geocoded/Defo 
-	PATHMODE[$i]=${PATHMODE}			# same as before but named with an index for further call
+case ${OS} in 
+	"Linux") 
+		NCPU=`nproc` 	;;
+	"Darwin")
+		NCPU=`sysctl -n hw.ncpu` 
+		
+		# must define a function because old bash on Mac does not know wait -n option
+		waitn ()
+		{ StartJobs="$(jobs -p)"
+		  CurJobs="$(jobs -p)"
+		  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
+		  do
+		    sleep 1
+		    CurJobs="$(jobs -p)"
+		  done
+		}
+		
+		;;
+esac			
+
+CPU=$((NCPU-1))
+echo "Run max ${CPU} processes at a time "
+
+PrepareModeI()
+{
+	# Prepare j_th mode
+	local HDRMOD
+	local MODETOCP
+	local MASSPROCESSPATH
+	local NRFILES
+	local ADDPAIRSFILETMP
+	local ADDBP
+	local ADDBT
+	local ADDPAIRSFILE
+	local FILEONLY
+	local MASTERDATE
+	local SLAVEDATE
+	local PAIR
+	local INCIDENCE
+	local BPERP
+	local HEADREAL
+	local HEAD
+	local ACQTIME
+	local MASDATESPLIT
+	local SLVDATESPLIT
+	local BTEMP
+	local ABSBPERP
+	local ABSBTEMP
+	local PATHRAS
+	local NAN
+	local PAIRINTABLE
+
 	HDRMOD=`find ${PATHMODE} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info
 	#HDRMOD=`ls ${PATHMODE}/*.hdr | head -n 1`	# one envi header file for that mode to get some info 
 	MODETOCP=`echo $MODE${i}` 			# get only the name without path (that is Defo" and with index, i.e. Defo1)
-	MASSPROCESSPATH="$(dirname "$(dirname "$PATHMODE[$i]")")"  # two levels up; needed for keeping track of possible pairs in table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt
+	MASSPROCESSPATH="$(dirname "$(dirname "$PATHMODE[${i}]")")"  # two levels up; needed for keeping track of possible pairs in table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt
+
+	# Check table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt
+	NRFILES=`ls ${MASSPROCESSPATH}/table_*_AdditionalPairs.txt 2>/dev/null | wc -l `
+	if [  ${NRFILES} -ge 1 ] # that file contains 1 col with full path and file name
+		then
+			echo "${NRFILES} table_0_x_0_x_AdditionalPairs.txt files for ${MODETOCP}"
+			if [ ${NRFILES} -eq 1 ]
+				then 
+					echo "Only one file; take it"
+					ADDPAIRSFILETMP=`ls ${MASSPROCESSPATH}/table_*_AdditionalPairs.txt`
+					ADDBP=`basename ${ADDPAIRSFILETMP} | cut -d _ -f3`
+					ADDBT=`basename ${ADDPAIRSFILETMP} | cut -d _ -f5`
+
+					if [ "${ADDBP}" -le "${MAXBP}" ] &&  [ "${ADDBT}" -le "${MAXBT}" ]
+						then 
+							echo "		=> OK"
+							ADDPAIRSFILE=${ADDPAIRSFILETMP}
+						else 
+							echo "		=> not OK because one baseline  ${ADDBP} or ${ADDBT} is out of criteria (${MAXBP} or ${MAXBT})"
+							touch dummy_empty_file_to_kill.txt
+							ADDPAIRSFILE="dummy_empty_file_to_kill.txt"
+	
+					fi
+				else
+					echo "More than one file; must take the one that satisfies at least the two criteria"		
+					for ((k=1;k<=${NRFILES};k++));
+						do 		
+							echo "	Test ${k}th file"
+ 							ADDPAIRSFILE[${k}]=`ls ${MASSPROCESSPATH}/table_*_AdditionalPairs.txt | head -${k} | tail -1`
+ 							ADDBP=`basename ${ADDPAIRSFILE[${k}]} | cut -d _ -f3`
+ 							ADDBT=`basename ${ADDPAIRSFILE[${k}]} | cut -d _ -f5`
+ 							if [ "${ADDBP}" -le "${MAXBP}" ] &&  [ "${ADDBT}" -le "${MAXBT}" ]
+ 								then 
+ 									echo "		=> OK"
+ 									# Not sure how to select wich kth file OK. Suppose that ls sort them by numerical oreder, hence take the last one
+ 									ADDPAIRSFILE=${ADDPAIRSFILE[${k}]}
+ 								else 
+ 									echo "		=> not OK because one baseline  ${ADDBP} or ${ADDBT} is out of criteria (${MAXBP} or ${MAXBT})"
+ 									touch dummy_empty_file_to_kill.txt
+									ADDPAIRSFILE="dummy_empty_file_to_kill.txt"
+							fi							
+					done
+			fi
+			echo "ADDPAIRSFILE is ${ADDPAIRSFILE}"
+			echo
+		else 
+			echo "No table_0_x_0_x_AdditionalPairs.txt files for ${MODETOCP}"
+			touch dummy_empty_file_to_kill.txt
+			ADDPAIRSFILE="dummy_empty_file_to_kill.txt"
+	fi
+
 
 	#mkdir -p ${MODETOCP}
 	cd ${MODETOCP}
+
 	find ${PATHMODE} -maxdepth 1 -type f -name "*deg" > ${MODETOCP}.txt 	# File with full path from SAR_MASSPROCESS/.../deformationMap.....deg
 	# same as above but without the path
 	find ${PATHMODE} -maxdepth 1 -type f -name "*deg" -print | while read filename ; do basename "${filename}" ; done >  ${MODETOCP}_NoPath.txt 	# File without any path or any other info, i.e. only file names deformationMap.....deg
-	
+
 	# Compare ${MODE}i/${MODETOCP}.txt with possibe existing ../${MODETOCP}i.txt (i.e. with only partial path)
 	if [ -f ../${MODETOCP}.txt ] 
 		then
@@ -208,14 +319,14 @@ do
 		then
 			mv ${MODETOCP}.txt ${MODETOCP}_FullToCheck.txt
 			# remove possible pairs out of range that are in SAR_SM/MSBAS/region/seti/table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt (also in SAR_MASSPROCESS)
-			if [ -f "${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt" ]  && [ -s "${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt" ]  # i.e. table with 4 col MAS SLV BP BT
+			if [ -f "${ADDPAIRSFILE}" ] && [ -s "${ADDPAIRSFILE}" ]   # i.e. table with 4 col MAS SLV BP BT
 				then
 					# remove pairs from Out_Of_Range_${MAXBP}m_${MAXBT}days.txt
 					while read -r MASDATEFORCE SLVDATEFORCE dummy1 dummy2 
 						do	
 						# remove lines with string ${MASDATE}_${SLVDATE} in out of range
 						${PATHGNU}/gsed -i "/${MASDATEFORCE}_${SLVDATEFORCE}/d" Out_Of_Range_${MAXBP}m_${MAXBT}days.txt
-					done < ${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt 
+					done < ${ADDPAIRSFILE} 
 					# i.e. Out_Of_Range_${MAXBP}m_${MAXBT}days.txt contains now only the out-of-range pairs that we do not want to keep
 			fi 		
 			${PATHGNU}/grep -Fv -f Out_Of_Range_${MAXBP}m_${MAXBT}days.txt ${MODETOCP}_FullToCheck.txt > ${MODETOCP}.txt 
@@ -233,19 +344,19 @@ do
 	#-----------------------------------------------------------------------------------------------
 	
 	# Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt contains 1 col with file name but without any path 
-	if [ -f "Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt" ] && [ -s "Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt" ]    # Do not look at version in MODETOCP_Full because it does not contains the last pairs checked 
+	if [ -f Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ] && [ -s Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ]    # Do not look at version in MODETOCP_Full because it does not contains the last pairs checked 
 		then
 			mv ${MODETOCP}.txt ${MODETOCP}_NoChoRestrict.txt
 			# remove possible pairs out of range that are in SAR_SM/MSBAS/region/seti/table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt (also in SAR_MASSPROCESS)
 			# This may be dangerous though because it would force to keep pairs with low level of coh. Not sure if we shoudl offer that possibility...  May be wise to remove? 
-			if [ -f "${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt" ] && [ -s "${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt" ]
+			if [ -f "${ADDPAIRSFILE}" ] && [ -s "${ADDPAIRSFILE}" ]
 				then
 					# remove pairs from Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt
 					while read -r MASDATEFORCE SLVDATEFORCE dummy1 dummy2 
 						do	
 						# remove lines with string ${MASDATE}_${SLVDATE} in out of range
 						${PATHGNU}/gsed -i "/${MASDATEFORCE}_${SLVDATEFORCE}/d" Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt
-					done < ${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt 
+					done < ${ADDPAIRSFILE} 
 
 			fi 		
 			${PATHGNU}/grep -Fv -f Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ${MODETOCP}_NoChoRestrict.txt > ${MODETOCP}.txt 
@@ -253,165 +364,215 @@ do
 	fi	
 	
 	# CREATES THE .TXT FILE
-	for LINE in `cat -s ${MODETOCP}.txt`
-	do
- 		#LINENOPATH=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}'` 	# Line with file name as deformationMap.....deg without path
-		FILEONLY=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}'` 	# Line with file name as deformationMap.....deg without path
+ 	for LINE in `cat -s ${MODETOCP}.txt`
+ 	do
 
-		MASTERDATE=`echo ${LINE} | ${PATHGNU}/grep -oP '\D+\K\d+' | ${PATHGNU}/gsed -n '/[0-9]\{8\}/p' | head -2  | tail -1`
-		SLAVEDATE=`echo ${LINE} | ${PATHGNU}/grep -oP '\D+\K\d+' | ${PATHGNU}/gsed -n '/[0-9]\{8\}/p' | tail -1`
+		# Proceed if a CPU is free 
+		if test "$(jobs | wc -l)" -ge ${CPU} 
+			then
+				case ${OS} in 
+					"Linux") 
+						wait -n 	;;
+					"Darwin")
+						waitn		;;
+				esac	
+		fi
+		# Run tests in pseudo parallelism
+		{
 
+  		#LINENOPATH=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}'` 	# Line with file name as deformationMap.....deg without path
+ 		FILEONLY=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}'` 	# Line with file name as deformationMap.....deg without path
+
+  		MASTERDATE=`echo ${LINE} | ${PATHGNU}/grep -oP '\D+\K\d+' | ${PATHGNU}/gsed -n '/[0-9]\{8\}/p' | head -2  | tail -1`
+ 		SLAVEDATE=`echo ${LINE} | ${PATHGNU}/grep -oP '\D+\K\d+' | ${PATHGNU}/gsed -n '/[0-9]\{8\}/p' | tail -1`
+ 		#MASTERDATE=`echo ${LINE} | ${PATHGNU}/grep -E -o '\b[0-9]{8}\b' | head -2 | head -1`
+ 		#SLAVEDATE=`echo ${LINE} | ${PATHGNU}/grep -E -o '\b[0-9]{8}\b' | head -2 | tail -1`
+ 
 #		GetPair ${MASTERDATE} ${SLAVEDATE}
+#		if [ "${SATDIR}" != "S1" ]
+#			then
+#				PAIR=`echo ${ROOTPATH[${i}]}/*${MASTERDATE}*_*${SLAVEDATE}*`	# path up to DateMaster_DateSlave  
+#			else 
+#				PAIR=`echo ${ROOTPATH[${i}]}/${MASTERDATE}_${SLAVEDATE}`	# path up to DateMaster_DateSlave
+#		fi
+ 
+ #		INCIDENCE=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Incidence angle at median slant range"`
+ # 		BPERP=`updateParameterFile ${PAIR}/i12/TextFiles/InSARParameters.txt "Perpendicular baseline component at image centre"` 
+ #		HEADREAL=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Azimuth heading"` 
 
-		if [ "${SATDIR}" != "S1" ]
-			then
-				PAIR=`echo ${!n}/*${MASTERDATE}*_*${SLAVEDATE}*`	# path up to DateMaster_DateSlave  
-			else 
-				PAIR=`echo ${!n}/${MASTERDATE}_${SLAVEDATE}`	# path up to DateMaster_DateSlave
-		fi
-	
- 		INCIDENCE=`echo ${LINENOPATH} | ${PATHGNU}/gawk -F 'deg' '{print $1}'  | ${PATHGNU}/gawk -F '-' '{print $NF}' | cut -d c -f2`
-		BPERP=`echo ${LINENOPATH}  | ${PATHGNU}/gawk -F 'Bp' '{print $NF}' | cut -d _ -f1 | cut -d m -f1` 
-		HEADREAL=`echo ${LINENOPATH} | ${PATHGNU}/gawk -F 'Head' '{print $NF}' | cut -d d -f1`
-		BTEMP=`echo ${LINENOPATH} | ${PATHGNU}/gawk -F 'BT' '{print $NF}' | cut -d d -f1` 
+		INCIDENCE=`echo ${FILEONLY} | ${PATHGNU}/gawk -F 'deg' '{print $1}'  | ${PATHGNU}/gawk -F '-' '{print $NF}' | cut -d c -f2` # always > 0, hence OK
+		BPERP=`echo ${FILEONLY}  | ${PATHGNU}/gawk -F 'Bp' '{print $NF}' | cut -d _ -f1 | cut -d m -f1`  					# sign is taken into account, hence OK
 
-		HEAD=`echo ${HEADREAL} | cut -d . -f 1 `
+		HEADREAL=`echo ${FILEONLY} | ${PATHGNU}/gawk -F 'Head' '{print $NF}' | cut -d d -f1`								# should be OK as well 
+ 		HEAD=`echo ${HEADREAL} | cut -d . -f 1 `
 
-		# Heading in CSL is counted conterclockwize from East. Transform in azimuth from North
-		if [ "${HEAD}" -ge "245" ] 
-			then # hence it is Descending (probably around 257)
-				HEAD=`echo "90 - ${HEAD}" | bc`
-			else # hence it is Ascending, (probably around 100) 
-				HEAD=`echo "360 - ${HEAD} + 90" | bc`
-		fi
+		BTEMP=`echo ${FILEONLY} | ${PATHGNU}/gawk -F 'BT' '{print $NF}' | cut -d d -f1` 									# sign is taken into account, hence OK
 
-		# get AcquisitionTime from file
-		#ACQTIME=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Acquisition time" | tr -dc '[0-9]'` 
-		ACQTIME=123400
+ 		# Heading in CSL is counted conterclockwize from East. Transform in azimuth from North
+ 		if [ "${HEAD}" -ge "245" ] 
+ 			then # hence it is Descending (probably around 257)
+ 				HEAD=`echo "90 - ${HEAD}" | bc`
+ 			else # hence it is Ascending, (probably around 100) 
+ 				HEAD=`echo "360 - ${HEAD} + 90" | bc`
+ 		fi
+ 
+ 		# get AcquisitionTime from file
+ 		#ACQTIME=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Acquisition time" | tr -dc '[0-9]'` 
+ 		# Will make later a fake acquisition time because it is not available from fle naming
 
-		# get dates images
-		MASDATESPLIT=`echo ${MASTERDATE:0:4} "," ${MASTERDATE:4:2} "," ${MASTERDATE:6:2} | ${PATHGNU}/gawk '{print $1,$2,$3+0,$4,$5+0}'`
-		SLVDATESPLIT=`echo ${SLAVEDATE:0:4} "," ${SLAVEDATE:4:2} "," ${SLAVEDATE:6:2} | ${PATHGNU}/gawk '{print $1,$2,$3+0,$4,$5+0}'`
-		
-		ABSBPERP=`echo ${BPERP} |  ${PATHGNU}/gsed -e 's%-%%' | cut -d . -f1 ` # truncate at integer
-		ABSBTEMP=`echo ${BTEMP} |  ${PATHGNU}/gsed -e 's%-%%' | cut -d . -f1 `	# truncate at integer
-		if [ ${ABSBPERP} -le ${MAXBP} ] && [ ${ABSBTEMP} -le ${MAXBT} ]
-			then
-				# Dump incidence angle if one wants to do some statistics
-				echo  ${INCIDENCE} >> ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 		# get dates images as yyyy , mm , dd
+ 		MASDATESPLIT=`echo ${MASTERDATE:0:4} "," ${MASTERDATE:4:2} "," ${MASTERDATE:6:2} | ${PATHGNU}/gawk '{print $1,$2,$3+0,$4,$5+0}'`
+ 		SLVDATESPLIT=`echo ${SLAVEDATE:0:4} "," ${SLAVEDATE:4:2} "," ${SLAVEDATE:6:2} | ${PATHGNU}/gawk '{print $1,$2,$3+0,$4,$5+0}'`
 
-				# Dump heading if one wants to do some statistics
-				echo  ${HEAD} >> ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
-	
-				# Dump Acquisition time 
-				echo  ${ACQTIME} >> ../AcquisitionTime_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 		#ABSBPERP=`echo ${BPERP} |  ${PATHGNU}/gsed -e 's%-%%' | cut -d . -f1 ` # truncate at integer
+ 		#ABSBTEMP=`echo ${BTEMP} |  ${PATHGNU}/gsed -e 's%-%%' | cut -d . -f1 `	# truncate at integer
+ 		# round instead of truncate
+ 		ABSBPERP=`echo ${BPERP} |  ${PATHGNU}/gsed -e 's%-%%' | xargs printf "%.*f\n" 0` # rounded
+ 		ABSBTEMP=`echo ${BTEMP} |  ${PATHGNU}/gsed -e 's%-%%' | xargs printf "%.*f\n" 0`	# rounded
+ 
+ 		if [ ${ABSBPERP} -le ${MAXBP} ] && [ ${ABSBTEMP} -le ${MAXBT} ]
+ 			then
+ 				# Dump incidence angle if one wants to do some statistics
+ 				echo  ${INCIDENCE} >> ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 
+ 				# Dump heading if one wants to do some statistics
+ 				echo  ${HEAD} >> ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 	
+ 				# Dump Acquisition time 
+# 				echo  ${ACQTIME} >> ../AcquisitionTime_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 
+ 				# copy also rasters for check
+ 				#PATHONLY=`echo $PATHMODE${i} | ${PATHGNU}/gsed 's%'"${MODETOCP}"'%'"${MODE}"'%' | ${PATHGNU}/gsed 's%Geocoded%GeocodedRasters%' `
+ 				#PATHRAS=`echo $PATHMODE${i} | ${PATHGNU}/gsed 's%'"${MODETOCP}"'%'"${MODE}"'%' | ${PATHGNU}/gsed 's%Geocoded%GeocodedRasters%' `
+ 				
+ 				PATHRAS=${MASSPROCESSPATH}/GeocodedRasters/${MODE}
+ 				#FILEONLY=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}' `
+ 
+ 				# get the target of link because numpy does not like links...
+ 				#ORIGINALTARGET=`ls -l ${LINE} | cut -d ">" -f 2- | cut -d "/" -f 2-` # get  the path and name of file pointed to by the broken link i.e. file tolocate in  TARGETDIR
+ 				#ORIGINALTARGET="/${ORIGINALTARGET}"
+ 				#ORIGINALTARGET=`readlink ${LINE}`
+ 				# LINE is not a link 
+ 				NAN=`checkOnlyNaN.py ${PATHMODE}/${FILEONLY} float32`
+ 				#NAN=`checkNaN.py ${ORIGINALTARGET}`
+ 				if [ "${NAN}" == "nan" ]
+ 					then 
+  						ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
+  						ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
+  						echo "  // Do not copy ${LINE}"
+  						echo "  //   because full of NaN - reprocess if possible."
+  					else 
+ 						if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
+ 						if [ ! -f ${FILEONLY} ] 
+ 							then 
+ 								ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
+ 								echo "${LINE} copied (link)" 
+ 								# put in file
+ 								if [ ${MASTERDATE} -lt ${SLAVEDATE} ] 
+ 									then
+ 										echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 									else 
+										echo "Slave date appears before Master date. I guess you are dealing with non S1 WS and using a pair with the Super Master..."
+ 										echo "${LINE} ${BPERP} ${SLAVEDATE} ${MASTERDATE}" >> ../${MODETOCP}.txt
+ 								fi
+ 							else 
+ 								echo "${LINE} exist"
+ 						fi
+ 						
+ 				fi
+ 			else 
+ 				echo "--------------------" 
+ 				echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE} out of criteria"
+ 				
+ 				# Test however that it is not a pair forced from SAR_SM/MSBAS/region/seti/table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt (also in SAR_MASSPROCESS)
+ 				if [ -f "${ADDPAIRSFILE}" ] && [ -s "${ADDPAIRSFILE}" ]
+ 					then 
+ 						# only if pairs is IN that table
+ 						PAIRINTABLE=`${PATHGNU}/grep ${MASTERDATE} ${ADDPAIRSFILE} | ${PATHGNU}/grep ${SLAVEDATE} | wc -l `
+ 						if [ ${PAIRINTABLE} -ge 1 ]
+ 							then
+ 								echo "But you requested to keep it (see ${ADDPAIRSFILE})"
+ 								# Dump incidence angle if one wants to do some statistics
+ 								echo  ${INCIDENCE} >> ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 
+ 								# Dump heading if one wants to do some statistics
+ 								echo  ${HEAD} >> ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 	
+ 								# Dump Acquisition time 
+# 								echo  ${ACQTIME} >> ../AcquisitionTime_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 
+ 								# copy also rasters for check
+ 								#PATHONLY=`echo $PATHMODE${i} | ${PATHGNU}/gsed 's%'"${MODETOCP}"'%'"${MODE}"'%' | ${PATHGNU}/gsed 's%Geocoded%GeocodedRasters%' `
+ 								#FILEONLY=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}' `
+ 								PATHRAS=${MASSPROCESSPATH}/GeocodedRasters/${MODE}
+ 								# get the target of link because numpy does not like links...
+ 								#ORIGINALTARGET=`ls -l ${LINE} | cut -d ">" -f 2- | cut -d "/" -f 2-` # get  the path and name of file pointed to by the broken link i.e. file tolocate in  TARGETDIR
+ 								#ORIGINALTARGET="/${ORIGINALTARGET}"
+ 								#ORIGINALTARGET=`readlink ${LINE}`
+ 				
+ 								#NAN=`checkNaN.py ${ORIGINALTARGET}`
+ 								NAN=`checkNaN.py  ${PATHMODE}/${FILEONLY} float32`
+ 								if [ "${NAN}" == "nan" ]
+ 									then 
+ 										ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
+ 										ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
+ 
+ 										echo "  // Do not copy ${LINE}"
+ 										echo "  //   because full of NaN - reprocess if possible."
+ 									else 
+ 										if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
+ 										if [ ! -f ${FILEONLY} ] 
+ 											then 
+ 												ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
+ 												echo "${LINE} copied (link)" 
+ 												# put in file
+ 												#echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 												if [ ${MASTERDATE} -lt ${SLAVEDATE} ] 
+ 													then
+ 														echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
+ 													else 
+														echo "Slave date appears before Master date. I guess you are dealing with non S1 WS and using a pair with the Super Master..."
+ 														echo "${LINE} ${BPERP} ${SLAVEDATE} ${MASTERDATE}" >> ../${MODETOCP}.txt
+ 												fi
 
-				# copy also rasters for check
-				#PATHONLY=`echo $PATHMODE${i} | ${PATHGNU}/gsed 's%'"${MODETOCP}"'%'"${MODE}"'%' | ${PATHGNU}/gsed 's%Geocoded%GeocodedRasters%' `
-				#PATHRAS=`echo $PATHMODE${i} | ${PATHGNU}/gsed 's%'"${MODETOCP}"'%'"${MODE}"'%' | ${PATHGNU}/gsed 's%Geocoded%GeocodedRasters%' `
-				
-				PATHRAS=${MASSPROCESSPATH}/GeocodedRasters/${MODE}
-				#FILEONLY=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}' `
-
-				# get the target of link because numpy does not like links...
-				#ORIGINALTARGET=`ls -l ${LINE} | cut -d ">" -f 2- | cut -d "/" -f 2-` # get  the path and name of file pointed to by the broken link i.e. file tolocate in  TARGETDIR
-				#ORIGINALTARGET="/${ORIGINALTARGET}"
-				#ORIGINALTARGET=`readlink ${LINE}`
-				# LINE is not a link 
-				NAN=`checkOnlyNaN.py ${PATHMODE}/${FILEONLY} float32`
-				#NAN=`checkNaN.py ${ORIGINALTARGET}`
-				if [ "${NAN}" == "nan" ]
-					then 
- 						ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
- 						ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
- 						echo "  // Do not copy ${LINE}"
- 						echo "  //   because full of NaN - reprocess if possible."
+ 											else 
+ 												echo "${LINE} exist"
+ 										fi
+ 
+ 								fi					
+ 							else 
+ 								echo ${LINE} >> Out_Of_Range_${MAXBP}m_${MAXBT}days.txt
+ 						fi		
  					else 
-						if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
-						if [ ! -f ${FILEONLY} ] 
-							then 
-								ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
-								echo "${LINE} copied (link)" 
-								# put in file
-								echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
-							else 
-								echo "${LINE} exist"
-						fi
-						
-				fi
-			else 
-				echo "--------------------" 
-				echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE} out of criteria"
-				
-				# Test however that it is not a pair forced from SAR_SM/MSBAS/region/seti/table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt (also in SAR_MASSPROCESS)
-				if [ -f "${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt" ] && [ -s "${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt" ]
-					then 
-						# only if pairs is IN that table
-						PAIRINTABLE=`${PATHGNU}/grep ${MASTERDATE} ${MASSPROCESSPATH}/table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt | ${PATHGNU}/grep ${SLAVEDATE} | wc -l `
-						if [ ${PAIRINTABLE} -ge 1 ]
-							then
-								echo "But you requested to keep it (see table_0_${MAXBP}_0_${MAXBT}_AdditionalPairs.txt)"
-								# Dump incidence angle if one wants to do some statistics
-								echo  ${INCIDENCE} >> ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 						echo ${LINE} >> Out_Of_Range_${MAXBP}m_${MAXBT}days.txt
+ 				fi		
+ 				echo "--------------------"
+ 		fi
+		} &
+	done 
+	wait 	
 
-								# Dump heading if one wants to do some statistics
-								echo  ${HEAD} >> ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
-	
-								# Dump Acquisition time 
-								echo  ${ACQTIME} >> ../AcquisitionTime_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
-
-								# copy also rasters for check
-								#PATHONLY=`echo $PATHMODE${i} | ${PATHGNU}/gsed 's%'"${MODETOCP}"'%'"${MODE}"'%' | ${PATHGNU}/gsed 's%Geocoded%GeocodedRasters%' `
-								#FILEONLY=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}' `
-								PATHRAS=${MASSPROCESSPATH}/GeocodedRasters/${MODE}
-								# get the target of link because numpy does not like links...
-								#ORIGINALTARGET=`ls -l ${LINE} | cut -d ">" -f 2- | cut -d "/" -f 2-` # get  the path and name of file pointed to by the broken link i.e. file tolocate in  TARGETDIR
-								#ORIGINALTARGET="/${ORIGINALTARGET}"
-								#ORIGINALTARGET=`readlink ${LINE}`
-				
-								#NAN=`checkNaN.py ${ORIGINALTARGET}`
-								NAN=`checkNaN.py  ${PATHMODE}/${FILEONLY} float32`
-								if [ "${NAN}" == "nan" ]
-									then 
-										ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
-										ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
-
-										echo "  // Do not copy ${LINE}"
-										echo "  //   because full of NaN - reprocess if possible."
-									else 
-										if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
-										if [ ! -f ${FILEONLY} ] 
-											then 
-												ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
-												echo "${LINE} copied (link)" 
-												# put in file
-												echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
-											else 
-												echo "${LINE} exist"
-										fi
-
-								fi					
-							else 
-								echo ${LINE} >> Out_Of_Range_${MAXBP}m_${MAXBT}days.txt
-						fi		
-					else 
-						echo ${LINE} >> Out_Of_Range_${MAXBP}m_${MAXBT}days.txt
-				fi		
-				echo "--------------------"
-		fi
-	done
-	
-	# Remove white lines before computing average
-	${PATHGNU}/gsed -i ' /^$/d' ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
-	${PATHGNU}/gsed -i ' /^$/d' ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
-	
-	AVGINCID[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt`
-	AVGHEAD[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt `
 	rm ${MODETOCP}.txt
 	cd ..
 	${PATHGNU}/gsed -i "s%.*\/${MODE}\/%%g" ${MODETOCP}.txt  # remove all up to /Defo/ included	
-	${PATHGNU}/gsed -i "s%^%${MODE}${i}\/%g" ${MODETOCP}.txt  # add Defo$i/ at beginning of each line
+	${PATHGNU}/gsed -i "s%^%${MODE}${i}\/%g" ${MODETOCP}.txt  # add Defo$j/ at beginning of each line
+	
+	rm -f dummy_empty_file_to_kill.txt 	
+}
+
+for ((i=1;i<=${NRMODES};i++));
+do 
+
+	n=`expr "${i}" + 4`;					# Start counting from 4 because 4 first parameters are not mode paths, i.e. $n = 5th param which is path to 1st mode, $n+1= 2nd mode etc... 
+	PATHMODE=${ROOTPATH[${i}]}/Geocoded/${MODE}		# path to dir where defo maps of ith mode are stored : e.g. /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Virunga_Asc/Resampled_20120702_Crop_NyigoCrater_-1.520_-1.540_29.200_29.220_Zoom1_ML4/Geocoded/Defo 
+	PATHMODE[${i}]=${PATHMODE}			# same as before but named with an index for further call
+
+	echo "Start mode ${i}"
+	PrepareModeI ${i} &
+
 done
+
+wait
 
 # Header.txt 
 rm -f header.txt
@@ -432,17 +593,36 @@ echo	"I_FLAG = 0"  >> header.txt  		# 0= auto run; 1= ask for coord of pix for t
 # For each mode, set Az heading, Incid angle, list_of_InSAR_files
 for ((i=1;i<=${NRMODES};i++));
 do 
-	ACQTIME[$i]=`cat AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt | head -1`
-	# It only writes the Acquisition time of the master from the last pair
+	# Remove white lines before computing average
+	${PATHGNU}/gsed -i ' /^$/d' IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
+	${PATHGNU}/gsed -i ' /^$/d' Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
+#	${PATHGNU}/gsed -i ' /^$/d' AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
+	
+	AVGINCID[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt`
+	AVGHEAD[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt `
+
+	# Change time in sec for average computation
+	#cat AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt | ${PATHGNU}/gawk '{gsub(/../, "& ",$1); split($1, a, FS); print (a[1] * 3600) + (a[2] *60) + a[3]}' > AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
+	# Get average time in sec
+	#ACQTIMESEC[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt`
+	# back in hhmmss
+	#ACQTIME[${i}]=`echo "${ACQTIMESEC[${i}]}" | awk  '{ h = int($1 / 3600) ; m = int((($1 / 3600)-h ) * 60) ; sec = int($1 - ((3600 * h ) + ( 60 * m))) ; printf("%02d%02d%02d\n", h, m, sec) }'`  # ensure that all a integer and 2 digits long
+
+	#rm -f AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
+
+
+#	ACQTIME[${i}]=`cat AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt | head -1`
+	ACQTIME[${i}]=123400
+	
 	case ${MSBAS} in 
 		msbasv4)
 			#msbasv4 (> Oct 2020) needs	
-			#	SET=0, ${ACQTIME[$i]}, ${AVGHEAD[${i}]}, ${AVGINCID[$i]}, ${MODE}${i}.txt - for insar range measurements
-			#   SET=1, ${ACQTIME[$i]}, ${AVGHEAD[${i}]}, ${AVGINCID[$i]}, ${MODE}${i}.txt - for insar azimuth measurements
-			echo "SET = 0, ${ACQTIME[$i]}, ${AVGHEAD[${i}]}, ${AVGINCID[$i]}, ${MODE}${i}.txt"  >> header.txt 
+			#	SET=0, ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt - for insar range measurements
+			#   SET=1, ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt - for insar azimuth measurements
+			echo "SET = 0, ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt"  >> header.txt 
 			;;
 		*)
-			echo "SET = ${ACQTIME[$i]}, ${AVGHEAD[${i}]}, ${AVGINCID[$i]}, ${MODE}${i}.txt"  >> header.txt
+			echo "SET = ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt"  >> header.txt
 			;;
 	esac
 done

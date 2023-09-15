@@ -35,13 +35,14 @@
 #						  3rd param, takes the highest version of msbas available 
 # New in Distro V 3.1:	- search for msbas version was missing in case of 2 param
 #						- and an exit for test was left in the script...
+# New in Distro V 3.2:	- search for msbas version was missing in case of 0 param
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/03/08 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 06, 2023"
+VER="Distro V3.2 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 15, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -115,9 +116,11 @@ if [ $# -eq 3 ] ; then
 			fi 			 
 			echo "and 3rd param seems to be the pix list."
 			PIXFILELIST="$3"
-			
-
 	fi
+fi
+
+if [ $# -eq 0 ] ; then 
+	LastMsbasV
 fi
 
 echo

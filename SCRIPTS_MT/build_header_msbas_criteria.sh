@@ -413,7 +413,7 @@ PrepareModeI()
  		# get AcquisitionTime from file
  		ACQTIME=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Acquisition time" | tr -dc '[0-9]'` 
  
- 		# get dates images
+ 		# get dates images as yyyy , mm , dd
  		MASDATESPLIT=`echo ${MASTERDATE:0:4} "," ${MASTERDATE:4:2} "," ${MASTERDATE:6:2} | ${PATHGNU}/gawk '{print $1,$2,$3+0,$4,$5+0}'`
  		SLVDATESPLIT=`echo ${SLAVEDATE:0:4} "," ${SLAVEDATE:4:2} "," ${SLAVEDATE:6:2} | ${PATHGNU}/gawk '{print $1,$2,$3+0,$4,$5+0}'`
  		BTEMP=`updateParameterFile ${PAIR}/i12/TextFiles/InSARParameters.txt "Temporal baseline [day]"` 
