@@ -8,7 +8,7 @@ running MasTer.
 
 MasTer is mostly based on 3 elements:
 - an InSAR processor (MasTer Engine)
-- a time series processor (MSBAS)
+- a time series processor (MSBAS; https://doi.org/10.4095/313749)
 - a set of mostly shell (bash) and some python scripts 
 
 MasTer is aiming at processing automatically a large number of interferometric pairs and 
@@ -59,7 +59,9 @@ At least I can try on the best effort basis...
 
 "MasTer toolbox: an InSAR automated Mass processing Toolbox for Multidimensional time series" © 2023 
 by Nicolas d'Oreye, Dominique Derauw, Sergey Samsonov, Delphine Smittarello, Maxime Jaspard and Gilles Celli 
-is licensed under CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike 4.0 International)
+is licensed under CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike 4.0 International).
+
+MSBAS is licensed to the https://open.canada.ca/en/open-government-licence-canada
 
 Because MasTer Toolbox program is licensed free of charge, there is no warranty for the program.  
 
@@ -77,10 +79,14 @@ observations for the period 2015 – 2020. J. South Am. Earth Sc., Vol. 104, 102
 https://doi.org/10.1016/j.jsames.2020.102850
 Freely available here: https://www.sciencedirect.com/science/article/pii/S089598112030393X?via%3Dihub 
 
-d’Oreye N., D. Derauw, S. Samsonov, M. Jaspard, D. Smittarello
+d’Oreye N., D. Derauw, S. Samsonov, M. Jaspard, D. Smittarello (2021)
 MASTER: A FULL AUTOMATIC MULTI-SATELLITE INSAR MASS PROCESSING TOOL FOR RAPID INCREMENTAL 
 2D GROUND DEFORMATION TIME SERIES. Proceedings of the IEEE International Geoscience and 
 Remote Sensing Symposium (IGARSS) 2021, Brussels
+
+Samsonov S. (2019) 
+User manual, source code, and test set for MSBASv3 (Multidimensional Small Baseline Subset version 3) for one- and two-dimensional deformation analysis
+https://doi.org/10.4095/313749
 
 **Develloppers of MasTer:**
 
