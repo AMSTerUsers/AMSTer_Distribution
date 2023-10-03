@@ -60,8 +60,25 @@ At least I can try on the best effort basis...
 "MasTer toolbox: an InSAR automated Mass processing Toolbox for Multidimensional time series" © 2023 
 by Nicolas d'Oreye, Dominique Derauw, Sergey Samsonov, Delphine Smittarello, Maxime Jaspard and Gilles Celli 
 is licensed under CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike 4.0 International).
+http://creativecommons.org/licenses/by-nc-sa/4.0/
 
-MSBAS is licensed to the https://open.canada.ca/en/open-government-licence-canada
+
+You are free to:
+    Share — copy and redistribute the material in any medium or format
+    Adapt — remix, transform, and build upon the material
+    The licensor cannot revoke these freedoms as long as you follow the license terms.
+
+Under the following terms:
+    Attribution - You must give appropriate credit , provide a link to the license, and indicate if changes were made . You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+    NonCommercial - You may not use the material for commercial purposes .
+    ShareAlike - If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+    No additional restrictions - You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+Notices:
+  You do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation .
+  No warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material.
+
+Moreover, MSBAS is licensed to the https://open.canada.ca/en/open-government-licence-canada
 
 Because MasTer Toolbox program is licensed free of charge, there is no warranty for the program.  
 
@@ -101,7 +118,21 @@ https://doi.org/10.4095/313749
 **Updates:**
 
 **________**
-
+- New in V 20231003:
+  1. Some important files were renamed (e.g. FUNCTIONS_FOR_MT.sh), some files were moved in more appropriate directories and some directories were renamed for more clarity (like where to store some scripts or parameters files). 
+  2. The MasTer Toolbox is now distributed on a public GitHub repository and covered by a CC BY-NC-SA 4.0 license. A discussions group was also implemented on Github. Do not hesitate to visit and ask or contribute.  
+  3. A new section entiteled "trouble shooting" was started in the manual... To be continued...
+  4. New tools to select the pairs for the mass processing (now possible with Delaunay triangulation or x-shortests connections in addition to the existing baselines lengths criteria) 
+  5. Major change in the mask handling: now mask pixels 0 = always keep ; 1 = always mask and 2 = mask if coherence is lower than COHCLNTHRESH parameter at unwrapping
+  6. New way to manage hard coded lines in scripts: now they are all listed in a file named __HardCodedLines.sh (see manual)
+  7. Bug fixed in geocoding (half a pixel offset was introduced in a former version of MasTer Engine several months ago...) 
+  8. Several new scripts and small tools (see e.a. chapter 8 and 9 in manual)
+  9. New way for MasTer Engine to read Sentinel-1 Wide Swath images. The former and the new methods can be used together though. 
+  10. The manuals were updated accordingly
+  11. The __LaunchMTparam.txt was updated accordingly
+Because this new version includes major changes (also in the structure), it is hardly recommended to perform a new installation with the installer (MasTer_Install.sh). 
+ 
+  
 - New in V 20230421:
   1. Scripts:
     + Read_All_Img.sh: add CSK 2nd generation and correct/improve reading of several formats 
