@@ -56,6 +56,7 @@ At least I can try on the best effort basis...
 **License:**
 
 **________**
+
 "MasTer toolbox: an InSAR automated Mass processing Toolbox for Multidimensional time series" © 2023 
 by Nicolas d'Oreye, Dominique Derauw, Sergey Samsonov, Delphine Smittarello, Maxime Jaspard and Gilles Celli 
 is licensed under CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike 4.0 International)
@@ -65,6 +66,7 @@ Because MasTer Toolbox program is licensed free of charge, there is no warranty 
 **References:** 
 
 **___________**
+
 Please cite at least the following references. More can be found in 
 /MasTerToolbox_Distribution/DOC/How_To_Cite_MasTer.txt
 
@@ -83,6 +85,7 @@ Remote Sensing Symposium (IGARSS) 2021, Brussels
 **Develloppers of MasTer:**
 
 **_______________________**
+
     Dominique Derauw (MasTer Engine)
     Nicolas d'Oreye (MasTer toolbox scripts)
     Sergey Samsonov (MSBAS)
@@ -92,6 +95,7 @@ Remote Sensing Symposium (IGARSS) 2021, Brussels
 **Updates:**
 
 **________**
+
 - New in V 20230421:
   1. Scripts:
     + Read_All_Img.sh: add CSK 2nd generation and correct/improve reading of several formats 
