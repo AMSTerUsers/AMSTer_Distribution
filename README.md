@@ -54,6 +54,7 @@ be easy for me to adapt some of these existing scripts to satisfy your needs.
 At least I can try on the best effort basis... 
 
 **License:**
+
 **________**
 "MasTer toolbox: an InSAR automated Mass processing Toolbox for Multidimensional time series" © 2023 
 by Nicolas d'Oreye, Dominique Derauw, Sergey Samsonov, Delphine Smittarello, Maxime Jaspard and Gilles Celli 
@@ -62,6 +63,7 @@ is licensed under CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike 4.0 Inte
 Because MasTer Toolbox program is licensed free of charge, there is no warranty for the program.  
 
 **References:** 
+
 **___________**
 Please cite at least the following references. More can be found in 
 /MasTerToolbox_Distribution/DOC/How_To_Cite_MasTer.txt
@@ -79,6 +81,7 @@ MASTER: A FULL AUTOMATIC MULTI-SATELLITE INSAR MASS PROCESSING TOOL FOR RAPID IN
 Remote Sensing Symposium (IGARSS) 2021, Brussels
 
 **Develloppers of MasTer:**
+
 **_______________________**
     Dominique Derauw (MasTer Engine)
     Nicolas d'Oreye (MasTer toolbox scripts)
@@ -87,6 +90,7 @@ Remote Sensing Symposium (IGARSS) 2021, Brussels
     Maxime Jaspard (web interface)
     
 **Updates:**
+
 **________**
 - New in V 20230421:
   1. Scripts:
