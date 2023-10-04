@@ -109,11 +109,18 @@ https://doi.org/10.4095/313749
 
 **_______________________**
 
-    Dominique Derauw (MasTer Engine)
-    Nicolas d'Oreye (MasTer toolbox scripts)
-    Sergey Samsonov (MSBAS)
-    Delphine Smittarello (modules for pair selection optimisation or recursive unwrapping)
-    Maxime Jaspard (web interface)
+    Nicolas d'Oreye [1,2] (MasTer Toolbox scripts)
+    Dominique Derauw [3,4] (MasTer Engine)
+    Sergey Samsonov [5] (MSBAS)
+    Delphine Smittarello [1] (modules for pair selection optimisation, recursive unwrapping...)
+    Maxime Jaspard [1] (web interface)
+    Gilles Celli [1,2] (downloaders, compilation issues...)
+
+    [1] European Center for Geodynamics and Seismology, Luxembourg
+    [2] National Museum of Natural History, Luxembourg
+    [3] Centre Spatial de Liège, Université de Liège, Belgium
+    [4] Universidad Nacional de Rio Negro, General Roca, Argentina
+    [5] Canada Centre for Mapping and Earth Observation, Natural Resources Canada, Ottawa, Canada
     
 **Updates:**
 
