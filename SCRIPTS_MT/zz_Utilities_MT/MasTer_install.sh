@@ -1502,7 +1502,6 @@ CompileMSBSA()
 				else 
 					echo " Format not as expected (zip). May not be genuine file ? Please do manually"		
 			fi	
-		fi
 		echo "  // "
 	}
 
