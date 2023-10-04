@@ -1,3 +1,11 @@
+/* MasTerEngine202308904 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Bug correction in master image copy due to new format management. 
+		Memory leaks corrections. 
+/* MasTerEngine202308901 (© DD & SAREOS) */
+/* ************************************ */
+S1OrbitUpdater : Cosmetic changes in message log. 
+
 /* MasTerEngine20230828 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: Correction in the reading of the UTM zone: can be set as zone index followed by latitude band id (e.g. 31U) or conversely. 

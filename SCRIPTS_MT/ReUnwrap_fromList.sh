@@ -20,19 +20,22 @@
 # HARD CODED: 	- 
 #
 # Dependencies:	- gnu sed and awk for more compatibility. 
+#				- byte2Float.py
 #
 # New in Distro V 1.0:	- Based on developpement version and Beta V1.1.0
 # New in Distro V 1.0.1:	- Cleaning
 # New in Distro V 1.1.0:	- update to get same options as SinglePair.sh V_D4.0.0
 # New in Distro V 1.2: - replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 1.3: 	- read UTM zone for geocoding
+# New in Distro V 1.4 20231002:	- compatible with new multi-mevel masks where 0 = non masked and 1 or 2 = masked  
+#								- add fig snaphuMask and keep copy of unmasked defo map
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2018/03/29 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.3 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 29, 2023"
+VER="Distro V1.4 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 02, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -298,13 +301,32 @@ FILESTOGEOC=`echo "NO NO NO YES NO YES YES NO"`
 	# Interpolation of small gaps - gaps are from holes in DEM and/or mask
 	if [ ${INTERPOL} == "BEFORE" ] || [ ${INTERPOL} == "BOTH" ]
 		then
-			EchoTee "You requested an interpolation before geocoding. First multiply deformation map with NaN mask."
-			if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
-				then 
-					ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
-			fi
+			EchoTee "You requested an interpolation before geocoding. "
 			DEFORG=`GetParamFromFile "Deformation measurement range dimension" InSARParameters.txt`
 			DEFOAZ=`GetParamFromFile "Deformation measurement azimuth dimension" InSARParameters.txt`
+
+			if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
+				then 
+					EchoTee "First multiply deformation map with NaN mask."
+					if [ -f "${RUNDIR}/i12/InSARProducts/binarySlantRangeMask" ]
+						then 
+							EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked."
+							# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
+							byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
+							ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
+							convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
+						else 
+							if [ ${UW_METHOD} == "CIS" ]
+								then 
+									EchoTee "CIS unwrapping performed with mask. However, deformation maps are not shown with masked area because there is no product with teh same size. "
+									EchoTee "However, you can easily do it manually with any GIS software. "
+								else 
+									EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
+									# i.e. use old masking method with single level masks where 0 = masked
+									ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
+							fi
+					fi
+			fi
 			fillGapsInImage ${RUNDIR}/i12/InSARProducts/deformationMap ${DEFORG} ${DEFOAZ} 
 			# make raster
 			MakeFig ${DEFORG} 1.0 1.2 normal jet 1/1 r4 ${PATHDEFOMAP}.interpolated 

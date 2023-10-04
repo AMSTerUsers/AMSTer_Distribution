@@ -5,7 +5,7 @@
 #           DO NOT ADD TEXT WTH VARIABLE NAME FOLLOWED BY COMA. 
 # ALWAYS KEEP THE PATH PARAMETERS AT THE BOTTOM
 #
-# VERSION Aug 28 2023
+# VERSION Oct 03 2023
 
 # AUTOMATIC FIGURES DISPLAY
 ###########################
@@ -74,8 +74,10 @@ VV          # INITPOL, For multi pol images; force polarisation at initInSAR for
 
 # MASK
 #######
-APPLYMASKyes	# APPLYMASK, Apply mask (bytes, 1/0, LatLong, Envi Harris, larger than img) before unwrapping (APPLYMASKyes or APPLYMASKno); 
-				# If mask requested but no Snaphu, one can also mask manually files with ffa (eg ffa residualInterferogram.HH-HH.f x slantRangeMask)
+APPLYMASKyes	# APPLYMASK, Apply mask (bytes, LatLong, Envi Harris, larger than img) before unwrapping (APPLYMASKyes or APPLYMASKno); 
+				# Mask for Master Engine < 20230928: 1 = keep, 0 = mask. However, at unwrapping, 0-masked pixels are kept if their coh > COHCLNTHRESH 
+				# Mask for Master Engine > 20230928: 0 = keep, 1 = always mask, 2 = mask. However, at unwrapping, 2-masked pixels are kept if their coh > COHCLNTHRESH 
+				# If a mask is requested but no Snaphu, one can also mask manually files with ffa (eg ffa residualInterferogram.HH-HH.f x slantRangeMask)
 /$PATH_3600/MASKS/LakeKivu_LatLong.envi  # PATHTOMASK, geocoded mask file name and path
 
 # UNWRAPPING
@@ -101,8 +103,9 @@ ResidInterfFilt	# WHICHINTERF, which interferogram to unwrap, ResidInterf (resid
 0.0627		# COHMUWPTHRESH, coh threshold (between 0 and 1) below which it replaces the phase by white noise (corresponding mask will be produced). If set to 0, do not mask with white noise
 
 # if snaphu or CIS unwrapping:
-0.25	# COHCLNTHRESH, Coherence cleaning threshold. For snaphu, used if mask is present to create a new mask, i.e. with 0<CohClnThreshold<1, all pixels defined by mask + pixels above CohClnThreshold will be unwrapped. 
-		# If set to 1, only pixels defined by mask will be snaphu-unwrapped. 
+0.25	# COHCLNTHRESH, Coherence cleaning threshold. Snaphu gives 0 weight at pixels below that threshold. 
+		# Moreover, if a mask is used, snaphu (or CIS) also unwraps 0-masked pixels (for MasTer Engine < 20230928) or 2-masked pixels (for MasTer Engine > 20230928)
+		# if their coherence is above COHCLNTHRESH. 
 
 # if CIS unwrapping:
 0.1		# FALSERESCOHTHR, False Residue Coherence Threshold: higher is much slower. Use max 0.15 e.g. in crater  

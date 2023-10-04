@@ -91,13 +91,16 @@
 # New in Distro V 6.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names (except for CIS unwrapping method name)
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 6.1 20230928:	- make figs for maskedCoherence 
+# New in Distro V 6.2 20231003:	- debug figs for maskedCoherence 
+# New in Distro V 6.2.1 20231004:	- add raster of geocoded maskedCoherence 
 #
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V6.0 MasTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+FCTVER="Distro V6.2.1 MasTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 04, 2023"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -1191,7 +1194,8 @@ function InSARprocess()
 	#Plot figs
 	##########
 	ISARRG=`GetParamFromFile "Interferometric products range dimension" InSARParameters.txt`
-
+	ISARAZ=`GetParamFromFile "Interferometric products azimuth dimension" InSARParameters.txt`
+	
 	# interfero
 	PATHINTERF=`GetParamFromFile " Interferogram file path " InSARParameters.txt`
 	MakeFig ${ISARRG} 0.5 1.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${PATHINTERF} 
@@ -1203,6 +1207,10 @@ function InSARprocess()
 	# coherence
 	PATHCOH=`GetParamFromFile " Coherence file path " InSARParameters.txt`
 	MakeFigR ${ISARRG} 0,1 1.0 1.0 normal gray ${MLFIG1}/${MLFIG2} r4 ${PATHCOH} 
+	
+	# create fig for maskedCoherence if it exists		
+	PATHMASKCOH=${RUNDIR}/i12/InSARProducts/maskedCoherence
+	if [ -f ${PATHMASKCOH} ] ; then ${ISARRG} 0,1 1.0 1.0 normal gray ${MLFIG1}/${MLFIG2} r4 ${PATHMASKCOH} ; fi
 
 
 	# interfero - dem
@@ -1613,6 +1621,12 @@ function UnwrapAndPlot()
 			PATHMASK=${RUNDIR}/i12/InSARProducts/slantRangeMask
 			MakeFigNoNorm ${ISARRG} normal gray 1/1 c1 ${PATHMASK} 
 	fi
+
+	# create fig for maskedCoherence if it exists		
+	PATHMASKCOH=${RUNDIR}/i12/InSARProducts/maskedCoherence
+	#if [ -f ${PATHMASKCOH} ] ; then MakeFigR ${UNRPSIZE} 0.1 1.0 1.0 normal gray ${MLFIG1}/${MLFIG2} r4 ${PATHMASKCOH} ; fi
+	if [ -f ${PATHMASKCOH} ] ; then convert -depth 32 -equalize -size ${ISARRG}x${ISARAZ}  gray:${PATHMASKCOH} ${PATHMASKCOH}.gif ; fi
+
 	}
 	
 # compute multiple geocoding in UTM
@@ -1851,7 +1865,11 @@ function PlotGeoc()
 		then
 		# plot geocoded coherence
 		PATHGEOCOH=`basename coherence.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
-		MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOCOH}			
+		MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOCOH}	
+
+		# plot geocoded maskedCoherence	if it exists
+		PATHGEOMASKCOH=`basename maskedCoherence.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		if [ -f ${PATHGEOMASKCOH} ] ; then ${ISARRG} 0,1 1.0 1.0 normal gray ${MLFIG1}/${MLFIG2} r4 ${PATHGEOMASKCOH} ; fi
 	fi
 	if [ "${INTERF}" == "YES" ]
 		then
@@ -1887,6 +1905,14 @@ function PlotGeoc()
 		PATHGEOUNWRAPINTERF=`basename unwrappedPhase.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
 		MakeFigNoNorm ${GEOPIXW} normal jet 4/4 r4 ${PATHGEOUNWRAPINTERF} 
 	fi
+
+	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && [ "${UW_METHOD}" == "SNAPHU" ]
+		then
+		# plot maskedCoherence
+		PATHGEOMASKCOH=`basename maskedCoherence.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOMASKCOH} 
+	fi
+
 	}	
 
 # Still used for create headers for amplitude image of master and slave Zoomed x ML

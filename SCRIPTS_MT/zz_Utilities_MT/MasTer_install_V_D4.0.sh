@@ -156,16 +156,14 @@
 # New in Distro V 4.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
-# New in Distro V 4.1 20231004:	- Offer option to search for MasTerToolboxDistribution package 
-#								- proper sequence to install MasTer Engine
 #
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 4.1 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye', (c)2020, Last modified on Oct 04 2023"
+VER="version 4.0 - Interactive Mac/Linux installation of MasTer Toolbox"
+AUT="Nicolas d'Oreye', (c)2020, Last modified on Aug 30 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -971,276 +969,110 @@ function InstallCpxfiddle()
 		echo ""			
 	}
 
-# fct based on UpdateMasterEngine.sh V6.0
-function ParalleliseME()
-	{
-		SEARCHSTRING=$1 	# YES or NO
-		
-		# Check if the line for parallelisation exists in the makefile 
- 		if ${PATHGNU}/ggrep -qF "USEOPENMP" makefile 
- 			then
- 				if [ "${SEARCHSTRING}" == "YES" ]
-					then 
-						echo " using the parallelistaion option"
-						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = YES
-						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = YES"'/' makefile
-						make USEOPENMP=YES
-					else 
-						echo " without using the parallelistaion option"
-						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = NO
-						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = NO"'/' makefile
-						make
-				fi
-			else
-			    if [ "${SEARCHSTRING}" == "YES" ]
-			    	then 
-			  			echo "The parallelistaion option line doesn't exist in the makefile ? It must have a line like this: "
-			    		echo "USEOPENMP = ... or USEOPENMP?=..."
-			    		echo "Your version of MasTer Engine seems not planned for parallelistaion. Compile it as it is..."
-						make
-					else 
-			  			echo "The parallelistaion option line doesn't exist in the makefile but you do not want to anyway. "
-			    		echo "Compile it as it is..."
-						make
-			    fi
-		fi
-	}
-
-CompileMasTerEngine()
-	{
-		local NEWMASTERENGINE
-		
-		NEWMASTERENGINE=$1		# e.g. ${PATHDISTRO}/MasTerEngine/Vyyyymmdd_MasterEngine/MasTerEngineyyyymmdd.tar.xz
-
-		MESOURCEDIR=`dirname ${NEWMASTERENGINE}`		# e.g. ${PATHDISTRO}/MasTerEngine/Vyyyymmdd_MasterEngine
-		MESOURCEFILETAR=`basename ${NEWMASTERENGINE}` 	# MasTerEngineyyyymmdd.tar.xz
-
-		# where to install
-		PATHMASTERENGINE=${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine
-		PATHSOURCES=${PATHMASTERENGINE}/_Sources_ME/Older
-		echo "MasTer Engine will be installed in default directory ${PATHMASTERENGINE}"
-
-		# Extract date
-			# Define the pattern to match yyyymmdd
-			pattern="[0-9]{8}"
-
-			# Use regex matching to extract the date
-			if [[ $MESOURCEFILETAR =~ $pattern ]]; then
-			  DATEMASTERENGINE="${BASH_REMATCH[0]}"
-			else
-			  echo "Date not found in the input file."
-			  exit 
-			fi
-
-		# Code below is from UpdateMasterEngine.sh V6.0
-	
-		# Ask if want to install with parallelistaion
-		while true; do
-			read -p "Do you want to compile MasTer Engine with the parallelisation option ? [Y/N] "  yn
-			case $yn in
-				[Yy]* ) 				
-						echo "  OK, I will do it."
-						PARALLELOPTION="-p"
-						break ;;
-				[Nn]* ) 
-						echo "  OK, I will compile it without the parallel option."
-						PARALLELOPTION=""
-						break ;;
-					* )  
-						echo "Please answer [y]es or [n]o.";;
-				esac	
-			done					
-
-		# Crash if path to ${NEWMASTERENGINE} contains white spaces 
-		if [ `echo "${NEWMASTERENGINE}" | ${PATHGNU}/grep  \  | wc -l` -gt 0 ] ; then echo "Move your MasTerEngine source in a dir without white spaces in name !" ; exit ; fi
-		
-		if [ `dirname ${NEWMASTERENGINE}` != ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine ]
-			then 
-				echo "updating from source located anywhere but ${PATHMASTERENGINE}/_Sources_ME/Older/V${DATEMASTERENGINE}_MasterEngine"
-				mkdir -p ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine
-				cp -f ${NEWMASTERENGINE} ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine/
-			else 
-				echo "updating from  ${PATHMASTERENGINE}/_Sources_ME/Older/V${DATEMASTERENGINE}_MasterEngine"
-		fi
-		
-		cd ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine
-		
-			if [ `ls *.tar.xz  | wc -l` -gt 1 ] 
-				then 
-					echo "More than one tar file. Please check"
-					exit 
-				else 
-					TARDIRNAME=`ls *.tar.xz | cut -d . -f 1`
-					echo "Decompress ${TARDIRNAME}.tar.xz..."
-					tar -xf *.tar.xz
-			fi
-		
-		if [ -d ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine/${TARDIRNAME}/Archives ]
-			then 
-				# seems to be the new version of MasterEngine distrubution, that is made for the installer
-				VERSION=NEW
-				cd ${TARDIRNAME}/Archives
-				TARNAME=`ls Mas*.tar.xz`
-				echo "   Decompress ${TARNAME}.tar.xz..."
-				tar -xf Mas*.tar.xz
-				cd InSAR/sources
-			else
-				# seems to be the old version of MasterEngine distrubution
-				VERSION=OLD
-				if [ -d ${TARDIRNAME} ]		# because sometimes tar decompress in current dir or in dir named by the tar file...
-					then 
-						cd ${TARDIRNAME}/InSAR/sources
-					else 
-						TARDIRNAME=""
-						cd InSAR/sources			
-				fi
-		fi 
-		
-		echo
-		echo "Compile MasTerEngine "
-		
-		if [ "${PARALLELOPTION}" == "-p" ]
-			then 
-				ParalleliseME "YES" 
-			else 
-				ParalleliseME "NO" 
-		fi
-		
-		#make 
-		
-		cp _History.txt ${PATHMASTERENGINE}/
-		
-		cd ../bin
-		if [ -f initInSAR ] 
-			then 
-				echo
-				echo "I will move all the binaries to ${PATHMASTERENGINE} from here, that is: "
-				pwd
-				mv -f * ${PATHMASTERENGINE}/
-			else 
-				echo "I can't find the binaries to move to ${PATHMASTERENGINE} from here. I am probably not at the right place. Please check. "
-				pwd
-				exit
-		fi
-		cd ../..
-		
-		## May need to do the MSBAS Tools as well 
-		echo
-		echo "-------------------------------"
-		echo "Compile MSBAS Tools as well "
-		
-		cd MSBASTools/sources
-		
-		if [ "${PARALLELOPTION}" == "-p" ]
-			then 
-				ParalleliseME "YES" 
-			else 
-				ParalleliseME "NO" 
-		fi
-		#make 
-		
-		cd ../bin
-		if [ -f getLineThroughStack ] 
-			then 
-				echo
-				echo "I will move all the binaries to ${PATHMASTERENGINE} from here, that is: "
-				pwd
-				mv -f * ${PATHMASTERENGINE}/
-			else 
-				echo "I can't find the binaries to move to ${PATHMASTERENGINE} from here. I am probably not at the right place. Please check. "
-				pwd
-				exit
-		fi
-		cd ../..
-		
-		echo 
-		echo
-		
-		while true; do
-			read -p "Do you want to clean ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine/${TARDIRNAME} ?"  yn
-			case $yn in
-				[Yy]* ) 
-					cd ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine/
-					if [ "${TARDIRNAME}" == "" ]
-						then 
-							rm -R InSAR
-							rm -R MSBASTools
-						else
-							rm -R ${TARDIRNAME}
-					fi
-					break ;;
-				[Nn]* ) 
-					exit 1	
-					break ;;
-				* ) echo "Please answer yes or no.";;
-			esac
-		done
-
- 		echo "  // "							
-
-	}
-
 DoInstallMasTerEngine()
 	{
-		if [ "${PATHDISTRO}" == "" ]
-			then 
-				# ask where are the sources if not in MasTerToolbox_Distribution
-				echo "Enter the path to the MasTerEngin source file you want to install."
-				while true ; do
-					read -e -p "It must be something like ...YourPath/Vyyyymmdd_MasterEngine/MasTerEngineyyyymmdd.tar.xz (You can use Tab for autocompletion): " RAWFILE
-			    	
-			    	# Check if the version exists
-					if [ -f "${RAWFILE}" ]
-						then
-							CompileMasTerEngine ${RAWFILE}
-							break
-						else
-					       echo "No MasTerEngineyyyymmdd.tar.xz file exists there."
-					       read -p "Do you want to enter a new path to the source file (enter 'yes' or 'no')? " choice
-					
-					       if [ "$choice" == "no" ]; then
-					           echo "OK, I skip the MasTer Engine installation ."
-					           break
-					       fi
+		# Below assign MasTer Engine to install as RAWFILE
+		AskDistroComponent "MasTerEngine" "https://github.com/ndoreye/MasTerToolbox_Distribution"
+
+		if [ "${SKIP}" == "No" ] ; then 
+			# just if there is a typo in the version, or name... hoping that at least the main name is OK					
+			if [ ! -f  ${PATHDISTRO}/MasTerEngine_sources/"${RAWFILE}" ] ; then 
+				FILETOINSTALL=`find ${PATHDISTRO}/MasTerEngine_sources/ -maxdepth 1 -type f -name "*MasTerEngine*" 2>/dev/null`
+				SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
+			fi
+
+			FILEXT="${RAWFILE##*.}"
+
+			if [ "${FILEXT}" == "xz" ] 
+				then 
+					MASTERENGINEDATE=`echo "${RAWFILE}" | grep -Eo "[0-9]{8}" `
+		
+					MESOURCEDIR="${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older/V${MASTERENGINEDATE}_MasterEngine/"
+					mkdir -p "${MESOURCEDIR}"
+					cp -f ${PATHDISTRO}/MasTerEngine_sources/${RAWFILE} ${MESOURCEDIR}
+					cd ${MESOURCEDIR}
+					TARDIRNAME=`ls -t *.tar.xz | head -1 | cut -d . -f 1`
+					echo "  // Decompress ${TARDIRNAME}.tar.xz..."
+					tar -xf ${TARDIRNAME}.tar.xz
+					# Check if unzipped MasTerEngine file contains subdirs (i.e. compilable version), or only binaries (i.e. not compilable version)
+					if [ -d "${MESOURCEDIR}/" ] 
+						then  
+							NRSUBDIR=`find ${MESOURCEDIR} -mindepth 1 -maxdepth 1 -type d | wc -l`
 					fi
-				done
-			else 
-				# sources are in MasTerToolbox_Distribution directory
-				echo "Here is the list of available versions in you MasTerToolbox_Distribution directory:"
-				cd ${PATHDISTRO}/MasTerEngine/
-				ls -d v*
-			    while true; do
-			    	read -p "Which version would you like to install (enter the full name of directory without path !): " DIRVERTOINSTALL
-			
-			    	# Check if the version exists
-					if [ -d "${DIRVERTOINSTALL}" ]
-						then
-							if [ `ls ${PATHDISTRO}/MasTerEngine/${DIRVERTOINSTALL}/*.tar.xz | wc -l` -eq 1 ]
+					if [ ${NRSUBDIR} -eq 0 ]
+						then 
+							echo "  // It seems that you install MasTerEngine binaries... Let's move the executables to the appropriate place "	
+							cd ${MESOURCEDIR}/${TARDIRNAME}
+							mv -f * ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
+						else 
+							echo "  // Compile and install MasTerEngine"							
+							if [ -d ${MESOURCEDIR}/${TARDIRNAME}/Archives ]
 								then 
-									MESOURCEFILE=`ls ${PATHDISTRO}/MasTerEngine/${DIRVERTOINSTALL}/*.tar.xz`
-									CompileMasTerEngine ${MESOURCEFILE}
-									break
+									# seems to be the new version of MasterEngine distrubution, that is made for the installer
+									VERSION=NEW
+									cd ${TARDIRNAME}/Archives
+									TARNAME=`ls Mas*.tar.xz`
+									echo "   Decompress ${TARNAME}.tar.xz..."
+									tar -xf Mas*.tar.xz
+									cd InSAR/sources
 								else
-									echo "No or More than one .tar.xz file in ${PATHDISTRO}/MasTerEngine/${DIRVERTOINSTALL}/"
-									echo " Remove unnecessary .tar.xz file in dir and/or provide a new path. "
-					      			read -p "Do you want to enter a new name dir (enter 'yes' or 'no')? " choice
-								
-					      			if [ "$choice" == "no" ]; then
-					      			    echo "OK, I skip the MasTer Engine installation ."
-					      			    break
-					      			fi
+									# seems to be the old version of MasterEngine distrubution
+									VERSION=OLD
+									if [ -d ${TARDIRNAME} ]		# because sometimes tar decompress in current dir or in dir named by the tar file...
+										then 
+											cd ${TARDIRNAME}/InSAR/sources
+										else 
+											TARDIRNAME=""
+											cd InSAR/sources			
+									fi
 							fi 
-						else
-					       echo "Version directory does not exist."
-					       read -p "Do you want to enter a new name dir (enter 'yes' or 'no')? " choice
-					
-					       if [ "$choice" == "no" ]; then
-					           echo "OK, I skip the MasTer Engine installation ."
-					           break
-					       fi
+
+							echo "  // Compile MasTerEngine "
+
+							if [ "${PARALLELOPTION}" == "-p" ]
+								then 
+									ParalleliseME "YES" 
+								else 
+									ParalleliseME "NO" 
+							fi
+
+							#make 
+							cp _History.txt ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
+							cd ../bin
+							mv -f * ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
+							cd ../..
+
+							echo "  // Compile MSBAS Tools as well "
+							cd MSBASTools/sources
+							
+							if [ "${PARALLELOPTION}" == "-p" ]
+								then 
+									ParalleliseME "YES" 
+								else 
+									ParalleliseME "NO" 
+							fi
+							#make 
+
+							cd ../bin
+							mv -f * ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/
+							cd ../..
+		
+							echo "  // Clean sources "
+							cd ${MESOURCEDIR}
+							if [ "${TARDIRNAME}" == "" ]
+								then 
+									rm -R InSAR
+									rm -R MSBASTools
+								else
+									rm -R ${TARDIRNAME}
+							fi
 					fi
-				done
-		fi
+					echo "  // "
+				else 
+					echo " Format not as expected (xz). May not be genuine file ? Please do manually"			
+			fi	
+			cd ${HOMEDR}	
+		fi	
 	}
 
 function InstallMasTerEngine()
@@ -1250,16 +1082,14 @@ function InstallMasTerEngine()
 			read -p "Do you want to [c]heck, [i]nstall/compile or [s]kip MasTerEngine  ? [c/i/s] "  cis
 			case $cis in
 			[Cc]* ) 	
-				echo "  // OK, let's check its version by looking at the last created source dir."
-				echo "  // It is your responsability to verify that it is the last one though..."
-				# Get last creater dir. Beware, it may not be the last version ?!
-				LASTDIRINFO=`find ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older -type d -name "V*" -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -1 `  
+				echo "  // OK, let's check its version. It is your responsability to verify that it is the last one though..."
+				LASTDIRINFO=`find ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older -type d -name "V*" -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -1 `  # get last creater dir
 				#	Get everything after the last /:
 				LASTDIRNAME="${LASTDIRINFO##*/}"
 				MEVER=`echo ${LASTDIRNAME} | cut -d _ -f1`
 				if [ "${MEVER}" == "" ] 
 					then 
-						echo "  MasTerEngine seems not installed. "
+						echo "MasTerEngine seems not installed. "
 						while true ; do
 						read -p "Do you want to install it now [y]es or [n]o ? "  yn
 							case $yn in
@@ -1276,33 +1106,8 @@ function InstallMasTerEngine()
 						done
 
 					else 
-						echo "  The last source of MasTerEngine in ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older" 
-						echo "     is ${MEVER}"
-						CHECKME=`S1DataReader | wc -l`
-						if [ ${CHECKME} -gt 0 ] 
-							then 
-								echo "There is at least one MasTer Engine compiled. "
-								echo "It is your responsability to verify that it is the last one though..."
-								# check the version from the _History.txt file 
-								echo "For your information, the last version most probably installed as mentionned in ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_History.txt is "
-								head -1 ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_History.txt
-							else 
-								echo "However, no MasTer Engine is compiled yet and/or executable from the PATH. "
-								read -p "Do you want to install it now [y]es or [n]o ? "  yn
-									case $yn in
-										[Yy]* ) 
-											echo "  // OK, I will try to install it."
-											DoInstallMasTerEngine
-											break ;;
-										[Nn]*)
-											echo "  // OK, you know..." 
-											break ;;
-										* ) 
-											echo "Please answer [y]es or [n]o." ;;
-									esac
-								done
-						fi
-				
+						echo "MasTerEngine version ${MEVER} is installed"
+						echo "  // It is your responsability to verify that it is the last one though..."
 				fi
 				break ;;				
 			[Ii]* ) 				
@@ -1375,7 +1180,7 @@ function TstPathGnuFctLinux()
 
 DoInstallMSBAS()
 	{
-		echo "  // MSBAS software performs the svd inversion for the ground deformation time series." 
+		echo "  // msbas software performs the svd inversion for the ground deformation time series." 
 		echo "  //     The sources were prepared to be Mac and Linux compliant for this installer." 
 		echo "  // Several versions are possible, e.g.: " 
 		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip runs msbasv4 (2D) in parallel on ALL the available cores for a maximum of efficiency. "
@@ -1386,83 +1191,26 @@ DoInstallMSBAS()
 		echo "  //   You can contact directely the autor (sergey.samsonov@NRCan-RNCan.gc.ca) for other version or for more info. In that case, you will have to compile it manually "
 		echo "  //   i.e.: unzip the package, go to sources subdirs and run make; move binaries in MSBAS dir)"
 
-		if [ "${PATHDISTRO}" == "" ]
-			then 
-				# ask where are the sources if not in MasTerToolbox_Distribution
-				echo "Enter the path to the msbas source file you want to install."
-				while true ; do
-					read -e -p "It must be something like ...YourPath/msbasvXX/msbasvXX_*.zip (You can use Tab for autocompletion): " RAWFILE
-			    	
-			    	# Check if the version exists
-					if [ -f "${RAWFILE}" ]
-						then
-							CompileMSBAS ${RAWFILE}
-							break
-						else
-					       echo "No msbas zip file exists there."
-					       read -p "Do you want to enter a new path to the source file (enter 'yes' or 'no')? " choice
-					
-					       if [ "$choice" == "no" ]; then
-					           echo "OK, I skip the msbas installation ."
-					           break
-					       fi
-					fi
-				done
-			else 
-				# sources are in MasTerToolbox_Distribution directory
-				echo "Here is the list of available versions in you MasTerToolbox_Distribution directory:"
-				cd ${PATHDISTRO}/MSBAS_sources/
-				find ${PATHDISTRO}/MSBAS_sources/ -type f -name "*.zip"
-			    while true; do
-			    	read -p "Which version would you like to install (enter the full path and zip file !): " RAWFILE
-			    	# Check if the version exists
-					if [ -f "${RAWFILE}" ]
-						then
-							CompileMSBSA ${RAWFILE}
-							break
-						else
-					       echo "Version does not exist."
-					       read -p "Do you want to enter a new path and zip file (enter 'yes' or 'no')? " choice
-					
-					       if [ "$choice" == "no" ]; then
-					           echo "OK, I skip the MSBAS installation ."
-					           break
-					       fi
-					fi
-				done
-		fi
-	}
+		# Below assign msbas zipped version to install as RAWFILE
+		AskDistroComponent "msbas" "https://github.com/ndoreye/MasTerToolbox_Distribution"
 
-CompileMSBSA()
-	{
-			RAWFILE=$1 		# e.g. .../msbasv4/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip
+		echo "  // OK, I will try to install msbas and msbas_extract using ${RAWFILE}. "
 
-			# where to install
-			PATHMSBAS=${HOMEDIR}/SAR/MasTerToolbox/MSBAS
-			# where to keep installed sources
-			PATHFORMERSOURCESMSBAS=${HOMEDIR}/SAR/EXEC/Sources_Installed/Former_msbas/
-			mkdir -p ${PATHFORMERSOURCESMSBAS}
-			echo "MSBAS will be installed in default directory ${PATHMSBAS}"
-			echo " and sources will be stored with possible older versions in ${PATHFORMERSOURCESMSBAS}"
-
-			MSBASSOURCEDIR=`dirname ${RAWFILE}`		# e.g. ${PATHDISTRO}/MSBAS_sources/msbasv4/
-			MSBASSOURCEFILETAR=`basename ${RAWFILE}` 	# e.g. msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip
-
-			FILEXT="${MSBASSOURCEFILETAR##*.}"
- 			FILENOXT=`echo "$MSBASSOURCEFILETAR%.*}"`
+		if [ "${SKIP}" == "No" ] ; then 
+			FILEXT="${RAWFILE##*.}"
+ 			FILENOXT=`echo "${RAWFILE%.*}"`
 			if [ "${FILEXT}" == "zip" ] 
 				then 
 					# Save possible former versions
-					FORMERVERSION=`ls ${PATHMSBAS}/msbasv* 2>/dev/null | grep -v "zip"`
+					FORMERVERSION=`ls ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/msbasv* 2>/dev/null | grep -v "zip"`
 					if [ "${FORMERVERSION}" != "" ] ; then
-						echo "  // Save former version in ${PATHFORMERSOURCESMSBAS}. "
-						mv -f ${FORMERVERSION} ${PATHFORMERSOURCESMSBAS}
+						echo "  // Save former version in SAR/MasTerToolbox/MSBAS/Former_version/. "
+						mkdir -p ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/Former_version
+						mv -f ${FORMERVERSION} ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/Former_version/
 					fi
 
-					cp ${RAWFILE} ${PATHFORMERSOURCESMSBAS}
-					cd ${PATHFORMERSOURCESMSBAS}
-					unzip ${MSBASSOURCEFILETAR}
-					cd ${FILENOXT}
+					unzip ${PATHDISTRO}/msbas_sources/${RAWFILE}
+					cd ${PATHDISTRO}/msbas_sources/${FILENOXT}
 					
 					make all 
 					
@@ -1473,7 +1221,7 @@ CompileMSBSA()
 	
 					# store compiled msbas in SAR/MasTerToolbox/MSBAS/
 					echo "  // store compiled msbasv${MSBASVERSION} in SAR/MasTerToolbox/MSBAS/"
-					cp ${PATHFORMERSOURCESMSBAS}/${FILENOXT}/msbasv${MSBASVERSION} ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
+					cp ${PATHDISTRO}/msbas_sources/${FILENOXT}/msbasv${MSBASVERSION} ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
 
 					case ${MSBASVERSION} in 
 						"4")
@@ -1481,7 +1229,7 @@ CompileMSBSA()
 							echo "  // msbas_extract available with msbasv${MSBASVERSION}; Compile it now "
 							cd msbas_extract
 							make
-							cp ${PATHFORMERSOURCESMSBAS}/${FILENOXT}/msbas_extract/msbas_extract ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
+							cp ${PATHDISTRO}/msbas_sources/${FILENOXT}/msbas_extract/msbas_extract ${HOMEDIR}/SAR/MasTerToolbox/MSBAS/
 							cd ${HOMEDIR} 
 							;;
 						"10")
@@ -1492,9 +1240,11 @@ CompileMSBSA()
 							;;
 					esac
 					
-					# Clean and keep sources
-					rm -rf ${PATHFORMERSOURCESMSBAS}/${FILENOXT}
-					rm -rf ${PATHFORMERSOURCESMSBAS}/${FILENOXT}/__MACOSX
+					# Keep sources
+					mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
+					cp -f ${PATHDISTRO}/msbas_sources/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed
+					rm -rf ${PATHDISTRO}/msbas_sources/${FILENOXT}
+					rm -rf ${PATHDISTRO}/msbas_sources/${FILENOXT}/__MACOSX
 					
 				else 
 					echo " Format not as expected (zip). May not be genuine file ? Please do manually"		
@@ -1505,9 +1255,9 @@ CompileMSBSA()
 
 function InstallMSBAS()
 	{
-		EchoInverted "  // MSBAS is the software required to create the deformation time series.   "
+		EchoInverted "  // msbas is the software required to create the deformation time series.   "
 		while true; do
-			read -p "Do you want to [c]heck, [i]nstall or [s]kip MSBAS  ? [c/i/s] "  cis
+			read -p "Do you want to [c]heck, [i]nstall or [s]kip msbas  ? [c/i/s] "  cis
 			case $cis in
 				[Cc]* ) 				
 						echo "  // OK, let's check its version. It is your responsability to verify that it is the last one though..."
@@ -1518,7 +1268,7 @@ function InstallMSBAS()
 						if [ ${NROFMSBAS} -gt 0 ]
 							then
 								MSBASVER=`tail -1 List_msbas.txt`
-								echo "  // You have ${NROFMSBAS} MSBAS versions"		
+								echo "  // You have ${NROFMSBAS} msbas versions"		
  								rm -f List_msbas.txt
 							else
 								MSBASVER=""
@@ -1526,7 +1276,7 @@ function InstallMSBAS()
 						
 						if [ "${MSBASVER}" == "" ] 
 							then 
-								echo "MSBAS seems not installed. "
+								echo "msbas seems not installed. "
 								while true ; do
 								read -p "Do you want to install it now [y]es or [n]o ? "  yn
 									case $yn in
@@ -1541,7 +1291,7 @@ function InstallMSBAS()
 									esac
 								done
 							else 
-								echo "last MSBAS version installed is ${MSBASVER}"
+								echo "last msbas version installed is ${MSBASVER}"
 								while true ; do
 								read -p "Do you want to install a new version [y]es or [n]o ? "  yn
 									case $yn in
@@ -1570,41 +1320,38 @@ function InstallMSBAS()
 		done							
 		echo ""	
 	}
-
-function GetSCRIPTS()
+	
+function ParalleliseME()
 	{
-		SCRIPTSDIR=$1		# e.g. ${PATHDISTRO}/SCRIPTS_MT/
-
-		if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT | wc -l ` -gt 0 ] ; then 
-			echo "Former scripts exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/"
-			# Save former scripts to ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/SCRIPTS_DATE
-			mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}
-			mv ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/
-		fi 
-		# install
-		cp -Rf ${SCRIPTSDIR}/* ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/
-		# keep installed sources 
-		mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
-		cp -Rf ${SCRIPTSDIR}/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
-
-		echo ""	
+		SEARCHSTRING=$1 	# YES or NO
+		
+		# Check if the line for parallelisation exists in the makefile 
+ 		if ${PATHGNU}/ggrep -qF "USEOPENMP = " makefile 
+ 			then
+ 				if [ "${SEARCHSTRING}" == "YES" ]
+					then 
+						echo " using the parallelistaion option"
+						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = YES
+						# ${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = YES"'/' makefile
+						make USEOPENMP=YES
+					else 
+						echo " without using the parallelistaion option"
+						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = NO
+						# ${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = NO"'/' makefile
+						make
+				fi
+			else
+			    if [ "${SEARCHSTRING}" == "YES" ]
+			    	then 
+			  			echo "The parallelistaion option line doesn't exist in the makefile ? It must have a line like this: "
+			    		echo "USEOPENMP = ... or USEOPENMP?=..."
+			    		echo "If your version of MasTer Engine is not planned for parallelistaion, just run the script without the -p option."
+			    		exit
+			    fi
+		fi
 	}
 
-function GetDoc()
-	{
-		DOCDIR=$1		# e.g. ${PATHDISTRO}/DOC/
-
-		if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/DOC | wc -l ` -gt 0 ] ; then 
-			echo "Former DOCs exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/"
-			mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}
-			mv ${HOMEDIR}/SAR/MasTerToolbox/DOC/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/
-		fi 
-
-		cp -Rf ${DOCDIR}/* ${HOMEDIR}/SAR/MasTerToolbox/DOC/
-
-		echo ""	
-	}
-
+	
 ###############
 # Some advice #
 ###############
@@ -3124,37 +2871,21 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 echo "  // MasTer Toolbox is freely available (under GPL licence) from https://github.com/ndoreye/MasTerToolbox_Distribution."
 
 	cd
-   	read -p "Have you downloaded the MasTerToolbox_Distribution package from Github ? [y/n]: " yn
-	case $yn in
-		[Yy]* ) 
-			echo "  // OK, I will try to install MasTer components from there (MasTer Engine, MSBAS and SCRIPTS_MT)."
-			while true; do
-		   		echo "Enter the path to the MasTerToolbox_Distribution directory; "
-		   		read -e -p "   You can use Tab for autocompletion (e.g. .../SAR/MasTerToolbox/MasTerToolbox_Distribution): " PATHDISTRO
+   	read -e -p "Enter the path to the MasTerToolbox_Distribution (that is the directory synchronised from github). You can use Tab for autocompletion (e.g. SAR/MasTerToolbox/MasTerToolbox_DIstribution): " PATHDISTRO
 
-			    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
-			    	then # [[ -d ${PATHDISTRO} ]] only test if exist
-			        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
-			       		break
-			   		else
-			       		echo "Directory ${PATHDISTRO} does not exist or is empty. "
-						read -p "Do you want to enter a new path [y/n]? " choice
-						
-						if [ "$choice" == "n" ] || [ "$choice" == "N" ] 
-							then
-						    	echo "OK, then you can provide me later with the path where you have the sources of each components."
-						    	break
-						fi
-			    fi
-			done
-			break ;;
-		[Nn]* ) 
-			echo "  // OK, I will ask you to provide me later with the path where you have the sources of each components (MasTer Engine, MASBAS and SCRIPTS_MT)."
-			break ;;
-		* ) 
-			echo "  // Please answer y or n"
-			;;
-	esac
+	while true; do
+	    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] ; then # [[ -d ${PATHDISTRO} ]] only test if exist
+	        echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
+	        break
+	    else
+	        echo "Directory ${PATHDISTRO} does not exist or is empty. Please try again."
+  			read -e -p "Enter the path to the MasTerToolbox_Distribution (that is the directory synchronised from github). You can use Tab for autocompletion (e.g. SAR/MasTerToolbox/MasTerToolbox_DIstribution): " PATHDISTRO
+	        break
+	    fi
+	done
+
+
+
 
 echo
 echo "  // OK, I will try to install/update MasTer Toolbox from ${PATHDISTRO}."
@@ -3162,6 +2893,21 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	# MASTER Engine 
 	# -------------
+	while true; do
+		read -p "Do you want to compile MasTer Engine with the parallelisation option ? [Y/N] "  yn
+		case $yn in
+			[Yy]* ) 				
+					echo "  // OK, I will do it."
+					PARALLELOPTION="-p"
+					break ;;
+			[Nn]* ) 
+					echo "  // OK, I will compile it without the parallel option."
+					PARALLELOPTION=""
+					break ;;
+				* )  
+					echo "Please answer [y]es or [n]o.";;
+			esac	
+		done							
 	InstallMasTerEngine
 	
 	# MSBAS and EXTRACT TOOL 
@@ -3170,69 +2916,29 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	
 	# SCRIPTS 
 	# -------
-	EchoInverted "  // MasTer Toolbox scrpits are required for interfacing MasTerEngine, MSBAS and their automation.   "
+	EchoInverted "  // MasTer Toolbox scrpits are required for interfacing MasTerEngine, msbas and their automation.   "
 	while true; do
-		echo "Do you want to install/update MasTer Toolbox SCRIPTS ?"
-		echo "  Scripts will be copied to ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT"
-		echo "      and sources will be kept as backup in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/"
+		echo "Do you want to install/update MasTer Toolbox SCRIPTS using those from https://github.com/ndoreye/MasTerToolbox_Distribution ?"
+		echo "  Scripts will be copied from ${PATHDISTRO}/SCRIPTS_sources to ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT"
+		echo "      and sources will be kept in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/"
 		echo "  If former scripts exist, they will be strored in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/"
 
 		read -p " Proceed ? [y/n] "  yn
 		case $yn in
 			[Yy]* ) 				
 					echo "  // OK, I do it."
+					
+					if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT | wc -l ` -gt 0 ] ; then 
+						# Save former scripts to ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/SCRIPTS_DATE
+						mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}
+						mv ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/
+					fi 
+					# install
+					cp -Rf ${PATHDISTRO}/SCRIPTS_sources/* ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT/
+					# keep installed sources 
+					mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
+					cp -Rf ${PATHDISTRO}/SCRIPTS_sources/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
 
-					if [ "${PATHDISTRO}" == "" ]
-						then 
-							# ask where are the sources if not in MasTerToolbox_Distribution
-							echo "Enter the path to the MasTer Toolbox directory named SCRIPTS_MT that you want to install."
-							while true ; do
-								read -e -p "It must be something like ...YourPath/SCRIPTS_MT (You can use Tab for autocompletion): " SCRIPTSDIR
-						    	
-						    	# Check if the dir exists
-								if [ -d "${SCRIPTSDIR}" ]
-									then
-										GetSCRIPTS ${SCRIPTSDIR}
-										break
-									else
-								       echo "No ${SCRIPTSDIR} exists."
-								       read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
-								
-								       if [ "$choice" == "no" ]; then
-								           echo "OK, I skip the installation of the scripts."
-								           break
-								       fi
-								fi
-							done
-						else 
-							# sources are in MasTerToolbox_Distribution directory
-					    	# Check if it exists
-								if [ -d "${PATHDISTRO}/SCRIPTS_MT" ]
-									then
-										GetSCRIPTS ${SCRIPTSDIR}
-									else
-								    	echo "No ${PATHDISTRO}/SCRIPTS_MT exists."
-										echo "Enter the path to the MasTer Toolbox directory named SCRIPTS_MT that you want to install."
-										while true ; do
-											read -e -p "It must be something like ...YourPath/SCRIPTS_MT (You can use Tab for autocompletion): " SCRIPTSDIR
-						    				
-						    				# Check if the dir exists
-											if [ -d "${SCRIPTSDIR}" ]
-												then
-													GetSCRIPTS ${SCRIPTSDIR}
-													break
-												else
-											       echo "No ${SCRIPTSDIR} exists."
-											       read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
-											
-											       if [ "$choice" == "no" ]; then
-											           echo "OK, I skip the installation of the scripts."
-											           break
-											       fi
-											fi
-										done
-								fi
-					fi
 					break ;;
 			[Nn]* ) 
 					echo "  // OK, I skip it."
@@ -3245,66 +2951,14 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	# DOC 
 	# -------
-	EchoInverted "  // Documentation for MasTer Toolbox is stored in ${HOMEDIR}/SAR/MasTerToolbox/DOC.   "
+	EchoInverted "  // Documentation for MasTer Toolbox is stored in ${PATHDISTRO}/DOC.   "
 	while true; do
-		echo "Do you want to copy/update MasTer Toolbox ?"
-		echo " Former versions, if any, will be stored in ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/"
+		echo "Do you want to copy/update MasTer Toolbox documentation using those from https://github.com/ndoreye/MasTerToolbox_Distribution ?"
 
 		read -p " Proceed ? [y/n] "  yn
 		case $yn in
 			[Yy]* ) 
-					if [ "${PATHDISTRO}" == "" ]
-						then 
-							# ask where are the docs if not in MasTerToolbox_Distribution
-							echo "Enter the path to the MasTer documentation directory named DOC that you want to install."
-							while true ; do
-								read -e -p "It must be something like ...YourPath/DOC (You can use Tab for autocompletion): " DOCDIR
-						    	
-						    	# Check if the dir exists
-								if [ -d "${DOCDIR}" ]
-									then
-										GetDoc ${DOCDIR}
-										break
-									else
-								       echo "No ${DOCDIR} exists."
-								       read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
-								
-								       if [ "$choice" == "no" ]; then
-								           echo "OK, I skip the installation of the documentation."
-								           break
-								       fi
-								fi
-							done
-						else 
-							# sources are in MasTerToolbox_Distribution directory
-					    	# Check if it exists
-								if [ -d "${PATHDISTRO}/DOC" ]
-									then
-										GetDoc ${DOCDIR}
-									else
-								    	echo "No ${PATHDISTRO}/DOC exists."
-										echo "Enter the path to the MasTer documentation directory named DOC that you want to install."
-										while true ; do
-											read -e -p "It must be something like ...YourPath/DOC (You can use Tab for autocompletion): " DOCDIR
-						    				
-						    				# Check if the dir exists
-											if [ -d "${DOCDIR}" ]
-												then
-													GetDoc ${DOCDIR}
-													break
-												else
-											       echo "No ${DOCDIR} exists."
-											       read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
-											
-											       if [ "$choice" == "no" ]; then
-											           echo "OK, I skip the installation of the documentation."
-											           break
-											       fi
-											fi
-										done
-								fi
-					fi
-
+					cp -Rf ${PATHDISTRO}/DOC/* ${HOMEDIR}/SAR/MasTerToolbox/DOC/
 					break
 					;;
 			[Nn]* ) 

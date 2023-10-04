@@ -62,13 +62,15 @@
 # New in Distro V2.6.0: - read UTM zone for geocoding
 # New in Distro V2.6.1: - quote search for FORCES1DEM param to avoid "unary operator" error message
 #						- try to create PROROOTPATH just in case 
+# New in Distro V2.6.2 20231003:	- Added stop if it cannot find the S1 Super Master Image (A. Dille)
+
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2015/08/24 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.6.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sep 01, 2023"
+VER="Distro V2.6.2 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 03, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -234,6 +236,17 @@ case ${SATDIR} in
 		# need this definition here for usage in GetParamFromFile
 		MASDIR=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SUPERMASTER}` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name.csl of the image anyway
 
+   		# Check if the variable is empty
+   		if [ -z "${MASDIR}" ]; then
+   		    echo ""
+   		    EchoTee "! I cannot find the super master ${SUPERMASTER} in folder ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop. Check the date of your super master given in LaunchMTparam_. The script will exit."
+   		    echo ""
+   		    exit 1  # Exit the script with an error code
+   		fi
+   		echo ""
+   		EchoTee "Working with Super Master with date ${SUPERMASTER}"
+   		EchoTee ""
+		
 		S1ID=`GetParamFromFile "Scene ID" SAR_CSL_SLCImageInfo.txt`
 		S1MODE=`echo ${S1ID} | cut -d _ -f 2`	
 		# If S1 is strip map, it requires normal processing
