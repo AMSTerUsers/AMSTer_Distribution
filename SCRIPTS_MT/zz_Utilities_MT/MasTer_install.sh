@@ -1274,7 +1274,6 @@ function InstallMasTerEngine()
 									echo "Please answer [y]es or [n]o." ;;
 							esac
 						done
-
 					else 
 						echo "  The last source of MasTerEngine in ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older" 
 						echo "     is ${MEVER}"
@@ -1288,6 +1287,7 @@ function InstallMasTerEngine()
 								head -1 ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_History.txt
 							else 
 								echo "However, no MasTer Engine is compiled yet and/or executable from the PATH. "
+								while true ; do
 								read -p "Do you want to install it now [y]es or [n]o ? "  yn
 									case $yn in
 										[Yy]* ) 
@@ -1302,7 +1302,6 @@ function InstallMasTerEngine()
 									esac
 								done
 						fi
-				
 				fi
 				break ;;				
 			[Ii]* ) 				
@@ -1400,12 +1399,14 @@ DoInstallMSBAS()
 							break
 						else
 					       echo "No msbas zip file exists there."
-					       read -p "Do you want to enter a new path to the source file (enter 'yes' or 'no')? " choice
+							while true ; do
+						       read -p "Do you want to enter a new path to the source file (enter 'yes' or 'no')? " choice
 					
-					       if [ "$choice" == "no" ]; then
-					           echo "OK, I skip the msbas installation ."
-					           break
-					       fi
+							   if [ "$choice" == "no" ]; then
+							       echo "OK, I skip the msbas installation ."
+							       break
+							   fi
+							done
 					fi
 				done
 			else 
@@ -1422,12 +1423,14 @@ DoInstallMSBAS()
 							break
 						else
 					       echo "Version does not exist."
-					       read -p "Do you want to enter a new path and zip file (enter 'yes' or 'no')? " choice
-					
-					       if [ "$choice" == "no" ]; then
-					           echo "OK, I skip the MSBAS installation ."
-					           break
-					       fi
+					       while true ; do
+								read -p "Do you want to enter a new path and zip file (enter 'yes' or 'no')? " choice
+								
+								if [ "$choice" == "no" ]; then
+								    echo "OK, I skip the MSBAS installation ."
+								    break
+								fi
+					       done
 					fi
 				done
 		fi
@@ -1634,7 +1637,7 @@ while true; do
 					
 						* )  
 						echo "Please answer [y]es or [n]o." ;;
-			esac
+				esac
 			done							
 			break ;;
 		[Nn]* ) 
@@ -3124,38 +3127,39 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 echo "  // MasTer Toolbox is freely available (under GPL licence) from https://github.com/ndoreye/MasTerToolbox_Distribution."
 
 	cd
-   	read -p "Have you downloaded the MasTerToolbox_Distribution package from Github ? [y/n]: " yn
-	case $yn in
-		[Yy]* ) 
-			echo "  // OK, I will try to install MasTer components from there (MasTer Engine, MSBAS and SCRIPTS_MT)."
-			while true; do
-		   		echo "Enter the path to the MasTerToolbox_Distribution directory; "
-		   		read -e -p "   You can use Tab for autocompletion (e.g. .../SAR/MasTerToolbox/MasTerToolbox_Distribution): " PATHDISTRO
-
-			    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
-			    	then # [[ -d ${PATHDISTRO} ]] only test if exist
-			        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
-			       		break
-			   		else
-			       		echo "Directory ${PATHDISTRO} does not exist or is empty. "
-						read -p "Do you want to enter a new path [y/n]? " choice
-						
-						if [ "$choice" == "n" ] || [ "$choice" == "N" ] 
-							then
-						    	echo "OK, then you can provide me later with the path where you have the sources of each components."
-						    	break
-						fi
-			    fi
-			done
-			break ;;
-		[Nn]* ) 
-			echo "  // OK, I will ask you to provide me later with the path where you have the sources of each components (MasTer Engine, MASBAS and SCRIPTS_MT)."
-			break ;;
-		* ) 
-			echo "  // Please answer y or n"
-			;;
-	esac
-
+	while true ; do
+   		read -p "Have you downloaded the MasTerToolbox_Distribution package from Github ? [y/n]: " yn
+		case $yn in
+			[Yy]* ) 
+				echo "  // OK, I will try to install MasTer components from there (MasTer Engine, MSBAS and SCRIPTS_MT)."
+				while true; do
+			   		echo "Enter the path to the MasTerToolbox_Distribution directory; "
+			   		read -e -p "   You can use Tab for autocompletion (e.g. .../SAR/MasTerToolbox/MasTerToolbox_Distribution): " PATHDISTRO
+	
+				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
+				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
+				        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
+				       		break
+				   		else
+				       		echo "Directory ${PATHDISTRO} does not exist or is empty. "
+							read -p "Do you want to enter a new path [y/n]? " choice
+							
+							if [ "$choice" == "n" ] || [ "$choice" == "N" ] 
+								then
+							    	echo "OK, then you can provide me later with the path where you have the sources of each components."
+							    	break
+							fi
+				    fi
+				done
+				break ;;
+			[Nn]* ) 
+				echo "  // OK, I will ask you to provide me later with the path where you have the sources of each components (MasTer Engine, MASBAS and SCRIPTS_MT)."
+				break ;;
+			* ) 
+				echo "  // Please answer y or n"
+				;;
+		esac
+	done
 echo
 echo "  // OK, I will try to install/update MasTer Toolbox from ${PATHDISTRO}."
 echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
@@ -3196,12 +3200,14 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 										break
 									else
 								       echo "No ${SCRIPTSDIR} exists."
-								       read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
-								
-								       if [ "$choice" == "no" ]; then
-								           echo "OK, I skip the installation of the scripts."
-								           break
-								       fi
+										while true ; do
+								       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
+										
+								       		if [ "$choice" == "no" ]; then
+								       		    echo "OK, I skip the installation of the scripts."
+								       		    break
+								       		fi
+								       	done
 								fi
 							done
 						else 
@@ -3223,12 +3229,14 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 													break
 												else
 											       echo "No ${SCRIPTSDIR} exists."
-											       read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
-											
-											       if [ "$choice" == "no" ]; then
-											           echo "OK, I skip the installation of the scripts."
-											           break
-											       fi
+											       while true ; do
+											       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
+													
+											       		if [ "$choice" == "no" ]; then
+											       		    echo "OK, I skip the installation of the scripts."
+											       		    break
+											       		fi
+											       done
 											fi
 										done
 								fi
@@ -3267,12 +3275,14 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 										break
 									else
 								       echo "No ${DOCDIR} exists."
-								       read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
-								
-								       if [ "$choice" == "no" ]; then
-								           echo "OK, I skip the installation of the documentation."
-								           break
-								       fi
+								       while true ; do
+								       		read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
+										
+								       		if [ "$choice" == "no" ]; then
+								       		    echo "OK, I skip the installation of the documentation."
+								       		    break
+								       		fi
+								       done
 								fi
 							done
 						else 
@@ -3294,12 +3304,14 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 													break
 												else
 											       echo "No ${DOCDIR} exists."
-											       read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
-											
-											       if [ "$choice" == "no" ]; then
-											           echo "OK, I skip the installation of the documentation."
-											           break
-											       fi
+											       while true ; do
+											       		read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
+													
+											       		if [ "$choice" == "no" ]; then
+											       		    echo "OK, I skip the installation of the documentation."
+											       		    break
+											       		fi
+											       done
 											fi
 										done
 								fi
