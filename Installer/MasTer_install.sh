@@ -1208,7 +1208,7 @@ DoInstallMasTerEngine()
 				# sources are in MasTerToolbox_Distribution directory
 				echo "Here is the list of available versions in you MasTerToolbox_Distribution directory:"
 				cd ${PATHDISTRO}/MasTerEngine/
-				ls -d v*
+				ls -d V*
 			    while true; do
 			    	read -p "Which version would you like to install (enter the full name of directory without path !): " DIRVERTOINSTALL
 			
