@@ -1274,7 +1274,6 @@ function InstallMasTerEngine()
 									echo "Please answer [y]es or [n]o." ;;
 							esac
 						done
-
 					else 
 						echo "  The last source of MasTerEngine in ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older" 
 						echo "     is ${MEVER}"
@@ -1288,6 +1287,7 @@ function InstallMasTerEngine()
 								head -1 ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_History.txt
 							else 
 								echo "However, no MasTer Engine is compiled yet and/or executable from the PATH. "
+								while true ; do
 								read -p "Do you want to install it now [y]es or [n]o ? "  yn
 									case $yn in
 										[Yy]* ) 
@@ -1302,7 +1302,6 @@ function InstallMasTerEngine()
 									esac
 								done
 						fi
-				
 				fi
 				break ;;				
 			[Ii]* ) 				
