@@ -977,7 +977,7 @@ function ParalleliseME()
 		SEARCHSTRING=$1 	# YES or NO
 		
 		# Check if the line for parallelisation exists in the makefile 
- 		if ${PATHGNU}/ggrep -qF "USEOPENMP" makefile 
+ 		if grep -qF "USEOPENMP" makefile 
  			then
  				if [ "${SEARCHSTRING}" == "YES" ]
 					then 
@@ -1052,7 +1052,7 @@ CompileMasTerEngine()
 			done					
 
 		# Crash if path to ${NEWMASTERENGINE} contains white spaces 
-		if [ `echo "${NEWMASTERENGINE}" | ${PATHGNU}/grep  \  | wc -l` -gt 0 ] ; then echo "Move your MasTerEngine source in a dir without white spaces in name !" ; exit ; fi
+		if [ `echo "${NEWMASTERENGINE}" | grep  \  | wc -l` -gt 0 ] ; then echo "Move your MasTerEngine source in a dir without white spaces in name !" ; exit ; fi
 		
 		if [ `dirname ${NEWMASTERENGINE}` != ${PATHSOURCES}/V${DATEMASTERENGINE}_MasterEngine ]
 			then 
@@ -1196,9 +1196,9 @@ DoInstallMasTerEngine()
 							break
 						else
 					       echo "No MasTerEngineyyyymmdd.tar.xz file exists there."
-					       read -p "Do you want to enter a new path to the source file (enter 'yes' or 'no')? " choice
+					       read -p "Do you want to enter a new path to the source file [y/n]? " choice
 					
-					       if [ "$choice" == "no" ]; then
+					       if [ "$choice" == "n" ]; then
 					           echo "OK, I skip the MasTer Engine installation ."
 					           break
 					       fi
@@ -1223,18 +1223,18 @@ DoInstallMasTerEngine()
 								else
 									echo "No or More than one .tar.xz file in ${PATHDISTRO}/MasTerEngine/${DIRVERTOINSTALL}/"
 									echo " Remove unnecessary .tar.xz file in dir and/or provide a new path. "
-					      			read -p "Do you want to enter a new name dir (enter 'yes' or 'no')? " choice
+					      			read -p "Do you want to enter a new name dir [y/n]? " choice
 								
-					      			if [ "$choice" == "no" ]; then
+					      			if [ "$choice" == "n" ]; then
 					      			    echo "OK, I skip the MasTer Engine installation ."
 					      			    break
 					      			fi
 							fi 
 						else
 					       echo "Version directory does not exist."
-					       read -p "Do you want to enter a new name dir (enter 'yes' or 'no')? " choice
+					       read -p "Do you want to enter a new name dir [y/n]? " choice
 					
-					       if [ "$choice" == "no" ]; then
+					       if [ "$choice" == "n" ]; then
 					           echo "OK, I skip the MasTer Engine installation ."
 					           break
 					       fi
@@ -1400,9 +1400,9 @@ DoInstallMSBAS()
 						else
 					       echo "No msbas zip file exists there."
 							while true ; do
-						       read -p "Do you want to enter a new path to the source file (enter 'yes' or 'no')? " choice
+						       read -p "Do you want to enter a new path to the source file [y/n]? " choice
 					
-							   if [ "$choice" == "no" ]; then
+							   if [ "$choice" == "n" ]; then
 							       echo "OK, I skip the msbas installation ."
 							       break
 							   fi
@@ -1424,9 +1424,9 @@ DoInstallMSBAS()
 						else
 					       echo "Version does not exist."
 					       while true ; do
-								read -p "Do you want to enter a new path and zip file (enter 'yes' or 'no')? " choice
+								read -p "Do you want to enter a new path and zip file [y/n]? " choice
 								
-								if [ "$choice" == "no" ]; then
+								if [ "$choice" == "n" ]; then
 								    echo "OK, I skip the MSBAS installation ."
 								    break
 								fi
@@ -3134,7 +3134,7 @@ echo "  // MasTer Toolbox is freely available (under GPL licence) from https://g
 				while true; do
 			   		echo "Enter the path to the MasTerToolbox_Distribution directory; "
 			   		read -e -p "   You can use Tab for autocompletion (e.g. .../SAR/MasTerToolbox/MasTerToolbox_Distribution): " PATHDISTRO
-	
+					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
 				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
 				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
 				        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
@@ -3200,9 +3200,9 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 									else
 								       echo "No ${SCRIPTSDIR} exists."
 										while true ; do
-								       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
+								       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
 										
-								       		if [ "$choice" == "no" ]; then
+								       		if [ "$choice" == "n" ]; then
 								       		    echo "OK, I skip the installation of the scripts."
 								       		    break
 								       		fi
@@ -3229,9 +3229,9 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 												else
 											       echo "No ${SCRIPTSDIR} exists."
 											       while true ; do
-											       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT (enter 'yes' or 'no')? " choice
+											       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
 													
-											       		if [ "$choice" == "no" ]; then
+											       		if [ "$choice" == "n" ]; then
 											       		    echo "OK, I skip the installation of the scripts."
 											       		    break
 											       		fi
@@ -3275,9 +3275,9 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 									else
 								       echo "No ${DOCDIR} exists."
 								       while true ; do
-								       		read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
+								       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
 										
-								       		if [ "$choice" == "no" ]; then
+								       		if [ "$choice" == "n" ]; then
 								       		    echo "OK, I skip the installation of the documentation."
 								       		    break
 								       		fi
@@ -3304,9 +3304,9 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 												else
 											       echo "No ${DOCDIR} exists."
 											       while true ; do
-											       		read -p "Do you want to enter a new path to the directory that contains the DOC (enter 'yes' or 'no')? " choice
+											       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
 													
-											       		if [ "$choice" == "no" ]; then
+											       		if [ "$choice" == "n" ]; then
 											       		    echo "OK, I skip the installation of the documentation."
 											       		    break
 											       		fi
