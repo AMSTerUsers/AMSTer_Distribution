@@ -1187,7 +1187,7 @@ DoInstallMasTerEngine()
 				# ask where are the sources if not in MasTerToolbox_Distribution
 				echo "Enter the path to the MasTerEngin source file you want to install."
 				while true ; do
-					read -e -p "It must be something like ...YourPath/Vyyyymmdd_MasterEngine/MasTerEngineyyyymmdd.tar.xz (You can use Tab for autocompletion): " RAWFILE
+					read -e -p "It must be something like ...YourPath/Vyyyymmdd_MasterEngine/MasTerEngineyyyymmdd.tar.xz (You can use Tab for autocompletion or drag & drop): " RAWFILE
 			    	
 			    	# Check if the version exists
 					if [ -f "${RAWFILE}" ]
@@ -1577,7 +1577,7 @@ function GetSCRIPTS()
 	{
 		SCRIPTSDIR=$1		# e.g. ${PATHDISTRO}/SCRIPTS_MT/
 
-		if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT | wc -l ` -gt 0 ] ; then 
+		if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/SCRIPTS_MT 2>/dev/null | wc -l ` -gt 0 ] ; then 
 			echo "Former scripts exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/"
 			# Save former scripts to ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/SCRIPTS_DATE
 			mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}
@@ -1596,7 +1596,7 @@ function GetDoc()
 	{
 		DOCDIR=$1		# e.g. ${PATHDISTRO}/DOC/
 
-		if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/DOC | wc -l ` -gt 0 ] ; then 
+		if [ `ls -l ${HOMEDIR}/SAR/MasTerToolbox/DOC 2>/dev/null | wc -l ` -gt 0 ] ; then 
 			echo "Former DOCs exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/"
 			mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}
 			mv ${HOMEDIR}/SAR/MasTerToolbox/DOC/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/
@@ -3288,7 +3288,8 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 						else 
 							# sources are in MasTerToolbox_Distribution directory
 					    	# Check if it exists
-								if [ -d "${PATHDISTRO}/DOC" ]
+								DOCDIR="${PATHDISTRO}/DOC"
+								if [ -d "${DOCDIR}" ]
 									then
 										GetDoc ${DOCDIR}
 									else
