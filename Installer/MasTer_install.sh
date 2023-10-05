@@ -981,12 +981,12 @@ function ParalleliseME()
  			then
  				if [ "${SEARCHSTRING}" == "YES" ]
 					then 
-						echo " using the parallelistaion option"
+						echo " using the parallelisation option"
 						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = YES
 						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = YES"'/' makefile
 						make USEOPENMP=YES
 					else 
-						echo " without using the parallelistaion option"
+						echo " without using the parallelisation option"
 						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = NO
 						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = NO"'/' makefile
 						make
@@ -994,12 +994,12 @@ function ParalleliseME()
 			else
 			    if [ "${SEARCHSTRING}" == "YES" ]
 			    	then 
-			  			echo "The parallelistaion option line doesn't exist in the makefile ? It must have a line like this: "
+			  			echo "The parallelisation option line doesn't exist in the makefile ? It must have a line like this: "
 			    		echo "USEOPENMP = ... or USEOPENMP?=..."
-			    		echo "Your version of MasTer Engine seems not planned for parallelistaion. Compile it as it is..."
+			    		echo "Your version of MasTer Engine seems not planned for parallelisation. Compile it as it is..."
 						make
 					else 
-			  			echo "The parallelistaion option line doesn't exist in the makefile but you do not want to anyway. "
+			  			echo "The parallelisation option line doesn't exist in the makefile but you do not want to anyway. "
 			    		echo "Compile it as it is..."
 						make
 			    fi
@@ -1034,7 +1034,7 @@ CompileMasTerEngine()
 
 		# Code below is from UpdateMasterEngine.sh V6.0
 	
-		# Ask if want to install with parallelistaion
+		# Ask if want to install with parallelisation
 		while true; do
 			read -p "Do you want to compile MasTer Engine with the parallelisation option ? [Y/N] "  yn
 			case $yn in
@@ -1419,7 +1419,7 @@ DoInstallMSBAS()
 			    	# Check if the version exists
 					if [ -f "${RAWFILE}" ]
 						then
-							CompileMSBSA ${RAWFILE}
+							CompileMSBAS ${RAWFILE}
 							break
 						else
 					       echo "Version does not exist."
@@ -1436,7 +1436,7 @@ DoInstallMSBAS()
 		fi
 	}
 
-CompileMSBSA()
+CompileMSBAS()
 	{
 			RAWFILE=$1 		# e.g. .../msbasv4/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip
 
