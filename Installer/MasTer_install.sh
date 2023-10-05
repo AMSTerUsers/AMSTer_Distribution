@@ -1452,7 +1452,7 @@ CompileMSBSA()
 			MSBASSOURCEFILETAR=`basename ${RAWFILE}` 	# e.g. msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip
 
 			FILEXT="${MSBASSOURCEFILETAR##*.}"
- 			FILENOXT=`echo "$MSBASSOURCEFILETAR%.*}"`
+ 			FILENOXT=`echo "${MSBASSOURCEFILETAR%.*}"`
 			if [ "${FILEXT}" == "zip" ] 
 				then 
 					# Save possible former versions
@@ -3212,7 +3212,8 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 						else 
 							# sources are in MasTerToolbox_Distribution directory
 					    	# Check if it exists
-								if [ -d "${PATHDISTRO}/SCRIPTS_MT" ]
+								SCRIPTSDIR="${PATHDISTRO}/SCRIPTS_MT"
+								if [ -d "${SCRIPTSDIR}" ]
 									then
 										GetSCRIPTS ${SCRIPTSDIR}
 									else
