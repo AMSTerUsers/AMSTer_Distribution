@@ -158,20 +158,21 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.1 20231004:	- Offer option to search for MasTerToolboxDistribution package 
 #								- proper sequence to install MasTer Engine
+# New in Distro V 4.2 20231006:	- new fct AskConfirmLoop
+#								- ask if want to install java instead of doing it by default
+#								- avoid duplication of PATH in bashrc when installer is run several time
 #
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 4.1 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye', (c)2020, Last modified on Oct 04 2023"
-echo " "
-echo "${PRG} ${VER}, ${AUT}"
-echo " "
-
+VER="version 4.2 - Interactive Mac/Linux installation of MasTer Toolbox"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Oct 06 2023"
 clear
-echo
+echo "${PRG} ${VER}"
+echo "${AUT}"
+echo " "
 
 ############
 # Check OS #
@@ -417,20 +418,20 @@ function InsertBelowVARIABLESTitle()
 				TSTTITLE=$(grep "# MasTer VARIABLES" ${HOMEDIR}/.bashrc)
 				if [ `echo "${TSTTITLE}" | wc -w` -eq 0 ]  
 					then
-						echo "  // No section named # MasTer VARIABLES exists in /.bashrc. Let's create it and add the variable after"	
+						echo "  // No section named # MasTer VARIABLES exists in .bashrc. Let's create it and add the variable after"	
 						sudo echo "" >> ${HOMEDIR}/.bashrc
 						sudo echo "# MasTer VARIABLES" >> ${HOMEDIR}/.bashrc
 						sudo echo "##################" >> ${HOMEDIR}/.bashrc
 						sudo echo "" >> ${HOMEDIR}/.bashrc
 						sudo echo "${EXPECTED}" >> ${HOMEDIR}/.bashrc
 					else
-						echo "  // Let's add the variable after the section named # MasTer VARIABLES in /.bashrc. "
+						echo "  // Let's add the variable after the section named # MasTer VARIABLES in .bashrc. "
 						TITLEPOS=`grep -n "# MasTer VARIABLES" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
 						WHERETOINSTERT=`echo "${TITLEPOS} + 3" | bc -l`
 						sudo ${PATHGNU}/sed -i ''"${WHERETOINSTERT}"' i '"${EXPECTED}"'' ${HOMEDIR}/.bashrc
 				fi
 			else 
-				echo "  // ${EXPECTED} already in /.bashrc. "
+				echo "  // ${EXPECTED} already in .bashrc. "
 		fi
 		
 		source ${HOMEDIR}/.bashrc
@@ -450,14 +451,14 @@ function InsertBelowPATHTitle()
 		TSTTITLE=$(grep "# MasTer PATHS" ${HOMEDIR}/.bashrc)
 		if [ `echo "${TSTTITLE}" | wc -w` -eq 0 ]  
 			then
-				echo "  // No section named # MasTer PATHS exists in /.bashrc. Let's create it and add the variable after"	
+				echo "  // No section named # MasTer PATHS exists in .bashrc. Let's create it and add the variable after"	
 				sudo echo "" >> ${HOMEDIR}/.bashrc
 				sudo echo "# MasTer PATHS" >> ${HOMEDIR}/.bashrc
 				sudo echo "##################" >> ${HOMEDIR}/.bashrc
 				sudo echo "" >> ${HOMEDIR}/.bashrc
 				sudo echo "PATH=\$PATH:${STRINGTOSEARCH}" >> ${HOMEDIR}/.bashrc 
 			else
-				echo "  // Let's add the variable after the section named # MasTer PATHS in /.bashrc. "
+				echo "  // Let's add the variable after the section named # MasTer PATHS in .bashrc. "
 				TITLEPOS=`grep -n "# MasTer PATHS" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
 				WHERETOINSTERT=`echo "${TITLEPOS} + 3" | bc -l`
 				sudo ${PATHGNU}/sed -i ''"${WHERETOINSTERT}"' i PATH=\$PATH:'"${STRINGTOSEARCH}"'' ${HOMEDIR}/.bashrc
@@ -488,7 +489,7 @@ function UpdateVARIABLESBashrc()
 		if [ `echo "${TST}" | wc -w` -eq 0 ] 
 			then 
 				STRINGTOSEARCH=${STRINGTOSEARCHIN}
-				echo "  // /.bashrc does not contain ${smso}${EXPECTED}${rmso} yet. Add it now (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+				echo "  // .bashrc does not contain ${smso}${EXPECTED}${rmso} yet. Add it now (former .bashrc was saved in .bashrc_${RUNDATE}). "
 
 				# Back it up first if not done yet
 				if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
@@ -501,7 +502,7 @@ function UpdateVARIABLESBashrc()
 					TST=$(grep "export ${STRINGTOSEARCH}" ${HOMEDIR}/.bashrc )
 					if [ "${TST}" == "${EXPECTED}" ] 
 						then 
-							echo "  // /.bashrc does contain ${STRINGTOSEARCH} as ${smso}${EXPECTED}${rmso}. OK "
+							echo "  // .bashrc does contain ${STRINGTOSEARCH} as ${smso}${EXPECTED}${rmso}. OK "
 						else 
 							while true; do
 							read -p "Your .bashrc contains the variable ${smso}${TST}${rmso} and you expected ${smso}${EXPECTED}${rmso}. Are you satified ? [y/n] "  yn
@@ -547,7 +548,7 @@ function UpdateVARIABLESBashrc()
 													done	
 													break ;;
 												[Nn]* )
-													echo "  // OK, then edit manually your /.bashrc as you want" 
+													echo "  // OK, then edit manually your .bashrc as you want" 
 													break ;;
 												* )
 													echo "  // Answer [y]es or [n]o." ;;
@@ -564,7 +565,6 @@ function UpdateVARIABLESBashrc()
 			fi
 		source ${HOMEDIR}/.bashrc
 		OS=`uname -a | cut -d " " -f 1 `
-		echo
 	}
 
 function UpdatePATHBashrcBEFORE()
@@ -579,7 +579,7 @@ function UpdatePATHBashrcBEFORE()
 
 		if [ `echo "${TST}" | wc -w` -eq 0 ] 
 			then 
-				echo "  // /.bashrc does not contain PATH yet. Add it now (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+				echo "  // .bashrc does not contain PATH yet. Add it now (former .bashrc was saved in .bashrc_${RUNDATE}). "
 				echo "  // and add ${smso}${STRINGTOSEARCH}${rmso}"
 				# Back it up first if not done yet
 				if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
@@ -591,7 +591,7 @@ function UpdatePATHBashrcBEFORE()
 				if [ `echo "${TST}" | wc -w` -eq 0 ] 
 					then 
 					
-						echo "  // /.bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}. Will add here new path BEFORE existing PATH (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+						echo "  // .bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}. Will add here new path BEFORE existing PATH (former .bashrc was saved in .bashrc_${RUNDATE}). "
 						# Back it up first if not done yet
 						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
 
@@ -609,8 +609,8 @@ function UpdatePATHBashrcBEFORE()
 						OCCUR=$(grep "PATH=" ${HOMEDIR}/.bashrc | grep -n "PATH=${STRINGTOSEARCH}" | cut -d : -f1  | head -1)	# check if exist at beginning of a PATH line 
 						if [ "${OCCUR}" != "1" ] && [ "${OCCUR}" != "2" ]
 							then 
-								echo "  // /.bashrc already contains PATH with ${STRINGTOSEARCH}, though not on the 1st or 2nd but the ${OCCUR}th line of PATH. "
-								echo "  // To avoid problem, lets add ${smso}${STRINGTOSEARCH}${rmso} on the 1st line of PATH (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+								echo "  // .bashrc already contains PATH with ${STRINGTOSEARCH}, though not on the 1st or 2nd but the ${OCCUR}th line of PATH. "
+								echo "  // To avoid problem, lets add ${smso}${STRINGTOSEARCH}${rmso} on the 1st line of PATH (former .bashrc was saved in .bashrc_${RUNDATE}). "
 								# Back it up first if not done yet
 								if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
 
@@ -622,7 +622,7 @@ function UpdatePATHBashrcBEFORE()
 								sudo ${PATHGNU}/sed -i "s%DUMMYSTRING%PATH=${STRINGTOSEARCH}:\$PATH%" ${HOMEDIR}/.bashrc
 
 							else
-								echo "  // OK, /.bashrc already contains PATH with ${STRINGTOSEARCH} on the ${OCCUR}st line of PATH. "
+								echo "  // OK, .bashrc already contains PATH with ${STRINGTOSEARCH} on the ${OCCUR}th of PATH. "
 						fi
 						
 				fi
@@ -639,22 +639,22 @@ function UpdatePATHBashrcAFTER()
 		local PATTERN	
 			
 		STRINGTOSEARCH=$1
-		PATTERN="^PATH=${STRINGTOSEARCH}$"
+		PATTERN="PATH=\$PATH:${STRINGTOSEARCH}"
 	
 		TST=$(grep "PATH=" ${HOMEDIR}/.bashrc)
 
 		if [ `echo "${TST}" | wc -w` -eq 0 ] 
 			then 
-				echo "  // /.bashrc does not contain PATH yet. Add it now (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+				echo "  // .bashrc does not contain PATH yet. Add it now (former .bashrc was saved in .bashrc_${RUNDATE}). "
 				echo "  // and add ${smso}${STRINGTOSEARCH}${rmso}"
 				
 				#sudo echo "PATH=\$PATH:/${STRINGTOSEARCH}" >> ${HOMEDIR}/.bashrc 
 				InsertBelowPATHTitle "${STRINGTOSEARCH}"
 			else 
 				while IFS= read -r line ; do
- 					if [[ ${line} =~ ${PATTERN} ]]
+ 					if [[ "${line}" =~ "${PATTERN}" ]]
  						then
-    						echo "  // OK, /.bashrc already contains PATH with ${smso}${STRINGTOSEARCH}${rmso}. "
+    						echo "  // OK, .bashrc already contains PATH with ${smso}${STRINGTOSEARCH}${rmso}. "
     						ADD="NO"
     						break
 						else 
@@ -665,22 +665,12 @@ function UpdatePATHBashrcAFTER()
 				if [ "${ADD}" == "YES" ] 
 					then 
 						echo "  // .bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}."
-						echo "  //  Will add here new path AFTER existing PATH (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
+						echo "  //  Will add here new path AFTER existing PATH (former .bashrc was saved in .bashrc_${RUNDATE}). "
 						InsertBelowPATHTitle "${STRINGTOSEARCH}" 
 					else 
 						echo "  // No need to add it to PATH. " 
 				fi
 				ADD=""
-				#TST=`grep "PATH=" ${HOMEDIR}/.bashrc | grep "${STRINGTOSEARCH}"`
-				#if [ `echo "${TST}" | wc -w` -eq 0 ] 
-				#	then 
-				#		echo "  // /.bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}. Will add here new path AFTER existing PATH (former /.bashrc was saved in /.bashrc_${RUNDATE}). "
-				#		
-				#		#sudo sed -i '/.*PATH=.*/a PATH=\$PATH:\/'"${${STRINGTOSEARCH}}"' ' ${HOMEDIR}/.bashrc
-				#		InsertBelowPATHTitle "${STRINGTOSEARCH}"
-				#	else
-				#		echo "  // OK, /.bashrc already contains PATH with ${smso}${STRINGTOSEARCH}${rmso}. "
-				#fi
 		fi
 		source ${HOMEDIR}/.bashrc
 		OS=`uname -a | cut -d " " -f 1 `
@@ -726,7 +716,7 @@ function NecessaryDisk()
 											read -e -p "Enter the name of the mounting point or path (will be added in the .bashrc as export PATH_${DISKNAME}=MOUNT_POINT_NAME). You can use Tab for autocompletion : " DIRMOUNT
 											if [ -d "${DIRMOUNT}" ]
 												then 
-													echo "  // OK, dir can be accessed. State variable defined in /.bashrc"
+													echo "  // OK, dir can be accessed. State variable defined in .bashrc"
 													UpdateVARIABLESBashrc "PATH_${DISKNAME}" "export PATH_${DISKNAME}=${DIRMOUNT}"
 													break
 												else
@@ -763,7 +753,7 @@ function NecessaryDisk()
 					[Nn]*)
 						if [ `grep "PATH_${DISKNAME}" ${HOMEDIR}/.bashrc | wc -w` -eq 0 ] 
 							then
-								echo "  // OK, you know... It seems that a state variable PATH_${DISKNAME} is already defined in /.bashrc:  "
+								echo "  // OK, you know... It seems that a state variable PATH_${DISKNAME} is already defined in .bashrc:  "
 								grep "PATH_${DISKNAME}" ${HOMEDIR}/.bashrc
 								echo "  // OK, you know... " 
 				
@@ -1180,6 +1170,32 @@ CompileMasTerEngine()
 
 	}
 
+
+function AskConfirmLoop()
+	{
+		local EXITLOOP			
+		local TOPIC
+		local TOOL
+		
+		TOPIC=$1		# e.g. "Do you want to enter a new path to the source file [y/n]? " 
+		EXITMSG=$2		# e.g. "OK, I skip the installation of MasTer Engine."
+		
+		while true ; do
+				read -p "${TOPIC} " choice	# e.g. "Do you want to enter a new path to the source file [y/n]? " 
+				case $choice in
+					[Yy]* ) 
+						EXITLOOP="NO"
+						break ;;
+					[Nn]* ) 
+						echo "${EXITMSG}."	# e.g. echo "OK, I skip the installation of MasTer Engine."
+						EXITLOOP="YES"
+						break ;;
+					* ) echo "Please answer [Y/y]es or [N/n]o.";;
+				esac
+		done
+		if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
+	}
+
 DoInstallMasTerEngine()
 	{
 		if [ "${PATHDISTRO}" == "" ]
@@ -1188,7 +1204,6 @@ DoInstallMasTerEngine()
 				echo "Enter the path to the MasTerEngin source file you want to install."
 				while true ; do
 					read -e -p "It must be something like ...YourPath/Vyyyymmdd_MasterEngine/MasTerEngineyyyymmdd.tar.xz (You can use Tab for autocompletion or drag & drop): " RAWFILE
-			    	
 			    	# Check if the version exists
 					if [ -f "${RAWFILE}" ]
 						then
@@ -1196,12 +1211,13 @@ DoInstallMasTerEngine()
 							break
 						else
 					       echo "No MasTerEngineyyyymmdd.tar.xz file exists there."
-					       read -p "Do you want to enter a new path to the source file [y/n]? " choice
-					
-					       if [ "$choice" == "n" ]; then
-					           echo "OK, I skip the MasTer Engine installation ."
-					           break
-					       fi
+						   AskConfirmLoop "Do you want to enter a new path to the source file [y/n]? "	"OK, I skip the installation of MasTer Engine. "
+# 					       read -p "Do you want to enter a new path to the source file [y/n]? " choice
+# 					
+# 					       if [ "$choice" == "n" ]; then
+# 					           echo "OK, I skip the MasTer Engine installation ."
+# 					           break
+# 					       fi
 					fi
 				done
 			else 
@@ -1223,21 +1239,23 @@ DoInstallMasTerEngine()
 								else
 									echo "No or More than one .tar.xz file in ${PATHDISTRO}/MasTerEngine/${DIRVERTOINSTALL}/"
 									echo " Remove unnecessary .tar.xz file in dir and/or provide a new path. "
-					      			read -p "Do you want to enter a new name dir [y/n]? " choice
-								
-					      			if [ "$choice" == "n" ]; then
-					      			    echo "OK, I skip the MasTer Engine installation ."
-					      			    break
-					      			fi
+									AskConfirmLoop "Do you want to enter a new name dir [y/n]?" "OK, I skip the MasTer Engine installation."
+# 					      			read -p "Do you want to enter a new name dir [y/n]? " choice
+# 								
+# 					      			if [ "$choice" == "n" ]; then
+# 					      			    echo "OK, I skip the MasTer Engine installation ."
+# 					      			    break
+# 					      			fi
 							fi 
 						else
 					       echo "Version directory does not exist."
-					       read -p "Do you want to enter a new name dir [y/n]? " choice
-					
-					       if [ "$choice" == "n" ]; then
-					           echo "OK, I skip the MasTer Engine installation ."
-					           break
-					       fi
+						   AskConfirmLoop "Do you want to enter a new name dir [y/n]?" "OK, I skip the MasTer Engine installation."
+					       
+# 					       read -p "Do you want to enter a new name dir [y/n]? " choice
+# 					       if [ "$choice" == "n" ]; then
+# 					           echo "OK, I skip the MasTer Engine installation ."
+# 					           break
+# 					       fi
 					fi
 				done
 		fi
@@ -1398,15 +1416,14 @@ DoInstallMSBAS()
 							CompileMSBAS ${RAWFILE}
 							break
 						else
-					       echo "No msbas zip file exists there."
-							while true ; do
-						       read -p "Do you want to enter a new path to the source file [y/n]? " choice
-					
-							   if [ "$choice" == "n" ]; then
-							       echo "OK, I skip the msbas installation ."
-							       break
-							   fi
-							done
+					       echo "No MSBAS zip file exists there."
+					       AskConfirmLoop "Do you want to enter a new path to the source zip file [y/n]? " "OK, I skip the MSBAS installation."
+					       
+# 						   read -p "Do you want to enter a new path to the source file [y/n]? " choice
+# 						   if [ "$choice" == "n" ]; then
+# 						       echo "OK, I skip the msbas installation ."
+# 						       break
+# 						   fi
 					fi
 				done
 			else 
@@ -1423,14 +1440,13 @@ DoInstallMSBAS()
 							break
 						else
 					       echo "Version does not exist."
-					       while true ; do
-								read -p "Do you want to enter a new path and zip file [y/n]? " choice
-								
-								if [ "$choice" == "n" ]; then
-								    echo "OK, I skip the MSBAS installation ."
-								    break
-								fi
-					       done
+					       AskConfirmLoop "Do you want to enter a new path to the source zip file [y/n]? " "OK, I skip the msbas installation."
+
+# 								read -p "Do you want to enter a new path and zip file [y/n]? " choice
+# 								if [ "$choice" == "n" ]; then
+# 								    echo "OK, I skip the MSBAS installation ."
+# 								    break
+# 								fi
 					fi
 				done
 		fi
@@ -1731,15 +1747,15 @@ if [ "${TYPERUN}" == "I" ] ; then
 			echo "  // You already have a ${HOMEDIR}/.bash_profile "
 			TST=`grep "source ~/.bashrc" ${HOMEDIR}/.bash_profile | wc -w`
 			if [ "${TST}" -gt 0 ] ; then 
-					echo "  // and /.bashrc is already sourced in there."
+					echo "  // and .bashrc is already sourced in there."
 				else 
-					echo "  // but no /.bashrc is sourced in there. Let's do it to be sure... (former /.bash_profile is saved as /.bash_profile_${RUNDATE}) "
+					echo "  // but no .bashrc is sourced in there. Let's do it to be sure... (former .bash_profile is saved as .bash_profile_${RUNDATE}) "
 					if [ ! -f ${HOMEDIR}/.bash_profile_${RUNDATE} ] ; then cp ${HOMEDIR}/.bash_profile ${HOMEDIR}/.bash_profile_${RUNDATE} ; fi
 					
 					sudo echo "source ~/.bashrc" >> ${HOMEDIR}/.bash_profile
 			fi		
 		else 
-			echo "  // No /.bash_profile exists. Create one and source the /.bashrc in the /.bash_profile to be sure"
+			echo "  // No .bash_profile exists. Create one and source the .bashrc in the .bash_profile to be sure"
 			sudo echo "source ~/.bashrc" > ${HOMEDIR}/.bash_profile	
 			sudo chmod 700 ${HOMEDIR}/.bash_profile
 	fi
@@ -1747,12 +1763,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 	
 	# setup the ${HOMEDIR}/.bashrc
 	# -------------------
-	EchoInverted "  // Test your /.bashrc:"
+	EchoInverted "  // Test your .bashrc:"
 	if [ -f ${HOMEDIR}/.bashrc ]
 		then 
-			echo "  // You already have a /.bashrc "
+			echo "  // You already have a .bashrc "
 		else 
-			echo "  // No /.bashrc exists. Create one"
+			echo "  // No .bashrc exists. Create one"
 			sudo touch ${HOMEDIR}/.bashrc
 			sudo chmod 700 ${HOMEDIR}/.bashrc
 	fi
@@ -2073,7 +2089,21 @@ if [ "${TYPERUN}" == "I" ] ; then
 				# ....
 				
 				EchoInverted "  // Java is required for some processings using Fiji or ImageMagick. "
-				AptInsatll default-jdk
+
+				while true; do
+					read -p "Do you want to install/update Java? [y/n] "  yn
+					case $yn in
+					[Yy]* ) 				
+						AptInsatll default-jdk
+							break ;;
+					[Nn]* ) 
+							echo "  // OK, I skip it."
+							break ;;
+						* )  
+							echo "Please answer [y]es or [n]o.";;
+					esac
+				done							
+				echo ""			
 
 				echo "  // In case of instalation problem, you can also try manual install from http://www.java.com following the instructions"
 				echo "  //"
@@ -2820,7 +2850,19 @@ if [ "${TYPERUN}" == "I" ] ; then
 				# ....
 				
 				EchoInverted "  // Java is required for some processings using Fiji or ImageMagick. "
-				PortInstall jdk19 
+				while true; do
+					read -p "Do you want to install/update Java? [y/n] "  yn
+					case $yn in
+					[Yy]* ) 				
+							PortInstall jdk19
+							break ;;
+					[Nn]* ) 
+							echo "  // OK, I skip it."
+							break ;;
+						* )  
+							echo "Please answer [y]es or [n]o.";;
+					esac
+				done							
 				
 				echo "  // In case of instalation problem, you can also try manual install from http://www.java.com (e.g. jre-8u341-macosx-x64.dmg) following the instructions"
 				echo "  //"
@@ -3141,13 +3183,13 @@ echo "  // MasTer Toolbox is freely available (under GPL licence) from https://g
 				       		break
 				   		else
 				       		echo "Directory ${PATHDISTRO} does not exist or is empty. "
-							read -p "Do you want to enter a new path [y/n]? " choice
-							
-							if [ "$choice" == "n" ] || [ "$choice" == "N" ] 
-								then
-							    	echo "OK, then you can provide me later with the path where you have the sources of each components."
-							    	break
-							fi
+							AskConfirmLoop "Do you want to enter a new path [y/n]? "  "OK, then you can provide me later with the path where you have the sources of each components."
+# 							read -p "Do you want to enter a new path [y/n]? " choice
+# 							if [ "$choice" == "n" ] || [ "$choice" == "N" ] 
+# 								then
+# 							    	echo "OK, then you can provide me later with the path where you have the sources of each components."
+# 							    	break
+# 							fi
 				    fi
 				done
 				break ;;
@@ -3199,14 +3241,20 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 										break
 									else
 								       echo "No ${SCRIPTSDIR} exists."
-										while true ; do
-								       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
-										
-								       		if [ "$choice" == "n" ]; then
-								       		    echo "OK, I skip the installation of the scripts."
-								       		    break
-								       		fi
-								       	done
+								       AskConfirmLoop "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " "OK, I skip the installation of the scripts."
+# 										while true ; do
+# 								       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
+# 										
+# 								       		if [ "$choice" == "n" ]
+# 								       			then
+# 								       		    	echo "OK, I skip the installation of the scripts."
+# 								       		    	EXITLOOP=YES
+# 								       		    	break
+# 								       		    else 
+# 								       		    	EXITLOOP=NO
+# 								       		fi
+# 								       	done
+# 								       	if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 								fi
 							done
 						else 
@@ -3229,14 +3277,13 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 													break
 												else
 											       echo "No ${SCRIPTSDIR} exists."
-											       while true ; do
-											       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
-													
-											       		if [ "$choice" == "n" ]; then
-											       		    echo "OK, I skip the installation of the scripts."
-											       		    break
-											       		fi
-											       done
+											       AskConfirmLoop "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " "OK, I skip the installation of the scripts."
+
+# 											       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
+# 											       		if [ "$choice" == "n" ]; then
+# 											       		    echo "OK, I skip the installation of the scripts."
+# 											       		    break
+# 											       		fi
 											fi
 										done
 								fi
@@ -3274,15 +3321,14 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 										GetDoc ${DOCDIR}
 										break
 									else
-								       echo "No ${DOCDIR} exists."
-								       while true ; do
-								       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
-										
-								       		if [ "$choice" == "n" ]; then
-								       		    echo "OK, I skip the installation of the documentation."
-								       		    break
-								       		fi
-								       done
+								       echo "No directory ${DOCDIR} exists."
+								       AskConfirmLoop "Do you want to enter a new path to the directory that contains the DOC [y/n]? " "OK, I skip the installation of the documentation."
+
+# 								       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
+# 								       		if [ "$choice" == "n" ]; then
+# 								       		    echo "OK, I skip the installation of the documentation."
+# 								       		    break
+# 								       		fi
 								fi
 							done
 						else 
@@ -3305,14 +3351,12 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 													break
 												else
 											       echo "No ${DOCDIR} exists."
-											       while true ; do
-											       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
-													
-											       		if [ "$choice" == "n" ]; then
-											       		    echo "OK, I skip the installation of the documentation."
-											       		    break
-											       		fi
-											       done
+												   AskConfirmLoop "Do you want to enter a new path to the directory that contains the DOC [y/n]? " "OK, I skip the installation of the documentation."
+# 											       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
+# 											       		if [ "$choice" == "n" ]; then
+# 											       		    echo "OK, I skip the installation of the documentation."
+# 											       		    break
+# 											       		fi
 											fi
 										done
 								fi
@@ -3340,9 +3384,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 	# PATH
 	######
 		echo
-		EchoInverted "  // Update now some PATH in /.bashrc"
+		EchoInverted "  // Update now some PATH in .bashrc"
 		echo "  // "
-		echo "  // The /.bashrc contains the following PATH:"		
+		echo "  // The .bashrc contains the following PATH:"		
 		grep "PATH=" ${HOMEDIR}/.bashrc | grep -v "export" | grep -v "#"  | ${PATHGNU}/sed -e "s/^[ \t]*//" | ${PATHGNU}/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
 		echo "  // "
 		EchoInverted "  // Let's review and update the PATH state variable if needed"	
@@ -3402,9 +3446,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 	# VARIABLES (for those not done yet)
 	# ##################################
 		echo
-		EchoInverted "  // Update now some VARIABLES in /.bashrc"
+		EchoInverted "  // Update now some VARIABLES in .bashrc"
 		echo "  // "
-		echo "  // Currently, the state variables in the /.bashrc are :"
+		echo "  // Currently, the state variables in the .bashrc are :"
 		cat ${HOMEDIR}/.bashrc | grep export | grep -v "#"  | ${PATHGNU}/sed -e "s/^[ \t]*//" | ${PATHGNU}/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
 		echo "  // "
 		echo "  // Let's review and update the ${smso}other state variables${rmso} if needed."	
@@ -3449,7 +3493,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 
 		# Paths to auxiliary data - DataSAR disks MUST be defined first ! 
 		# Because UpdateVARIABLESBashrc add variable in bashrc below the title, DataSAR disks MUST be defined after in order to be defined first...
-		EchoInverted "  // Update now some PATH to ORBITS and GEOID data in /.bashrc"
+		EchoInverted "  // Update now some PATH to ORBITS and GEOID data in .bashrc"
 		UpdateVARIABLESBashrc "S1_ORBITS_DIR" "export S1_ORBITS_DIR=\${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB"
 		UpdateVARIABLESBashrc "ENVISAT_PRECISES_ORBITS_DIR" "export ENVISAT_PRECISES_ORBITS_DIR=\${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ENV_ORB"
 		UpdateVARIABLESBashrc "EARTH_GRAVITATIONAL_MODELS_DIR" "export EARTH_GRAVITATIONAL_MODELS_DIR=\${PATH_DataSAR}/SAR_AUX_FILES/EGM"
@@ -3551,17 +3595,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 						echo "alias say='echo "$1" | espeak -s 120 2>/dev/null'" >> ${HOMEDIR}/.bashrc 
 				fi 
 
-# 				TST=$(grep "# Trick to solve possible ImageJ issues" ${HOMEDIR}/.bashrc)
-# 				if [ `echo "${TST}" | wc -w` -eq 0 ]  
-# 					then				
-# 						# Back it up first if not done yet
-# 						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
-# 
-# 						echo "# Trick to solve possible ImageJ issues. In case of prblm opening Terminal windows from command line, " >> ${HOMEDIR}/.bashrc 
-# 						echo "#   check you DISPLAY value using the command who (shows all displays) or who -m (shows your current display) and change below accordingly" >> ${HOMEDIR}/.bashrc 
-# 						echo "export DISPLAY=:0.0" >> ${HOMEDIR}/.bashrc 
-# 				fi
-				
+			
 				UpdatePATHBashrcAFTER "/usr/local/tigervnc/bin/"			# in case of usage of tigervnc 
 				echo " "
 				echo "  // Set up OPENBLAS_NUM_THREADS = 1 in bashrc (i.e. nr of threads for parallel computation) as needed for msbas optimized compilation. Higher value would cause msbas to crash."
@@ -3581,7 +3615,7 @@ echo "  //"
 #########################
 # Create dir in DataSAR #
 #########################
-EchoInverted "  // MasTer Toolbox requires auxiliary files stored in PATH_DataSAR, which is a state variable that must be defined in your /.bashrc"		
+EchoInverted "  // MasTer Toolbox requires auxiliary files stored in PATH_DataSAR, which is a state variable that must be defined in your .bashrc"		
 if [ -d "${PATH_DataSAR}" ] 
 	then 
 		echo "  // And the directory associated to PATH_DataSAR does exist ; OK."	
@@ -3726,9 +3760,9 @@ done
 if [ -f ${HOMEDIR}/.bashrc_${RUNDATE} ] 
 	then 
 		echo ""
-		EchoInverted "  // /.bashrc has been sourced and hence is ready for this Terminal."
+		EchoInverted "  // .bashrc has been sourced and hence is ready for this Terminal."
 		echo
-		EchoInverted "  // However, /.bashrc has been updated. Reboot to complete installation and hence have the /.bashrc sourced for every terminal that will further be open. "	
+		EchoInverted "  // However, .bashrc has been updated. Reboot to complete installation and hence have the .bashrc sourced for every terminal that will further be open. "	
 		# REBOOT TO SOURCE BASHRC
 		while true; do
 			read -p "Can I proceed to the reboot now? [y/n] "  yn
@@ -3739,7 +3773,7 @@ if [ -f ${HOMEDIR}/.bashrc_${RUNDATE} ]
 				break
 				;;
 			[Nn]*)
-				echo "  // OK, then do not forget to reboot later or source /.bashrc in any new terminal you would open. " 
+				echo "  // OK, then do not forget to reboot later or source .bashrc in any new terminal you would open. " 
 				break
 				;;
 			* ) 
@@ -3747,7 +3781,7 @@ if [ -f ${HOMEDIR}/.bashrc_${RUNDATE} ]
 			esac
 		done
 	else 
-		EchoInverted "  // /.bashrc seems unchanged (no /.bashrc_${RUNDATE} exists). No need to reboot. "	
+		EchoInverted "  // .bashrc seems unchanged (no .bashrc_${RUNDATE} exists). No need to reboot. "	
 fi
 
 echo 
