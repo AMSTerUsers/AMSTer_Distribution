@@ -28,12 +28,14 @@
 # New in Distro V 3.0 20230916:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh#
+# New in Distro V 3.1 20231006:	- if pyqt6 is missing in Mac OSX, add a message explaining why 
+#
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2020/06/15 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Sept 16, 2023"
+VER="Distro V3.1 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Oct 06, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -274,6 +276,7 @@ function TestPythonModuleQt()
 				echo "    PyQt6:$(tput setaf 2)	passed$(tput sgr 0)		Version	nr is missing though" 
 			else 
 				echo "    PyQt6:	$(tput setaf 1)$(tput setab 7)missing$(tput sgr 0)"
+				${PATHTOPY} -c "from ${MODULE} import ${APPL}" 
 		fi
 	}
 
