@@ -121,6 +121,8 @@ https://doi.org/10.4095/313749
     [3] Centre Spatial de Liège, Université de Liège, Belgium
     [4] Universidad Nacional de Rio Negro, General Roca, Argentina
     [5] Canada Centre for Mapping and Earth Observation, Natural Resources Canada, Ottawa, Canada
+
+The development of the MasTer Toolbox commenced in the early 2010s and leveraged the capabilities of various pre-existing tools, including the CSL InSAR suite, which was fully remastered to be the MasTerEngine. Over time, the MasTer Toolbox underwent incremental enhancements, both independently and within the context of numerous projects, notably (unsorted) RESIST, MUZUBI, GEORISCA, SMMIP, TIGRES, ECTIC, MODUS, VERSUS, advInSAR, Vi-X... These projects were primarily funded by the Belgian Scientific Policy (BelSPo) and the Luxembourgish Fond National de la Recherche (FNR).
     
 **Updates:**
 
