@@ -94,13 +94,14 @@
 # New in Distro V 6.1 20230928:	- make figs for maskedCoherence 
 # New in Distro V 6.2 20231003:	- debug figs for maskedCoherence 
 # New in Distro V 6.2.1 20231004:	- add raster of geocoded maskedCoherence 
+# New in Distro V 6.2.2 20231012:	- debug raster of geocoded maskedCoherence 
 #
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V6.2.1 MasTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 04, 2023"
+FCTVER="Distro V6.2.2 MasTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 12, 2023"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -1867,9 +1868,6 @@ function PlotGeoc()
 		PATHGEOCOH=`basename coherence.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
 		MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOCOH}	
 
-		# plot geocoded maskedCoherence	if it exists
-		PATHGEOMASKCOH=`basename maskedCoherence.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
-		if [ -f ${PATHGEOMASKCOH} ] ; then ${ISARRG} 0,1 1.0 1.0 normal gray ${MLFIG1}/${MLFIG2} r4 ${PATHGEOMASKCOH} ; fi
 	fi
 	if [ "${INTERF}" == "YES" ]
 		then
@@ -1909,8 +1907,8 @@ function PlotGeoc()
 	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && [ "${UW_METHOD}" == "SNAPHU" ]
 		then
 		# plot maskedCoherence
-		PATHGEOMASKCOH=`basename maskedCoherence.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
-		MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOMASKCOH} 
+		PATHGEOMASKCOH=`basename maskedCoherence.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		if [ -f ${PATHGEOMASKCOH} ] ; then MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOMASKCOH} ; fi
 	fi
 
 	}	

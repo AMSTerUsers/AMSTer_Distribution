@@ -78,7 +78,7 @@ APPLYMASKyes	# APPLYMASK, Apply mask (bytes, LatLong, Envi Harris, larger than i
 				# Mask for Master Engine < 20230928: 1 = keep, 0 = mask. However, at unwrapping, 0-masked pixels are kept if their coh > COHCLNTHRESH 
 				# Mask for Master Engine > 20230928: 0 = keep, 1 = always mask, 2 = mask. However, at unwrapping, 2-masked pixels are kept if their coh > COHCLNTHRESH 
 				# If a mask is requested but no Snaphu, one can also mask manually files with ffa (eg ffa residualInterferogram.HH-HH.f x slantRangeMask)
-/$PATH_3600/MASKS/LakeKivu_LatLong.envi  # PATHTOMASK, geocoded mask file name and path
+/$PATH_DataSAR/SAR_AUX_FILES/MASKS/WaterBodies/DRCongo/LakeKivu_LatLong_0keep  # PATHTOMASK, geocoded mask file name and path
 
 # UNWRAPPING
 ############

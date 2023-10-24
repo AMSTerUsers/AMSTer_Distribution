@@ -114,13 +114,14 @@
 # New in Distro V 4.1 20230912:	- Cope with possible multiple CSK acquisitions on the same day
 #								- check that possible former S1, TDX, SAOCOM or ICEYE  links at reading are from the same OS
 # New in Distro V 4.2 20230928:	- Add case where no link exists in new CSL folder (was otherwise failings...) (by A Dille).
+# New in Distro V 4.3 20231018:	- Debug some cases of re-reading CSK images when more than one image exist on the same day 
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox.
 # NdO (c) 2016/02/29 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 28, 2023"
+VER="Distro V4.3 MasTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 18, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) "
@@ -1436,9 +1437,25 @@ case ${SAT} in
 		# BEWARE, ${RAW} can't end with a /
 		#ls ${RAW}* | ${PATHGNU}/grep -v ".txt" | ${PATHGNU}/grep -v ".png" | ${PATHGNU}/grep -v ".tmp" | ${PATHGNU}/grep -v ".dat"  | ${PATHGNU}/grep -v ".gz" | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".zip" | ${PATHGNU}/grep -v ".kml" | ${PATHGNU}/grep -v ".Z" > List_raw.txt
 
-		find "${RAW}" -maxdepth 1 -mindepth 1 -type d | xargs -I {} basename {} > List_raw_tmp.txt	#  | xargs -I {} basename {}  removes path
-		cat List_raw_tmp.txt | ${PATHGNU}/grep -v "\.txt" | ${PATHGNU}/grep -v "\.tmp" | ${PATHGNU}/grep -v "\.gz" | ${PATHGNU}/grep -v "\.zip" | ${PATHGNU}/grep -v "\.Z" > List_raw.txt
-		rm -f List_raw_tmp.txt 
+		if [ "${SAT}" == "CSK" ]
+			then 
+				# cna have several images acquired on the same day
+				rm -f List_raw.txt
+				for RAWIMGDIR in `find "${RAW}" -maxdepth 1 -mindepth 1 -type d | xargs -I {} basename {}` ; do
+				    # Count the number of .h5 files in the subdirectory
+				    NRIMG=$(find "${RAW}/${RAWIMGDIR}" -maxdepth 1 -type f -name "*.h5" | wc -l)
+					# list as many times the date in List_raw.txt as there are h5 files in dir 
+				    
+				    for i in $(seq 1 ${NRIMG})	
+				    	do
+				        echo "${RAWIMGDIR}" >> List_raw.txt  # List the subdirectory once
+					done
+				done
+			else 
+				find "${RAW}" -maxdepth 1 -mindepth 1 -type d | xargs -I {} basename {} > List_raw_tmp.txt	#  | xargs -I {} basename {}  removes path
+				cat List_raw_tmp.txt | ${PATHGNU}/grep -v "\.txt" | ${PATHGNU}/grep -v "\.tmp" | ${PATHGNU}/grep -v "\.gz" | ${PATHGNU}/grep -v "\.zip" | ${PATHGNU}/grep -v "\.Z" > List_raw.txt
+				rm -f List_raw_tmp.txt 
+		fi
 
 		# List images already in read csl format
 		rm -f List_csl.txt
@@ -1501,6 +1518,7 @@ case ${SAT} in
 		#    In List_csl.txt names are date.csl, 
 		#    while in List_raw.txt names are a complex dir name that includes date somewhere
 		cp -f List_raw.txt Img_To_Read.txt
+		rm -f Multi_Img_To_Ignore_tmp.txt
 		if [ -f "List_csl.txt" ] && [ -s "List_csl.txt" ] ; then 
 			for LINE in `cat -s List_csl.txt`
 				do	
@@ -1508,7 +1526,12 @@ case ${SAT} in
 						then 
 							DATE=`echo ${LINE} | cut -d . -f1 | cut -c 3-8`
 						else 
-							DATE=`echo ${LINE} | cut -d . -f1`
+							if [ "${SAT}" == "CSK" ]
+								then 
+									DATE=`echo ${LINE} | cut -d . -f1 | cut -c 1-8` # in case multiple CSK images acquired on the same day and labelled yyyymmdd_i.csl
+								else 
+									DATE=`echo ${LINE} | cut -d . -f1 ` 
+							fi
 					fi
 					TSTINDEX=`${PATHGNU}/grep ${DATE} Img_To_Read.txt | wc -l`
 					if [ ${TSTINDEX} -eq 1 ]
@@ -1516,12 +1539,46 @@ case ${SAT} in
 							${PATHGNU}/grep -v ${DATE} Img_To_Read.txt > Img_To_Read_tmp.txt
 							cp -f Img_To_Read_tmp.txt Img_To_Read.txt
 						else 
-							${PATHGNU}/grep -vx ${DATE} Img_To_Read.txt > Img_To_Read_tmp.txt		# If a date appears more than one time in a file name, it means that it was probably prepared by Prepa_TSX.sh
-							cp -f Img_To_Read_tmp.txt Img_To_Read.txt								# hence one  can reject the line that fits exactly the date(_index)  
+							if [ "${SAT}" == "CSK" ]
+								then 
+									# may have multiple images acquired on the same day
+									# If nr of read image in csl is the same as in raw, one can suppose images are already read. 
+									# If that nr is not the same, delete what is already read in CSL and read again 
+									NROFRAWIMG=`${PATHGNU}/grep ${DATE} List_Raw.txt | wc -l`
+									if [ "${NROFRAWIMG}" == "${TSTINDEX}" ] 
+										then 
+											# Store image in list to ignore 
+											echo "${DATE}" >> Multi_Img_To_Ignore_tmp.txt
+											#ok, seems to be read as much as there are h5 files; remove that date from list to read
+											${PATHGNU}/grep -v ${DATE} Img_To_Read.txt > Img_To_Read_tmp.txt
+											cp -f Img_To_Read_tmp.txt Img_To_Read.txt
+										else 
+											# ignore if DATE is in Multi_Img_To_Ignore_tmp.txt
+											if ! grep -q "${DATE}" Multi_Img_To_Ignore_tmp.txt ; then
+												# it seems that the image is either not read yet (TSTINDEX=0) or some images are not read (TSTINDEX=2). 
+												# In that last case, remove partial existing and read again. Hence in both case, do not grep -v the date from the list to read
+												if [ "${TSTINDEX}" != "0" ]
+													then 
+														rm -Rf ${CSL}/${DATE}* 2> /dev/null
+														rm -Rf ${CSL}_Asc/${DATE}* 2> /dev/null
+														rm -Rf ${CSL}_Desc/${DATE}* 2> /dev/null
+												fi
+											fi
+									fi
+									
+								else 
+									${PATHGNU}/grep -vx ${DATE} Img_To_Read.txt > Img_To_Read_tmp.txt		# If a date appears more than one time in a file name, it means that it was probably prepared by Prepa_TSX.sh
+									cp -f Img_To_Read_tmp.txt Img_To_Read.txt								# hence one  can reject the line that fits exactly the date(_index)  
+							fi
 					fi
 
 				done
-			rm -f Img_To_Read_tmp.txt
+			# now one can sort and uniq the list of images to read 
+			sort Img_To_Read.txt | uniq > Img_To_Read_tmp.txt
+			cp -f Img_To_Read_tmp.txt Img_To_Read.txt
+
+			rm -f Img_To_Read_tmp.txt Multi_Img_To_Ignore_tmp.txt
+
 		fi 
 		
 		EchoTee ""
@@ -1566,9 +1623,11 @@ case ${SAT} in
 					"CSK") 
 								IMG=`GetDateOnly ${IMGDIR}`
 								NRCSK=`ls ${RAW}/${IMGDIR}/*.h5 | wc -l |  ${PATHGNU}/gsed 's/[^0-9]*//g'`
-								if [ ${NRCSK} -gt 1 ]
-									EchoTee "WARNING: there are ${NRCSK} csk images acquired on ${IMG}; Processing them with additional index in SAR_CSL/ dir naming. " 
-									i=0
+								
+								EchoTee "WARNING: there are -${NRCSK}- csk images acquired on ${IMG}; Processing them with additional index in SAR_CSL/ dir naming. " 
+								i=0
+
+								if [ "${NRCSK}" != "1" ]
 									then 
 										for IMGH5 in `ls ${RAW}/${IMGDIR}/*.h5`	# with path 
 											do 

@@ -1,3 +1,58 @@
+/* MasTerEngine20231018 (© DD & SAREOS) */
+/* ************************************ */
+CSKDataReader: Removal of hdf5 flag in makefile. Handling replaced through H5Ovisit_vers defined variable in new hdf5 versions. 
+
+/* MasTerEngine20231011 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: Correction of wrong handling of UTM zone in geoProjectionParameters.txt (inversion of zone number and latitude band)
+		Bug correction: erroneously freed pointer. 
+		valgrind check: loads of leaks corrections. 
+
+/* MasTerEngine20231009 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: Forgot to adapt geoprojection core routines to three-level mask...
+fineCoregistration: In case of tracking, values are initiated to NaN. 
+
+/* MasTerEngine20231007 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: Mask handling corrected to cope with 3 level mask. 
+	Now, if asking for masking and if a mask named binarySlantRangeMask is found, it is this one that will be used.
+	Else, it will be the one named slantRangeMask. In which case, all non-zero values lead to masking. 
+	If using homemade phase unwrapping and asking for zone map masking, a corresponding binary zoneMask file will be created. 
+
+/* MasTerEngine20231005 (© DD & SAREOS) */
+/* ************************************ */
+makefile: Addition of a flag to switch between old and new hdf5 version. Versions after 1.12 requires the flag to compile. 
+
+/* MasTerEngine20231003 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: bug correction in masked coherence handling. 
+
+/* MasTerEngine20231002 (© DD & SAREOS) */
+/* ************************************ */
+phaseUnwrapping: Correction in 3-level mask management. 
+		The 3-level mask is used in two ways with snaphu. 
+		First, the mask is converted to binary maske taking into account coherence level and saved as binarySlantRangeMask. 
+		Once converted to binary mask, it is used to mask coherence. It is this masked coherence that is sent to snaphu. 
+		Additionally, the mask is send to snaphu through its -M option. 
+		Now, 3-level mask is also applicable to homemade branch cut phase unwrapping. 
+		In case of using snaphu, the mask sent to snaphu is saved as snaphuMask. 
+		It is simply the inverted binarySlantRangeMask as snaphu uses zero to mask. 
+geoProjection: geo-projection of maskedCoherence added. 
+
+/* MasTerEngine20230928 (© DD & SAREOS) */
+/* ************************************ */
+slantRangeDEM: Mask management and projection correction to cope with the three levels. 
+InSARProductsGeneration: Three-level mask management now correctely implemented to generate a slantRangeMask with correct size keeping the three levels. 
+
+/* MasTerEngine20230921 (© DD & SAREOS) */
+/* ************************************ */
+phaseUnwrapping : Now, three-level mask is considered. If mask == 0, no masking values stay untouched.
+If mask == 1, masking is performed. 
+If mask > 1, masking is performed only if coh is below threshold. If not, masking is cleared. 
+
+slantRangeDEM: mask can now be of any size. 
+
 /* MasTerEngine202308904 (© DD & SAREOS) */
 /* ************************************ */
 S1Coregistration: Bug correction in master image copy due to new format management. 
