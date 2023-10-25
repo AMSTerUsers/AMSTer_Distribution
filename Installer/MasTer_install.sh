@@ -698,7 +698,7 @@ function NecessaryDisk()
 					[Yy]* ) 
 						echo "  // OK, I will add its mounting point or path here as a state variable."
 						cd ${HOMEDIR}
-						read -e -p "Enter the name of the mounting point (e.g. /mnt/YourDisk/PATH_TO/YOUR_DIR) or path (e.g. /users/your_account/PATH_TO/YOUR_DIR). You can use Tab for autocompletion: " DIRMOUNT
+						read -e -p "Enter the name of the mounting point (e.g. /mnt/YourDisk/PATH_TO/YOUR_DIR) or path (e.g. /users/your_account/PATH_TO/YOUR_DIR). You can use Tab for autocompletion or drag/drop the path: " DIRMOUNT
 						if [ -d "${DIRMOUNT}" ]
 							then 
 								echo "  // OK, dir can be accessed. State variable defined in ./bashrc"
@@ -715,7 +715,7 @@ function NecessaryDisk()
 									read -p "Select [e/s/m/d] "  des
 									case $des in
 									[Ee]* ) 
-											read -e -p "Enter the name of the mounting point or path (will be added in the .bashrc as export PATH_${DISKNAME}=MOUNT_POINT_NAME). You can use Tab for autocompletion : " DIRMOUNT
+											read -e -p "Enter the name of the mounting point or path (will be added in the .bashrc as export PATH_${DISKNAME}=MOUNT_POINT_NAME). You can use Tab for autocompletion or drag/drop the path: " DIRMOUNT
 											if [ -d "${DIRMOUNT}" ]
 												then 
 													echo "  // OK, dir can be accessed. State variable defined in .bashrc"
@@ -1416,7 +1416,7 @@ DoInstallMSBAS()
 				# ask where are the sources if not in MasTerToolbox_Distribution
 				echo "Enter the path to the msbas source file you want to install."
 				while true ; do
-					read -e -p "It must be something like ...YourPath/msbasvXX/msbasvXX_*.zip (You can use Tab for autocompletion): " RAWFILE
+					read -e -p "It must be something like ...YourPath/msbasvXX/msbasvXX_*.zip (You can use Tab for autocompletion or drag/drop the path): " RAWFILE
 			    	
 			    	# Check if the version exists
 					if [ -f "${RAWFILE}" ]
@@ -3183,7 +3183,7 @@ echo "  // MasTer Toolbox is freely available (under GPL licence) from https://g
 				echo "  // OK, I will try to install MasTer components from there (MasTer Engine, MSBAS and SCRIPTS_MT)."
 				while true; do
 			   		echo "Enter the path to the MasTerToolbox_Distribution directory; "
-			   		read -e -p "   You can use Tab for autocompletion (e.g. .../SAR/MasTerToolbox/MasTerToolbox_Distribution): " PATHDISTRO
+			   		read -e -p "   You can use Tab for autocompletion or drag/drop the path (e.g. ...YourPath/SAR/MasTerToolbox/MasTerToolbox_Distribution): " PATHDISTRO
 					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
 				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
 				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
@@ -3240,7 +3240,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 							# ask where are the sources if not in MasTerToolbox_Distribution
 							echo "Enter the path to the MasTer Toolbox directory named SCRIPTS_MT that you want to install."
 							while true ; do
-								read -e -p "It must be something like ...YourPath/SCRIPTS_MT (You can use Tab for autocompletion): " SCRIPTSDIR
+								read -e -p "It must be something like ...YourPath/SCRIPTS_MT (You can use Tab for autocompletion or drag/drop the path): " SCRIPTSDIR
 						    	
 						    	# Check if the dir exists
 								if [ -d "${SCRIPTSDIR}" ]
@@ -3276,7 +3276,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 								    	echo "No ${PATHDISTRO}/SCRIPTS_MT exists."
 										echo "Enter the path to the MasTer Toolbox directory named SCRIPTS_MT that you want to install."
 										while true ; do
-											read -e -p "It must be something like ...YourPath/SCRIPTS_MT (You can use Tab for autocompletion): " SCRIPTSDIR
+											read -e -p "It must be something like ...YourPath/SCRIPTS_MT (You can use Tab for autocompletion or drag/drop the path): " SCRIPTSDIR
 						    				
 						    				# Check if the dir exists
 											if [ -d "${SCRIPTSDIR}" ]
@@ -3321,7 +3321,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 							# ask where are the docs if not in MasTerToolbox_Distribution
 							echo "Enter the path to the MasTer documentation directory named DOC that you want to install."
 							while true ; do
-								read -e -p "It must be something like ...YourPath/DOC (You can use Tab for autocompletion): " DOCDIR
+								read -e -p "It must be something like ...YourPath/DOC (You can use Tab for autocompletion or drag/drop the path): " DOCDIR
 						    	
 						    	# Check if the dir exists
 								if [ -d "${DOCDIR}" ]
@@ -3350,7 +3350,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 								    	echo "No ${PATHDISTRO}/DOC exists."
 										echo "Enter the path to the MasTer documentation directory named DOC that you want to install."
 										while true ; do
-											read -e -p "It must be something like ...YourPath/DOC (You can use Tab for autocompletion): " DOCDIR
+											read -e -p "It must be something like ...YourPath/DOC (You can use Tab for autocompletion or drag/drop the path): " DOCDIR
 						    				
 						    				# Check if the dir exists
 											if [ -d "${DOCDIR}" ]

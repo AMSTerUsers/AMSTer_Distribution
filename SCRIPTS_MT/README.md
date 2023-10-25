@@ -47,3 +47,4 @@ Develloppers of MasTer:
     Dominique Derauw (MasTer Engine)
     Nicolas d'Oreye (MasTer toolbox)
     Sergey Samsonov (MSBAS)
+    ...
