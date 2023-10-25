@@ -127,6 +127,10 @@ The development of the MasTer Toolbox commenced in the early 2010s and leveraged
 **Updates:**
 
 **________**
+
+- New in V 20231024:
+  1. Scripts build_header_msbas_Tables.sh now allows preparing msbas inversion baseond on tables resulting from a Delaunay Traingulation and/or x-shortest connections, and/or baseline criterias pairs selections. 
+
 - New in V 20231003:
   Because this new version includes major changes (also in the structure), it is hardly recommended to perform a new installation with the installer (MasTer_Install.sh): 
   1. Some important files were renamed (e.g. FUNCTIONS_FOR_MT.sh), some files were moved in more appropriate directories and some directories were renamed for more clarity (like where to store some scripts or parameters files). 
