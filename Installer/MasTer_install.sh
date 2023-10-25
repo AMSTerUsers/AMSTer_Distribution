@@ -156,19 +156,21 @@
 # New in Distro V 4.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
-# New in Distro V 4.1 20231004:	- Offer option to search for MasTerToolboxDistribution package 
+# New in Distro V 4.1 20231004:	- Offer option to search for MasTerToolboxDistribution components 
 #								- proper sequence to install MasTer Engine
 # New in Distro V 4.2 20231006:	- new fct AskConfirmLoop
 #								- ask if want to install java instead of doing it by default
 #								- avoid duplication of PATH in bashrc when installer is run several time
+# New in Distro V 4.3 20231025:	- search for the most recent snaphu source dir, just in case an older one would exist
+#								- new message asking for localisation of MasTerToolbox Distribution sources
 #
 #
 # MasTer: InSAR Suite automated Mass processing Toolbox. 
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 4.2 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Oct 06 2023"
+VER="version 4.3 - Interactive Mac/Linux installation of MasTer Toolbox"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Oct 25 2023"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -816,7 +818,10 @@ function InstallSnaphu()
 												#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
 												mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
 												mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
-												SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
+												#SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
+												# take only the most recent if more than one dir satisfies the search
+												SNAPHUSOURCEDIR=$(find "${HOMEDIR}/SAR/EXEC/" -type d -name "*snaphu*" | grep "snaphu" | xargs ls -td 2>/dev/null | head -1)
+
 												cd ${SNAPHUSOURCEDIR}/src
 												make
 												mv ${SNAPHUSOURCEDIR}/bin/snaphu ${HOMEDIR}/SAR/EXEC/
@@ -855,7 +860,10 @@ function InstallSnaphu()
 						then 
 							cd ${HOMEDIR}/SAR/EXEC/
 							tar -zxvf ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
-							SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
+							#SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
+							# take only the most recent if more than one dir satisfies the search
+							SNAPHUSOURCEDIR=$(find "${HOMEDIR}/SAR/EXEC/" -type d -name "*snaphu*" | grep "snaphu" | xargs ls -td 2>/dev/null | head -1)
+
 
 							cd ${SNAPHUSOURCEDIR}/src
 							make
@@ -3169,7 +3177,7 @@ echo "  // MasTer Toolbox is freely available (under GPL licence) from https://g
 
 	cd
 	while true ; do
-   		read -p "Have you downloaded the MasTerToolbox_Distribution package from Github ? [y/n]: " yn
+   		read -p "Have you downloaded the MasTerToolbox_Distribution components from Github ? [y/n]: " yn
 		case $yn in
 			[Yy]* ) 
 				echo "  // OK, I will try to install MasTer components from there (MasTer Engine, MSBAS and SCRIPTS_MT)."
