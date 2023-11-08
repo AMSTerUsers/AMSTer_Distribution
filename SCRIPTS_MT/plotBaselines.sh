@@ -18,13 +18,15 @@
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -78,7 +80,7 @@ PAIRSFILE=${RUNDIR}/table_${MinBp}_${MaxBp}_${MinBt}_${MaxBt}.txt
 
 		set style arrow 1 heads back nofilled linetype 3 linecolor rgb "red"  linewidth 2.0 size screen 0.008,90.0,90.0
 		
-		set timestamp "Created by MasTer at ${INSTITUTE} on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+		set timestamp "Created by AMSTer at ${INSTITUTE} on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 		
 		#plot 'dataBaselinesPlot.txt' u 1:2:3:4 with vectors arrowstyle 1 title 'set1'
 		plot 'dataBaselinesPlot.txt' u 1:2:3:4 with vectors arrowstyle 1 notitle 

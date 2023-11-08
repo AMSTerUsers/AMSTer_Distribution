@@ -3,7 +3,7 @@
 # This script read two wrapped interferograms and substract 2 to 1
 #
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016
 #################################
 

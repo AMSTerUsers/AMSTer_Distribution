@@ -3,7 +3,7 @@
 # This script look for bad file names (pointing toward inexistant files) in DefoInterpolx2Detrend.txt.  
 # This may result from crashes in msbas preparation or cleaning from update of S1 orbits. 
 # It also check now for duplicated lines in DefoInterpolx2Detrend.txt. Indeed, it may happen 
-# that after updating master and/or slave orbits of S1 data, file name might be the same 
+# that after updating Primary and/or Secondary image orbits of S1 data, file name might be the same 
 # but col 2 (Bp) might differ while it provides the value with more digits. 
 #
 # Must be launched in MSBAS/region/ dir, i.e. where DefoInterpolx2Detrend and DefoInterpolx2Detrend.txt is. 
@@ -31,15 +31,15 @@
 # New in V3.3 :		- wrong path for OUTRANGEFILES
 # New in V3.4 : 	- proper cleaning of MODEi.txt
 # New in V3.5 : 	- replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-#
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2019/12/05 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.5 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on July 18, 2023"
+VER="Distro V40 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

@@ -26,7 +26,7 @@
 #   NOTE: only the 3 first param must be in the right order. No matter the order of the other parameters. 
 #
 #
-# Dependencies:	- MasTer Engine and MasTer Engine Tools, at least V20190716. 
+# Dependencies:	- AMSTer Engine and AMSTer Engine Tools, at least V20190716. 
 #				- gnu sed and awk for more compatibility
 #   			- functions "say" for Mac or "espeak" for Linux, but might not be mandatory
 #				- FUNCTIONS_FOR_MT.sh
@@ -115,13 +115,19 @@
 #								- check that possible former S1, TDX, SAOCOM or ICEYE  links at reading are from the same OS
 # New in Distro V 4.2 20230928:	- Add case where no link exists in new CSL folder (was otherwise failings...) (by A Dille).
 # New in Distro V 4.3 20231018:	- Debug some cases of re-reading CSK images when more than one image exist on the same day 
+# New in Distro V 5.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#								- avoid error message at cat empty MASSPROCESS dir
+# New in Distro V 5.1 20231102:	- Adapt to new SAOCOM reader; needs kml for Region of Interest (mandatory because frames are not reliable)
+#								- debug check previous readings for S1 and SAOCOM 
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox.
-# NdO (c) 2016/02/29 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.3 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 18, 2023"
+VER="Distro V5.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 02, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) "
@@ -146,12 +152,12 @@ if [ $# -gt 3 ]
 			case "$1" in
 		    	# Process the parameter
 		     	*".kml")
-		     		# for S1 or recent other Datareader
+		     		# for S1 or recent other Datareader (eg SAOCOM)
 		     		if [[ ! -f "$1" ]] ; then echo  ; echo "Your kml does not exist. Please check" ; exit ; fi
 		         	KMLS1="$1"
 		         	shift 1 ;;
 		        "ForceAllYears")
-		        	# for S1 or ICEYE : force reading data in yyyy directories if is "ForceAllYears"
+		        	# for S1, SAOCOM or ICEYE : force reading data in yyyy directories if is "ForceAllYears"
 		        	FAY=$1
 		        	shift 1 ;;
 		        "-n")
@@ -185,6 +191,8 @@ if [ $# -gt 3 ]
 		done
 fi
 
+FCTFILE=${PATH_SCRIPTS}/SCRIPTS_MT/FUNCTIONS_FOR_MT.sh
+
 if [[ "${SAT}" == "S1" ]] && [[ "${INITPOL}" = "" ]]
 	then
 		echo "Please provide a S1 polarisation to read : VV, HH, VH, HV or ALLPOL"
@@ -196,7 +204,6 @@ if [[ "${SAT}" == "SAOCOM" ]] && [[ "${INITPOL}" = "" ]]
 		exit
 fi
 
-FCTFILE=${PATH_SCRIPTS}/SCRIPTS_MT/FUNCTIONS_FOR_MT.sh
 
 # do not run if no EARTH_GRAVITATIONAL_MODELS_DIR available
 if [ `ls "${EARTH_GRAVITATIONAL_MODELS_DIR}" 2>/dev/null | wc -w ` -eq 0 ] ;  then echo "No EARTH_GRAVITATIONAL_MODELS_DIR ; can't run." ; exit ; fi
@@ -275,6 +282,7 @@ if [ ${SAT} == "S1" ] && [ "${KMLS1}" == "" ]
 			SpeakOut "Please provide a kml contouring the area of interest for S1 data. Do not forget the path..."
 			exit
 fi
+
 if [ ${SAT} == "S1" ] && [ ! -d ${SENTIORB} ]
 		then
 			echo "No precise orbit directory for sentinel 1 data. Check .bashrc. Exit"
@@ -282,11 +290,18 @@ if [ ${SAT} == "S1" ] && [ ! -d ${SENTIORB} ]
 			exit
 fi
 
+if [ ${SAT} == "SAOCOM" ] && [ "${KMLS1}" == "" ]
+		then
+			echo "No kml; I can't check the area. Exit"
+			SpeakOut "No kml; I can't check the area. Exit"
+			exit
+fi
+
 if [ ${SAT} == "RS1" ] || [ ${SAT} == "RADARSAT1" ]
 		then
-			echo "Remember that orbits from RADARSAT-1 can't be processed so far with MasTer Engine. "
-			echo "  Hence you can read these RS1 data, compute the amplitude images in slant range or process 3 pass interferometry,"
-			echo "  but you will not be able to perform geocoding. "
+			EchoTee "Remember that orbits from RADARSAT-1 can't be processed so far with AMSTer Engine. "
+			EchoTee "  Hence you can read these RS1 data, compute the amplitude images in slant range or process 3 pass interferometry,"
+			EchoTee "  but you will not be able to perform geocoding. "
 
 fi
 
@@ -300,11 +315,17 @@ then
    echo "" > ${LOGFILE}
    EchoTee " OK: a directory exist where I can store the data in csl format." 
    EchoTee "     They will be stored in ${CSL}"
-   if [ ${SAT} == "S1" ] 
-   	  then EchoTee "     as link for each images. Data are stored in _Asc_TRK and Desc_TRK corresponding dir." 
+   if [ ${SAT} == "S1" ]  
+   	  then 
+   	  	EchoTee "     as link for each images. Data are stored in _Asc_TRK and Desc_TRK corresponding dir." 
+   fi
+   if [ ${SAT} == "SAOCOM" ] 
+   	  then 
+   	  	EchoTee "     as link for each images. Data are stored in _Asc_TRK and Desc_TRK corresponding dir." 
    fi
    if [ ${SAT} == "TDX" ]
-   	  then EchoTee "     as link for each images. Data are stored in _TX (for transmit) and _RX (for receive) corresponding dir."
+   	  then 
+   	  	EchoTee "     as link for each images. Data are stored in _TX (for transmit) and _RX (for receive) corresponding dir."
    fi
    EchoTee ""
 else
@@ -493,8 +514,8 @@ function TestLink()
 ###########
 cd ${CSL}
 
-# 		Use fct GetMasTerEngineVersion to get the date of the last version of MasTerEngine as param LASTVERSIONMT
-GetMasTerEngineVersion
+# 		Use fct GetAMSTerEngineVersion to get the date of the last version of AMSTerEngine as param LASTVERSIONMT
+GetAMSTerEngineVersion
 
 case ${SAT} in
 	"SAOCOM")
@@ -502,58 +523,338 @@ case ${SAT} in
 		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
 		REGION=`basename ${PARENTCSL}`
 
-
  		# Check if there are any subfolders ending with ".csl"
-	    if find "${PARENTCSL}" -type d -name "*.csl" -print -quit | grep -q .; then
-	      echo "Subfolders with '.csl' found in ${PARENTCSL}"
-	      echo "Check if the links are OK, eg. not from the wrong OS"
+	    if find "${CSL}" -name "*.csl" -print -quit | grep -q .; then
+	      EchoTee "Subfolders with '.csl' found in ${PARENTCSL}"
+	      EchoTee "Check if the links are OK, eg. not from the wrong OS"
           FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
 	      TestLink ${FIRSTLINK}
 	    else
-	      echo "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
+	      EchoTee "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
 	    fi
- 
- 
  
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${TRK}/NoCrop/)
 		# if not, remove broken link
 		EchoTee "Remove possible broken links"
+		#for LINKS in `ls -d *.csl 2>/dev/null`
+		#	do
+		#		find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken
+		#done
 		for LINKS in `ls -d *.csl 2>/dev/null`
 			do
-				find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken
+				if test "$(jobs | wc -l)" -ge ${CPU}
+					then
+						case ${OS} in
+							"Linux")
+								wait -n 	;;
+							"Darwin")
+								waitn		;;
+						esac
+				fi
+				# Run tests in pseudo parallelism
+				{
+					find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken
+				} &
 		done
+		wait
 
-		if [[ "${INITPOL}" == "ALLPOL" ]]
+		if [ "${FAY}" == "ForceAllYears" ]
 			then
-				# Read all polarisations
-				SAOCOMDataReader ${RAW} ${CSL} ${KMLS1}
+				EchoTee ""
+				EchoTeeYellow "Read recent images"
+				if [ -n "$(find ${RAW} -mindepth 1 -type d )" ] 
+					then
+						if [[ "${INITPOL}" == "ALLPOL" ]]
+							then
+								# Read all polarisations
+								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1}
+							else
+								# Read only requested polarisation
+								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL}
+						fi
+						cp ${CSL}/SAOCOMDataReaderLog.txt ${CSL}/SAOCOMDataReaderLog_Recent.txt
+					else
+						EchoTee "No recent data."
+						touch ${CSL}/SAOCOMDataReaderLog.txt
+				fi
+				EchoTee ""
+				EchoTeeYellow "Read older images"
+				# Read in ${RAW}_FORMER/${YYYY}
+				if [ -d ${RAW}_FORMER ]
+					then
+						if [[ "${INITPOL}" == "ALLPOL" ]]
+							then
+								# Read all polarisations
+								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1}
+							else
+								# Read only requested polarisation
+								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL}
+						fi
+						cp ${CSL}/SAOCOMDataReaderLog.txt ${CSL}/SAOCOMDataReaderLog_Former.txt 2>/dev/null
+				fi
+				cat ${CSL}/SAOCOMDataReaderLog_Recent.txt ${CSL}/SAOCOMDataReaderLog_Former.txt > ${CSL}/SAOCOMDataReaderLog.txt 2>/dev/null
+				rm -f ${CSL}/SAOCOMDataReaderLog_Recent.txt ${CSL}/SAOCOMDataReaderLog_Former.txt 2>/dev/null
+
 			else
-				# Read only requested polarisation
-				SAOCOMDataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL}
+				EchoTeeYellow "Read recent images"
+				if [ -n "$(find ${RAW} -mindepth 1 -type d )" ] 
+					then
+						if [[ "${INITPOL}" == "ALLPOL" ]]
+							then
+								# Read all polarisations
+								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1}
+							else
+								# Read only requested polarisation
+								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL}
+						fi
+					else
+						EchoTee "No recent data."
+						touch ${CSL}/SAOCOMDataReaderLog.txt
+				fi
 		fi
 
+		# Check if some data with pol != initpol
+		# script here something like for S1 if one wants to check the other polarisations
+
+
 		EchoTee ""
-		EchoTee "All SAOCOM img read; now sorting Asc and Desc images  "
+		EchoTee "All S1 SAOCOM read; now moving images created (no acquired !) > 6 months in : "
+		EchoTee "     ${RAW}_FORMER/_YYYY"
+		EchoTee ""
+		cd ${RAW}
+
+		TESTDIR=`basename ${RAW}`
+		#if [[ $(echo $TESTDIR | ${PATHGNU}/grep -Eo "_[0-9]{4}" | wc -l) -gt 0 ]]
+		if echo "${TESTDIR}" | ${PATHGNU}/grep -q '_[0-9]\{4\}$'
+			then
+				# Dir name contains only _yyyy and hence it is probably run to read only data in _FORMER/_YYYY dir. No need to move to FORMER then
+				EchoTee "Probably reading data from _FORMER/_YYYY dir. No need to move them to FORMER again then."
+			else
+				if [ -n "$(find ${RAW} -mindepth 1 -type d )" ] 
+					then
+#						for FILESAFE in `ls -d *.SAFE`
+						for IMGDIR in `find ${RAW} -maxdepth 1 -mindepth 1 -type d -printf "%f\n"`		# i.e. all dirs in RAW
+							do
+ 								# search .xemt fil in dir 
+ 								XEMTFILE=$(basename ${RAW}/${IMGDIR}/*.xemt)
+  								FOCUSDATE=$(echo ${XEMTFILE} | ${PATHGNU}/grep -Eo "[0-9]{8}T[0-9]{6}" | cut -d T -f 1)
+
+								YEARFILE=`echo ${FOCUSDATE} | cut -c 1-4`
+								MMFILE=`echo ${FOCUSDATE} | cut -c 5-6 | ${PATHGNU}/gsed 's/^0*//'`
+								DATEFILE=`echo "${YEARFILE} + ( ${MMFILE} / 12 ) - 0.0001" | bc -l` # 0.0001 to avoid next year in december
+								YRNOW=`date "+ %Y"`
+								MMNOW=`date "+ %-m"`
+								DATENOW=`echo "${YRNOW} + ( ${MMNOW} / 12 )" | bc -l`
+								DATEHALFYRBFR=`echo "${DATENOW} - 0.5" | bc -l`
+								TST=`echo "${DATEFILE} < ${DATEHALFYRBFR}" | bc -l`
+								if [ ${TST} -eq 1 ]
+									then
+										mkdir -p ${RAW}_FORMER/_${YEARFILE}
+										mv ${IMGDIR} ${RAW}_FORMER/_${YEARFILE}
+								fi
+						done
+					else
+						"No data recently created ; nothing to move."
+				fi
+		fi
+
+		cd ${CSL}
+		echo
+
+		# sort Asc and Desc orbits
+		EchoTee ""
+		EchoTee "Now sorting Asc and Desc SAOCOM images  "
 		EchoTee "  because mass reading copes with both orbits at the same time. "
 		EchoTeeRed "Do not remove image files (links) from ${CSL} !!"
+		EchoTee " Remember: image not apparently read are outside of kml zone (or better kml cover exist),"
+		EchoTee "           or another (more recent) image was focused for the same date and was hence read instead."
 		EchoTee ""
 		for SAOCOMIMGPATH in ${CSL}/*.csl  # list actually the former links and the new dir if new images were read
 			do
+# need adaptation/check from here
 				SAOCOMIMG=`echo ${SAOCOMIMGPATH##*/}` 				# Trick to get only name without path
-				SAOCOMMODE=`echo ${SAOCOMIMG} | cut -d _ -f 3 | cut -d . -f1` # Get the Asc or Desc mode
-				SAOCOMDATE=`echo ${SAOCOMIMG} | cut -d _ -f 2` # Get the date
-
-				mkdir -p ${PARENTCSL}_${SAOCOMMODE}/NoCrop
-				if [ ! -d ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ]
+				SAOCOMMODE=`echo ${SAOCOMIMG} | cut -d _ -f 5 | cut -d . -f1` # Get the Asc or Desc mode
+				SAOCOMORBIT=`echo ${SAOCOMIMG} | cut -d _ -f 3 ` 	# Get the orbit nr
+				SAOCOMDATE=`echo ${SAOCOMIMG} | cut -d _ -f 2` 		# Get the date
+SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
+				
+				# if data exist in /Data, make a LINK
+				if [ -f "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ] && [ -s "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ]
 					then
-							# There is no  ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE} DIR yet, hence it is a new img; move new img there
-							mv ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
-							#and create a link
-							ln -s ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
-							echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMIMG}/Read_w_MasTerEngine_V.txt
+						EchoTee "Data found in ${SAOCOMIMGPATH} for ${SAOCOMDATE} in orbit ${SAOCOMORBIT}, ${SAOCOMMODE} "
+						mkdir -p ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop
+						if [ ! -d ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ]
+							then
+								# There is no  ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE} DIR yet, hence it is a new img; move new img there
+								mv ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
+								#and create a link
+								ln -s ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Read_w_AMSTerEngine_V.txt
+							else
+								# There was already a ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl DIR, hence it is an updated (re-created) img; move new img there
+								EchoTee "There was already a ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl sirectory,"
+								# Get its frame 
+								OLDSAOCOMFRAME=$(${PATHGNU}/grep "Frame" ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Pedigree.txt | ${PATHGNU}/grep -Eo "[0-9]*" )
+
+								# Check if same frame ? 
+								if [ "${SAOCOMOFRAME}" != "${OLDSAOCOMFRAME}" ]
+									then 
+										EchoTee "   though that image was updated (re-created) with another frame. Froce moving the img. "
+									else 
+										EchoTee "   though that image was updated (re-created) with teh same frame. Froce moving the img. "
+								fi
+								
+								mv -Rf ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
+								# Recreate the link in case frame is not the same 
+								ln -s ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Read_w_AMSTerEngine_V.txt
+								echo " ${SAOCOMIMG}" >> ${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt  #  List all images in the form of SAO1A_20230401_042_A.csl
+
+# OR make later a reading of all the updated images like for S1 orbit 
+#			${PATHGNU}/grep -iB 3 "precise orbit update performed" ${CSL}/S1DataReaderLog.txt | ${PATHGNU}/grep Start | ${PATHGNU}/grep -Eo "[0-9]{8}T" | cut -d T -f1 | uniq > ${CSL}/S1DataReaderLog_NEWORB.txt
+
+						fi
+					else 
+						EchoTee "No data found in ${SAOCOMIMGPATH}; image will not be moved to ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop"
 				fi
 		done
 		echo
+
+# create here a cleaning like S1 updated obrit		
+		if [ "${SAR_MASSPROCESS}" != "" ] || [ "${RESAMPLED}" != "" ] ; then
+		
+			#if [ -f "${CSL}/SAOCOMDataReaderLog_${RUNDATE}.txt" ] && [ -s "${CSL}/SAOCOMDataReaderLog_${RUNDATE}.txt" ]  ; then
+			if [ -f "${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt" ] && [ -s "${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt" ]  ; then
+				EchoTee "List all processes to clean in RESAMPLED and SAR_MASSPROCESS which include images that were updated."
+				for IMGTOCLEAN in `cat ${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt`   #  List all images in the form of SAO1A_20230401_042_A.csl
+					do
+						DATEIMGTOCLEAN=`echo "${IMGTOCLEAN}" | cut -d _ -f2 `
+						if [ "${RESAMPLED}" != "" ] ; then
+	 						cd ${RESAMPLED}/SAOCOM
+							EchoTee "Image ${DATEIMGTOCLEAN} was updated. "
+							EchoTee "List all processing involving ${DATEIMGTOCLEAN} from RESAMPLED/SAOCOM/${REGION}*"
+	
+							find ${REGION}* -name "*${DATEIMGTOCLEAN}*" -a -prune 2>/dev/null >> ${CSL}/CleanRESAMPLED_${RUNDATE}_tmp.txt # e.g. LagunaFea_A_xx/SMNoCrop_SM_yyyymmdd/yyyymmdd_yyyymmdd
+						fi
+						if [ "${SAR_MASSPROCESS}" != "" ] ; then
+							cd ${SAR_MASSPROCESS}/SAOCOM
+							EchoTee "List all processing involving ${DATEIMGTOCLEAN} from SAR_MASSPROCESS/S1/${REGION}*"
+							find ${REGION}* -name "*${DATEIMGTOCLEAN}*" -a -prune 2>/dev/null >> ${CSL}/CleanMASSPROCESS_${RUNDATE}_tmp.txt
+						fi
+				done
+				
+				echo
+				# add possible former list that was postponed because a run was in progress
+				cat ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.txt ${CSL}/CleanRESAMPLED_${RUNDATE}_tmp.txt 2>/dev/null | sort | uniq > ${CSL}/CleanRESAMPLED_${RUNDATE}.txt
+				cat ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.txt ${CSL}/CleanMASSPROCESS_${RUNDATE}_tmp.txt 2>/dev/null | sort | uniq > ${CSL}/CleanMASSPROCESS_${RUNDATE}.txt
+
+				rm -f ${CSL}/CleanRESAMPLED_${RUNDATE}_tmp.txt ${CSL}/CleanMASSPROCESS_${RUNDATE}_tmp.txt
+
+				EchoTee "Move (may prefer delete ?) all processes in RESAMPLED, SAR_MASSPROCESS which include images for which images were re-read"
+				EchoTee "   Move them in ${RESAMPLED}/SAOCOM_CLN/"
+				EchoTee "            and ${SAR_MASSPROCESS}/SAOCOM_CLN/"
+
+				# get all modes in ${CSL}/CleanRESAMPLED_${RUNDATE}.txt
+				${PATHGNU}/gsed 's%\/.*%%' ${CSL}/CleanRESAMPLED_${RUNDATE}.txt | sort | uniq > TRKDIR_list_${RUNDATE}_${RNDM1}.txt		# list all mode dirs in RESAMPLED
+				DATAPATH="$(dirname "$PARENTCSL")"  # get the parent dir, one level up
+
+				for TRKDIR in `cat TRKDIR_list_${RUNDATE}_${RNDM1}.txt 2>/dev/null`
+				do
+				# If no ${PARENTCSL}_${SAOCOMMODE}_${SAOCOMORBIT}/NoCrop/DoNotUpdateProducts_*_*.txt of less than 1 day (1440 min) then can remove products
+				# Note that we consider that if DoNotUpdateProducts_*_*.txt are odler than 1440 min, they must be ghost file and will be ignored.
+					CHECKFLAGUSAGE=`find ${DATAPATH}/${TRKDIR}/NoCrop/ -maxdepth 1 -name "DoNotUpdateProducts_*_*.txt" -type f -mmin -1440 | wc -l`
+					if [ ${CHECKFLAGUSAGE} -eq 0 ]
+						then
+							echo # just if nothing shows up in loop
+							# ok no process running since less than 1 day: can proceed to cleaning
+										#for FILESTOCLEAN in `cat  ${CSL}/CleanRESAMPLED_${RUNDATE}.txt`
+										if [ "${RESAMPLED}" != "" ] ; then
+
+											for FILESTOCLEAN in `${PATHGNU}/grep ${TRKDIR} ${CSL}/CleanRESAMPLED_${RUNDATE}.txt`  # e.g. LagunaFea_A_xx/SMNoCrop_SM_yyyymmdd/yyyymmdd_yyyymmdd
+											do
+												if test "$(jobs | wc -l)" -ge ${CPU}
+													then
+														case ${OS} in
+															"Linux")
+																wait -n 	;;
+															"Darwin")
+																waitn		;;
+														esac
+												fi
+												# Run tests in pseudo parallelism
+												{
+													PATHFILESTOCLEAN=$(dirname "${FILESTOCLEAN}")
+													mkdir -p ${RESAMPLED}/SAOCOM_CLN/${PATHFILESTOCLEAN}
+													# echo "Image ${FILESTOCLEAN} re-read. Should move ${RESAMPLED}/SAOCOM/${FILESTOCLEAN} to ${RESAMPLED}/SAOCOM_CLN/${PARENTCSL}_${SAOCOMMODE}_${SAOCOMORBIT}/"
+													mv -f ${RESAMPLED}/SAOCOM/${FILESTOCLEAN} ${RESAMPLED}/SAOCOM_CLN/${FILESTOCLEAN}
+												} &
+											done
+											wait
+											# because products were cleaned, one can discard the list (if any) of products to clean
+											rm -f ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.txt
+										fi
+
+										#for FILESTOCLEAN in `cat  ${CSL}/CleanMASSPROCESS_${RUNDATE}.txt`
+										if [ "${SAR_MASSPROCESS}" != "" ] ; then
+											for FILESTOCLEAN in `${PATHGNU}/grep ${TRKDIR}  ${CSL}/CleanMASSPROCESS_${RUNDATE}.txt`
+											do
+												if test "$(jobs | wc -l)" -ge ${CPU}
+													then
+														case ${OS} in
+															"Linux")
+																wait -n 	;;
+															"Darwin")
+																waitn		;;
+														esac
+												fi
+												# Run tests in pseudo parallelism
+												{
+													# if a pair MAS_SLV was already updated for the MAS and is now updated for the SLV, the MAS_SLV dir exist already. Rename it first as MAS_SLV_1st_update
+													if [ -d ${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN} ]
+														then
+															mv -f ${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN} ${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN}_1st_update
+															mv -f ${SAR_MASSPROCESS}/SAOCOM/${FILESTOCLEAN} ${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN}
+														else
+															PATHFILESTOCLEAN=$(dirname "${FILESTOCLEAN}")
+
+															if [ -f "${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN}" ] && [ -s "${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN}" ]
+																then
+																	FILESTOCLEANEXT="${FILESTOCLEAN##*.}" # extention only
+																	FILESTOCLEANNOEXT="${FILESTOCLEAN%.*}" # path and name without extention
+																	mv -f ${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN} ${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEANNOEXT}_1st_update.${FILESTOCLEANEXT}
+															fi
+															mkdir -p ${SAR_MASSPROCESS}/SAOCOM_CLN/${PATHFILESTOCLEAN}
+															# echo "Image ${FILESTOCLEAN} was re-read. Should move  ${SAR_MASSPROCESS}/SAOCOM/${FILESTOCLEAN} to ${SAR_MASSPROCESS}/SAOCOM_CLN/${PARENTCSL}_${SAOCOMMODE}_${SAOCOMORBIT}/"
+															mv -f ${SAR_MASSPROCESS}/SAOCOM/${FILESTOCLEAN} ${SAR_MASSPROCESS}/SAOCOM_CLN/${FILESTOCLEAN}
+													fi
+												} &
+											done
+											wait
+										# because products were cleaned, one can discard the list (if any) of products to clean
+										rm -f ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.txt
+									fi
+						else
+							# Some processes are running. Let's wait next run to clean the products.
+							# Store them in ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.txt and ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.txt
+							EchoTee " A process seems to be using data from ${SAOCOMORBIT}. To avoid possible clash, we postpone here the move of old products using images with former read."
+							# store/add them in a file for next run
+							cat ${CSL}/CleanRESAMPLED_${RUNDATE}.txt >> ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.txt
+							cat ${CSL}/CleanMASSPROCESS_${RUNDATE}.txt >> ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.txt
+							# sort and uniq
+							sort ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.txt | uniq > ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.clean.txt
+							sort ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.txt | uniq > ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.clean.txt
+							mv -f ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.clean.txt ${CSL}/CleanRESAMPLED_TODO_NEXT_TIME.txt
+							mv -f ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.clean.txt ${CSL}/CleanMASSPROCESS_TODO_NEXT_TIME.txt
+					fi
+				done
+				rm -f TRKDIR_list_${RUNDATE}_${RNDM1}.txt
+			else
+				EchoTee " No image re-read."
+				# file is hence empty
+# valid ? 
+				rm -f ${CSL}/SAOCOMDataReaderLog_${RUNDATE}.txt
+			fi
+		fi
 		;;
 	"S1") # Use bulk reader
 		# first update the orbit table
@@ -575,19 +876,19 @@ case ${SAT} in
 
 		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
 		REGION=`basename ${PARENTCSL}`
-		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/)
-		# if not, remove broken link
 
 		# Check if there are any subfolders ending with ".csl"
-	    if find "${PARENTCSL}" -type d -name "*.csl" -print -quit | grep -q .; then
-	      echo "Subfolders with '.csl' found in ${PARENTCSL}"
-	      echo "Check if the links are OK, eg. not from the wrong OS"
+	    if find "${CSL}" -name "*.csl" -print -quit | grep -q .; then
+	      EchoTee "Subfolders with '.csl' found in ${PARENTCSL}"
+	      EchoTee "Check if the links are OK, eg. not from the wrong OS"
 	      FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
 	      TestLink ${FIRSTLINK}
 	    else
-	      echo "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
+	      EchoTee "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
 	    fi
- 
+
+		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/)
+		# if not, remove broken link
 		EchoTee "Remove possible broken links"
 		for LINKS in `ls -d *.csl 2>/dev/null`
 			do
@@ -791,7 +1092,7 @@ case ${SAT} in
 								mv ${S1IMG} ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/
 								#and create a link
 								ln -s ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/${S1IMG} ${CSL}
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/${S1IMG}/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/${S1IMG}/Read_w_AMSTerEngine_V.txt
 					fi
 				} &
 		done
@@ -807,7 +1108,7 @@ case ${SAT} in
 		EchoTee "Now stiches all bursts of S1 images (if wide swath) "
 		EchoTee "  and check if size is compliant with number or lines and columns. If not, re-stitch the image "
 
-		EchoTee "Then check the size of all master images and store that info in NoCrop/List_Master_Sizes.txt. "
+		EchoTee "Then check the size of all Primary images and store that info in NoCrop/List_Master_Sizes.txt. "
 		EchoTee "  You may want to check it to ensure that no bursts are missing in some images. "
 		EchoTee ""
 		EchoTee "Then delete data that are in quarantained in SAR_CSL/S1/region/Quarantained. "
@@ -1068,7 +1369,7 @@ case ${SAT} in
 
 			if [ -f "${CSL}/S1DataReaderLog_NEWORB_${RUNDATE}.txt" ] && [ -s "${CSL}/S1DataReaderLog_NEWORB_${RUNDATE}.txt" ] ; then # still contains then ony lines such as: ---> Frame already present in image S1B_21_20200923_D.csl.
 				EchoTee "List all processes to clean which include images for which orbit was updated in RESAMPLED, SAR_MASSPROCESS"
-				for DATEIMGTOCLEAN in `cat ${CSL}/S1DataReaderLog_NEWORB_${RUNDATE}.txt`
+				for DATEIMGTOCLEAN in `cat ${CSL}/S1DataReaderLog_NEWORB_${RUNDATE}.txt 2>/dev/null`
 					do
  						if test "$(jobs | wc -l)" -ge ${CPU}
 							then
@@ -1122,7 +1423,7 @@ case ${SAT} in
 				${PATHGNU}/gsed 's%\/.*%%' ${CSL}/ORB_CleanRESAMPLED_${RUNDATE}.txt | sort | uniq > TRKDIR_list_${RUNDATE}_${RNDM1}.txt
 				DATAPATH="$(dirname "$PARENTCSL")"  # get the parent dir, one level up
 
-				for TRKDIR in `cat TRKDIR_list_${RUNDATE}_${RNDM1}.txt`
+				for TRKDIR in `cat TRKDIR_list_${RUNDATE}_${RNDM1}.txt 2>/dev/null`
 				do
 				# If no ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/DoNotUpdateProducts_*_*.txt of less than 1 day (1440 min) then can remove products
 				# Note that we consider that if DoNotUpdateProducts_*_*.txt are odler than 1440 min, they must be ghost file and will be ignored.
@@ -1367,7 +1668,7 @@ case ${SAT} in
 										mv ${TDXIMGPATH} ${TDXDIR}/${TDXDATE}.csl
 										#and create a link
 										ln -s ${TDXDIR}/${TDXDATE}.csl ${CSL}/${TDXDATE}_${TDXDIRENDNAME}/${TDXDATE}_${TDXSAT}.${TDXMODE}.csl
-										echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${TDXDIR}/${TDXDATE}.csl/Read_w_MasTerEngine_V.txt
+										echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${TDXDIR}/${TDXDATE}.csl/Read_w_AMSTerEngine_V.txt
 								fi
 						fi	# test old or recent format
 					} &
@@ -1427,7 +1728,7 @@ case ${SAT} in
 							mv ${ICYIMG} ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/${ICYDATE}.csl 
 							#and create a link
 							ln -s ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/${ICYDATE}.csl ${CSL}/${ICYIMG} 
-							echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/${ICYDATE}.csl/Read_w_MasTerEngine_V.txt
+							echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/${ICYDATE}.csl/Read_w_AMSTerEngine_V.txt
 				fi  
 		done
 		echo 		
@@ -1508,6 +1809,12 @@ case ${SAT} in
 						echo "${DIRNAMERAW}" >> List_csl.txt # Now List_csl.txt contains orbits names as dirs in CSL 
 					done
 					;;
+#		"SAOCOM") 
+#				# Need the bulkreader because frames changes all the time ; bulkreader compares the image with area of interest provided as a kml 
+#				# It also check the date of ficusing. If image was already read but it is a new focus, like update of S1 orbit, it logs the Info
+#				#  so that the former processing of coregistration and mass processing can be updated. 
+#
+#					;;
 			*) 	
 				#ls ${CSL}/* | ${PATHGNU}/grep -v ".txt" > List_csl.txt
 				ls ${CSL} | ${PATHGNU}/grep -v ".txt" > List_csl.txt
@@ -1603,7 +1910,7 @@ case ${SAT} in
 								ChangeInPlace PathToRSAT2Directory "${RAW}/${IMGDIR}" ${CSL}/Read_${IMG}.txt
 								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 								RSAT2DAtaReader ${CSL}/Read_${IMG}.txt	
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;
 					"RADARSAT1"|"RS1") 
@@ -1616,7 +1923,7 @@ case ${SAT} in
 								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 								#ChangeInPlace DORIS_DirectoryPath ${ENVORB} ${CSL}/Read_${IMG}.txt
 								ERSDataReader ${CSL}/Read_${IMG}.txt
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;
 	
@@ -1639,7 +1946,7 @@ case ${SAT} in
 												TRKHEADING=`updateParameterFile ${CSL}/${IMG}_${i}.csl/Info/SLCImageInfo.txt Heading | cut -d c -f1`
 												TRKHEADING=${TRKHEADING}c
 												SCENELOCATION=`updateParameterFile ${CSL}/${IMG}_${i}.csl/Info/SLCImageInfo.txt "Scene location"`
-												echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+												echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 												EchoTee " Track of ${IMG}_${i} : ${TRKHEADING}" 
 												EchoTee "Image ${IMG}_${i} red"
 												EchoTee "Image ${IMG}_${i} : ${TRKHEADING}  : ${SCENELOCATION}" >> List_Files_Trk_Location_${RUNDATE}.txt
@@ -1652,7 +1959,7 @@ case ${SAT} in
 										TRKHEADING=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt Heading | cut -d c -f1`
 										TRKHEADING=${TRKHEADING}c
 										SCENELOCATION=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt "Scene location"`
-										echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+										echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 										EchoTee " Track of ${IMG} : ${TRKHEADING}" 
 										EchoTee "Image ${IMG} red"
 										EchoTee "Image ${IMG} : ${TRKHEADING}  : ${SCENELOCATION}" >> List_Files_Trk_Location_${RUNDATE}.txt
@@ -1668,7 +1975,7 @@ case ${SAT} in
 								TRKHEADING=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt Heading | cut -d c -f1`
 								TRKHEADING=${TRKHEADING}c
 								SCENELOCATION=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt "Scene location"`
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee " Track of ${IMG} : ${TRKHEADING}" 
 								EchoTee "Image ${IMG} red"
 								EchoTee "Image ${IMG} : ${TRKHEADING}  : ${SCENELOCATION}" >> List_Files_Trk_Location_${RUNDATE}.txt
@@ -1736,7 +2043,7 @@ case ${SAT} in
 										ChangeInPlace PathToTSXDir ${TSXDIR} ${CSL}/Read_${IMG}.txt
 										ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 										TSXDataReader ${CSL}/Read_${IMG}.txt
-										echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+										echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 										EchoTee "Image ${IMG} red"
 									else 
 										if echo "${IMGDIR}" | grep -Eq "^[0-9]{8}_[0-9]+$"	# if IMGDIR contains 8 digits and a "_" and again digits,
@@ -1748,7 +2055,7 @@ case ${SAT} in
 														ChangeInPlace PathToTSXDir ${TSXDIR} ${CSL}/Read_${IMGDIR}.txt
 														ChangeInPlace outputFilePath ${CSL}/${IMGDIR} ${CSL}/Read_${IMGDIR}.txt
 														TSXDataReader ${CSL}/Read_${IMGDIR}.txt
-														echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMGDIR}.csl/Read_w_MasTerEngine_V.txt
+														echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMGDIR}.csl/Read_w_AMSTerEngine_V.txt
 														EchoTee "Image ${IMGDIR} red"
 														EchoTee " BEWARE: this image seems to be of the same date as another one and hence is probably another footprint."
 														EchoTee " 		  You can check e.g. by running _Check_CSL_Corners_Trk_etc.sh in the directory that contains you images.csl"
@@ -1794,7 +2101,7 @@ case ${SAT} in
 								ChangeInPlace PathToTSXDir ${RAW}/${IMGDIR} ${CSL}/Read_${IMG}.txt
 								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 								TSXDataReader ${CSL}/Read_${IMG}.txt
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;
 					"ENVISAT") 
@@ -1806,7 +2113,7 @@ case ${SAT} in
 								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 								ChangeInPlace DORIS_DirectoryPath ${ENVORB} ${CSL}/Read_${IMG}.txt
 								EnviSATDataReader ${CSL}/Read_${IMG}.txt
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;
 					"ERS") 
@@ -1818,7 +2125,7 @@ case ${SAT} in
 								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 								#ChangeInPlace DORIS_DirectoryPath ${ENVORB} ${CSL}/Read_${IMG}.txt
 								ERSDataReader ${CSL}/Read_${IMG}.txt
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;
 
@@ -1832,7 +2139,7 @@ case ${SAT} in
 								ChangeInPlace "VOL-ALPSR..." ${VOLALPSR} ${CSL}/Read_${IMG}.txt
 								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 								ALOSDataReader ${CSL}/Read_${IMG}.txt
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;
 								
@@ -1845,26 +2152,62 @@ case ${SAT} in
 								ChangeInPlace "VOL-ALPSR..." ${VOLALPSR} ${CSL}/Read_${IMG}.txt
 								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
 								ALOSDataReader ${CSL}/Read_${IMG}.txt
-								echo "Last created MasTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_MasTerEngine_V.txt
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;
 					#"S1") 		EchoTee "Using here the native bulk reader for S1"
 					#			;;	
 
-# Prefer Bulk reader					
-# 					"SAOCOM") 
-# 								IMG=`GetDate ${IMGDIR}`
-# 								SAOCOMDataReader ${CSL}/Read_${IMG}.txt -create
-# 								ChangeParamRead "SAOCOM data directory path (directory containing the manifest.safe file)" ${RAW}/${IMGDIR}/*.h5 
-# 								ChangeParamRead "outputFilePath" ${CSL}/${IMG} 
-# 								SAOCOMDataReader ${CSL}/Read_${IMG}.txt
-# 								TRKHEADING=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt Heading | cut -d c -f1`
-# 								TRKHEADING=${TRKHEADING}c
-# 								SCENELOCATION=`updateParameterFile ${CSL}/${IMG}.csl/Info/SLCImageInfo.txt "Scene location"`
-# 								EchoTee " Track of ${IMG} : ${TRKHEADING}" 
-# 								EchoTee "Image ${IMG} red"
-# 								EchoTee "Image ${IMG} : ${TRKHEADING}  : ${SCENELOCATION}" >> List_Files_Trk_Location_${RUNDATE}.txt
-# 								;;								
+# Use the Bulk reader !  					
+#  					"SAOCOM") 
+#  							#	IMG=`GetDate ${IMGDIR}`
+#  								# get IMGDIR
+#  							#	IMGDIR must be name from `find ${RAW} -maxdepth 1 -mindepth 1 -type d -printf "%f\n"` 
+# 
+# 								touch ${CSL}/Pedigree.txt # A file to remember where the image comes from...
+#  								echo "Raw dir name:				${IMGDIR}" >> ${CSL}/Pedigree.txt
+#  								# search .xemt fil in dir 
+#  								XEMTFILE=$(basename ${RAW}/${IMGDIR}/*.xemt)
+#   								echo "xemt file and dir name:		${XEMTFILE}" >> ${CSL}/Pedigree.txt
+#   								FOCUSDATE=$(echo ${XEMTFILE} | ${PATHGNU}/grep -Eo "[0-9]{8}T[0-9]{6}")
+#   								echo "Focus date: 				${FOCUSDATE}" >> ${CSL}/Pedigree.txt
+#  								# Read the start time from the xemt file and output it in the form of yyyymmdd
+#  								IMGDATE=$(${PATHGNU}/gawk -F'[-T]' '/<startTime>/{gsub(/[:.]/,"",$6); print $2$3$4; exit}' ${RAW}/${IMGDIR}/${XEMTFILE} | cut -d ">" -f 2)
+#   								echo "Acquisition date: 			${IMGDATE}" >> ${CSL}/Pedigree.txt
+#  								# name of dir where data are expected; also name of possile zip file if not unzip yet
+#  								XEMTNAME=$(echo "${XEMTFILE}" | ${PATHGNU}/gsed s"/.xemt//")
+#  								# if not unzipped yet, do it here
+#  								if [ -f "${RAW}/${IMGDIR}/${XEMTNAME}.zip" ]
+#  									then 
+#  										ZIPFILE=${RAW}/${IMGDIR}/${XEMTNAME}.zip
+#  										unzip ${ZIPFILE} -d "${ZIPFILE%.*}" && rm -f ${ZIPFILE}	# unzip in place and remove zip file; now data are in ${RAW}/${IMGDIR}/${XEMTNAME}
+#   								fi
+#  								# Read the data and store in general target dir in a subdir named TMP because date is unknown
+#  								mkdir -p ${CSL}/TMP
+#  								SAOCOMDataReader ${RAW}/${IMGDIR} ${CSL}/TMP ${KMLS1} P=${INITPOL}
+#  								# Now image is read in ${CSL}/TMP/SAO1AorB_DATE_ORB_FRAME_AorD.csl, e.g. PATH_1650/SAR_CSL/SAOCOM/LagunaFea/NoCrop/TMP/SAO1A_20230401_042_389_A.csl
+#  								CSLFULLNAME=$(basename ${CSL}/TMP/*.csl)
+#   								echo "Image full name: 	  ${CSLFULLNAME}" >> ${CSL}/Pedigree.txt
+#  								# Get the Orbit and Frame 
+#  								SAOCOMORBIT=`echo ${CSLFULLNAME} | cut -d _ -f 3 ` # Get the orbit nr
+#  								SAOCOMORBITDIR=`echo ${CSLFULLNAME} | cut -d _ -f 5 | cut -d . -f 1 ` # Get the orbit nr
+#  				 				SAOCOMOFRAME=`echo ${CSLFULLNAME} | cut -d _ -f 4 ` # Get the frame nr
+#   								echo "Orbit: 		${SAOCOMORBIT}" >> ${CSL}/Pedigree.txt
+#   								echo "Direction: 	${SAOCOMORBITDIR}" >> ${CSL}/Pedigree.txt
+#   								echo "Frame: 		${SAOCOMOFRAME}" >> ${CSL}/Pedigree.txt
+#  				 				
+# 								# Move image in CSL format in final dir and keep link in general dir 
+# 								PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
+# 								mkdir -p ${PARENTCSL}_${SAOCOMORBITDIR}_${SAOCOMORBIT}_${SAOCOMOFRAME}/NoCrop
+# 								
+# 								mv ${CSL}/TMP/${CSLFULLNAME} ${PARENTCSL}_${SAOCOMORBITDIR}_${SAOCOMORBIT}_${SAOCOMOFRAME}/NoCrop/${IMGDATE}.csl
+#  								# keep travck of name of original dir
+#  								mv ${CSL}/Pedigree.txt ${PARENTCSL}_${SAOCOMORBITDIR}_${SAOCOMORBIT}_${SAOCOMOFRAME}/NoCrop/${IMGDATE}.csl/Pedigree.txt
+# # 								touch ${PARENTCSL}_${SAOCOMORBITDIR}_${SAOCOMORBIT}_${SAOCOMOFRAME}/${IMGDATE}.csl/${CSLFULLNAME}.txt
+#  								
+#  								# create a link back in read dir 
+#  								ln -s ${PARENTCSL}_${SAOCOMORBITDIR}_${SAOCOMORBIT}_${SAOCOMOFRAME}/NoCrop/${IMGDATE}.csl ${CSL}/${CSLFULLNAME}
+# #  								;;								
 				esac	
 			} &
 		done 
@@ -1896,8 +2239,11 @@ if [ ${SAT} = "S1" ] ; then
 	find . -maxdepth 1 -name "NoPreciseOrbitsFoundFor_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
 	find . -maxdepth 1 -name "ORB_CleanMASSPROCESS_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
 	find . -maxdepth 1 -name "ORB_CleanRESAMPLED_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;	
+	find . -maxdepth 1 -name "CleanMASSPROCESS_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
+	find . -maxdepth 1 -name "CleanRESAMPLED_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;	
 	find . -maxdepth 1 -name "OrbitsToDownload_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
 	find . -maxdepth 1 -name "S1DataReaderLog_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
+	find . -maxdepth 1 -name "SAOCOMDataReaderLog_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
 	find . -maxdepth 1 -name "S1OrbitUpdaterLog_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
 	find . -maxdepth 1 -name "List_IMG_pol_HH_*.txt" -type f -mtime +${MAXLOG} -exec rm -f {} \;
 

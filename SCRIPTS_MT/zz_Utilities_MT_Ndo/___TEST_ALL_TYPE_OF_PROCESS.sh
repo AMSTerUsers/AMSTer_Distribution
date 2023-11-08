@@ -1,12 +1,12 @@
 #!/bin/bash
 ######################################################################################
-# This script check several type of processing. Usefull to test in one batch MT in all cases. 
+# This script check several type of processing. Usefull to test in one batch AS in all cases. 
 # Each processing will be done in a new termnal. Processes will be run on separate disks as 
 # described in table below (defined from LaunchParam.txt, then moved to /$PATH_3602/TEST_ALL_TYPE_PROCESS/${RUNDATE}
 #
 # WAIT FOR USER TO ANSWER "n" (or "y") WHEN ASKED TO BENEFIT FROM PREVIOUS SM COREGISTRATION 
 #
-# It will test the following satellies as Single Pair and Single Pair coregistered on Super Master :
+# It will test the following satellies as Single Pair and Single Pair coregistered on Global Primary (SuperMaster) :
 #
 #   				SATELLITE						|   on HD	|		mode				|	Rem
 # ----------------------------------------------------------------------------------------------------
@@ -35,13 +35,16 @@
 # New in Distro V 2.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# N.d'Oreye, v 1.0 2020/04/29 -                         
-######################################################################################
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -76,8 +79,8 @@ echo
 
 function LaunchSingleTest()
 	{
-	local MAS=$1  	# master date
-	local SLV=$2	# slave date 
+	local MAS=$1  	# Primary date
+	local SLV=$2	# Secondary date 
 	local SAT=$3	# sat
 	local MODE=$4	# mode
 	local PARAMFILE=$5 	# param file 
@@ -157,7 +160,7 @@ if [ ${TSTS1WS} == "Yes" ] ; then
 	MAS=20141007
 	SLV=20141124
 	SM=20151014
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/S1/DRC_Nyigo_Nyam_Crater_Desc21/LaunchMTparam_S1_Nyigo_Nyam_CraterDesc_Zoom1_ML4_monitoring.txt
+	PARAMFILE="/$PATH_1650/Param_files/S1/DRC_Nyigo_Nyam_Crater_Desc21/LaunchMTparam_S1_Nyigo_Nyam_CraterDesc_Zoom1_ML4_monitoring.txt"
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -179,7 +182,7 @@ if [ ${TSTS1SM} == "Yes" ] ; then
 	MAS="20180416"
 	SLV="20190622"
 	SM="20180404"
-	PARAMFILE="$PATH_1650/Param_files_SuperMaster/S1/Tristan_Asc/LaunchMTparam_S1_Tristan_Asc_Zoom1_ML8_MassProc.txt"
+	PARAMFILE="$PATH_1650/Param_files/S1/Tristan_Asc/LaunchMTparam_S1_Tristan_Asc_Zoom1_ML8_MassProc.txt"
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -201,7 +204,7 @@ if [ ${TSTCSK} == "Yes" ] ; then
 	MAS=20110417
 	SLV=20110714
 	SM=20160105
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/CSK/Virunga_Desc/LaunchMTparam_SuperMaster_CSK_Virunga_Desc_Full_Zoom1_ML47_MassPro.txt
+	PARAMFILE="/$PATH_1650/Param_files/CSK/Virunga_Desc/LaunchMTparam_SuperMaster_CSK_Virunga_Desc_Full_Zoom1_ML47_MassPro.txt"
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -223,7 +226,7 @@ if [ ${TSTENV} == "Yes" ] ; then
 	MAS=20110702
 	SLV=20110831
 	SM=20110930
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/ENVISAT/ASARNyiragongo_A114/LaunchMTparam_Envi_Asc114_Full_Zoom1_ML8_MassProc.txt
+	PARAMFILE=/$PATH_1650/Param_files/ENVISAT/ASARNyiragongo_A114/LaunchMTparam_Envi_Asc114_Full_Zoom1_ML8_MassProc.txt
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -245,7 +248,7 @@ if [ ${TSTRS} == "Yes" ] ; then
 	MAS=20120303
 	SLV=20120701
 	SM=20140410
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/RS/RS2F_UH_Asc36deg/LaunchMTparameters_RS2_UH_SuperMaster_Full_Zoom1_ML46_MassProc.txt
+	PARAMFILE=/$PATH_1650/Param_files/RS/RS2F_UH_Asc36deg/LaunchMTparameters_RS2_UH_SuperMaster_Full_Zoom1_ML46_MassProc.txt
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -267,7 +270,7 @@ if [ ${TSTTSX} == "Yes" ] ; then
 	MAS=20110806
 	SLV=20120712
 	SM=20120803
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/TSX/GOMA_SAKE_NYIGO_StMp_Desc92_VV/LaunchMTparameters_TSX_SM_D92_Goma_Sake_Nyigo_Full_Zoom1_ML38_MassProc.txt
+	PARAMFILE=/$PATH_1650/Param_files/TSX/GOMA_SAKE_NYIGO_StMp_Desc92_VV/LaunchMTparameters_TSX_SM_D92_Goma_Sake_Nyigo_Full_Zoom1_ML38_MassProc.txt
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -289,7 +292,7 @@ if [ ${TSTERS} == "Yes" ] ; then
 	MAS=19970604
 	SLV=19971022
 	SM=20020807
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/ERS/NYIGO_Asc/LaunchMTparam_ERS_Asc_Full_Zoom1_ML5_MassProc.txt
+	PARAMFILE=/$PATH_1650/Param_files/ERS/NYIGO_Asc/LaunchMTparam_ERS_Asc_Full_Zoom1_ML5_MassProc.txt
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -313,7 +316,7 @@ if [ ${TSTTDXDEFOBIS} == "Yes" ] ; then
 	MAS=20120712
 	SLV=20120905
 	#SM=
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/TDX/RDC_GOMA_SAKE_NYIGO_StMp_Desc92_Bistat_150Mhz/LaunchMTparameters_TDX_SM_D92_Bis_Goma_Kake_Nyigo_Full_Zoom1_ML38_MassProc.txt
+	PARAMFILE=/$PATH_1650/Param_files/TDX/RDC_GOMA_SAKE_NYIGO_StMp_Desc92_Bistat_150Mhz/LaunchMTparameters_TDX_SM_D92_Bis_Goma_Kake_Nyigo_Full_Zoom1_ML38_MassProc.txt
 
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -334,7 +337,7 @@ fi
 if [ ${TSTTDXTOPOBISSAMEDATE} == "Yes" ] ; then
 	MAS=20121110
 	SLV=20121110
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/TDX/RDC_GOMA_SAKE_NYIGO_StMp_Desc92_Bistat_150Mhz/LaunchMTparameters_TDX_SM_D92_Bis_Goma_Kake_Nyigo_Full_Zoom1_ML38_TOPO.txt
+	PARAMFILE=/$PATH_1650/Param_files/TDX/RDC_GOMA_SAKE_NYIGO_StMp_Desc92_Bistat_150Mhz/LaunchMTparameters_TDX_SM_D92_Bis_Goma_Kake_Nyigo_Full_Zoom1_ML38_TOPO.txt
 	
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -353,7 +356,7 @@ fi
 if [ ${TSTTDXTOPOBISSAMEDATE} == "Yes" ] ; then
 	MAS=20121110
 	SLV=20121213
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/TDX/RDC_GOMA_SAKE_NYIGO_StMp_Desc92_Bistat_150Mhz/LaunchMTparameters_TDX_SM_D92_Bis_Goma_Kake_Nyigo_Full_Zoom1_ML38_TOPO.txt
+	PARAMFILE=/$PATH_1650/Param_files/TDX/RDC_GOMA_SAKE_NYIGO_StMp_Desc92_Bistat_150Mhz/LaunchMTparameters_TDX_SM_D92_Bis_Goma_Kake_Nyigo_Full_Zoom1_ML38_TOPO.txt
 	
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -372,7 +375,7 @@ fi
 if [ ${TSTTDXDEFOPM} == "Yes" ] ; then
 	MAS=20141021
 	SLV=20141101
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/TDX/RDC_NYIGO_MIKENO_StMp_Desc16_Purs_100Mhz/LaunchMTparameters_TDX_SM_D16_Purs_Nyigo_Mikeno_Full_Zoom1_ML24_MassProc.txt
+	PARAMFILE=/$PATH_1650/Param_files/TDX/RDC_NYIGO_MIKENO_StMp_Desc16_Purs_100Mhz/LaunchMTparameters_TDX_SM_D16_Purs_Nyigo_Mikeno_Full_Zoom1_ML24_MassProc.txt
 	
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -390,7 +393,7 @@ fi
 if [ ${TSTTDXTOPOPMSAMEDATE} == "Yes" ] ; then
 	MAS=20141010
 	SLV=20141010
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/TDX/RDC_NYIGO_MIKENO_StMp_Desc16_Purs_100Mhz/LaunchMTparameters_TDX_SM_D16_Purs_Nyigo_Mikeno_Full_Zoom1_ML24_TOPO.txt
+	PARAMFILE=/$PATH_1650/Param_files/TDX/RDC_NYIGO_MIKENO_StMp_Desc16_Purs_100Mhz/LaunchMTparameters_TDX_SM_D16_Purs_Nyigo_Mikeno_Full_Zoom1_ML24_TOPO.txt
 	
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -409,7 +412,7 @@ fi
 if [ ${TSTTDXTOPOPMDIFFDATE} == "Yes" ] ; then
 	MAS=20141010
 	SLV=20141021
-	PARAMFILE=/$PATH_1650/Param_files_SuperMaster/TDX/RDC_NYIGO_MIKENO_StMp_Desc16_Purs_100Mhz/LaunchMTparameters_TDX_SM_D16_Purs_Nyigo_Mikeno_Full_Zoom1_ML24_TOPO.txt
+	PARAMFILE=/$PATH_1650/Param_files/TDX/RDC_NYIGO_MIKENO_StMp_Desc16_Purs_100Mhz/LaunchMTparameters_TDX_SM_D16_Purs_Nyigo_Mikeno_Full_Zoom1_ML24_TOPO.txt
 	
 	REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping

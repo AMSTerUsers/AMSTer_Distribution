@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 
 TSFILE=MSBAS_177_217_1.ts
 GPSFILEMM=BUK_.enu
@@ -37,7 +40,7 @@ RAD=1
 	#set xtics 0.5	
 	set key left top
 
-	set timestamp "Created by MasTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+	set timestamp "Created by AMSTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 
 #'plot "lcurve.txt" using 2:3 notitle with linespoints'
 plot "${TSFILE}" u 2:3 title 'ew', "${TSFILE}" u 2:4  title 'up' , "${GPSFILE}" u 1:2  title 'X' , "${GPSFILE}" u 1:4  title 'Z'

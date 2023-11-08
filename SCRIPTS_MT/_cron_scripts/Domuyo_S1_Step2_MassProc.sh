@@ -5,11 +5,17 @@
 # NOTE: usualy by running the reading and coregistration at 1 am, it is finished around 1am30
 #       hence this script should be safely launched around 2 am for instance.
 #       Nevertheless because VVP_S1_Step1_Read_SMCoreg_Pairs.sh uses RadAll_Img.sh, which also move updated prelim orbit images at all levels in _CLN dir,
-#       and coregister images on super masters, one check that it is not running anymore before starting.
+#       and coregister images on Global Primary (super masters), one check that it is not running anymore before starting.
 #
 # New in Distro V 2.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/25 - could make better... when time.
+# -----------------------------------------------------------------------------------------
 
 source $HOME/.bashrc
 
@@ -23,8 +29,8 @@ BP=20
 TABLEASC=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_${BP}_0_450.txt
 TABLEDESC=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set2/table_0_${BP}_0_450.txt
 
-PARAMPROCESSASC=$PATH_1650/Param_files_SuperMaster/S1/ARG_DOMU_LAGUNA_A_18/LaunchMTparam_S1_Arg_Domu_Laguna_A_18_Zoom1_ML4_MassProc_MaskCohWater.txt
-PARAMPROCESSDESC=$PATH_1650/Param_files_SuperMaster/S1/ARG_DOMU_LAGUNA_D_83/LaunchMTparam_S1_Arg_Domu_Laguna_D_83_Zoom1_ML4_MassProc_Snaphu_WaterCohMask.txt
+PARAMPROCESSASC=$PATH_1650/Param_files/S1/ARG_DOMU_LAGUNA_A_18/LaunchMTparam_S1_Arg_Domu_Laguna_A_18_Zoom1_ML4_MassProc_MaskCohWater.txt
+PARAMPROCESSDESC=$PATH_1650/Param_files/S1/ARG_DOMU_LAGUNA_D_83/LaunchMTparam_S1_Arg_Domu_Laguna_D_83_Zoom1_ML4_MassProc_Snaphu_WaterCohMask.txt
 
 PARAMASCNAME=`basename ${PARAMPROCESSASC}`
 PARAMDESCNAME=`basename ${PARAMPROCESSDESC}`
@@ -46,7 +52,7 @@ CHECKREAD=`ps -eaf | ${PATHGNU}/grep Domuyo_S1_Step1_Read_SMCoreg_Pairs.sh | ${P
 if [ ${CHECKREAD} -eq 0 ] 
 	then 
 		# OK, no more Domuyo_S1_Step1_Read_SMCoreg_Pairs.sh is running: 
-		# Check that no other SuperMaster automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
+		# Check that no other Global Primary (SuperMaster) automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
 		CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMASCNAME} | wc -l`
 		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAME} | wc -l`
 		if [ ${CHECKASC} -lt 1 ] 

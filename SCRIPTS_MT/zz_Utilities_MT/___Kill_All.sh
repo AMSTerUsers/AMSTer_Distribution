@@ -2,6 +2,9 @@
 # 
 # BEWARE : script to quickly delete the whole content of a dir... 
 #
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 
 DIRTOKILL=$1
 

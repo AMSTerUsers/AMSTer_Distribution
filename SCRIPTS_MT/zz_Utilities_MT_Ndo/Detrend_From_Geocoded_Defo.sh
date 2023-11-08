@@ -8,6 +8,8 @@
 #
 # This script was needed after a mistake that caused the loss of all the  Geocoded Products after Defo
 #
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 # I know, it is a bit messy and can be improved.. when time. But it works..
 # N.d'Oreye, v 1.0 2019/10/10 -                         
 ######################################################################################

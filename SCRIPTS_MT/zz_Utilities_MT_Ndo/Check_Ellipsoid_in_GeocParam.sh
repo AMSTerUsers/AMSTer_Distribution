@@ -6,6 +6,10 @@
 # Must be launnched in SAR_MASSPROCESS/sat/trk/crop/ where all pair dirs are
 #
 # New in Distro V 1.1 (Jul 19 2023): - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
 # I know, it is a bit messy and can be improved.. when time. But it works..
 # N.d'Oreye, v 1.0 2020/01/27 -                         

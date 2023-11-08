@@ -1,13 +1,16 @@
 #!/bin/bash
 ######################################################################################
-# This script check the size in lines and columns of the master SLC and interpolated slave SLC
+# This script check the size in lines and columns of the Primary SLC and interpolated Secondary SLC
 #   and compare them with the file sizes in bytes
 #
 # Must be launnched in pair dir where interfero is computed (or crashed)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# N.d'Oreye, v 1.0 2019/04/25 -                         
-######################################################################################
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 
 SOURCEDIR=`basename $PWD`
 
@@ -39,7 +42,7 @@ MASSIZE=`wc -c < ${MASSLC}`
 
 MASDIFF=`echo "(${MASBYTES} - ${MASSIZE}) " | bc` 
 
-echo "Master (${MAS}) is	${MASSIZE} bytes and ${MASCOL} x ${MASLIN}, which (x8) is supposed to be ${MASBYTES} bytes => diff master is ${MASDIFF}	bytes"
+echo "Primary (${MAS}) is	${MASSIZE} bytes and ${MASCOL} x ${MASLIN}, which (x8) is supposed to be ${MASBYTES} bytes => diff Primary is ${MASDIFF}	bytes"
 
 # get SLAVE info from PROCESS_PAIR/i12/Resampled.csl
 SLVINFOLOC=`ls -f i12/InSARProducts/* | ${PATHGNU}/grep ${SLV} | ${PATHGNU}/grep "interpolated.csl"  | cut -d : -f 1`
@@ -56,4 +59,4 @@ SLVSIZE=`wc -c < ${SLVSLC}`
 
 SLVDIFF=`echo "(${SLVBYTES} - ${SLVSIZE}) " | bc` 
 
-echo "Slave (${SLV}) is	${SLVSIZE} bytes and ${SLVCOL} x ${SLVLIN}, which (x8) is supposed to be ${SLVBYTES} bytes => diff slave is ${SLVDIFF}	bytes"
+echo "Secondary (${SLV}) is	${SLVSIZE} bytes and ${SLVCOL} x ${SLVLIN}, which (x8) is supposed to be ${SLVBYTES} bytes => diff Secondary is ${SLVDIFF}	bytes"

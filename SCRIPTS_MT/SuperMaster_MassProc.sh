@@ -1,10 +1,10 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
 # This script is aiming at processing all compatible pairs form a give sat/mode in 
-#     the geometry of a given SuperMaster as selected by Prepa_MSBAS.sh eg in 
+#     the geometry of a given Global Primary (SuperMaster) as selected by Prepa_MSBAS.sh eg in 
 #     /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/VVP/seti/setParametersFile.txt
 #   
-# All slave images must have been resamled at master grid using SuperMasterCorg.sh and stored 
+# All Secondary images must have been resamled at Global Primary (SuperMaster) grid using SuperMasterCorg.sh and stored 
 #     in a dir such as /Volumes/hp-1650-Data_Share1/SAR_SM/RESAMPLED/SATDIR/TRKDIR
 #
 # Parameters : - file with the compatible pairs (incl path; named as table_MinBp_MaxBp_MinBt_MaxBt.txt)    
@@ -13,13 +13,13 @@
 #						 pairs based on the files in Geocoded/DefoInterpolx2Detrend 
 #						 instead of on the list of pair dirs. 
 #						 -list=filename, it forces to compute only pairs in provided list 
-#						 (filename MUST be in the form of list of MASTER_SLAVE dates)
+#						 (filename MUST be in the form of list of PRM_SCD dates)
 #
 # Dependencies:
-#    - Data coregistered on a super master... of course
-#	 - CIS and CIS Tools, at least V20190716
+#    - Data coregistered on a Global Primary (SuperMaster)... of course
+#	 - AMSTerEngine and AMSTerEngine Tools, at least V20190716
 #	 - PRAMETERS file, at least V 20190710
-#    - The FUNCTIONS_FOR_CIS.sh file with the function used by the script. Will be called automatically by the script
+#    - The FUNCTIONS_FOR_MT.sh file with the function used by the script. Will be called automatically by the script
 #    - gnu sed and awk for more compatibility. 
 #    - cpxfiddle is usefull though not mandatory. This is part of Doris package (TU Delft) available here :
 #            http://doris.tudelft.nl/Doris_download.html. 
@@ -87,13 +87,16 @@
 # New in Distro V2.5: 	- read UTM zone for geocoding
 # New in Distro V2.6 20231002:	- compatible with new multi-mevel masks where 0 = non masked and 1 or 2 = masked  
 #								- add fig snaphuMask and keep copy of unmasked defo map
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2015/08/24 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.6 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 02, 2023"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -102,7 +105,7 @@ echo " "
 PAIRFILE=$1					# File with the compatible pairs; named as table_MinBp_MaxBp_MinBt_MaxBt.txt
 PARAMFILE=$2				# File with the parameters needed for the run
 LISTOFPROCESSED=$3			# if -f, it forces to create the list of existing pairs based on the files in Geocoded/DefoInterpolx2Detrend 
-							# if -list=filename, it forces to compute only pairs in provided list (file MUST be in the form of list of MASTER_SLAVE dates)
+							# if -list=filename, it forces to compute only pairs in provided list (file MUST be in the form of list of PRM_SCD dates)
 
 if [ $# -lt 2 ] ; then echo “Usage $0 PAIRS_FILE PARAMETER_FILE ”; exit; fi
 
@@ -149,8 +152,8 @@ function GetParam()
 	echo ${PARAM}
 	}
 
-SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the super master as selected by Prepa_MSBAS.sh in
-											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SUPER_MASTERS/MSBAS/VVP/seti/setParametersFile.txt
+SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the Global Primary (SuperMaster) as selected by Prepa_MSBAS.sh in
+											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/VVP/seti/setParametersFile.txt
 
 PROROOTPATH=`GetParam PROROOTPATH`			# PROROOTPATH, path to dir where data will be processed in sub dir named by the sat name. 
 DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored 
@@ -355,7 +358,7 @@ case ${SATDIR} in
 
 		if [ ${MASTDXMODE} != "_TX" ] 
  			then 
- 				EchoTee "Master mode is ${MASTDXMODE}, not TX; please check" 
+ 				EchoTee "Primary mode is ${MASTDXMODE}, not TX; please check" 
  				exit 0
 		fi
 		SLVTDXMODE="_TX"
@@ -447,15 +450,15 @@ EchoTee ""
 # Path to resampled data  
 	if [ -d "${OUTPUTDATA}" ]  # Path to dir where resampled data are stored.
 	then
-	   echo "  // OK: a directory exist where Resampled data on Super Master ${SUPERMASTER} are stored ." 
-	   echo "  //    They were most probably computed wth a script CIS_sat_SuperMasterCoreg.sh"
+	   echo "  // OK: a directory exist where Resampled data on Global Primary (SuperMaster) ${SUPERMASTER} are stored ." 
+	   echo "  //    They were most probably computed wth a script SuperMasterCoreg.sh"
 	   mkdir -p ${PROPATH}
 	else
 	   echo " "
 	   echo "  // NO expected ${OUTPUTDATA} directory."
-	   echo "  // Can't run wthout these Resampled data on Super Master ${MAS}" 
+	   echo "  // Can't run wthout these Resampled data on Global Primary (SuperMaster) ${MAS}" 
 	   echo "  // PLEASE REFER TO SCRIPT and  change hard link if needed,"
-	   echo "  // or run the appropriate script such as CIS_sat_SuperMasterCoreg.sh "
+	   echo "  // or run the appropriate script such as SuperMasterCoreg.sh "
 	   exit 1
 	fi
 
@@ -713,8 +716,8 @@ else
 	rm -f only_the_masters.txt
 fi
 
-# Get date of last MasTer Engine source dir (require FCT file sourced above)
-GetMasTerEngineVersion
+# Get date of last AMSTer Engine source dir (require FCT file sourced above)
+GetAMSTerEngineVersion
 
 i=0
 # PROCESS PAIRS: coreg and resample, or link to existing if Master is SuperMaster
@@ -744,7 +747,7 @@ do
 		if [ "${SLV}" == "${SUPERMASTER}" ] && [ "${S1MODE}" != "WIDESWATH" ]  # do not test S1, test S1MODE instead
 			then 
 				EchoTee ""
-				EchoTeeYellow "Slave is SUPERMASTER; swap MAS and SLV to benefit from processing already performed at geocoding"
+				EchoTeeYellow "Secondary is Global Primary (SuperMaster); swap PRM and SCD to benefit from processing already performed at geocoding"
 				SLV=${MAS}
 				SLVNAME=${MASNAME}
 				SLVDIR=${MASDIR}
@@ -754,9 +757,9 @@ do
 		fi
 		echo
 		EchoTee ""
-		EchoTee "----------------------------------------------------------------------------------------"
-		EchoTeeYellow "Shall process ${MASNAME} - ${SLVNAME} ; SuperMaster is ${SUPERMASTER} ; pair $i/${NPAIRS} "
-		EchoTee "----------------------------------------------------------------------------------------"
+		EchoTee "--------------------------------------------------------------------------------------------"
+		EchoTeeYellow "Shall process ${MASNAME} - ${SLVNAME} ; Global Primary is ${SUPERMASTER} ; pair $i/${NPAIRS} "
+		EchoTee "--------------------------------------------------------------------------------------------"
 
 		# Check if pair not already processed - mostly in case of supermaster as slave... 
 		if [ -d ${MASSPROCESSPATHLONG}/${MASNAME}_${SLVNAME} ] || [ -d ${MAINRUNDIR}/${MASNAME}_${SLVNAME} ] || [ -d ${MASSPROCESSPATHLONG}/${SLVNAME}_${MASNAME} ] || [ -d ${MAINRUNDIR}/${SLVNAME}_${MASNAME} ]
@@ -767,8 +770,8 @@ do
 				mkdir -p ${RUNDIR}
 				cd ${RUNDIR}				
 
-				# Store date of last MasTer Engine source dir
-				echo "Last created MasTer Engine source dir suggest Mass Porcessing with ME version: ${LASTVERSIONCIS}" > ${RUNDIR}/Processing_Pair_w_MasTerEngine_V.txt
+				# Store date of last AMSTer Engine source dir
+				echo "Last created AMSTer Engine source dir suggest Mass Porcessing with AE version: ${LASTVERSIONMT}" > ${RUNDIR}/Processing_Pair_w_AMSTerEngine_V.txt
 
 				if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${CROPKML}" != "" ] 
 						then # pseudo crop based on kml file for S1 images
@@ -780,7 +783,7 @@ do
 				# Attempt here to force polarisation to INITOPOL but better check
 				POLMAS=`GetParamFromFile "Master polarization channel" InSARParameters.txt`
 				POLSLV=`GetParamFromFile "Slave polarization channel" InSARParameters.txt`
-				if [ "${POLMAS}" != "${INITPOL}" ] ; then EchoTee "Polarisation of master (${MAS}) is not the same as the preferred one requested (INITPOL in ParametersFile) : ${POLMAS}-${INITPOL}. Check" ; fi
+				if [ "${POLMAS}" != "${INITPOL}" ] ; then EchoTee "Polarisation of Primary (${MAS}) is not the same as the preferred one requested (INITPOL in ParametersFile) : ${POLMAS}-${INITPOL}. Check" ; fi
 
 				# if MAS is not SUPERMASTER, or if S1 wideswath, one need to process each pair. If not, then we can benefit from what is already computed at SuperMasterCoreg
 				# Add path to SuperMaster here 
@@ -805,7 +808,7 @@ do
 								if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ]		# FLAG 2
 									then 
 										EchoTee "Skip module image and Coarse Coregistration computation for S1 because orbits are good enough." 
-										EchoTee "Ensure that InitInSAR was informed of the SuperMaster orbitography"
+										EchoTee "Ensure that InitInSAR was informed of the Global Primary (SuperMaster) orbitography"
 										FORCECOREG=NO  # will not need to force the coarse coregistration despite the SM
 										cd ${RUNDIR}/i12
 									else 
@@ -813,18 +816,18 @@ do
 											then 
 												if [ ${CCOHWIN} == 0 ] 
 													then 
-														EchoTee "Master and Slave are already coregistered on a super master and TSX/TDX or ENVISAT orbits are good enough to Skip module image and Coarse Coregistration computation." 
-														EchoTee "You choose that option by setting CCOHWIN=0. Ensure that InitInSAR was informed of the SuperMaster orbitography"
+														EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster) and TSX/TDX or ENVISAT orbits are good enough to Skip module image and Coarse Coregistration computation." 
+														EchoTee "You choose that option by setting CCOHWIN=0. Ensure that InitInSAR was informed of the Global Primary (SuperMaster) orbitography"
 														FORCECOREG=NO  # will not need to force the coarse coregistration despite the SM
 														cd ${RUNDIR}/i12
 													else 
-														EchoTee "Master and Slave are already coregistered on a super master. Although TSX/TDX or ENVISAT orbits are good enough, you choosed NOT to Skip module image and Coarse Coregistration computation by setting CCOHWIN=0." 
+														EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster). Although TSX/TDX or ENVISAT orbits are good enough, you choosed NOT to Skip module image and Coarse Coregistration computation by setting CCOHWIN=0." 
 														EchoTee "Therefore one need to compute module image for the Coarse Coregistration."
 														FORCECOREG=YES # will need to force the coarse coregistration despite the SM
 														MakeAmpliImgAndPlot 1 1 ORIGINALFORM 	# Parameter is ML factor for RASTER image in x and y; force ORIGINALFORM for module used for coreg
 												fi
 											else 
-												EchoTee "Master and Slave are already coregistered on a super master but ERS, RS, CSK, ALOS... orbits are not safe enough to Skip module image and Coarse Coregistration computation." 
+												EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster) but ERS, RS, CSK, ALOS... orbits are not safe enough to Skip module image and Coarse Coregistration computation." 
 												EchoTee "Therefore one need to compute module image for the Coarse Coregistration."
 												FORCECOREG=YES # will need to force the coarse coregistration despite the SM
 												MakeAmpliImgAndPlot 1 1 ORIGINALFORM 	# Parameter is ML factor for RASTER image in x and y; force ORIGINALFORM for module used for coreg
@@ -849,11 +852,11 @@ do
 								cd ${RUNDIR}/i12
 								if [ "${FORCECOREG}" == "NO" ]
 									then 
-										EchoTee "Master and Slave are already coregistered on a super master. Let's take these interpolated.csl image as input image and skip coarse coreg"
-										EchoTee "Ensure that InitInSAR was informed of the SuperMaster orbitography"
+										EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster). Let's take these interpolated.csl image as input image and skip coarse coreg"
+										EchoTee "Ensure that InitInSAR was informed of the Global Primary (SuperMaster) orbitography"
 										echo
 									else 
-										EchoTee "Master and Slave are not coregistered on a super master or you choosed not to skip coarse coreg."
+										EchoTee "Primary and Secondary are not coregistered on a Global Primary (SuperMaster) or you choosed not to skip coarse coreg."
 										CoarseCoregTestQuality
 								fi	
 

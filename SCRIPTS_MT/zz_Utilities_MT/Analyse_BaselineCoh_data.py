@@ -6,8 +6,12 @@
 #
 #
 # New in 1.1 (20230621 - NdO):	- Rename script with starting capital letter and change shebang
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# This script is part of the AMSTer Toolbox 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 # DS (c) 2023/06/01 # Last modified on June 01, 2023
 # -----------------------------------------------------------------------------------------
 
@@ -19,8 +23,8 @@ import datetime
 
 inputfile_path = sys.argv[1]
 
-VER="Distro V1.0.3 MasTer script utilities"
-AUT="Delphine Smittarello (c)2016-2019, Last modified on June 01, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Delphine Smittarello (c)2016-2019, Last modified on Oct 30, 2023"
 print(VER)
 print(AUT)
 

@@ -1,22 +1,26 @@
 #!/bin/bash
 ######################################################################################
-# This script convert binary def map from MSBAS processing to jpg then combine all jpg   
+# This script convert binary defo map from MSBAS processing to jpg then combine all jpg   
 # into a gif movie
 # using : convert -delay 10 *jpg movie.gif
 #
 # Parameters :	- path to directory where MSBAS_????????T??????_*.bin and .hdr are
 #		
 # Hard Coded : color scaling
+#
 # Dependencies:	- convert 
 # 
-# New in Distro V 1.0:	- Based on developpement version 1.1 and Beta V1.0.2
-# 
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# D.Smittarello, v 1.0 2020/10/06 -  
-######################################################################################
+# New in Distro V 1.0 (Oct 08, 2020):	- Based on developpement version 1.1 and Beta V1.0.2
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# Delphine Smittarello (c) - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0 MasTer script utilities"
-AUT="Delphine Smittarello, (c)2016-2019, Last modified on Oct 08, 2020"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Delphine Smittarello, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

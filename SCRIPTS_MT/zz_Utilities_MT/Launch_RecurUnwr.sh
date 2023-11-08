@@ -1,18 +1,24 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
-# This script is aiming at launching recursive unwrapping with Snaphu based on a procedure developped by J-L Froger and Y. Fukushima. 
+# This script is aiming at launching recursive unwrapping with Snaphu based on a 
+#   procedure developped by J-L Froger and Y. Fukushima. 
 #
 # Parameters : - path to file to unwrap.   
 #
 # Dependencies:	- python3, snaphu
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# V1.0 (Sep 30, 2022)
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 # DS (c) 2022/09/30 - could make better... when time.
 # ./Launch_RecurUnwr.sh ~/Documents/Unwr_INTERFERO_JLF/interfs/S1A/test/crop_interf.r4 601 401 0.9 12.5 10 0.02773288 '/home/delphine/Documents/Unwr_INTERFERO_JLF/interfs/S1A/test/crop_coh.r4' 0.0627
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0 MasTer script utilities"
-AUT="Delphine Smittarello, (c)2016-2022, Last modified on Sep 30, 2022"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Delphine Smittarello, (c)2016-2022, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

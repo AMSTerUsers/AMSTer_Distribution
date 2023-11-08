@@ -16,7 +16,7 @@
 #    - functions "say" for Mac or "espeak" for Linux, but might not be mandatory
 #    - snaphu
 #	 - MasterDEM.sh script
-#	 - __HardCodedLines.sh for the Path to binaries and sources for tracking the version of MasTer Engine
+#	 - __HardCodedLines.sh for the Path to binaries and sources for tracking the version of AMSTer Engine
 #
 #  Note: Function CreateHDR (used only for SinglePair.sh and SinglePairNiUnwrap.sh for flip/flop images) 
 #        contains dummy hard coded values for UTM zone 35. No need to worry. 
@@ -95,13 +95,15 @@
 # New in Distro V 6.2 20231003:	- debug figs for maskedCoherence 
 # New in Distro V 6.2.1 20231004:	- add raster of geocoded maskedCoherence 
 # New in Distro V 6.2.2 20231012:	- debug raster of geocoded maskedCoherence 
+# New in Distro V 7.0.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#									- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 7.0.1 20231102:	- Get version of AMSTer in GetAMSTerEngineVersion to avoid reading __HardCodedLines.sh 
 #
-#
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V6.2.2 MasTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 12, 2023"
+FCTVER="Distro V7.0.1 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 02, 2023"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -110,18 +112,13 @@ FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 12, 2023"
 source $HOME/.bashrc 
 
 source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
-	# Path to binaries and sources for tracking the version of MasTer Engine
-	FunctionsForMEPathSources
+	# Path to binaries and sources for tracking the version of AMSTer Engine
+	FunctionsForAEPathSources
 # ^^^ ----- Hard coded lines to check --- ^^^ 
 
 	
 OS=`uname -a | cut -d " " -f 1 `
 
-# vvv ----- Hard coded lines to check --- vvv 
-# For tracking the version of MasTer Engine
-#	eval PATHMASTERENGINE=${HOME}/SAR/MasTerToolbox/MasTerEngine
-#	eval PATHSOURCES=${PATHMASTERENGINE}/_Sources_ME/Older/
-# ^^^ ----- Hard coded lines to check -- ^^^ 
 
 # Define functions:
 ###################
@@ -279,12 +276,15 @@ function GetParamFromFile()
 	updateParameterFile ${parameterFilePath} ${KEY}
 	}
 
-function GetMasTerEngineVersion 
+function GetAMSTerEngineVersion 
 	{
-	if [ -f ${PATHMASTERENGINE}/_History.txt ]
+	PATHS1Reader=`which S1DataReader`
+	PATHAMSTERENGINE=$(basename ${PATHS1Reader})
+
+	if [ -f ${PATHAMSTERENGINE}/_History.txt ]
 		then 
 			# get version from History file 
-			eval LASTVERSIONMT=`head -1 ${PATHMASTERENGINE}/_History.txt | ${PATHGNU}/grep -Eo "[0-9]{8}"`
+			eval LASTVERSIONMT=`head -1 ${PATHAMSTERENGINE}/_History.txt | ${PATHGNU}/grep -Eo "[0-9]{8}"`
 		else 
 			# get version from last directory 
 			LASTDIRINFO=`${PATHGNU}/find ${PATHSOURCES} -maxdepth 1 -type d -name "V*" -printf "%T@ %Tc %p\n"  | sort -n | tail -1 `  # get last creater dir
@@ -292,7 +292,7 @@ function GetMasTerEngineVersion
 			LASTDIRNAME="${LASTDIRINFO##*/}"
 			eval LASTVERSIONMT=`echo ${LASTDIRNAME} | cut -d "_" -f1`
 	fi
-	EchoTee "Last MasTer Engine version is ${LASTVERSIONMT}"
+	EchoTee "Last AMSTer Engine version is ${LASTVERSIONMT}"
 	}
 	
 	
@@ -539,7 +539,7 @@ function ChangeCropZoomCSLImage()
 function Crop()
 	{
 	unset IMG
-	local IMG=$1 # Master or slave image date to crop and zoom
+	local IMG=$1 # Primary or Secondary image date to crop and zoom
 	cutAndZoomCSLImage ${RUNDIR}/Crop.txt -create
 	ChangeParam "Input file path in CSL format" ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${IMG}.csl Crop.txt
 	ChangeParam "Output file path" ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${IMG}.csl Crop.txt
@@ -558,7 +558,7 @@ function Crop()
 function CropAtZeroAlt()
 	{
 	unset IMG
-	local IMG=$1 # Master or slave image date to crop and zoom
+	local IMG=$1 # Primary or Secondary image date to crop and zoom
 	cutAndZoomCSLImage ${RUNDIR}/Crop.txt -create
 	ChangeParam "Input file path in CSL format" ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${IMG}.csl Crop.txt
 	ChangeParam "Output file path" ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${IMG}.csl Crop.txt
@@ -642,7 +642,7 @@ function ManageDEM()
 					fi
 			fi	;;   	
 		*) 
-			EchoTeeRed " I do not understand if you want to recompute the DEM (and maybe the MASK) in (super)master slant range. Will do it anyway.  \n"
+			EchoTeeRed " I do not understand if you want to recompute the DEM (and maybe the MASK) in (Global)Primary slant range. Will do it anyway.  \n"
 			MasterDEM.sh ${IMGWITHDEM} ${PARAMFILE}  
 			;;    
 	esac
@@ -859,13 +859,13 @@ function RatioPix()
 	EchoTee "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	}
 
-# copy resampled slave module and info for InSARParameters.txt for mass processing
+# copy resampled Secondary module and info for InSARParameters.txt for mass processing
 function GetImgMod()
 	{
 	unset IMG TOBEUSEDAS
 	local IMG=$1 # Date of img to test
-	local TOBEUSEDAS=$2 # type of img.mod to be used as master or slave in the present run (must be correctly spelled, attention it is case sensitive)
-	EchoTee "At least one pair must have been already processed using ${IMG} as slave in OUTPUTDATA and module must be in /ModulesForCoreg". 
+	local TOBEUSEDAS=$2 # type of img.mod to be used as Primary or Secondary in the present run (must be correctly spelled, attention it is case sensitive)
+	EchoTee "At least one pair must have been already processed using ${IMG} as Secondary in OUTPUTDATA and module must be in /ModulesForCoreg". 
 	EchoTee "   Let's copy its module image and update InSARParameters to use it as ${TOBEUSEDAS} in the present run." 	
 
 	# get the polarisation and size of images
@@ -890,7 +890,7 @@ function MakeAmpliImgAndPlot()
 	local ML1=$1 # ML factor for raster fig in x
 	local ML2=$2 # ML factor for raster fig in y
 	local TYPE=$3 # type of reduc factor : SQUARE of ORIGINALFORM 
-	local IMGTORUN=$4 # option for Ampli image reduction of slave only 	
+	local IMGTORUN=$4 # option for Ampli image reduction of Secondary only 	
 	# Amplitude image reduction
 	# Process Image reduction
 	# Better have a high ML to compute this step in order to reduce speckel as it will only be used
@@ -925,7 +925,7 @@ function MakeAmpliImgAndPlot()
 	case ${IMGTORUN} in
 		"slaveOnly")
 			amplitudeImageReduction slaveOnly | tee -a ${LOGFILE}
-			# get actual Master and Slave Path and size in Range
+			# get actual Primary and Secondary Path and size in Range
 			SRG=`GetParamFromFile "Reduced slave amplitude image range dimension" InSARParameters.txt`
 			PATHSLV=`GetParamFromFile "Reduced slave amplitude image file path" InSARParameters.txt`
 			FIGRATIO=`echo "(${ML1} * ${RATIO})" | bc` # Integer
@@ -934,7 +934,7 @@ function MakeAmpliImgAndPlot()
 			;;
 		"masterOnly")
 			amplitudeImageReduction masterOnly | tee -a ${LOGFILE}
-			# get actual Master and Slave Path and size in Range
+			# get actual Primary and Secondary Path and size in Range
 			MRG=`GetParamFromFile "Reduced master amplitude image range dimension" InSARParameters.txt`
 			PATHMAST=`GetParamFromFile "Reduced master amplitude image file path" InSARParameters.txt`
 			FIGRATIO=`echo "(${ML1} * ${RATIO})" | bc` # Integer
@@ -943,7 +943,7 @@ function MakeAmpliImgAndPlot()
 			;;
 		*)
 			amplitudeImageReduction | tee -a ${LOGFILE}
-			# get actual Master and Slave Path and size in Range
+			# get actual Primary and Secondary Path and size in Range
 			MRG=`GetParamFromFile "Reduced master amplitude image range dimension" InSARParameters.txt`
 			SRG=`GetParamFromFile "Reduced slave amplitude image range dimension" InSARParameters.txt`
 			PATHMAS=`GetParamFromFile "Reduced master amplitude image file path" InSARParameters.txt`
@@ -999,12 +999,12 @@ function CoarseCoregTestQuality()
 					EchoTee "Shall run Fiji on "
 					EchoTee "${PATHMAST} "
 					EchoTee "${PATHSLV}"
-					EchoTee "Using Master size ${MASWIDTH} x ${MASLENGTH}"
+					EchoTee "Using Primary size ${MASWIDTH} x ${MASLENGTH}"
 					EchoTee "And Slave size ${SLVWIDTH} x ${SLVLENGTH}"
 					cp ${PATHMAST} FILE1fortest
 					cp ${PATHSLV} FILE2fortest
 					cp ${RUNDIR}/i12/TextFiles/InSARParameters.txt InSARParameters_testFiji.txt
-					# Attention : run Fiji on Slave then master to have Affine transfo in the same logic as MT. 
+					# Attention : run Fiji on Secondary then Primary to have Affine transfo in the same logic as MT. 
 
 					CoregFiji ${PATHSLV} ${PATHMAST} ${SLVWIDTH} ${SLVLENGTH} ${MASWIDTH} ${MASLENGTH}
 					
@@ -1575,7 +1575,7 @@ function UnwrapAndPlot()
 	# Get width of file for rasters and gmtmath 
 	UNRPSIZE=`GetParamFromFile "Unwrapped phase range dimension" InSARParameters.txt`
 	
-	# TEST IF MASTER DATE > OR < SLAVE. INVERT UNWRAPPED IF NEEDED
+	# TEST IF Primary DATE > OR < Secondary. INVERT UNWRAPPED IF NEEDED
 	EchoTee ""
 	if [ "${PROCESSMODE}" != "TOPO" ]
 		then 
@@ -1587,7 +1587,7 @@ function UnwrapAndPlot()
 					mv ${RUNDIR}/i12/InSARProducts/deformationMap ${RUNDIR}/i12/InSARProducts/deformationMap.WrongSign
 					gmt gmtmath ${RUNDIR}/i12/InSARProducts/deformationMap.WrongSign -bs${UNRPSIZE} -1 MUL = ${RUNDIR}/i12/InSARProducts/deformationMap
 				else 
-					EchoTee "Master date is before Slave date. No need to Multiply unwrappedd phase by -1"
+					EchoTee "Primary date is before Secondary date. No need to Multiply unwrappedd phase by -1"
 			fi
 	fi
 
@@ -1852,13 +1852,13 @@ function PlotGeoc()
 	fi
 	if [ "${MASAMPL}" == "YES" ]
 		then
-		# plot geocoded master
+		# plot geocoded Primary
 		PATHGEOMAS=`basename *${MASNAME}*.*.mod.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
 		if [ -f "${PATHGEOMAS}" ] && [ -s "${PATHGEOMAS}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOMAS} ; fi
 	fi
 	if [ "${SLVAMPL}" == "YES" ]
 		then
-		# plot geocoded slave
+		# plot geocoded Secondary
 		PATHGEOSLV=`basename *${SLVNAME}*.*.mod.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
 		if [ -f "${PATHGEOSLV}" ] && [ -s "${PATHGEOSLV}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOSLV} ; fi
 	fi
@@ -1913,7 +1913,7 @@ function PlotGeoc()
 
 	}	
 
-# Still used for create headers for amplitude image of master and slave Zoomed x ML
+# Still used for create headers for amplitude image of Primary and Secondary Zoomed x ML
 function CreateHDR()
 	{
 	unset SAMPLES LINES TYPE UTMXmin UTMYmin FILE CREADATE
@@ -2056,18 +2056,18 @@ function ManageGeocoded()
 	if [ -f ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${MASNAME}.*.hdr ] && [ -s ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${MASNAME}.*.hdr ]
 		then 
 			GEOCMAST="NO"	
-			EchoTee "Master already geocoded. Will skip it"	
+			EchoTee "Primary image already geocoded. Will skip it"	
 		else 
 			GEOCMAST="YES"	
-			EchoTee "Master Not geocoded yet. Will do it"							
+			EchoTee "Primary image Not geocoded yet. Will do it"							
 	fi	
 	if [ -f ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${SLVNAME}.*.hdr ] && [ -s ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${SLVNAME}.*.hdr ]
 		then 
 			GEOCSLAV="NO"	
-			EchoTee "Slave already geocoded. Will skip it"	
+			EchoTee "Secondary image already geocoded. Will skip it"	
 		else 
 			GEOCSLAV="YES"	
-			EchoTee "Slave Not geocoded yet. Will do it"					
+			EchoTee "Secondary image Not geocoded yet. Will do it"					
 	fi	
 	if [ ${SKIPUW} == "SKIPyes" ] ; then
 							#  SLRDEM, MASAMPL, SLVAMPL, COH, INTERF, FILTINTERF, RESINTERF, UNWPHASE
@@ -2134,7 +2134,7 @@ function ManageGeocoded()
 	
  	RenameAllProducts 
 	
-# rename here master S1 STRIPMAP from MASDATE to MASNAME
+# rename here Primary S1 STRIPMAP from MASDATE to MASNAME
  	if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "STRIPMAP" ] ; then 		
  		mv ${MAS}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg ${MASNAME}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg 2>/dev/null
   		mv ${MAS}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr ${MASNAME}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr 2>/dev/null

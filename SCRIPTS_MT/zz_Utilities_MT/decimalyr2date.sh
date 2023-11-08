@@ -1,11 +1,17 @@
 #!/bin/bash
 # Transform first column of decimal year into YYYYMMDD
-# CSL InSAR Suite utilities. 
-# NdO (c) 2018/08/16 - could make better with more functions... when time.
+#
+# V1.0: Aug 16, 2018
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="v1.0 Beta CIS script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2018, Last modified on Aug 16, 2018"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

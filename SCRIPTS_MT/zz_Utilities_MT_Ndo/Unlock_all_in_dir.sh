@@ -4,7 +4,7 @@
 # Must be launched with path to dir to unclock as only parameter.
 #
 # I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2019/12/05 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 

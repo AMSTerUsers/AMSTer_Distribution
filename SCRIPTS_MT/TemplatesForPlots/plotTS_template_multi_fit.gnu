@@ -89,7 +89,7 @@ annualrateUD(b) = ( d * 3153600000. )
 # ANNUALRATEUD
 
 
-set timestamp "Created by MasTer at INSTITUTE on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+set timestamp "Created by AMSTer at INSTITUTE on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 
 set output "PATH_TO_EPS.eps" 
 CMD_LINE

@@ -1,10 +1,13 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
 # This script is aiming at coregistrating all modes of LUX
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="v1.0 Beta CIS script utilities"
-AUT="Nicolas d'Oreye, (c)2016-18, Last modified on May 08, 2018"
+VER="Distro V1.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

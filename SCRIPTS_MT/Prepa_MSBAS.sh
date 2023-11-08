@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------------------
 # This script is aiming at preparing the MSBAS data sets and computing baselines table
 #   Data must be already in csl format. 
-# Can force using a given super master if one do not want to compute a new one while just 
+# Can force using a given Global Primary (super master) if one do not want to compute a new one while just 
 #   adding an image to a large existing data base.
 # Will add manual pairs if an appropriate file is provided (see New in V2.0 below)
 # Since V4.0, it can also accomodate two sets of baseline criteria: one applied for the 
@@ -14,7 +14,7 @@
 #              - Max Btemp
 #              (- Min Bp - obsolate since V3.0......UNLESS you want to work with old tools)
 #              (- Min Btemp - obsolate since V3.0...UNLESS you want to work with old tools)
-#              - Date of SuperMaster       
+#              - Date of Global Primary (SuperMaster)       
 #              - optional max Bp2
 #              - optional Max Btemp2
 #              (- optional Min Bp2 - obsolate since V3.0......UNLESS you want to work with old tools)
@@ -23,25 +23,25 @@
 #
 # Dependencies:	- gnu sed and awk for more compatibility.
 #    			- functions "say" for Mac or "espeak" for Linux, but might not be mandatory
-#				- MasTer Engine tools: baselinePlot (D. Derauw from MasTer Engine V20220510)
+#				- AMSTer Engine tools: baselinePlot (D. Derauw from AMSTer Engine V20220510 - formerly named AMSTerEngine)
 # 				Obsolate since V3.0
 #    			- script build_bperp_file.sh (which needs plotspan.sh )
-#				- MasTer Engine tools: initiateBaselinesComputation... (L. Libert) 
+#				- AMSTer Engine tools: initiateBaselinesComputation... (L. Libert) 
 #
 # New in Distro V 1.0:	- Based on developpement version 3.3 and Beta V1.2
 # New in Distro V 2.0:	- If a file named table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt exists 
 #						  in SETi dir with a list of pairs in the form  
-#						  "DateMaster	   DateSlave	   Bp	   Bt", without header, 
+#						  "DatePrimary	   DateSecondary	   Bp	   Bt", without header, 
 #						  it will paste these pairs to the table_BpMin_BpMax_Btmin_Btmax.txt.
 #						  This is usefull when some pairs above Bp and Bt must be kept in the  
 #						  beseline ployt to ensure trianlgle closure or time continuity
 # New in Distro V 2.1:	- Remove header of table with additional pairs if any
-# New in Distro V 2.2:	- if do not want to recomputer a super master, ensure that a SM date was provied. 
+# New in Distro V 2.2:	- if do not want to recomputer a Global Primary, ensure that a SM date was provied. 
 # New in Distro V 2.3:	- correction of test for nr of parameters (thanks to A. Dille)
 # New in Distro V 3.0:	- use tool developped by DD instead of those by L. Libert. 
 #						- make the baseline plot using baselinePlot instead of build_bperp_file.sh and plot_span.sh
 # New in Distro V 3.1:	- Create a initBaseline.txt file as needed by the computeBaselinesPlotFile to be allowed to keep some old tools  
-# New in Distro V 3.2:	- Now actually work with old and new version of Master Engine, that is with D Derauw or L Libert tools for baseline plotting.
+# New in Distro V 3.2:	- Now actually work with old and new version of AMSTEer Engine (formerly MasTerEngine), that is with D Derauw or L Libert tools for baseline plotting.
 #						  New is faster and more accurate, Old allows comuting tables with minimum Bt and Bp other than 0 
 # New in Distro V 3.3:	- typo on searching for baselinePlot2 instead of baselinePlot and wrong call of second if at double test
 # New in Distro V 3.4:	- prepare bperp_file.txt and SM_Approx_baselines.txt also when using new tools for baseline plots for further plots if needed
@@ -62,29 +62,31 @@
 #						- remove possible double empt lines
 # New in Distro V 4.4: - use gdate
 # New in Distro V 4.5: - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 5.0: - Rename MasTer Toolbox as AMSTer Software
+#					   - rename Master and AMSTer as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.5 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V5.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
-if [ $# -lt 3 ] ; then echo "Usage $0 path_to_SETi MaxBp MaxBt [DateSuperMaster]"; exit; fi
+if [ $# -lt 3 ] ; then echo "Usage $0 path_to_SETi MaxBp MaxBt [DateGlobalPrimary]"; exit; fi
 
 if [ $# -eq 3 ] || [ $# -eq 4 ] # New tools only require 3 or 4 param
 	then 
-		echo "// Try to process with MasTer Engine tools from May 2022; Check if required files are available"
+		echo "// Try to process with AMSTer Engine tools from May 2022; Check if required files are available"
 		SET=$1					# path to dir with the csl dataset prepared for MSBAS
 		BP=$2					# Max Bperp
 		BT=$3					# Max Btemp
 		SMFORCED=$4				# SM date
 		if [ `baselinePlot | wc -l` -eq 0 ] 
 			then 
-				echo "// MasTer Engine tools from May 2022 does not exist yet"
+				echo "// AMSTer Engine tools from May 2022 does not exist yet"
 				echo "// Set Min Bp and Bt to zero and use old tools." 
 				VERTOOL="OLD"
 			else 
@@ -100,7 +102,7 @@ if [ $# -eq 3 ] || [ $# -eq 4 ] # New tools only require 3 or 4 param
 
 		if [ `baselinePlot | wc -l` -eq 0 ] 
 			then 
-				echo "// Process with MasTer Engine tools before May 2022"	
+				echo "// Process with AMSTer Engine tools before May 2022"	
 				SET=$1					# path to dir with the csl dataset prepared for MSBAS
 				BP=$2					# Max Bperp
 				BT=$3					# Max Btemp
@@ -110,7 +112,7 @@ if [ $# -eq 3 ] || [ $# -eq 4 ] # New tools only require 3 or 4 param
 				VERTOOL="OLD"		
 						
 			else
-				echo "// You have MasTer Engine tools from May 2022 but entered parameters as for old tools"
+				echo "// You have AMSTer Engine tools from May 2022 but entered parameters as for old tools"
 				if [ "$4" -eq 0 ] && [ "$5" -eq 0 ] 
 					then
 						echo "// But you use Min BP or BT == zero. Hence you can to use new tools." 
@@ -140,7 +142,7 @@ if [ $# -eq 3 ] || [ $# -eq 4 ] # New tools only require 3 or 4 param
 
 	elif [ $# -eq 7 ]  ; then 
 		# New tools with change in baselines criteria
-		echo "// Try to process with MasTer Engine tools from May 2022; Check if required files are available"
+		echo "// Try to process with AMSTer Engine tools from May 2022; Check if required files are available"
 		SET=$1					# path to dir with the csl dataset prepared for MSBAS
 		BP1=$2					# Max Bperp
 		BT1=$3					# Max Btemp
@@ -151,7 +153,7 @@ if [ $# -eq 3 ] || [ $# -eq 4 ] # New tools only require 3 or 4 param
 		
 		if [ `baselinePlot | wc -l` -eq 0 ] 
 			then 
-				echo "// MasTer Engine tools from May 2022 does not exist yet"
+				echo "// AMSTer Engine tools from May 2022 does not exist yet"
 				echo "// Set Min Bp and Bt to zero and use old tools." 
 				VERTOOL="OLD"
 			else 
@@ -168,7 +170,7 @@ if [ $# -eq 3 ] || [ $# -eq 4 ] # New tools only require 3 or 4 param
 	else [ $# -eq 11 ]  # old tools with change in baselines criteria
 		if [ `baselinePlot | wc -l` -eq 0 ] 
 				then 
-					echo "// Process with MasTer Engine tools before May 2022 with a change of baseline criteria from ${11}"	
+					echo "// Process with AMSTer Engine tools before May 2022 with a change of baseline criteria from ${11}"	
 					SET=$1					# path to dir with the csl dataset prepared for MSBAS
 					BP1=$2					# Max Bperp
 					BT1=$3					# Max Btemp
@@ -183,7 +185,7 @@ if [ $# -eq 3 ] || [ $# -eq 4 ] # New tools only require 3 or 4 param
 					
 					VERTOOL="OLD"					
 				else
-					echo "// You have MasTer Engine tools from May 2022 but entered parameters as for old tools"
+					echo "// You have AMSTer Engine tools from May 2022 but entered parameters as for old tools"
 					if [ $4 -eq 0 ] && [ $5 -eq 0 ] && [ $9 -eq 0 ] && [ ${10} -eq 0 ] 
 						then
 							echo "// But you use Min BP or BT == zero . Hence you can to use new tools with a change of baseline criteria from ${11}." 
@@ -392,7 +394,7 @@ function ProcessBaselinePlotNewMethod()
  				echo "// Compute BaselinePlot with provided criteria : Bp=${BP} dT=${BT} "	
 				baselinePlot ${SET} ${SET} BpMax=${BP} dTMax=${BT}  # second call of ${SET} is to output results in current dir
 				SM=`grep "Identified Super Master" ${SET}/allPairsListing.txt | cut -d ":" -f2 | ${PATHGNU}/gsed 's/\t//g' | ${PATHGNU}/gsed 's/ //g'`
- 				echo "// BaselinePlot computed. New Super Master is  ${SM}."		
+ 				echo "// BaselinePlot computed. New Global Promary (Super Master) is  ${SM}."		
  				TABLEFORBPERP=table_0_${BP}_0_${BT}.txt	
  				SUFFIX="0_${BP}_0_${BT}"
  				echo
@@ -409,7 +411,7 @@ function ProcessBaselinePlotNewMethod()
  				cp baselinePlot.gnuplot baselinePlot_BpMax=${BP1}_BTMax=${BT1}.txt.gnuplot
 	
 				SM=`grep "Identified Super Master" ${SET}/allPairsListing.txt | cut -d ":" -f2 | ${PATHGNU}/gsed 's/\t//g' | ${PATHGNU}/gsed 's/ //g'`
- 				echo "// BaselinePlot computed. New Super Master is  ${SM}."	
+ 				echo "// BaselinePlot computed. New Global Promary (Super Master) is  ${SM}."	
 				echo
 
 				# second set of criteria :
@@ -579,9 +581,9 @@ if [ "${DUALCRITERIA}" == "YES" ]
 		BTMAX=$((${BT1} > ${BT2} ? ${BT1} : ${BT2}))		
 fi
 
-SpeakOut "Do you want to search for a new Super Master?" 
+SpeakOut "Do you want to search for a new Global Primary image?" 
 while true; do
-    read -p "Do you want to search for a new Super Master? (say no only when it is about adding new data to an existing dataset): "  yn
+    read -p "Do you want to search for a new Global Primary image (Super Master)? (say no only when it is about adding new data to an existing dataset): "  yn
     case $yn in
         [Yy]* ) 
 			if [ "${VERTOOL}" == "OLD" ] 
@@ -596,16 +598,16 @@ while true; do
 				         	# Get the supermaster
 				 			SM=`grep "Path to global master" ${SET}/setParametersFile.txt | cut -d* -f1 | ${PATHGNU}/gsed 's/\t//g' | ${PATHGNU}/gsed 's/.$//' | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d . -f 1`
 					fi
-		 			echo "// New Super Master is  ${SM}."
+		 			echo "// New Global Primary (Super Master) is  ${SM}."
 				else
 					# Compute baselinePlot New Method for Dual or non Dual cases
 					ProcessBaselinePlotNewMethod
-					echo "New Super Master is  ${SM}."	
+					echo "New Global Primary (Super Master) is  ${SM}."	
  			fi
         	
         	if [ "${DUALCRITERIA}" == "YES" ] 
         		then 
-        			echo "// Note that the Super Master (i.e. ${SM}) was computed using the first set of baselines criteria."
+        			echo "// Note that the Global Primary (Super Master) (i.e. ${SM}) was computed using the first set of baselines criteria."
         	fi
         	
         	break ;;
@@ -613,32 +615,32 @@ while true; do
  			# No search for new SM
  			if [ "${VERTOOL}" == "OLD" ] 
 				then
-					if [ $# -lt 6 ] ; then echo "Usage $0 path_to_SETi MaxBp MaxBt MinBp MinBt DateSuperMaster, PLEASE PROVIDE A SUPER MASTER"; exit; fi
+					if [ $# -lt 6 ] ; then echo "Usage $0 path_to_SETi MaxBp MaxBt MinBp MinBt DateGlobalPrimary, PLEASE PROVIDE A GLOBAL PRIMARY (SUPER MASTER)"; exit; fi
  					echo
-					echo "// Use the Super Master set as last parameter in the current run, that is  ${SMFORCED}"
+					echo "// Use the Global Primary (Super Master) set as last parameter in the current run, that is  ${SMFORCED}"
 					echo "// Let's check what is in setParametersFile.txt :"
 					grep "Path to global master" ${SET}/setParametersFile.txt
 					echo ""
 					if [ -z ${SMFORCED} ]
 						then # no FORMCED SM provided; will take it from existing setParametersFile.txt
-							echo "// No SuperMaster provided in the command line; shall take it from the setParametersFile.txt. Hope it is the good one."
+							echo "// No Global Primary (Super Master) provided in the command line; shall take it from the setParametersFile.txt. Hope it is the good one."
 							SM=`grep "Path to global master" ${SET}/setParametersFile.txt | cut -d* -f1 | ${PATHGNU}/gsed 's/\t//g' | ${PATHGNU}/gsed 's/.$//' | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d . -f 1`
 						else 
-							echo "// Shall take the Super Master provided in the command line"
+							echo "// Shall take the Global Primary (Super Master) provided in the command line"
 							SM=${SMFORCED}
 					fi
  
  				else
-       				if [ $# -lt 4 ] ; then echo "Usage $0 path_to_SETi MaxBp MaxBt DateSuperMaster, PLEASE PROVIDE A SUPER MASTER"; exit; fi
+       				if [ $# -lt 4 ] ; then echo "Usage $0 path_to_SETi MaxBp MaxBt DateGlobalPrimary, PLEASE PROVIDE A GLOBAL PRIMARY (SUPER MASTER)"; exit; fi
 
 					#if [ -s ${SET}/allPairsListing.txt ] 
 					if [ -f "${SET}/allPairsListing.txt" ] && [ -s "${SET}/allPairsListing.txt" ] 
 						then 
 							echo
-							echo "// Use the Super Master set as last parameter in the current run, that is  -${SMFORCED}-"
+							echo "// Use the Global Primary (Super Master) set as last parameter in the current run, that is  -${SMFORCED}-"
 							echo "// Let's check what is in ${SET}/allPairsListing.txt :"
 							SMEXISTING=`grep "Identified Super Master" ${SET}/allPairsListing.txt | head -1 | cut -d ":" -f2 | ${PATHGNU}/gsed 's/\t//g' | ${PATHGNU}/gsed 's/ //g'`
-							echo "// Existing Super Master is -${SMEXISTING}-."
+							echo "// Existing Global Primary (Super Master) is -${SMEXISTING}-."
 							echo ""
 						
 							echo "// First compute table(s) and plots with default SM"
@@ -651,7 +653,7 @@ while true; do
 
 							if [ "${SMFORCED}" != "${SMEXISTING}" ] 
 								then 
-									echo "// Warning: you asked for keeping the SuperMaster but the existing SM (${SMEXISTING}) does not fit with the provided one (${SMFORCED})..."
+									echo "// Warning: you asked for keeping the Global Primary (Super Master) but the existing SM (${SMEXISTING}) does not fit with the provided one (${SMFORCED})..."
 									echo "// Will use the one provided. Please check"
 
 									# change SM in files allPairsListing.txt, selectedPairsListing_BpMax=400_BTMax=400.txt (wich is linked to selectedPairsListing.txt) and baselinePlot.gnuplot
@@ -689,7 +691,7 @@ while true; do
 							fi
 	
 						else
-							echo "// Super Master not computed yet. Compute it and force to ${SMFORCED}."
+							echo "// Global Primary (Super Master) not computed yet. Compute it and force to ${SMFORCED}."
 							
 							echo "// First compute table(s) and plots with default SM"
 							# Compute baselinePlot New Method for Dual or non Dual cases
@@ -1075,7 +1077,7 @@ if [ "${VERTOOL}" == "OLD" ]
 									 BpMAS=`echo "(${BpMAS} * -1)" | bc -l `
 								fi
 						fi
-						echo "//  --> Bp and Bt of master_Superaster ${MAS}_${SM} are ${BpMAS} ${BtMAS}" 
+						echo "//  --> Bp and Bt of Primary_GlobalPrimary ${MAS}_${SM} are ${BpMAS} ${BtMAS}" 
 						# Get Bt and Bp for Slave-SM pair
 						if [ ${SLV} == ${SM} ]
 							then 
@@ -1090,7 +1092,7 @@ if [ "${VERTOOL}" == "OLD" ]
 										BpSLV=`echo "(${BpSLV} * -1)" | bc -l `
 								fi
 						fi 	
-						echo "//  --> Bp and Bt of slave_Superaster ${SLV}_${SM} are ${BpSLV} ${BtSLV}" 
+						echo "//  --> Bp and Bt of Secondary_GlobalPrimary ${SLV}_${SM} are ${BpSLV} ${BtSLV}" 
 						echo "${i}  ${MAS}  ${SLV}  ${BtPAIR}  ${BpPAIR}  ${BtMAS}  ${BtSLV}  ${BpMAS}  ${BpSLV}" >> bperp_file.txt
 						i=`expr "$i" + 1`
 				fi

@@ -2,7 +2,8 @@
 ######################################################################################
 # This script copy all files in sub dirs that contains a certain string in their name into a given dir.
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 # N.d'Oreye, v 1.0 2018/02/023 -                         
 ######################################################################################
 

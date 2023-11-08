@@ -2,8 +2,9 @@
 ######################################################################################
 # This script add two unwrapped phases
 #
+# This script is part of the AMSTer Toolbox 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
 # Delphine Smittarello, (c)2016
 #################################
 

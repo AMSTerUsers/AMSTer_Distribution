@@ -16,13 +16,15 @@
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 
@@ -47,7 +49,7 @@ ${PATHGNU}/gnuplot << EOF
 		set xlabel "log ||Ax - Y||" font "Helvetica,24"
 		set ylabel "log ||X|| up and ew" font "Helvetica,24"
 	
-		set timestamp "Created by MasTer at ${INSTITUTE} on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+		set timestamp "Created by AMSTer at ${INSTITUTE} on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 
 		#'plot "lcurve.txt" using 2:3 notitle with linespoints'
 		plot "lcurve_${ORDER}.txt" u 2:3:1 w labels offset character 0,character 1 tc rgb "blue" notitle, "lcurve_${ORDER}.txt" u 2:3 with lp notitle

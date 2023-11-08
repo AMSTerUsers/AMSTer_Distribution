@@ -29,16 +29,16 @@ export JAVA_HOME=/Library/Internet\ Plug-Ins/JavaAppletPlugin.plugin/Contents/Ho
 # MasTer PATHS
 ##################
 
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/MasTerOrganizer
+PATH=$PATH:/Users/doris/SAR/AMSTerToolbox/SCRIPTS_MT/AMSTerOrganizer
 PATH=$PATH:/Users/doris/SAR/EXEC
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/MSBAS
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/MasTerEngine/_Sources_ME
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/MasTerEngine
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/zz_Utilities_MT_Ndo
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/zz_Utilities_MT
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/_cron_scripts
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT
-PATH=$PATH:/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/optimtoolbox
+PATH=$PATH:/Users/doris/SAR/AMSTer/MSBAS
+PATH=$PATH:/Users/doris/SAR/AMSTer/AMSTerEngine/_Sources_AE
+PATH=$PATH:/Users/doris/SAR/AMSTer/AMSTerEngine
+PATH=$PATH:/Users/doris/SAR/AMSTer/SCRIPTS_MT/zz_Utilities_MT_Ndo
+PATH=$PATH:/Users/doris/SAR/AMSTer/SCRIPTS_MT/zz_Utilities_MT
+PATH=$PATH:/Users/doris/SAR/AMSTer/SCRIPTS_MT/_cron_scripts
+PATH=$PATH:/Users/doris/SAR/AMSTer/SCRIPTS_MT
+PATH=$PATH:/Users/doris/SAR/AMSTer/SCRIPTS_MT/optimtoolbox
 
 # MasTer VARIABLES
 ##################
@@ -55,7 +55,7 @@ export PATH_DataSAR=/Volumes/DataSAR/
 export EARTH_GRAVITATIONAL_MODELS_DIR=${PATH_DataSAR}/SAR_AUX_FILES/EGM
 export ENVISAT_PRECISES_ORBITS_DIR=${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ENV_ORB
 export S1_ORBITS_DIR=${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB
-export PATH_SCRIPTS=/Users/doris/SAR/MasTerToolbox
+export PATH_SCRIPTS=/Users/doris/SAR/AMSTer
 export PATHCONV=/opt/local/bin
 export PATHFIJI=/Applications/Fiji.app/Contents/MacOS/
 export PATHGNU=/opt/local/bin

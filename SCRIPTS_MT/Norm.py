@@ -7,9 +7,11 @@
 # Dependencies:	- python2.7 and modules below (see import)
 #
 # New in Distro V 1.0:	- Based on developpement version and Beta V1.0
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# Nicolas d'Oreye, (c)2017-18
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 ######################################################################################
 
 import numpy as np

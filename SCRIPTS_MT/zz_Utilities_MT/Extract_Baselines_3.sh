@@ -1,7 +1,7 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
 # This script is aiming at extracting frolm a MSBAS table (e.g. /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/VVP/set6/table_0_50_0_400.txt)
-#   the pairs such as each image is used MAXIMUM 3 times as master and slave
+#   the pairs such as each image is used MAXIMUM 3 times as Primary and Secondary
 #
 #
 # Parameters : - path to dir with the CSL images are stored (e.g. /Volumes/hp-1650-Data_Share1/SAR_CSL/sat/NoCrop)   
@@ -12,14 +12,16 @@
 #
 # Hard coded:	- 
 #
-# New in Distro V 1.0:	- 
+# New in Distro V 1.0 (Jan 13, 2020)
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/02/29 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jan 13, 2020"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -67,7 +69,7 @@ do
 	NMAS=`${PATHGNU}/gawk '{count[$1]++} END {print count ["'"${DATEIMG}"'"]}' ${NAMETABLE}_Sort_1_2_4_3_Max3.txt`
 	NSLV=`${PATHGNU}/gawk '{count[$2]++} END {print count ["'"${DATEIMG}"'"]}' ${NAMETABLE}_Sort_1_2_4_3_Max3.txt` 
 	cat ${NAMETABLE}_Sort_1_2_4_3_Max3.txt | ${PATHGNU}/grep ${DATEIMG} > Stat_img_${DATEIMG}_Mas${NMAS}_Slv${NSLV}.txt
-	echo "${DATEIMG} used as master: ${NMAS}	and Slv: ${NSLV}"
+	echo "${DATEIMG} used as Primary: ${NMAS}	and Secondary: ${NSLV}"
 done
 
 

@@ -53,13 +53,15 @@
 # New in Distro V 6.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 7.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2017/12/29 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V6.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V7.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -126,7 +128,7 @@ function SpeakOut()
 	esac			
 	}
 	
-SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the super master as selected by Prepa_MSBAS.sh in
+SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the Global Primary image as selected by Prepa_MSBAS.sh in
 											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SUPER_MASTERS/MSBAS/VVP/seti/setParametersFile.txt
 
 PROROOTPATH=`GetParam PROROOTPATH`			# PROROOTPATH, path to dir where data will be processed in sub dir named by the sat name. 
@@ -343,7 +345,7 @@ done
 
 echo ""
 
-# First take care of the DEM of the SuperMaster. ManageDEM will take care of forcing it or computing if not existing
+# First take care of the DEM of the Global Primary. ManageDEM will take care of forcing it or computing if not existing
 
 case ${SATDIR} in 
 	"S1") 
@@ -373,7 +375,7 @@ esac
 	fi	
 	SUPERMASDIR=${SUPERMASNAME}.csl
 	
-EchoTee " Before splitting the coregistration, I must take care of the DEM of the SuperMaster ${SUPERMASNAME}"
+EchoTee " Before splitting the coregistration, I must take care of the DEM of the Global Primary (SuperMaster) ${SUPERMASNAME}"
 
 	if [ "${SATDIR}" == "S1" ] && [ "${FORCES1DEM}" == "FORCE" ] 
 		then

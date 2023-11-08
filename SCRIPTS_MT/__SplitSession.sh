@@ -43,7 +43,7 @@
 #						 instead of on the list of pair dirs. 
 #					   - do not list _CheckResults dir while building existing pairs list
 # New in Distro V 1.2: - if launched with option -list=filename, it forces to compute only pairs 
-#						 in provided list (filename MUST be in the form of list of MASTER_SLAVE dates)
+#						 in provided list (filename MUST be in the form of list of PRM_SCD dates)
 #					   - fix find with maxdepth
 # New in Distro V 1.3: - add new disks
 # New in Distro V 1.4: - path to gnu ${PATHGNU}/grep
@@ -69,13 +69,15 @@
 # New in Distro V 4.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 5.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2017/12/29 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V5.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -95,7 +97,7 @@ TABLEFILEPATH=$1 	# eg /Users/doris/NAS/hp-1650-Data_Share1/SAR_SM/MSBAS/Limbour
 PARAMFILEPATH=$2 	# Usual Parameter file
 N=$3 				# eg 5 if you have 100 pairs and want process 5 terminals, each processing 20 pairs
 LISTOFPROCESSED=$4	# if -f, it forces to create the list of existing pairs based on the files in Geocoded/DefoInterpolx2Detrend 
-					# if -list=filename, it forces to compute only pairs in provided list (filename MUST be in the form of list of MASTER_SLAVE dates)
+					# if -list=filename, it forces to compute only pairs in provided list (filename MUST be in the form of list of PRM_SCD dates)
 
 if [ $# -lt 3 ] 
 	then 
@@ -173,7 +175,7 @@ function SpeakOut()
 	esac			
 	}
 	
-SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the super master as selected by Prepa_MSBAS.sh in
+SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the Global Primary (super master) as selected by Prepa_MSBAS.sh in
 											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SUPER_MASTERS/MSBAS/VVP/seti/setParametersFile.txt
 
 PROROOTPATH=`GetParam PROROOTPATH`			# PROROOTPATH, path to dir where data will be processed in sub dir named by the sat name. 
@@ -304,7 +306,7 @@ sort ${TABLEFILE} > ${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT} # sort by MASTERS
 TABLEFILEPATHNOHEADER=`echo ${PROPATH}/${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT}`
 PAIRS=`wc -l < ${TABLEFILEPATHNOHEADER}`
 
-# list of number of pairs using a given image as master as [nr master]
+# list of number of pairs using a given image as Primary as [nr master]
 cat ${PROPATH}/${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT} | cut -c 1-8 | sort | uniq -c > ${PROPATH}/${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT}_LISTMASTERSCOUNTED.txt
 
 PAIRSPERSET=`echo "(${PAIRS} + ${N} - 1) / ${N}" | bc` # bash solution for ceiling... 
@@ -338,7 +340,7 @@ do
 				if [ ${l} -lt ${PAIRSPERSET} ] 
 					then 		
 						#copy all pairs with starting master 
-						echo "Shall write ${NROFPAIRSWITHMAS} pairs starting with master ${MASINSET} in new ${i}th table" 
+						echo "Shall write ${NROFPAIRSWITHMAS} pairs starting with Primary image ${MASINSET} in new ${i}th table" 
 						cat ${TABLEFILEPATHNOHEADER} | ${PATHGNU}/grep ^${MASINSET} >> ${NEWPAIRFILE} 
 						# and remove that master from list to split
 						cat ${PROPATH}/${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT}_LISTMASTERSCOUNTED.txt | ${PATHGNU}/grep -v ${MASINSET} > ${PROPATH}/${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT}_LISTMASTERSCOUNTED.txt.tmp
@@ -346,7 +348,7 @@ do
 						mv ${PROPATH}/${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT}_LISTMASTERSCOUNTED.txt.tmp ${PROPATH}/${TABLEFILE}_NOHEAD_${RNDM}.${TABLEEXT}_LISTMASTERSCOUNTED.txt
 				fi	
 			else # get all the remaining pairs, even if goes beyone max nr of per set
-				echo "Shall write ${NROFPAIRSWITHMAS} pairs starting with master ${MASINSET} in the last ${i}th table" 
+				echo "Shall write ${NROFPAIRSWITHMAS} pairs starting with Primary image ${MASINSET} in the last ${i}th table" 
 				cat ${TABLEFILEPATHNOHEADER} | ${PATHGNU}/grep ^${MASINSET} >> ${NEWPAIRFILE} 
 
 		fi
@@ -360,7 +362,7 @@ SECONDHALFLAST=`echo "( ${TSTLENGTHLAST} - ${FIRSTHALFLAST} ) " | bc `
 LONGERPAIRSPERSET=`echo "( ${PAIRSPERSET} + (${PAIRSPERSET} * 0.10) ) " | bc | cut -d . -f 1` # Not rounded by default if not integer because of 0.10 hence must cut at dot
 if [ ${TSTLENGTHLAST} -gt ${LONGERPAIRSPERSET} ] && [ ${TSTLENGTHLAST} -gt 0 ] && [ ${LONGERPAIRSPERSET} -gt 0 ]
 	then 
-		echo "Each batch will process ${PAIRSPERSET} pairs at the maximum, because all pairs using a same Master are not spread over two batches. "
+		echo "Each batch will process ${PAIRSPERSET} pairs at the maximum, because all pairs using a same Primary Image are not spread over two batches. "
 		echo "The last batch is however ${TSTLENGTHLAST} pairs long, that is more than 10% longer than max length of other batches."
 		while true; do
 			read -p "Do you want to split it in two batches to avoid delaying the results because of that otherwise much longer last batch [y/n]? "  yn
@@ -376,7 +378,7 @@ if [ ${TSTLENGTHLAST} -gt ${LONGERPAIRSPERSET} ] && [ ${TSTLENGTHLAST} -gt 0 ] &
 					# If they are the same, copy all pairs from part where less pairs use that master to the other part
 					if [ ${MASINFIRSTHALF} -eq ${MASINSECONDHALF} ] 
 						then 
-							echo " Both parts of the last batch share a same master. Let's copy all pairs from part where less pairs use that master to the other part "
+							echo " Both parts of the last batch share a same Primary Image. Let's copy all pairs from part where less pairs use that Primary Image to the other part "
 							# nr of occurrence of MASINFIRSTHALF in both parts
 							MASINPART1=`grep -c "^${MASINFIRSTHALF}_" ${PROPATH}/${TABLEFILE}_Part${N}_${RNDM}.${TABLEEXT}_PART1`
 							MASINPART2=`grep -c "^${MASINFIRSTHALF}_" ${PROPATH}/${TABLEFILE}_Part${N}_${RNDM}.${TABLEEXT}_PART2`
@@ -394,7 +396,7 @@ if [ ${TSTLENGTHLAST} -gt ${LONGERPAIRSPERSET} ] && [ ${TSTLENGTHLAST} -gt 0 ] &
 									mv -f ${PROPATH}/${TABLEFILE}_Part${N}_${RNDM}.${TABLEEXT}_PART1_TMP ${PROPATH}/${TABLEFILE}_Part${N}_${RNDM}.${TABLEEXT}_PART1
 							fi
 						else 
-							echo " Both parts of the last batch do not share same master."
+							echo " Both parts of the last batch do not share same Primary Image."
 					fi
 					OLDN=${N}
 					N=`echo "( ${N} + 1 ) " | bc ` 

@@ -13,10 +13,12 @@
 # New in Distro V 1.2:	- hard code input format (byte or float32)
 # New in Distro V 2.0: 	- Faster and more robust (NdO July 8, 2021)
 # New in Distro V 2.1:  - add argument check (NdO Jul 8 2022)
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
 # launch command : python thisscript.py param1 param2
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2016
 ######################################################################################
 

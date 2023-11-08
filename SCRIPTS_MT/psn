@@ -19,8 +19,12 @@
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# NdO - June 16, 2020; last revision Sept 21 2022
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
+# NdO - June 16, 2020; last revision Oct 30, 2023
 # -----------------------------------------------
 
 source $HOME/.bashrc
@@ -95,7 +99,7 @@ ps -ax | ${PATHGNU}/grep SCRIPTS | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -
 # List SuperMaster_MassProc.sh are running either from SCRIPTS_MT
 ps -ax | ${PATHGNU}/grep "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | sort > SM_Running.txt
 
-echo "// MasTer processes running on this computer: 		      Nr     PID     HD-    		Status                                  	Processing Pair"
+echo "// AMSTer processes running on this computer: 		      Nr     PID     HD-    		Status                                  	Processing Pair"
 echo "//____________________________________________________________________________________________________________________________________________________________________________"
 # __SplitSession.sh
 	# Nr of Split sessions 
@@ -240,7 +244,7 @@ echo "//________________________________________________________________________
 		then
 			echo "//						------------------"
 			# Any other process from SCRIPTS_MT 
-			echo "// Total nr of all MasTer shell scripts:		      ${X}"
+			echo "// Total nr of all AMSTer shell scripts:		      ${X}"
 			echo "//" 
 			Y=`ps -ax | ${PATHGNU}/grep SCRIPT | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" | ${PATHGNU}/grep -v "kate" | wc -l`
 			if [ ${Y} -ge "1" ] 
@@ -256,7 +260,7 @@ echo "//________________________________________________________________________
 			echo "//   or  kill PID  to end it"
 			echo ""
 		else 
-			echo "// Total nr of all MasTer shell scripts:		${X}"
+			echo "// Total nr of all AMSTer shell scripts:		${X}"
 			echo ""
 		
 	fi
@@ -267,7 +271,7 @@ echo "//________________________________________________________________________
 		then
 			echo "//						------------------"
 			# Any other process from SAR DIR 
-			echo "// Total nr of all MasTer Toolbox software (other than SCRIPTS):		      ${X}"
+			echo "// Total nr of all AMSTer software (other than SCRIPTS):		      ${X}"
 			echo "//" 
 			Y=`ps -ax | ${PATHGNU}/grep SAR | ${PATHGNU}/grep -v "SCRIPT" | ${PATHGNU}/grep -v "grep" | ${PATHGNU}/grep -v "$0" | ${PATHGNU}/grep -v "LaunchTerminal.sh" | ${PATHGNU}/grep -v "__SplitSession.sh" | ${PATHGNU}/grep -v "SuperMaster_MassProc.sh" | ${PATHGNU}/grep -v "Read_All_Img.sh" | ${PATHGNU}/grep -v "SuperMasterCoreg.sh" | ${PATHGNU}/grep -v "MasterDEM.sh" | ${PATHGNU}/grep -v "kate" | wc -l`
 			if [ ${Y} -ge "1" ] 
@@ -283,7 +287,7 @@ echo "//________________________________________________________________________
 			echo "//   or  kill PID  to end it"
 			echo ""
 		else 
-			echo "// Total nr of all MasTer shell scripts:		${X}"
+			echo "// Total nr of all AMSTer shell scripts:		${X}"
 			echo ""
 		
 	fi

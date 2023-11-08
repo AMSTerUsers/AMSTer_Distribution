@@ -10,7 +10,7 @@
 #
 # Dependencies:	- gnu sed and awk for more compatibility
 #			    - bc
-#				- getStatForZoneInFile and ffa utilities from CIS
+#				- getStatForZoneInFile and ffa utilities from AMSTer Engine
 #
 # Hard coded:	- 
 #
@@ -23,13 +23,15 @@
 # New in Distro V 1.4:	- skip triangle for which at least one of the pair dir is missing in SAR_MASSPROCESS
 #						- select all images in _Wrong_Closure.txt that are not in _Good_Closure.txt and save it in _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure.txt
 # New in Distro V 1.5:  - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/02/29 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.5 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

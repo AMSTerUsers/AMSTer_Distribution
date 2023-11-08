@@ -5,7 +5,7 @@
 # _Check_common_images dir to be created in the current dir. The list of path with index is also 
 # stored in _Check_common_images. 
 #
-# It will do the same with composite images in PREVIEW of each of the Tandem image dir in order to check the master and slave of TDX
+# It will do the same with composite images in PREVIEW of each of the Tandem image dir in order to check the Primary and Secondary image of TDX
 # This will be strored in _Check_single_images with their lists
 #
 # If launched in TSX dir,  _Check_common_images will be empty
@@ -17,9 +17,11 @@
 # New in V D 1.0.1:	   - bash for Linux compatibility 
 # New in Distro V 1.2:  - remove stray \ before _ while calling grep to cope with new grep syntax and avoid waring
 #						- zap gremlins 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-#
-# N.d'Oreye, v 1.2 2022/09/21 -                         
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 ######################################################################################
 
 if [ -d _Check_common_images ] 

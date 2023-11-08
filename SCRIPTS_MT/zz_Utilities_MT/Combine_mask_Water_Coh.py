@@ -14,9 +14,10 @@
 #
 # Usage: python thisscript.py <water_mask_file> <coherence_mask_file>
 #
-# New in V 1.1:	- 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CIS script utilities
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2023
 ######################################################################################
 

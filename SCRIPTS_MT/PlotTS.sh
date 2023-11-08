@@ -47,7 +47,7 @@
 #					-start=YYYYMMDD -stop=YYYYMMDD restricts the plot to corresponding time span 
 #
 #
-# Dependencies : - function getLineThroughStack (MasTer Engine utilities)
+# Dependencies : - function getLineThroughStack (AMSTer Engine utilities)
 #                - gnuplot
 #                - gnu plot template plotTS_template.gnu or plotTS_template_fit.gnu 
 #				And for adding Legend with direction of deformation
@@ -60,7 +60,7 @@
 # Hard coded (only if you run it from QGIS python console; 
 #     otherwise, these info are taken from the state variables):	
 #				- path to template plotTS_template.gnu (One may want to change some plot style in there ?.)
-#				- PATH TO MasTer Toolbox and Engine in order to be run from python console in QGIS which does not understand state variables
+#				- PATH TO AMSTer Toolbox and Engine in order to be run from python console in QGIS which does not understand state variables
 #	Note that some info about plot style (title, range, font, color...) are also set up in the script. 
 #
 # New in Distro V 1.0:	- Based on developpement version and Beta V3.0
@@ -93,13 +93,15 @@
 # New in Distro V 7.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 8.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V7.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V8.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -127,8 +129,8 @@ if [ ${TESTVAR} == "0" ]
 					PATHGNU=/usr/bin 		;;
 		esac
 fi
-PATH_SCRIPTS=/$HOME/SAR/MasTerToolbox/
-PATHTOME=/$HOME/SAR/MasTerToolbox/MasTerEngine 
+PATH_SCRIPTS=/$HOME/SAR/AMSTer/
+PATHTOME=/$HOME/SAR/AMSTer/AMSTerEngine 
 
 source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
 

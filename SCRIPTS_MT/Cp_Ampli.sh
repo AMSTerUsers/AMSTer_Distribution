@@ -17,13 +17,15 @@
 #						- parallelised 
 # New in Distro V 2.1:	- debug links
 #						- link and move only if target does not exist yet
-# 
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2017/10/09 - could make better... when time.
-######################################################################################
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 08, 2023"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 

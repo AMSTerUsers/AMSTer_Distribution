@@ -8,10 +8,12 @@
 # Parameters: DEM DEFO 
 # launch command : python thisscript.py param1 param2 
 #
-# New in Distro V 1.1:  - 
+# V 1.0 (2022)
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CIS script utilities
-# Nicolas d'Oreye, (c)2022
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2022 - could make better with more functions... when time.
 ######################################################################################
 
 import numpy as np

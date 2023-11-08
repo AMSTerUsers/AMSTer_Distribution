@@ -1,7 +1,7 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
 # This script is aiming at computing the slant range DEM (and mask if requested and path provided in ParametersFile.txt) 
-#    for a given image. DEM (and mask) can be used later for a pair or supermaster  
+#    for a given image. DEM (and mask) can be used later for a pair or Global Primary (supermaster)  
 #    processing, as the results are stored in appropriate dir.
 # Processing is perfomed and results are stored first in 
 #    /Volumes.../SAR_CSL/SATDIR/TRKDIR/Crop_REGION_CROP/MAS.csl
@@ -11,11 +11,11 @@
 # It is based on SinglePair.sh VBeta 2.0, that is why it started with version nr Beta 2.0. 
 #    and from which all the SLV related stuffs were removed because useless for DEM
 #
-# Parameters : - MAS date or S1 name (accept both date or name for S1)
+# Parameters : - PRM date or S1 name (accept both date or name for S1)
 #              - PRAMETERS file, incl path (e.g. /Users/doris/PROCESS/SCRIPTS_MT/___V20190710_LaunchMTparam.txt)
 #
 # Dependencies:
-#	- MasTer Engine and MasTer Engine Tools, at least V20190716
+#	- AMSTer Engine and AMSTer Engine Tools, at least V20190716
 #	- PRAMETERS file, at least V 20190710
 #   - The FUNCTIONS_FOR_MT.sh file with the function used by the script. Will be called automatically by the script
 #   - gnu sed (gsed) and gnu awk (gawk) for more compatibility. 
@@ -38,21 +38,22 @@
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
-
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-#
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " "
 
-MASINPUT=$1					# date or S1 name of master (for S1 : it could be either in the form of yyyymmdd or S1a/b_sat_trk_a/d)
+MASINPUT=$1					# date or S1 name of Primary image (for S1 : it could be either in the form of yyyymmdd or S1a/b_sat_trk_a/d)
 PARAMFILE=$2				# File with the parameters needed for the run
 COMMENT=_TEMP_FOR_DEM
 
@@ -363,7 +364,7 @@ SUPERMASDIR=${MASDIR}
 					EchoTee "Crop applied : lines ${FIRSTL}-${LASTL} ; pixels ${FIRSTP}-${LASTP}"
 					EchoTee "Crop applied : Zoom ${ZOOM} ; Interferometric products ML factor ${INTERFML}"			
 				else
-					EchoTee "Master ${MAS} already cropped."
+					EchoTee "Primary image ${MAS} already cropped."
 					EchoTee ""
 			fi
 		else 
@@ -403,12 +404,12 @@ EchoTee "--------------------------------"
 IMGWITHDEM=${MASNAME}
 SlantRangeExtDEM PAIR BlankRunNo   
 
-# Get date of last MasTer Engine source dir (require FCT file sourced above)
-GetMasTerEngineVersion
-# Store date of last MasTer Engine source dir
+# Get date of last AMSTer Engine source dir (require FCT file sourced above)
+GetAMSTerEngineVersion
+# Store date of last AMSTer Engine source dir
 
-#echo "Last created MasTer Engine source dir suggest projecting DEM in slant range with ME version: ${LASTVERSIONMT} in ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Projecting_DEM_w_MasTerEngine_V.txt"
-echo "Last created MasTer Engine source dir suggest projecting DEM in slant range with ME version: ${LASTVERSIONMT}" > ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Projecting_DEM_w_MasTerEngine_V.txt
+#echo "Last created AMSTer Engine source dir suggest projecting DEM in slant range with ME version: ${LASTVERSIONMT} in ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Projecting_DEM_w_AMSTerEngine_V.txt"
+echo "Last created AMSTer Engine source dir suggest projecting DEM in slant range with ME version: ${LASTVERSIONMT}" > ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Projecting_DEM_w_AMSTerEngine_V.txt
 
 EchoTee ""	
 EchoTee " Clean ${RUNDIR}"

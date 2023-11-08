@@ -4,15 +4,16 @@
 # smaller than a certain amount in Mb (or Bytes for files) in provided path.
 #
 # New in V1.1: 	- seems that former version was not compliant with some OS 
-# New in V1.2: 	- offer herd coded option for checking files
+# New in V1.2 (Aug 08, 2022): 	- offer herd coded option for checking files
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2019/12/05 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Aug 08, 2022"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

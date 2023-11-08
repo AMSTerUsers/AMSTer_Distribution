@@ -1,7 +1,7 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
 # This script is aiming at launching multiple occurrences of a SinglePair processing 
-# 		using a SuperMaster as master and all other existing images as slave. 
+# 		using a Global Primary (SuperMaster) as Primary image and all other existing images as Secondary. 
 # It can be run incrementally and will only compute the new pairs. 
 #
 # IN THIS VERSION, IT WILL ONLY COMPUTE PAIRS THAT FITS BT AND BP LIMITS.
@@ -50,13 +50,15 @@
 # New in Distro V 2.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2017/05/17 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -78,8 +80,8 @@ SOFTNAME=`basename ${SOFT}`
 
 case $# in
 	7)
-		echo "OK, let's build your mask based on a SuperMaster and a Max Bt and Bp."
-		echo "Ensure that the SuperMaster is set in you ParametersFile.txt"
+		echo "OK, let's build your mask based on a Global Primary (SuperMaster) and a Max Bt and Bp."
+		echo "Ensure that the Global Primary is set in you ParametersFile.txt as SuperMaster"
 		INPUTDATA=$1		# Dir where all original data are in csl format: .../SAR_CSL/SAT/TRK/NoCrop
 		OUTPUTDATA=$2		# Dir where results will be stored: ../SAR_SM/MASK/SAT/TRK/REGION
 		PARAM=$3			# File (incl path) with the processing parameters - MUST contains the date of the supermaster if run with Bt Bp criteria
@@ -145,7 +147,7 @@ SATDIR=`GetParam "SATDIR,"`					# Satellite system. E.g. RADARSAT
 TRKDIR=`GetParam "TRKDIR,"`					# Processing directory and dir where data are stored E.g. RS2_UF
 REGION=`GetParam "REGION,"`					# Processing directory and dir where data are stored E.g. RS2_UF
 
-SUPERMASTER=`GetParam "SUPERMASTER,"`		# date of the super master
+SUPERMASTER=`GetParam "SUPERMASTER,"`		# date of the Global Primary (supermaster)
 
 FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are stored
 
@@ -247,7 +249,7 @@ case ${METHOD} in
 			if [ ${SATDIR} == "S1" ] 						
 				then
 					# image names with sat A or B reference in name (from bulk mass processing)
-					EchoTeeRed "Suppose processed image names as MASTER_S1A/B_TRK_SLAVE_D(.x)_REGION (from bulk mass processing)"
+					EchoTeeRed "Suppose processed image names as PRIMARY_S1A/B_TRK_SECONDARY_D(.x)_REGION (from bulk mass processing)"
 					EchoTeeRed "If processed images have another form (mostly from manual mass processing), comment/uncomment lines accordingly in ${PRG} script"
 					EchoTeeRed "   (cfr lines after # process only the new ones, again without Super Master)"				
 					# Check if sub dir with super master exist already to avoid ls error msg

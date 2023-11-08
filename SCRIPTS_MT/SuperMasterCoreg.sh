@@ -1,7 +1,7 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
-# This script is aiming at resampling all images form a give sat/mode in a SuperMaster
-#     geometry using CSL Insar Suite. 
+# This script is aiming at resampling all images form a give sat/mode in a 
+#     Global Primary (SuperMaster) geometry using AMSTer Engine. 
 #
 # Parameters :      - file with the processing parameters (incl path) 
 #                   - FORCES1DEM: if  FORCE, then recompute DEM for each S1 wide swath image 
@@ -10,9 +10,9 @@
 #							 FORCE if you want to Force recomputing the DEM (for S1 wide swath)
 #
 # Dependencies:
-#	 - CIS and CIS Tools, at least V2020426
+#	 - AMSTerEngine and AMSTerEngine Tools, at least V2020426
 #	 - PRAMETERS file, at least V V20200505
-#    - The FUNCTIONS_FOR_CIS.sh file with the function used by the script. Will be called automatically by the script
+#    - The FUNCTIONS_FOR_MT.sh file with the function used by the script. Will be called automatically by the script
 #    - gnu sed and awk for more compatibility. 
 #    - cpxfiddle is usefull though not mandatory. This is part of Doris package (TU Delft) available here :
 #            http://doris.tudelft.nl/Doris_download.html. 
@@ -63,14 +63,16 @@
 # New in Distro V2.6.1: - quote search for FORCES1DEM param to avoid "unary operator" error message
 #						- try to create PROROOTPATH just in case 
 # New in Distro V2.6.2 20231003:	- Added stop if it cannot find the S1 Super Master Image (A. Dille)
-
+# New in Distro V3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2015/08/24 - could make better with more functions... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.6.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 03, 2023"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -94,8 +96,8 @@ function GetParam()
 	echo ${PARAM}
 	}
 
-SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the super master as selected by Prepa_MSBAS.sh in
-											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SUPER_MASTERS/MSBAS/VVP/seti/setParametersFile.txt
+SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the Global Primary (SuperMaster) as selected by Prepa_MSBAS.sh in
+											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/VVP/seti/setParametersFile.txt
 
 PROROOTPATH=`GetParam PROROOTPATH`			# PROROOTPATH, path to dir where data will be processed in sub dir named by the sat name. 
 DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored 
@@ -213,8 +215,8 @@ fi
 
 source ${FCTFILE}
 
-# Get date of last MasTer Engine source dir (require FCT file sourced above)
-GetMasTerEngineVersion
+# Get date of last AMSTer Engine source dir (require FCT file sourced above)
+GetAMSTerEngineVersion
 
 # Define Crop Dir
 if [ ${CROP} == "CROPyes" ]
@@ -239,12 +241,12 @@ case ${SATDIR} in
    		# Check if the variable is empty
    		if [ -z "${MASDIR}" ]; then
    		    echo ""
-   		    EchoTee "! I cannot find the super master ${SUPERMASTER} in folder ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop. Check the date of your super master given in LaunchMTparam_. The script will exit."
+   		    EchoTee "! I cannot find the Global Primary (SuperMaster) ${SUPERMASTER} in folder ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop. Check the date of your Global Primary (SuperMaster) given in LaunchMTparam_. The script will exit."
    		    echo ""
    		    exit 1  # Exit the script with an error code
    		fi
    		echo ""
-   		EchoTee "Working with Super Master with date ${SUPERMASTER}"
+   		EchoTee "Working with Global Primary (SuperMaster) with date ${SUPERMASTER}"
    		EchoTee ""
 		
 		S1ID=`GetParamFromFile "Scene ID" SAR_CSL_SLCImageInfo.txt`
@@ -253,7 +255,7 @@ case ${SATDIR} in
 		if [ ${S1MODE} == "IW" ] || [ ${S1MODE} == "EW" ]
 			then 
 				S1MODE="WIDESWATH"
-				EchoTee "S1 data do not require coregistration on a SUPERMASTER for SuperMaster_MassProc.sh."
+				EchoTee "S1 data do not require coregistration on a Global Primary (SuperMaster) for SuperMaster_MassProc.sh."
 				EchoTee "However, we will take this opportunity to compute DEM for each (New) S1 image."
 			else 
 				S1MODE="STRIPMAP"
@@ -290,7 +292,7 @@ case ${SATDIR} in
 		# Master must always be TX. Slv is TX except when Topo with master date = slave date :
  		if [ ${MASTDXMODE} != "_TX" ] 
  			then 
- 				EchoTee "Master mode is ${MASTDXMODE}, not TX; please check" 
+ 				EchoTee "Primary mode is ${MASTDXMODE}, not TX; please check" 
  				exit 0
  			else 
  				SLVTDXMODE="_TX"	 #Just un case... 
@@ -517,7 +519,7 @@ if [ -f New_Slaves_to_process_${RUNDATE}_${RNDM1}.txt ] && [ -s New_Slaves_to_pr
 				rm -f ${OUTPUTDATA}/_No_New_Data_Today.txt		# if FORCE, do it anyway 
 				RECOMPDEM="FORCE"
 			else 
-				EchoTee "No new slave to coregister; end here."
+				EchoTee "No new Secondary to coregister; end here."
  				rm -f ${OUTPUTDATA}/New_Slaves_to_process_${RUNDATE}_${RNDM1}.txt
  				rm -f ${OUTPUTDATA}/All_Slaves_${RUNDATE}_${RNDM1}.txt
  				rm -f ${OUTPUTDATA}/Processed_slaves_${RUNDATE}_${RNDM1}.txt	
@@ -542,7 +544,7 @@ fi
 		"CROPyes")
 
 			if [ ! -d "${INPUTDATA}/${SUPERMASTER}.csl" ]; then
-				EchoTee "No Crop of that size yet for Super Master ${SUPERMASTER}"
+				EchoTee "No Crop of that size yet for Global Primary (SuperMaster) ${SUPERMASTER}"
 				EchoTee "=> Will create a dir and store data there"
 				echo
 				Crop ${SUPERMASTER} 
@@ -676,10 +678,10 @@ EchoTee "--------------------"
 # If Process all images to coregister on SUPERMASTER
 ####################################################
 
-# Get date of last MasTer Engine source dir (require FCT file sourced above)
-GetMasTerEngineVersion
+# Get date of last AMSTer Engine source dir (require FCT file sourced above)
+GetAMSTerEngineVersion
 # Store date of last MasTer Engine source dir
-echo "Last created MasTer Engine source dir suggest projecting DEM in slant range with ME version: ${LASTVERSIONCIS}" > ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Projecting_DEM_w_MasTerEngine_V.txt
+echo "Last created AMSTer Engine source dir suggest projecting DEM in slant range with AE version: ${LASTVERSIONMT}" > ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Projecting_DEM_w_AMSTerEngine_V.txt
 
 NPAIRS=`wc -l < New_Slaves_to_process_${RUNDATE}_${RNDM1}.txt`
 
@@ -729,17 +731,17 @@ do
 				# Compute (master and) SLV amplitudes
 				if [ ! -f ${OUTPUTDATA}/_${SUPERMASTER}_Ampli_Img_Reduc/i12/InSARProducts/${SUPERMASTER}.*.mod ]
 					then # supermaster not processed yet. Must compute ampli of both SM and SLV
-						EchoTee "Compute Super Master ${MAS} and Slave ${SLV} amplitude reduction (size are != because before InSAR)"
+						EchoTee "Compute Global Primary (SuperMaster) ${MAS} and Secondary ${SLV} amplitude reduction (size are != because before InSAR)"
 						EchoTee "Using original pixel shape and save it as OriginalCoreg"
 						MakeAmpliImgAndPlot 1 1 ${PIXSHAPE} MasAndSlv
-						EchoTee "Keep copy of master module with ML for ampli coregistration for further mass processing use."
+						EchoTee "Keep copy of Primary module with ML for ampli coregistration for further mass processing use."
 						PATHMAS=`GetParamFromFile "Reduced master amplitude image file path" InSARParameters.txt`
 						MRGORIG=`GetParamFromFile "Reduced master amplitude image range dimension" InSARParameters.txt`
 						MAZORIG=`GetParamFromFile "Reduced master amplitude image azimuth dimension" InSARParameters.txt`
 						MASPOL=`echo "${PATHMAS}" | ${PATHGNU}/gawk -F '/' '{print $NF}'`
 						cp -f InSARProducts/${MASPOL} ${OUTPUTDATA}/ModulesForCoreg/${MASPOL}.OriginalCoreg_Z${ZOOM}_ML${MLAMPLI}_W${MRGORIG}_L${MAZORIG}
 						if [ ! -s ${PATHMAS} ] ; then
-							EchoTeeRed "  // Module file of supermaster is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
+							EchoTeeRed "  // Module file of Global Primary (SuperMaster) is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
 						fi	
 						# STORE INFO ABOUT SUPERMASTER IN ${OUTPUTDATA}/_${SUPERMASTER}_Ampli_Img_Reduc FOR FUTHER USE WITH OTHER SLAVES
 						mkdir -p ${OUTPUTDATA}/_${SUPERMASTER}_Ampli_Img_Reduc/i12/TextFiles
@@ -749,7 +751,7 @@ do
 						# to be clean update here the path to that supermaster.*.mod file in InSARParameters.txt
 						updateParameterFile ${OUTPUTDATA}/_${SUPERMASTER}_Ampli_Img_Reduc/i12/TextFiles/InSARParameters.txt "Reduced master amplitude image file path"  ${OUTPUTDATA}/_${SUPERMASTER}_Ampli_Img_Reduc/i12/InSARProducts/${MASPOL}
 					else # supermaster already processed; only need to compute ampli of save
-						EchoTee "Compute Slave ${SLV} amplitude reduction (size are != because before InSAR)"
+						EchoTee "Compute Secondary ${SLV} amplitude reduction (size are != because before InSAR)"
 						EchoTee "Using original pixel shape and save it as OriginalCoreg"
 						MakeAmpliImgAndPlot 1 1 ${PIXSHAPE} slaveOnly
 						# And Super master reduced size and path are to be set in InSARParameters.txt.
@@ -771,7 +773,7 @@ do
 				SLVPOL=`echo "${PATHSLV}" | ${PATHGNU}/gawk -F '/' '{print $NF}'`
 				cp InSARProducts/${SLVPOL} ${OUTPUTDATA}/ModulesForCoreg/${SLVPOL}.OriginalCoreg_Z${ZOOM}_ML${MLAMPLI}_W${SRGORIG}_L${SAZORIG}
 				if [ ! -s ${PATHSLV} ] ; then
-					EchoTeeRed "  // Module file of slave is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
+					EchoTeeRed "  // Module file of Secondary is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
 				fi	
 			fi	
 	echo 
@@ -832,7 +834,7 @@ do
 						
 						if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ]
 							then
-								echo "Do not link ${SLVINTERP}.ras because supermaster name will be changed as date in dir naming"
+								echo "Do not link ${SLVINTERP}.ras because Global Primary (SuperMaster) name will be changed as date in dir naming"
 								touch ${RUNDIR}/i12/InSARProducts/SEE_${SLVPOL}.interpolated.csl.ras_in_interpolated_Dir_Data
 							else
 								ln -s ${SLVINTERP}.ras ${RUNDIR}/i12/InSARProducts/${SLVPOL}.interpolated.csl.ras
@@ -841,9 +843,9 @@ do
 			esac		
 	fi
 
-	# Store date of last MasTer Engine source dir
-	#echo "Last created MasTer Engine source dir suggest coregistration with ME version: ${LASTVERSIONCIS} saved in ${RUNDIR}/Coreg_w_MasTerEngine_V.txt" 
-	echo "Last created MasTer Engine source dir suggest coregistration with ME version: ${LASTVERSIONCIS}" > ${RUNDIR}/Coreg_w_MasTerEngine_V.txt
+	# Store date of last AMSTer Engine source dir
+	#echo "Last created AMSTer Engine source dir suggest coregistration with AE version: ${LASTVERSIONMT} saved in ${RUNDIR}/Coreg_w_AMSTerEngine_V.txt" 
+	echo "Last created AMSTer Engine source dir suggest coregistration with AE version: ${LASTVERSIONMT}" > ${RUNDIR}/Coreg_w_AMSTerEngine_V.txt
 
 		
 	# Get back to base dir 	
@@ -873,7 +875,7 @@ cat $(dirname $0)/${PRG} >> ${LOGFILE}
 
 EchoTee "" 	
 EchoTee "--------------------------------------------------------"
-EchoTee "Dump FUNCTIONS_FOR_CIS.sh  in ${LOGFILE} for debugging " 
+EchoTee "Dump FUNCTIONS_FOR_MT.sh  in ${LOGFILE} for debugging " 
 EchoTee "--------------------------------------------------------" 
 cat ${FCTFILE} >> ${LOGFILE}
 EchoTee "" 

@@ -80,7 +80,7 @@ annualrate(b) = ( b * 3153600000. )
 #set label sprintf('Linear rate = %.2f cm/yr', annualrate(b) ) at  graph 0.84,0.02 
 
 
-set timestamp "Created by MasTer at INSTITUTE on: %d/%m/%y %H:%M" font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+set timestamp "Created by AMSTer at INSTITUTE on: %d/%m/%y %H:%M" font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 
 set output "PATH_TO_EPS.eps" 
 CMD_LINE

@@ -28,14 +28,16 @@
 # New in Distro V 1.2: - replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 1.3: 	- read UTM zone for geocoding
 # New in Distro V 1.4 20231002:	- compatible with new multi-mevel masks where 0 = non masked and 1 or 2 = masked  
-#								- add fig snaphuMask and keep copy of unmasked defo map
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2018/03/29 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.4 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 02, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -55,8 +57,8 @@ function GetParam()
 	echo ${PARAM}
 	}
 
-SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the super master as selected by Prepa_MSBAS.sh in
-											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SUPER_MASTERS/MSBAS/VVP/seti/setParametersFile.txt
+SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the Global Primary (supermaster) as selected by Prepa_MSBAS.sh in
+											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/VVP/seti/setParametersFile.txt
 
 PROROOTPATH=`GetParam PROROOTPATH`			# PROROOTPATH, path to dir where data will be processed in sub dir named by the sat name. 
 DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored 
@@ -226,12 +228,12 @@ do
 	cd ${MASSPROCESSPATH}
 	# get the pair dir name
 	if [ ${CHANGEDIRNAME} == "YES" ] ; then 
-			MAS=`echo "${RUNDIR}" | cut -d "_" -f1  ` # select master date
-			SLV=`echo "${RUNDIR}" | cut -d "_" -f2  ` # select slave date
+			MAS=`echo "${RUNDIR}" | cut -d "_" -f1  ` # select Primary date
+			SLV=`echo "${RUNDIR}" | cut -d "_" -f2  ` # select Secondary date
 			RUNDIR=`ls -d *${MAS}*${SLV}*`
 		else 
-			MAS=`echo "${RUNDIR}" | cut -d "_" -f3  ` # select master date
-			SLV=`echo "${RUNDIR}" | cut -d "_" -f7  ` # select slave date
+			MAS=`echo "${RUNDIR}" | cut -d "_" -f3  ` # select Primary date
+			SLV=`echo "${RUNDIR}" | cut -d "_" -f7  ` # select Secondary date
 	fi
 	echo
 	echo "*********************************************************"

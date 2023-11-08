@@ -16,14 +16,16 @@
 #
 #
 # New in Distro V 1.0.1:	- add number of days since last image 
-# New in Distro V 1.0.2:	- add average over last XX images (hard coded) 
-# 
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/25 - could make better... when time.
+# New in Distro V 1.0.2 (Mar 15, 2022):	- add average over last XX images (hard coded) 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 15, 2022"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -55,7 +57,7 @@ case ${TYPE} in
 			DATENAME=`echo ${IMGFILE} | cut -d "/" -f 2`
 			DATECREA=`stat ${IMGFILE} | tail -1 | cut -d : -f2 | cut -d " " -f2 | ${PATHGNU}/gsed "s%-%%g" `
 			DELIVERYDIFF=`echo "($(date +%s -d ${DATECREA})-$(date +%s -d ${DATENAME}))/86400" | bc -l | cut -d . -f 1`
-# completer script pour delta entre temps entre avant derniere img et derniere info (last created and img last-1)
+			# completer script pour delta entre temps entre avant derniere img et derniere info (last created and img last-1)
 			TIMESINCELAST=`echo "($(date +%s -d ${DATENAME})-$(date +%s -d ${FORMERDATE}))/86400" | bc -l | cut -d . -f 1`
 			LASTINFO=`echo "($(date +%s -d ${DATECREA})-$(date +%s -d ${FORMERDATE}))/86400" | bc -l | cut -d . -f 1`
 			FORMERDATE=${DATENAME}

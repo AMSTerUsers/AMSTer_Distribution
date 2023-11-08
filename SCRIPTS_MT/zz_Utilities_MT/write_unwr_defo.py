@@ -4,7 +4,7 @@
 #
 # New in V1.1 :	- add line or col of zero's instead of NaN to get file of even size
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016
 #################################
 

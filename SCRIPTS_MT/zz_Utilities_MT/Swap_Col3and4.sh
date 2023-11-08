@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 
 FILETOSWAP=$1
 

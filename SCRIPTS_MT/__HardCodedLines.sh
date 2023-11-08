@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script contains a series of hard coded lines required for several scripts of the
-# MasTer toolbox. 
+# AMSTer toolbox. 
 #
 # They are written here as functions to be called from the scripts using the following line:
 # source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh   
@@ -17,8 +17,11 @@
 # New in Distro V 2.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2023/06/22 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 
@@ -224,11 +227,11 @@
 		
 # FUNCTIONS_FOR_MT.sh
 ######################
-	# For tracking the version of MasTer Engine
-	function FunctionsForMEPathSources()
+	# For tracking the version of AMSTer Engine
+	function FunctionsForAEPathSources()
 		{
-		eval PATHMASTERENGINE=${HOME}/SAR/MasTerToolbox/MasTerEngine
-		eval PATHSOURCES=${PATHMASTERENGINE}/_Sources_ME/Older/
+		eval PATHAMSTERENGINE=${HOME}/SAR/AMSTer/AMSTerEngine
+		eval PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older/
 		}	
 
 # Geocode_from_ALL2GIF.sh, RenamePath_Volumes.sh, RenamePathAfterMove_in_SAR_MASSPROC.sh,
@@ -370,11 +373,11 @@
 		convert $combi -fill grey -pointsize 60 -font ${font} -draw "text 670,250 'WebSite: http://terra3.ecgs.lu/${WebPage}" $combi
 		}
 
-# UpdateMasterEngine.sh
+# UpdateAMSTerEngine.sh
 #######################
-	# Define path to MasTerEngine and its sources
-	function PathSourcesME()
+	# Define path to AMSTerEngine and its sources
+	function PathSourcesAE()
 		{
-		PATHMASTERENGINE=${HOME}/SAR/MasTerToolbox/MasTerEngine
-		PATHSOURCES=${PATHMASTERENGINE}/_Sources_ME/Older
+		PATHAMSTERENGINE=${HOME}/SAR/AMSTer/AMSTerEngine
+		PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older
 		}

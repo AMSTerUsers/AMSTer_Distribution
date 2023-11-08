@@ -1,7 +1,15 @@
 ######################################################################################
 # This file contains the python3 functions of the optimFunctions module called by creategraphfromtable.py
 # 
-#Last modif  D. Smittarello April 20, 2021
+# This script is part of the AMSTer Toolbox 
+# 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# Last modif  D. Smittarello April 20, 2021
+# -----------------------------------------------------------------------------------------
+
 
 ## Import Modules
 import datetime as dt

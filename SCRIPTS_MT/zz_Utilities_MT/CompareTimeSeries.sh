@@ -3,6 +3,10 @@
 # Compare time series 
 #
 #
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
+
 
 # pixel to compare
 XLIN=$1

@@ -29,13 +29,16 @@
 # New in Distro V 1.5:	- Force discarding pairs that would satisfy all criteria but that are contained in _EXCLUDE_PAIRS_ALTHOUGH_CRITERIA_OK.txt
 # New in Distro V 1.6: - remove stray \ before _ while calling grep to cope with new grep syntax and avoid waring
 # New in Distro V 1.7: - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.7 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

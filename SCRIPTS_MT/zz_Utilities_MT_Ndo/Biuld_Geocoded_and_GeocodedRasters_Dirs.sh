@@ -1,6 +1,9 @@
 #!/bin/bash
 ######################################################################################
 # Dummy script to create dir structure
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 ######################################################################################
 
 mkdir -p Geocoded 

@@ -6,13 +6,16 @@
 # Parameters : - path to dir with the csl archives are stored.   
 #              - path to dir where link will be copied 
 #
+# V1.0 (April 06, 2016)
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CSL InSAR Suite utilities. 
-# NdO (c) 2016/04/06 - could make better with more functions... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="v1.0 CIS script utilities"
-AUT="Nicolas d'Oreye, (c)2016, Last modified on April 06, 2016"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 
 
 ARCHIVES=$1					# path to dir with the raw archives to read

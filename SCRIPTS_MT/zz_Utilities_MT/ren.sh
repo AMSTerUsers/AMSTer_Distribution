@@ -8,6 +8,8 @@
 #
 # New in V1.0 beta: 
 #
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 # I know, it is a bit messy and can be improved.. when time. But it works..
 # N.d'Oreye, S. Samsonov v 1.0 2018/11/15 -                         
 ######################################################################################

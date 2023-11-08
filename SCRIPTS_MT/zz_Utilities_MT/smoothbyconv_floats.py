@@ -3,7 +3,7 @@
 # This script smooth an interferogram (float32) using a 2-D convolution
 # with a matrix ones(3x3)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016
 ######################################################################################
 

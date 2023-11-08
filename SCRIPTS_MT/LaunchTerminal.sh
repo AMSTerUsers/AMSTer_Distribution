@@ -24,12 +24,12 @@
 # 			x-terminal-emulator -e /path/to/script2 LaunchTerminalFct [optional arguments here]
 # 		Don't forget to put "$@" at the end of the script
 # 
-#New in Distro V 1.0:	- Based on developpement version 
+# New in Distro V 1.0:	- Based on developpement version 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-#
-# Last modified on Aug 08, 2018"
-# NdO (c)2016-2018 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 "$@"
 exec "$SHELL"

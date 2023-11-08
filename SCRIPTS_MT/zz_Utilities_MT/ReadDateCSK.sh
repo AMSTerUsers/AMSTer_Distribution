@@ -8,14 +8,17 @@
 # Dependencies: - none
 #
 # New in Distro V 1.0:	- Based on developpement version and beta version 1.0
-# New in Distro V 1.1:	- More robust date search in h5 naming
+# New in Distro V 1.1 (Jan 31, 2023):	- More robust date search in h5 naming
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2015/08/24 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2015-2019, Last modified on Jan 31, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

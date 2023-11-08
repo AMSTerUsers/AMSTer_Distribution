@@ -3,7 +3,7 @@
 # This script read an interferogram and a coherence file to create a mask and replace 
 # interf values by white noise where coh < COHMUWPTHRESH
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016
 #################################
 

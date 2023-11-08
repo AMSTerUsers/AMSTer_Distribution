@@ -68,7 +68,7 @@ set style rect fc lt -0.2 fs solid 0.15 noborder
 ####################################
 #OTHER_TABLE
 
-set timestamp "Created by MasTer at INSTITUTE on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+set timestamp "Created by AMSTer at INSTITUTE on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 
 set output "PATH_TO_EPS.eps" 
 CMD_LINE

@@ -1,11 +1,11 @@
 install : 
-$ cd /Users/nicolas/SAR/MasTerToolbox
+$ cd /Users/nicolas/SAR/AMSTer/SCRIPTS_MT
 $ unzip optimtoolbox.zip
-$ chmod u+x /Users/nicolas/SAR/MasTerToolbox/optimtoolbox/*.py
-$ chmod u+x /Users/nicolas/SAR/MasTerToolbox/optimtoolbox/*.sh
+$ chmod u+x /Users/nicolas/SAR/AMSTer/SCRIPTS_MT/optimtoolbox/*.py
+$ chmod u+x /Users/nicolas/SAR/AMSTer/SCRIPTS_MT/optimtoolbox/*.sh
 
 add in .bashrc
-$ PATH=$PATH:/Users/nicolas/SAR/MasTerToolbox/optimtoolbox
+$ PATH=$PATH:/Users/nicolas/SAR/AMSTer/SCRIPTS_MT/optimtoolbox
 source .bashrc
 
 

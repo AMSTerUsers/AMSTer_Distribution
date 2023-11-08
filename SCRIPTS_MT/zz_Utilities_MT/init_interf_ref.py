@@ -2,7 +2,11 @@
 ######################################################################################
 # This script converts interf in float into an input file in bytes 
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 # Delphine Smittarello, (c)2016
 ######################################################################################
 import sys

@@ -16,21 +16,22 @@
 #  
 # 
 # New in Distro V 1.0:	- Based on AmpDefo_map.sh V1.4.2
-# New in Distro V 1.1:	- 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
-
 
 # vvv ----- Hard coded lines to check --- vvv 
 source ${HOME}/.bashrc
 # See Fiji command and options at the end
 # ^^^ ----- Hard coded lines to check -- ^^^ 
 
+
 PRG=`basename "$0"`
-VER="Distro V1.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2022, Last modified on Jan 20, 2022"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2022, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -48,7 +49,6 @@ PATHFILECOH=$3		# may differ from amp files ; results will be in coh dir
 
 # path where results will be stored
 PATHFILES=$(dirname $(dirname ${PATHAMP1}))
-
 
 # Get files names
 AMP1=`basename ${PATHAMP1}`

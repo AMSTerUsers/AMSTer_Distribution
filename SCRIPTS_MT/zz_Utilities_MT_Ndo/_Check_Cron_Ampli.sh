@@ -10,17 +10,19 @@
 # A lot is hard coded for each mode
 # 
 # New in V 1.1:	- stop searching for CSK files when all files in Auto_Curl are checked to avoid infinite loop when less than OLDCSK images are present in dir 
-# New in V 1.2:	- improve display in column
+# New in V 1.2 (Aug 11, 2021):	- improve display in column
 #				- take into account the loss of Sentinel 1B on 23 December 2021, ultimately announced as decommissioned on August 3 2022
 #				- loop search CSK images till k+15 because of long delay between acq and delivery and only keep limited nr of images in raw dir
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2019/12/05 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Aug 11, 2021"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

@@ -1,9 +1,12 @@
 #!/opt/local/bin/python
 ######################################################################################
-# This script read an interferogram and an unwrapped phase, rewrap the unwr and find the optimal shift between both wrapped phases
+# This script read an interferogram and an unwrapped phase, rewrap the unwr and 
+#   find the optimal shift between both wrapped phases
 #
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016
 #################################
 #python3 findshift_float.py '/home/delphine/Documents/Unwr_INTERFERO_JLF/interfs/S1A/test/residualInterferogram.VV-VV.20210519_20210531_Bp-4.85m_BT12days' '/home/delphine/Documents/Unwr_INTERFERO_JLF/interfs/S1A/test/unwrfilt.tmp' 6356 5876

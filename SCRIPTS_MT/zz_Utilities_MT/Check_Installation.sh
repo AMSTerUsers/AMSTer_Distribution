@@ -3,7 +3,7 @@
 #
 # Parameters are: none
 #
-# Dependencies:	all the required components for MasTer, that is 
+# Dependencies:	all the required components for AMSTer, that is 
 #				- gnu sed, awk, grep, seq, date 
 #               - Appel's osascript for opening terminal windows if OS is Mac
 #               - x-terminal-emulator for opening terminal windows if OS is Linux
@@ -29,13 +29,15 @@
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh#
 # New in Distro V 3.1 20231006:	- if pyqt6 is missing in Mac OSX, add a message explaining why 
+# New in Distro V 4.0 20231030:	- Rename AMSTer Software as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2020/06/15 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Oct 06, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -413,9 +415,9 @@ function CheckLibMAC()
 
 clear 
 
-echo "Testing components for MasTer"
-echo "-----------------------------"
-echo "-----------------------------"
+echo "Testing components for AMSTer Software"
+echo "--------------------------------------"
+echo "--------------------------------------"
 echo ""
 echo "1) STATE VARIABLES in bashrc or bash_profile"
 echo "--------------------------------------------"
@@ -441,23 +443,23 @@ TestVarBashrc "S1_ORBITS_DIR"
 TestVarBashrc "ENVISAT_PRECISES_ORBITS_DIR"
 TestVarBashrc "EARTH_GRAVITATIONAL_MODELS_DIR"
 TestVarBashrc "EXTERNAL_DEMS_DIR"
-echo "    $(tput setaf 3)EXTERNAL_DEMS_DIR is not mandatrory and actually not used with MasTer Toolbox $(tput sgr 0)"
+echo "    $(tput setaf 3)EXTERNAL_DEMS_DIR is not mandatrory and actually not used with AMSTer Toolbox $(tput sgr 0)"
 echo ""
 
-echo "2) MasTer Toolbox main components" 
+echo "2) AMSTer Software main components" 
 echo "---------------------------------"
 echo ""
 
-# test presence of MasTer Toolbox main components in $PATH
+# test presence of AMSTer Software main components in $PATH
 ##########################################################
 echo "Directories in \$PATH in bashrc:" 
 	WHICHME=$(dirname $(which initInSAR))
 	TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHME | wc -l)
 	if [ $TMP -ge 1 ] 
 		then 
-			printf "%-60s%-20s\n" "--> MasTerEngine in \$PATH:" "$(tput setaf 2)passed	($WHICHME)$(tput sgr 0)"
+			printf "%-60s%-20s\n" "--> AMSTerEngine in \$PATH:" "$(tput setaf 2)passed	($WHICHME)$(tput sgr 0)"
 		else 
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTerEngine in \$PATH:" "failed$(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTerEngine in \$PATH:" "failed$(tput sgr 0)"
 	fi
 
 
@@ -465,44 +467,44 @@ echo "Directories in \$PATH in bashrc:"
 	TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 	if [ $TMP -ge 1 ] 
 		then 
-			printf "%-60s%-20s\n" "--> MasTer Toolbox SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS)$(tput sgr 0)"
+			printf "%-60s%-20s\n" "--> AMSTer Software SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS)$(tput sgr 0)"
 
 			# test if utilities ok as well 
 			WHICHSCRIPTSUTIL=zz_Utilities_MT
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
-					printf "%-60s%-20s\n" "--> MasTer Toolbox SCRIPTS Utilities in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+					printf "%-60s%-20s\n" "--> AMSTer Software SCRIPTS Utilities in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
 				else 
-					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox SCRIPTS Utilities in \$PATH:" "failed $(tput sgr 0)"
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software SCRIPTS Utilities in \$PATH:" "failed $(tput sgr 0)"
 			fi
 			# test if utilities_Ndo ok as well 
 			WHICHSCRIPTSUTIL=zz_Utilities_MT_Ndo
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
-					printf "%-60s%-20s\n" "--> MasTer Toolbox SCRIPTS Utilities_Ndo in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+					printf "%-60s%-20s\n" "--> AMSTer Software SCRIPTS Utilities_Ndo in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
 				else 
-					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox SCRIPTS Utilities_Ndo in \$PATH:" "failed $(tput sgr 0)"
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software SCRIPTS Utilities_Ndo in \$PATH:" "failed $(tput sgr 0)"
 			fi
 			# test if _cron_scripts  ok as well 
 			WHICHSCRIPTSUTIL=_cron_scripts
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
-					printf "%-60s%-20s\n" "--> MasTer Toolbox cron SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+					printf "%-60s%-20s\n" "--> AMSTer Software cron SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
 				else 
-					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox cron SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software cron SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
 			fi
 			
-			# test if MasTerOrganizer  ok as well 
-			WHICHSCRIPTSUTIL=MasTerOrganizer
+			# test if AMSTerOrganizer  ok as well 
+			WHICHSCRIPTSUTIL=AMSTerOrganizer
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
-					printf "%-60s%-20s\n" "--> MasTer Toolbox MasTerOrganizer SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+					printf "%-60s%-20s\n" "--> AMSTer Software AMSTerOrganizer SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
 				else 
-					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox MasTerOrganizer SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software AMSTerOrganizer SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
 			fi
 
 			# test if optimtoolbox  ok as well 
@@ -510,9 +512,9 @@ echo "Directories in \$PATH in bashrc:"
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
-					printf "%-60s%-20s\n" "--> MasTer Toolbox optimtoolbox SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+					printf "%-60s%-20s\n" "--> AMSTer Software optimtoolbox SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
 				else 
-					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox optimtoolbox SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software optimtoolbox SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
 			fi
 
 			# test if TemplatesForPlots  ok as well 
@@ -520,9 +522,9 @@ echo "Directories in \$PATH in bashrc:"
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
-					printf "%-60s%-20s\n" "--> MasTer Toolbox TemplatesForPlots SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+					printf "%-60s%-20s\n" "--> AMSTer Software TemplatesForPlots SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
 				else 
-					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox TemplatesForPlots SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software TemplatesForPlots SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
 			fi
 
 			# test if TSCombiFiles  ok as well 
@@ -530,14 +532,14 @@ echo "Directories in \$PATH in bashrc:"
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
 			if [ $TMP -ge 1 ] 
 				then 
-					printf "%-60s%-20s\n" "--> MasTer Toolbox TSCombiFiles files in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+					printf "%-60s%-20s\n" "--> AMSTer Software TSCombiFiles files in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
 				else 
-					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox TSCombiFiles files in \$PATH:" "failed $(tput sgr 0)"
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software TSCombiFiles files in \$PATH:" "failed $(tput sgr 0)"
 			fi
 
 
 		else 
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
 
 	fi
 
@@ -577,8 +579,8 @@ echo "Directories in \$PATH in bashrc:"
 
 	echo "Executables and versions:" 
 
-#  MasTerEngine
-	LASTDIRINFO=`find ${HOMEDIR}/SAR/MasTerToolbox/MasTerEngine/_Sources_ME/Older -type d -name "V*" -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -1 `  # get last creater dir
+#  AMSTerEngine
+	LASTDIRINFO=`find ${HOMEDIR}/SAR/AMSTer/AMSTerEngine/_Sources_AE/Older -type d -name "V*" -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -1 `  # get last creater dir
 	#	Get everything after the last /:
 	LASTDIRNAME="${LASTDIRINFO##*/}"
 	MEVER=`echo ${LASTDIRNAME} | cut -d _ -f1`
@@ -586,18 +588,18 @@ echo "Directories in \$PATH in bashrc:"
 	if [ `echo $?` == "0" ]
 		then
 			WHICHVAR=$(which initInSAR)
-			printf "%-60s%-20s\n" "--> MasTerEngine : " "$(tput setaf 2)passed$(tput sgr 0) 	(Version ${MEVER}. At least initInSAR is in: $(dirname ${WHICHVAR}))"
+			printf "%-60s%-20s\n" "--> AMSTerEngine : " "$(tput setaf 2)passed$(tput sgr 0) 	(Version ${MEVER}. At least initInSAR is in: $(dirname ${WHICHVAR}))"
 		else 
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTerEngine" "failed: missing at least initInSAR $(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTerEngine" "failed: missing at least initInSAR $(tput sgr 0)"
 
 	fi
 	type -t getLineThroughStack  >/dev/null
 	if [ `echo $?` == "0" ]
 		then
 			WHICHVAR=$(which getLineThroughStack)
-			printf "%-60s%-20s\n" "--> MasTerEngine MSBAStools : " "$(tput setaf 2)passed$(tput sgr 0) 	(Version ${MEVER}. At least getLineThroughStack is in: $(dirname ${WHICHVAR}))"
+			printf "%-60s%-20s\n" "--> AMSTerEngine MSBAStools : " "$(tput setaf 2)passed$(tput sgr 0) 	(Version ${MEVER}. At least getLineThroughStack is in: $(dirname ${WHICHVAR}))"
 		else 
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTerEngine MSBAStools" "failed: missing at least getLineThroughStack $(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTerEngine MSBAStools" "failed: missing at least getLineThroughStack $(tput sgr 0)"
 	fi
 
 # SCRIPTS
@@ -605,9 +607,9 @@ echo "Directories in \$PATH in bashrc:"
 	if [ `echo $?` == "0" ]
 		then
 			WHICHVAR=$(which FUNCTIONS_FOR_MT.sh)
-			printf "%-60s%-20s\n" "--> MasTer Toolbox SCRIPTS : " "$(tput setaf 2)passed$(tput sgr 0) 	(At least FUNCTIONS_FOR_MT.sh is in: $(dirname ${WHICHVAR}))"
+			printf "%-60s%-20s\n" "--> AMSTer Software SCRIPTS : " "$(tput setaf 2)passed$(tput sgr 0) 	(At least FUNCTIONS_FOR_MT.sh is in: $(dirname ${WHICHVAR}))"
 		else 
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> MasTer Toolbox SCRIPTS" "failed: missing at least FUNCTIONS_FOR_MT.sh is in: $(dirname ${WHICHVAR}) $(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software SCRIPTS" "failed: missing at least FUNCTIONS_FOR_MT.sh is in: $(dirname ${WHICHVAR}) $(tput sgr 0)"
 	fi
 
 # MSBAS
@@ -707,7 +709,7 @@ if [ "${EXPECTEDPYTHON}" == "" ]
 		EXPECTEDPYTHONVER=`echo "${EXPECTEDPYTHON}" | awk '{print $2}' | cut -d. -f 1 `
 		if [ "${EXPECTEDPYTHONVER}" == "3" ]
 			then  
-				echo "--> python:	$(tput setaf 2)passed$(tput sgr 0)		Need V${EXPECTEDPYTHONVER} for MasTer. ${EXPECTEDPYTHON} found in /opt/local/bin"
+				echo "--> python:	$(tput setaf 2)passed$(tput sgr 0)		Need V${EXPECTEDPYTHONVER} for AMSTer. ${EXPECTEDPYTHON} found in /opt/local/bin"
 				TSTMODULES="YES"
 				# check a possible default dir for python if called without path
 				DEFAULTPYTH=$(which -a python | tr -s / | sort | uniq)
@@ -727,7 +729,7 @@ if [ "${EXPECTEDPYTHON3}" == "" ]
 	then 
 		echo "--> python3:	$(tput setaf 1)$(tput setab 7)failed$(tput sgr 0)		No python3 found in /opt/local/bin"  
 	else 
-		echo "--> python3:	$(tput setaf 2)passed$(tput sgr 0)		${EXPECTEDPYTHON3} required for MasTer found in /opt/local/bin"
+		echo "--> python3:	$(tput setaf 2)passed$(tput sgr 0)		${EXPECTEDPYTHON3} required for AMSTer found in /opt/local/bin"
 		TSTMODULES="YES"
 		# check a possible default dir for python if called without path
 		DEFAULTPYTH3=$(which -a python3 | tr -s / | sort | uniq)
@@ -775,7 +777,7 @@ echo "4) Specific system-based functions"
 echo "----------------------------------"  # For Mac or Linux
 case ${OS} in 
 	"Linux") 
-		echo "Testing libraries for MSBAS, MasTerEngine etc..." 
+		echo "Testing libraries for MSBAS, AMSTerEngine etc..." 
 		CheckLib1 "clang"	
 		CheckLib2 "libfftw3-dev"
 		CheckLib2 "libfftw3-long3"
@@ -827,7 +829,7 @@ case ${OS} in
 
 		;;
 	"Darwin")
-		echo "Testing libraries for MSBAS, MasTerEngine etc..." 
+		echo "Testing libraries for MSBAS, AMSTerEngine etc..." 
 		CheckLibMAC "hdf5"
 		CheckLibMAC "libgeotiff"
 		CheckLibMAC "lapack"
@@ -887,7 +889,7 @@ TestDirs "${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ERS"
 TestDirs "${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB"
 TestDirs "${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB/AUX_POEORB"
 TestDirs "${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB/AUX_RESORB"
-TestDirs "${PATH_DataSAR}/SAR_AUX_FILES/Param_files_SuperMaster"
+TestDirs "${PATH_DataSAR}/SAR_AUX_FILES/Param_files"
 
 if [ ! -d "${PATH_DataSAR}/SAR_AUX_FILES/EGM/EGM96" ] 
 	then 
@@ -1162,6 +1164,6 @@ echo
 echo 
 echo 
 echo "---------------------------------------------------------------------------------------------------"  
-echo "$(tput setaf 2) In case of problem, you may want to run again the MasTer_Installer.sh $(tput sgr 0)"
+echo "$(tput setaf 2) In case of problem, you may want to run again the AMSTer_Install.sh $(tput sgr 0)"
 echo
  

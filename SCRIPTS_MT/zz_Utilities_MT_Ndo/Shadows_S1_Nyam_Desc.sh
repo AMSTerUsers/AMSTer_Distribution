@@ -8,14 +8,16 @@
 # New in V1.0.1 Beta:	- take state variable for PATHGNU etc
 # New in V1.0.2 Beta:	- path naming for linux and mac
 #        V1.0.3 Bbeta: 	- check OK muste be after sourcing bashrc 
-#        V1.0.4 Bbeta: 	- use state variable for external disk path and remove OS check
+#        V1.0.4 Bbeta (Jan 17, 2019): 	- use state variable for external disk path and remove OS check
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CSL InSAR Suite utilities. 
-# NdO (c) 2016/03/08 - could make better with more functions... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="v1.0.4 Beta CIS script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2018, Last modified on Jan 17, 2019"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

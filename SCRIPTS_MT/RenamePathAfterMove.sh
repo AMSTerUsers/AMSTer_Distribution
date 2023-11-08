@@ -4,7 +4,7 @@
 #
 # This may have an interest in case of replaying some steps in MASS_PROCESS directories 
 #
-# Need to be run in dir where all /MAS_SLV/i12/TextFiles/InSARParameters.txt were moved, 
+# Need to be run in dir where all /PRM_SCD/i12/TextFiles/InSARParameters.txt were moved, 
 #   e.g. /.../SAR_SM/RESAMPLED/SAT/TRK/CROPDIR/
 #
 # Parameters : - Sat   
@@ -13,13 +13,16 @@
 #
 # New in Distro V 1.0:	- Based on developpement version and Beta V1.1.0
 # New in Distro V 1.1:	- search for dir of any name after ????????_????????
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2018/03/29 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 11, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

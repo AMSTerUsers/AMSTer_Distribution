@@ -9,9 +9,11 @@
 #
 # New in Distro V 1.1:  - add argument check (NdO Jul 8 2022)
 # New in Distro V 1.2:  - debug nr of argument check (NdO March 7 2023) - watch out, it takes the script name as an argument 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CIS script utilities
-# Nicolas d'Oreye, (c)2016
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 ######################################################################################
 
 import numpy as np

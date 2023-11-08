@@ -1,4 +1,7 @@
 #!/opt/local/bin/python
+#
+# This script is part of the AMSTer Toolbox 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 
 # -*-coding:Latin-1 -*
 #import struct

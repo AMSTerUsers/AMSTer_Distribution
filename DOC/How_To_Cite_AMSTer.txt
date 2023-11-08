@@ -1,0 +1,22 @@
+Nov 07, 2023 
+
+AMSTer Software is based on formerly named MasTer Toolbox. Despite of that name evolution, the software can be cited using the following references: 
+
+AMSTer Engine can be cited as follow:
+- Derauw & Moxhet, Multiple images SAR interferometry (1996), FRINGE’96 workshop, Edinburg 30 Sept - 2 Oct. 1996
+- Derauw D. (1999). Phasimétrie par Radar à Synthèse d'Ouverture; théorie et applications. PhD Thesis, Université de Liège, pp 1–141    
+- Libert, L., Derauw, D., d’Oreye, N., Barbier, C., Orban, A., (2017). Split-band interferometry-assisted phase unwrapping for the phase ambiguities correction. Remote Sensing, 9(9), 879.
+- Derauw D., Libert L., Barbier C., Orban A., Kervyn F., Samsonov S., d’Oreye N. (2019). The CSL InSAR Suite processor: specificities of a command line InSAR processing software specifically adapted for automated time series processing. Abstract, 13-17 May 2019, ESA Living Planet Symposium 2019, Milano, Italy
+
+AMSTer toolbox can be cited as follow:
+- Derauw D., N. d’Oreye, M. Jaspard, A. Caselli, S. Samsonov (2020): Ongoing automated ground deformation monitoring of Domuyo - Laguna del Maule area (Argentina) using Sentinel-1 MSBAS time series: Methodology description and first observations for the period 2015–2020, Journal of South American Earth Sciences, 104, 102850, DOI=10.1016/j.jsames.2020.102850
+- d’Oreye N., Derauw D., S. Samsonov, M. Jaspard, and D. Smittarello (2021): MasTer: A Full Automatic Multi-Satellite InSAR Mass Processing Tool for Rapid Incremental 2D Ground Deformation Time Series, Proc. 2021 IEEE International Geoscience and Remote Sensing Symposium IGARSS, 1899-1902, DOI=10.1109/igarss47720.2021.9553615
+- Smittarello, D., d’Oreye, N., Jaspard, M., Derauw, D., & Samsonov, S. (2022). Pair selection optimization for InSAR time series processing. Journal of Geophysical Research: Solid Earth, 127, e2021JB022825. See open access: https://doi.org/10.1029/2021JB022825
+- d’Oreye N., Derauw D., S. Samsonov, M. Jaspard, D. Smittarello, G. Celli (2022) MasTer: InSAR automated Mass processing Toolbox for Multidimensional time series, User Manual version 5.0, Aug 31 2023. 216 pages
+
+
+For MSBAS citations: 
+- Samsonov S. and N. d’Oreye (2012). Multidimensional time series analysis of ground deformation from multiple InSAR data sets applied to Virunga Volcanic Province Geophysical Journal International, vol. 191, Iss. 3, 1095-1108
+- Samsonov S., d’Oreye N. (2017). Multidimensional Small Baseline Subset (MSBAS) for two-dimensional deformation analysis: Case study Mexico City. Canadian Journal of Remote Sensing, vol 43, iss. 4, 318-329, DOI: 10.1080/07038992.2017.1344926
+- Samsonov S., W. Feng, A. Peltier, H. Geirsson, N. d’Oreye, KK. F.Tiampo (2017). Multidimensional Small Baseline Subset (MSBAS) for volcano monitoring in two dimensions: opportunities and challenges. Case study Piton de la Fournaise volcano.  Journal of Volcanology and Geothermal Research, Vol 344, 121-138,  https://doi.org/10.1016/j.jvolgeores.2017.04.017
+- Samsonov, S., A. Dille, O. Dewitte, F. Kervyn, and N. d'Oreye (2020). Satellite interferometry for mapping surface deformation time series in one, two and three dimensions: A new method illustrated on a slow-moving landslide. Engineering Geology, (266), 105471, doi:10.1016/j.enggeo.2019.105471.items

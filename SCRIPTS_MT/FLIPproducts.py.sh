@@ -11,11 +11,13 @@
 # New in Distro V 1.1:	- print syntax ok for python 3  (NdO March 30, 2021)
 # New in Distro V 1.2:  - add argument check (NdO Jul 8 2022)
 # New in Distro V 1.3:  - debug nr of argument check (NdO March 7 2023) - watch out, it takes the script name as an argument 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
 # launch command : python thisscript.py param1 param2
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# Nicolas d'Oreye, (c)2016-18
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 ######################################################################################
 
 import numpy as np

@@ -9,9 +9,11 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 #								- replace sed separator with % 
 #								- set string to search for file name in find instead of grep 
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# N.d'Oreye, v 1.0 2016/04/07 -                         
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 ######################################################################################
 
 CRITERE=$1

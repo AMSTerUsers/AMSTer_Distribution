@@ -11,15 +11,17 @@
 #
 # New in V1.1:	-	use gnu version of du to allow option -d 
 # New in V1.2:	-	run in background to parallelise. Need to export variables and functions if using gnu parallel
-# New in V1.3:	-	prevent path to finish by a slash 
-
-# 
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# N.d'Oreye, v 1.0 2016/04/07 -                         
-######################################################################################
+# New in V1.3 (Jul 24, 2023):	-	prevent path to finish by a slash 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.3 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 24, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 
 TSFILE=$1
 
@@ -33,7 +36,7 @@ done < ${TSFILE}
 	#set xtics 0.5	
 	set key left top
 	
-	set timestamp "Created by MasTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+	set timestamp "Created by AMSTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 	
 #'plot "lcurve.txt" using 2:3 notitle with linespoints'
 plot "los.txt" u 1:2

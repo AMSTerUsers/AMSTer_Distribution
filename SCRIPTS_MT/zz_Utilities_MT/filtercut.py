@@ -3,7 +3,7 @@
 # This script read an unwrapped phase and apply cutting filter
 #
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016
 #################################
 

@@ -28,15 +28,17 @@
 # New in V 3.3: - update table for Karthala with dual criteria
 # New in V 3.4: - if nr of MASS_PROCESS & geocoded = 0 but image is in MSBAS, check that it is indeed in S1_CLN
 #				- get back search on VVP CSK
-# New in V 3.5: - Search the acq time in RAW CSK naming compatible with new format
+# New in V 3.5 (Aug 9, 2023): - Search the acq time in RAW CSK naming compatible with new format
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2019/12/05 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.5 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Aug 9, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

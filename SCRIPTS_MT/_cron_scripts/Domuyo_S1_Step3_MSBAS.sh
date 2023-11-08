@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script intends to run in a cronjob an automatic systematic (re)processinf of msbas time 
+# Script intends to run in a cronjob an automatic systematic (re)processing of msbas time 
 # series when new images were made available. If orbits were updated, corresponding products 
 # will be taken into account at the time of processing with new images. 
 # 
@@ -7,7 +7,7 @@
 # It also plots several time series and double differences based on provided list of points. 
 #
 # Optional : perform a selection of pairs based on a mean coh computed on a provided footprint.
-#			This might be usefull for regions known to be affected by strong seasonal decorrelation. 
+#			This might be useful for regions known to be affected by strong seasonal decorrelation. 
 #			For instance, ensuring a mean coh of at least 0.235 on the Laguna_Maule area (Chile) 
 #			ensured a proper estimation of the deformation. Not performing that selection based 
 #			on the coh underestimated the defo up to 60%.
@@ -32,13 +32,16 @@
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -323,7 +326,7 @@ TODAY=`date`
 		}
 
 
-# Check that there is no other cron (Step 2 or 3) or manuam SuperMaster_MassProc.sh running
+# Check that there is no other cron (Step 2 or 3) or manual SuperMaster_MassProc.sh running
 ###########################################################################################
 	# Check that no other cron job step 3 (MSBAS) or manual SuperMaster_MassProc.sh is running
 	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | wc -l`
@@ -336,7 +339,7 @@ TODAY=`date`
 			REASON=" another ${PRG} is running" 
 			STOPRUN="YES"
 		else
-			# Check that no other SuperMaster automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
+			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
 			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
 			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
 			# For unknown reason it counts 1 even when no process is running

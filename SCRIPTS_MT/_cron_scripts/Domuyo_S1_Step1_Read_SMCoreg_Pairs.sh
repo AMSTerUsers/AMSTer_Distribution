@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script to run in cronjob for processing DOMUYO images:
 # Read images, check if nr of bursts and corners coordinates are OK, 
-# corigister them on a super master and compute the compatible pairs.
+# corigister them on a Global Primary (super master) and compute the compatible pairs.
 # It also creates a common baseline plot for  ascending and descending modes. 
 
 # New in Distro V 2.0.0 20220602 :	- use new Prepa_MSBAS.sh compatible with D Derauw and L. Libert tools for Baseline Ploting
@@ -10,8 +10,10 @@
 # New in Distro V 4.0.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #									- Replace CIS by MT in names 
 #									- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 5.0.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#					   				- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/25 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 source $HOME/.bashrc
@@ -46,12 +48,12 @@ _Check_ALL_S1_SizeAndCoord_InDir.sh $PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_D_83/N
 	rm -R $PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_D_83/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE 2>/dev/null
 
 
-# Coregister all images on the super master 
-###########################################
+# Coregister all images on the Global Primary (Super Master) 
+############################################################
 # in Ascending mode 
-$PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files_SuperMaster/S1/ARG_DOMU_LAGUNA_A_18/LaunchMTparam_S1_Arg_Domu_Laguna_A_18_Zoom1_ML4_MassProc_Coreg.txt &
+$PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/S1/ARG_DOMU_LAGUNA_A_18/LaunchMTparam_S1_Arg_Domu_Laguna_A_18_Zoom1_ML4_MassProc_Coreg.txt &
 # in Descending mode 
-$PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files_SuperMaster/S1/ARG_DOMU_LAGUNA_D_83/LaunchMTparam_S1_Arg_Domu_Laguna_D_83_Zoom1_ML4_MassProc_Coreg.txt &
+$PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/S1/ARG_DOMU_LAGUNA_D_83/LaunchMTparam_S1_Arg_Domu_Laguna_D_83_Zoom1_ML4_MassProc_Coreg.txt &
 
 # Search for pairs
 ##################
@@ -74,7 +76,7 @@ wait
 if [ ! -s ${NEWASCPATH}/_No_New_Data_Today.txt ] || [ ! -s ${NEWDESCPATH}/_No_New_Data_Today.txt ] ; then 
 		if [ `baselinePlot | wc -l` -eq 0 ] 
 			then
-				# use MasTer Engine before May 2022
+				# use AMSTer Engine before May 2022
 
 				mkdir -p $PATH_1650/SAR_SM/MSBAS/ARGENTINE/BaselinePlots_S1_set_1_2
 				cd $PATH_1650/SAR_SM/MSBAS/ARGENTINE/BaselinePlots_S1_set_1_2
@@ -84,7 +86,7 @@ if [ ! -s ${NEWASCPATH}/_No_New_Data_Today.txt ] || [ ! -s ${NEWDESCPATH}/_No_Ne
 
 				$PATH_SCRIPTS/SCRIPTS_MT/plot_Multi_span.sh ModeList.txt 0 ${BP} 0 450   $PATH_SCRIPTS/SCRIPTS_MT/TemplatesForPlots/ColorTable_AD.txt
 			else
-				# use MasTer Engine > May 2022
+				# use AMSTer Engine > May 2022
 				mkdir -p $PATH_1650/SAR_SM/MSBAS/ARGENTINE/BaselinePlots_set1_set2
 				cd $PATH_1650/SAR_SM/MSBAS/ARGENTINE/BaselinePlots_set1_set2
  

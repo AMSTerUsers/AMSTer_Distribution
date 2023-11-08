@@ -15,14 +15,16 @@
 #
 # Dependencies:	- PlotTS.sh
 #
-# New in 1.1:	- limit parallel at MAXCPU=5 CPU's (hard coded), or max CPU-1 if less than MAXCPU are available.
+# New in 1.1 (Jan 20 2023):	- limit parallel at MAXCPU=5 CPU's (hard coded), or max CPU-1 if less than MAXCPU are available.
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# N.d'Oreye, v Beta 1.0 2022/08/31 -                         
-######################################################################################
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="version 1.1 - Interactive Mac/Linux installation of MasTer Toolbox"
-AUT="Nicolas d'Oreye', (c)2020, Last modified on Jan 20 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

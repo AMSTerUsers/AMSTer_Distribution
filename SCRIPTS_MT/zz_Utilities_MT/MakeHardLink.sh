@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 
 # Attention : provide the source dir without the /NoCrop
 SOURCEDIR=$1 	# eg /Users/doris/NAS/hp-1650-Data_Share1/SAR_CSL/S1/DRC_Funu_A_72/NoCrop

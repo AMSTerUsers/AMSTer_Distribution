@@ -35,13 +35,15 @@
 # New in Distro V 2.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2017/05/17 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -58,7 +60,7 @@ INPUTDATA=$1		# Dir where all original data are in csl format: .../SAR_CSL/SAT/T
 OUTPUTDATA=$2		# Dir where results will be stored: ../SAR_SM/MASK/SAT/TRK/REGION
 PARAM=$3			# File (incl path) with the processing parameters - MUST contains the date of the supermaster if run with Bt Bp criteria
 PAIRSFILE=$4		# Table with a list of pairs in the form of SAR_SM/MSBAS/REGION/seti/table_BpMin_BpMax_BtMin_BtMax.txt prepared with the script Prepa_MSBAS.sh (with or without header; it does not matter) 
-if [[ "${PAIRSFILE}" != *".txt" ]]  ; then echo "Path to text file with Date_Master Date_Slave of pairs to process (or similar to SM_Approx_baselines.txt) must be provided as 4th parameter." ; exit 0 ; fi
+if [[ "${PAIRSFILE}" != *".txt" ]]  ; then echo "Path to text file with Date_Primary Date_Secondary of pairs to process (or similar to SM_Approx_baselines.txt) must be provided as 4th parameter." ; exit 0 ; fi
 
 function GetParam()
 	{
@@ -97,7 +99,7 @@ LLRGCO=`GetParam "LLRGCO,"`					# LLRGCO, Lower Left Range coord offset for fina
 LLAZCO=`GetParam "LLAZCO,"`					# LLAZCO, Lower Left Azimuth coord offset for final interferometric products generation. Used mainly for Shadow measurements
 CALIBSIGMA=`GetParam "CALIBSIGMA,"`			# CALIBSIGMA, if SIGMAYES it will output sigma nought calibrated amplitude file at the insar product generation step  
 
-SUPERMASTER=`GetParam "SUPERMASTER,"`		# date of the super master
+SUPERMASTER=`GetParam "SUPERMASTER,"`		# date of the Global Primary (supermaster)
 
 FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are stored
 

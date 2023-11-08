@@ -9,12 +9,14 @@
 #
 # Must be launched in dir that contains Geocoded and GeocodedRasters
 #
-# New in V1.1:	- security for empty criteria...
-# 
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# N.d'Oreye, v 1.0 2019/06/26 -    
-# N.d'Oreye, v 1.1 2021/07/07 -                      
-######################################################################################
+# N.d'Oreye, v 1.0 2019/06/26 	-    
+# N.d'Oreye, v 1.1 2021/07/07 	- security for empty criteria...                  
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 
 CRITERIA=$1  #must be in the form of e.g. S1_DRC_VVP_A_174-37.0deg_20190717_20191108_Bp-27.3m_HA518.9m_BT114days_Head102.1deg
 #TARGETDIR=/Volumes/hp-D3602-Data_RAID5/SAR_MASSPROCESS_2/CSK/Virunga_Desc/_Quarantained

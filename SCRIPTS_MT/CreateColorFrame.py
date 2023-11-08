@@ -30,8 +30,10 @@
 #	- Write the 3 output binary file (= Input file + _2.0)
 #	- Create an array with Min/Max value of deformation file and the position of colorframe in the image to add at the same place comments in others scripts. 
 #	- Write all these info in the 5th argument: TemFile 
-
-
+#
+#
+# This script is part of the AMSTer Toolbox 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 
 
 

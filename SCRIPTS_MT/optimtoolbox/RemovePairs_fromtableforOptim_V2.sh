@@ -4,23 +4,27 @@
 # PrepaMSBAS.sh all the pairs listed in file  table_minBP_maxBPminBT_maxBT_Pairs2remove.txt
 #
 # 
-# Parameters - List of pairs (with path) from Prepa_MSBAS.sh, that is with a 2 lines 
-#			   header and 4 columns format: yyyymmdd yyyymmdd (-)val (-)val
-# 	     - List of Pairs 2 remove that is a 2 colummns format yyyymmdd yyyymmdd
-#	     - Remark for outputname
-# Output     -  *_orig.txt : save of input table (read in priority if already exist)
-# 	     -  *_optimized.txt : table with pairs removed
+# Parameters:	- List of pairs (with path) from Prepa_MSBAS.sh, that is with a 2 lines 
+#			  	  header and 4 columns format: yyyymmdd yyyymmdd (-)val (-)val
+# 	     		- List of Pairs 2 remove that is a 2 colummns format yyyymmdd yyyymmdd
+#	     		- Remark for outputname
+#
+# Output:	-  *_orig.txt : save of input table (read in priority if already exist)
+# 	     	-  *_optimized.txt : table with pairs removed
+#
 # Dependencies: gsed, gawk
 #
 # Hard coded:	-
 #
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # D.Smittarello, v 1.0 2019/10/03 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="Distro V1.0.1 MasTer script utilities"
-AUT="Delphine Smittarello, (c)2016-2019, Last modified on Novembre 09, 2020"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Delphine Smittarello, (c)2016-2019, Last modified on Oct 30, 2023"
 echo ""
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

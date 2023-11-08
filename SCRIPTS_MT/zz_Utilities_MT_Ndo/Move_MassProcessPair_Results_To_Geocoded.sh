@@ -2,7 +2,7 @@
 ######################################################################################
 # This script aims at moving the geocoded results from a SuperMaster_MassProc.sh  
 # and that would be still located in a pair directory, that is 
-# SAR_MASSPROCESS/SAT/TRK/SMCrop.../MAS_SLV/i12/GeoProjection 
+# SAR_MASSPROCESS/SAT/TRK/SMCrop.../PRM_SCD/i12/GeoProjection 
 # to where it was supposed to be, that is SAR_MASSPROCESS/SAT/TRK/SMCrop.../Geocoded/... directories
 # It also copy the corresponding rasters in GeocodedRasters
 #
@@ -18,20 +18,21 @@
 # Dependencies:
 #	 - 
 # 
-# New in Distro V 1.0.:	-
+# V 1.0 (Feb 03, 2023)
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2019/12/05 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 03, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
-SNGLPAIRDIRPATH=$1				# directory (with path) where the Pair was processed, i.e. in SAR_MASSPROCESS/SAT/TRK/SMCrop.../MAS_SLV
+SNGLPAIRDIRPATH=$1				# directory (with path) where the Pair was processed, i.e. in SAR_MASSPROCESS/SAT/TRK/SMCrop.../PRM_SCD
 MASSPROCDIRPATH=$2				# Dir (with path) where mass process Geocoded results are expected, i.e. SAR_MASSPROCESS/SAT/TRK/SMCrop.../
 
 SNGLPAIRDIR=`basename ${SNGLPAIRDIRPATH}`

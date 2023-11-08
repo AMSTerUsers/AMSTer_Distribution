@@ -28,15 +28,17 @@
 # New in V 1.1:	- typo in __Good and __Wrong images files to remove when older than 15 days
 # New in V 1.2:	- yet another typo in __Wrong images files to remove when older than 15 days
 # New in V 1.3:	- do not need TOLERANCE and may work with coordinates from AoI 
-# New in V 1.4:	- get TOLERANCE from  _Check_S1_SizeAndCoord.sh for display at the beginning of the script
+# New in V 1.4 (Sept 01, 2023):	- get TOLERANCE from  _Check_S1_SizeAndCoord.sh for display at the beginning of the script
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2019/12/05 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.4 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Sept 01, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -85,7 +87,7 @@ eval RNDM1=`echo $(( $RANDOM % 10000 ))`
 cd ${IMGPATH}
 
 # make log files
-echo "Images with UNKNOWN status (see _Check_S1_SizeAndCoord.sh), i.e. read with old version of MasterEngine (or wrong image?)" > __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt
+echo "Images with UNKNOWN status (see _Check_S1_SizeAndCoord.sh), i.e. read with old version of AMSTerEngine (or wrong image?)" > __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt
 echo "Images with FAIL status (see _Check_S1_SizeAndCoord.sh), i.e. wrong nr of bursts and/or corner coordinates" > __Wrong_Images_${RUNDATE}_${RNDM1}.txt
 echo "Images with OK status (see _Check_S1_SizeAndCoord.sh), i.e. good nr of bursts and corner coordinates" > __Good_Images_${RUNDATE}_${RNDM1}.txt
 
@@ -95,7 +97,7 @@ do
 	STATUS=`_Check_S1_SizeAndCoord.sh ${IMGNAME} ${EXPECTEDNRBURSTS} ${EXPECTEDMINRGMINAZLONG} ${EXPECTEDMINRGMINAZLAT} ${EXPECTEDMAXRGMINAZLONG} ${EXPECTEDMAXRGMINAZLAT} ${EXPECTEDMINRGMAXAZLONG} ${EXPECTEDMINRGMAXAZLAT} ${EXPECTEDMAXRGMAXAZLONG} ${EXPECTEDMAXRGMAXAZLAT} | tail -1 | cut -d : -f 2  | ${PATHGNU}/gsed "s/ //g" `
 	case ${STATUS} in 
 		"UNKNOWN") 
-			echo "Can't check image because  ${IMGNAME}/Info/burstSelection.txt is missing (may be read with old version of MasterEngine and fine, or be wrong image...)" 
+			echo "Can't check image because  ${IMGNAME}/Info/burstSelection.txt is missing (may be read with old version of AMSTerEngine and fine, or be wrong image...)" 
 			echo "${IMGNAME} status is UNKNOWN" >> __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt
 			;;
 		"FAIL") 

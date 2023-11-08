@@ -1,6 +1,6 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
-# This script is aiming at making a table MAS SLV Bp Bt Coh from all the files that are in 
+# This script is aiming at making a table PRMY SCDY Bp Bt Coh from all the files that are in 
 # SAR_MASSPROCESS/../Geocoded/Coh named Baseline_Coh_Table_${KMLNAME}.txt. 
 # The Coh in table is the average coherence on a selected zone provided by a kml.
 #
@@ -10,18 +10,21 @@
 # Parameters are : 
 #		- path to kml of zone where to test the coh
 #
-# Dependencies:	- function getStatForZoneInFile from CIS
+# Dependencies:	- function getStatForZoneInFile from AMSTer Engine
 #
 # New in Distro V 1.0:	- restrict_msbas_to_Coh.sh V1.5
 # New in Distro V 1.1: - remove stray \ before _ while calling grep to cope with new grep syntax and avoid waring
 # New in Distro V 1.2: - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

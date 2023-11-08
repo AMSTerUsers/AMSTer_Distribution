@@ -16,9 +16,16 @@
 #					moderate: keeps unwrapped and coh stuffs (if one wants to re-geocode later; not tested though !) 
 #					light: keep (filtered) interferogram & unwrapped and coh (if one wants to re-unwrap later; not tested though !) 
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# N.d'Oreye, v 1.0 2018/02/023 -                         
-######################################################################################
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo " "
+
 
 PAIRDIRS=$1
 LEVEL=$2

@@ -33,16 +33,18 @@
 #	find . -maxdepth 1 -type d -name "*.csl" | while read IMGNAME ; do _Check_S1_SizeAndCoord.sh ${IMGNAME} 16 28.7532 -2.4225 30.2811 -2.0896 28.4441 -0.9607 29.9705 -0.6309 ; done
 # 
 # New in V 1.1:	- ok if number of burst is not the same but at least greater
-# New in V 2.0:	- if 6 parameters are provided, then coordinates are supposed to be of Area Of Interest. Check that they are inside coordinates of bursts, whatever the TOLERANCE is. 
+# New in V 2.0 (Sept 01, 2023):	- if 6 parameters are provided, then coordinates are supposed to be of Area Of Interest. Check that they are inside coordinates of bursts, whatever the TOLERANCE is. 
 #				  if 10 parameters are provided, then coordinates are supposed to be of expected kml footprint. Check that they are inside coordinates of bursts within the TOLERANCE. 
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2019/12/05 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2021, Last modified on Sept 01, 2023"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -98,7 +100,7 @@ IMGNAME=`basename ${IMGPATH}`
 
 
 # Check Info files
-if [ ! -s ${IMGPATH}/Info/burstSelection.txt ] ; then echo "${IMGPATH}/Info/burstSelection.txt is missing. Please check (may be error in reading S1 image or read with old version of MasterEngine.)" ; STATUS="UNKNOWN" ; echo "Status is : ${STATUS}"; exit ; else STATUS="OK" ; fi
+if [ ! -s ${IMGPATH}/Info/burstSelection.txt ] ; then echo "${IMGPATH}/Info/burstSelection.txt is missing. Please check (may be error in reading S1 image or read with old version of AMSTerEngine.)" ; STATUS="UNKNOWN" ; echo "Status is : ${STATUS}"; exit ; else STATUS="OK" ; fi
 if [ ! -s ${IMGPATH}/Info/SLCImageInfo.txt ] ; then echo "${IMGPATH}/Info/SLCImageInfo.txt is missing. Please check." ; STATUS="FAIL" ; echo "Status is : ${STATUS}" ; exit ; else STATUS="OK" ; fi
 echo
 

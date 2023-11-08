@@ -9,8 +9,10 @@
 #
 # New in V1.1 : - add argument check (NdO Jul 8 2022)
 # New in V1.2:  - debug nr of argument check (NdO March 7 2023) - watch out, it takes the script name as an argument 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CIS script utilities
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2017-18
 ######################################################################################
 

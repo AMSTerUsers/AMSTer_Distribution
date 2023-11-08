@@ -3,29 +3,31 @@
 # This script launch python3 functions to run the optimization pair selection module    
 #
 # Parameters:	- fullpath to table_0_BP_0_BT.txt to optimize
-#		- fullpath to BaselineCohTable_Area.kml.txt (result of BaselineCohTable.sh)
-#		- optimization criteria (3 or 4) 
-#		- Day of year when decorrelation is the worse (1-365) 
-#		- alpha calib param (exponent of seasonal component)
-#		- beta calib param (temporal component)
-#		- gamma calib param (spatial component)
-#		- Max of expected coherence
-#		- Min of expected coherence
-#		- coherence proxy threshold for image rejection (0 if not used)
+#				- fullpath to BaselineCohTable_Area.kml.txt (result of BaselineCohTable.sh)
+#				- optimization criteria (3 or 4) 
+#				- Day of year when decorrelation is the worse (1-365) 
+#				- alpha calib param (exponent of seasonal component)
+#				- beta calib param (temporal component)
+#				- gamma calib param (spatial component)
+#				- Max of expected coherence
+#				- Min of expected coherence
+#				- coherence proxy threshold for image rejection (0 if not used)
 #
-# Ouputs - List of pairs to remove in the form of MasDate_SlvDate : table_0_BP_0_BT_listPR2rm4optim_optimcrit.txt
-#	 - List of pairs to keep in the form of MasDate	SlvDate	BP	BT : table_0_BP_0_BT_listPR2rm4optim_optimcrit_optimized.txt
+# Outputs:	- List of pairs to remove in the form of MasDate_SlvDate : table_0_BP_0_BT_listPR2rm4optim_optimcrit.txt
+#			- List of pairs to keep in the form of MasDate	SlvDate	BP	BT : table_0_BP_0_BT_listPR2rm4optim_optimcrit_optimized.txt
 #
 # Depedencies: 	- python3
-# 			- gsed
+# 				- gsed
 #
-# I know, it is a bit messy and can be improved.. when time.
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS (c) 2020/11/03 
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 MasTer script utilities"
-AUT="Delphine Smittarello, (c)2016-2019, Last modified on April 20, 2021"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Delphine Smittarello, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

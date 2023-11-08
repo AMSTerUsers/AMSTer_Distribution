@@ -3,8 +3,8 @@
 # This script is aiming at building a bperp_file for Baseline plot. 
 #
 # Parameters are:
-# 		- the table_BpermMin_BperpMax_Tmin_Tmax.txt that contains "SlaveDate MasterDATE Bperp Delay"
-#		- the SuperMaster date 
+# 		- the table_BpermMin_BperpMax_Tmin_Tmax.txt that contains "SecondaryDate PrimaryDATE Bperp Delay"
+#		- the Global Primary (SuperMaster) date 
 #
 # Dependencies:	- gnu sed and awk for more compatibility. 
 #				- script plotspan.sh
@@ -17,21 +17,22 @@
 #						  The only difference is that SM_Approx_baselines.txt contains BP with decimal values. 
 # New in Distro V 2.1:	- works either with approximateBaselinesTable.txt (from L Libert) or allPairsListing.txt (from D Derauw). It takes the most recent one
 # New in Distro V 2.2:	- remove header from table only if a header exists
+# New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/04/06 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jan 13, 2023"
-echo " "
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
 TABLE=$1
 SM=$2					
 
-if [ $# -lt 1 ] ; then echo “Usage $0 table_BpermMin_BperpMax_Tmin_Tmax.txt [SuperMaster]”; exit; fi
+if [ $# -lt 1 ] ; then echo “Usage $0 table_BpermMin_BperpMax_Tmin_Tmax.txt [GlobalPrimary]”; exit; fi
 
 echo "The script MUST be laucnhed in the dir that contains the approximateBaselinesTable.txt or allPairsListing.txt."
 
@@ -48,7 +49,6 @@ MinBt=`echo "${TABLENAME}" | cut -d _ -f4`
 MaxBt=`echo "${TABLENAME}" | cut -d _ -f5  | cut -d . -f1`
 
 # get rid of header
-
 if [ `${PATHGNU}/grep "Master" bperp_file.tmp | wc -c` -gt 0 ] 
 	then 
 		tail -n +3 bperp_file.tmp > bperp_file
@@ -115,7 +115,7 @@ do
 					 BpMAS=`echo "(${BpMAS} * -1)" | bc -l `
 				fi
 		fi
-		echo " --> Bp and Bt of master_Superaster ${MAS}_${SM} are ${BpMAS} ${BtMAS}" 
+		echo " --> Bp and Bt of Primary_GlobalPrimary ${MAS}_${SM} are ${BpMAS} ${BtMAS}" 
 		# Get Bt and Bp for Slave-SM pair
 		if [ ${SLV} == ${SM} ]
 			then 
@@ -130,7 +130,7 @@ do
 						BpSLV=`echo "(${BpSLV} * -1)" | bc -l `
 				fi
 		fi 	
-		echo " --> Bp and Bt of slave_Superaster ${SLV}_${SM} are ${BpSLV} ${BtSLV}" 
+		echo " --> Bp and Bt of Secondary_GloablPrimary ${SLV}_${SM} are ${BpSLV} ${BtSLV}" 
 		echo "${i}  ${MAS}  ${SLV}  ${BtPAIR}  ${BpPAIR}  ${BtMAS}  ${BtSLV}  ${BpMAS}  ${BpSLV}" >> bperp_file.txt
 		i=`expr "$i" + 1`
 done < bperp_file

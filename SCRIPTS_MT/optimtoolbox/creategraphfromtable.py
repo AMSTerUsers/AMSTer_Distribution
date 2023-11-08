@@ -23,9 +23,11 @@
 #			- networkx
 # 			- optimFunctions 
 #
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # DS (c) 2020/11/03 - could make better... when time.
 # Last modif April 20, 2021 
 # -----------------------------------------------------------------------------------------

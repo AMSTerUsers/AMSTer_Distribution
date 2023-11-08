@@ -2,7 +2,7 @@
 # This script makes a common Baseline and imageSpatialLocalization plots for multiple data sets. 
 # Note : If more than 5 different dataset, colors in imageSpatialLocalization will loop. 
 #        But it would be unreadable anyway... Above 10, see yourself...
-# Note: it search by himself the Bp, Bt and SuperMaster date of each set
+# Note: it search by itmself the Bp, Bt and Global Primary date of each set
 # 
 # It supposes that a first plot was already computed (see Prepa_MSBAS.sh) for each mode in order to generate 
 #     the required data and gnuplot files
@@ -19,13 +19,15 @@
 # New in Distro V 1.0:	- based on baselinePlot.gnuplot issued by baselinePlot 
 # New in Distro V 1.1:	- correct error to get Bp and Bt				
 # New in Distro V 1.2: - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/04/28 - could make better with more functions... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -72,7 +74,7 @@ do
 	eval LINE=${LINE}
 	# get set number
 	SETNR[$i]=`echo ${LINE} |  ${PATHGNU}/grep -Eo '[0-9]+$' `
-	if [ ! -f ${LINE}/acquisitionsRepartition.txt ] ; then echo "No  ${LINE}/acquisitionsRepartition.txt, can't use this script. May need to perform a Prepa_MSBAS.sh first with MasTer Engine at least from 20220501" ; exit 0 ; fi
+	if [ ! -f ${LINE}/acquisitionsRepartition.txt ] ; then echo "No  ${LINE}/acquisitionsRepartition.txt, can't use this script. May need to perform a Prepa_MSBAS.sh first with AMSTer Engine at least from 20220501" ; exit 0 ; fi
 	cp ${LINE}/acquisitionsRepartition.txt BaselinePlots${DIRSETLIST}/acquisitionsRepartition${SETNR[$i]}.txt
 	if [ -f "${LINE}/baselinePlot_ADD_PAIRS.gnuplot" ] && [ -s "${LINE}/baselinePlot_ADD_PAIRS.gnuplot" ]
 		then
@@ -204,7 +206,8 @@ echo "# Defining title" >> BaselinePlots${DIRSETLIST}/baselinePlot_${DIRSETLIST}
 		echo "superMasterDate${SETNR[$i]} = ${SM[$i]}" >> BaselinePlots${DIRSETLIST}/baselinePlot_${DIRSETLIST}.gnuplot
 		echo "BpMax${SETNR[$i]} = ${BP[$i]}" >> BaselinePlots${DIRSETLIST}/baselinePlot_${DIRSETLIST}.gnuplot
 		echo "BTMax${SETNR[$i]} = ${BT[$i]}" >> BaselinePlots${DIRSETLIST}/baselinePlot_${DIRSETLIST}.gnuplot
-		TITLEBP="${TITLEBP}Baseline plot of data set ${SETNR[$i]} : Bp Max=${BP[$i]}; BT Max=${BT[$i]}; superMasterDate=${SM[$i]} \\n"
+		#TITLEBP="${TITLEBP}Baseline plot of data set ${SETNR[$i]} : Bp Max=${BP[$i]}; BT Max=${BT[$i]}; superMasterDate=${SM[$i]} \\n"
+		TITLEBP="${TITLEBP}Baseline plot of data set ${SETNR[$i]} : Bp Max=${BP[$i]}; BT Max=${BT[$i]}; GlobalPrimaryDate=${SM[$i]} \\n"
 		i=`expr ${i} + 1`
 	done
 # remove trailing CR in title
@@ -221,7 +224,7 @@ echo "set format x \"%d/%m\n%Y\"" >> BaselinePlots${DIRSETLIST}/baselinePlot_${D
 echo "set grid" >> BaselinePlots${DIRSETLIST}/baselinePlot_${DIRSETLIST}.gnuplot
 echo "set key left" >> BaselinePlots${DIRSETLIST}/baselinePlot_${DIRSETLIST}.gnuplot
 
-# vertical axes for the supermaster in baseline plot
+# vertical axes for the Global primary in baseline plot
 	i=1
 	k=`expr ${Nsets} + 2`
 	TITLEBP=""

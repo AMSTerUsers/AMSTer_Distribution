@@ -1,6 +1,11 @@
 # https://gis.stackexchange.com/questions/261504/getting-row-col-on-click-of-a-pixel-on-a-qgis-map?noredirect=1&lq=1
 # Slightly modified by AD from Detlev for QT5 and QGIS 3
 # Works with python3.10
+# New in Distro V 	20231030:	- Rename MasTer Toolbox as AMSTer Software
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 
 import qgis
 
@@ -56,7 +61,7 @@ class ClickTool(QgsMapTool):
                 # print (row, col)
                 print (col, row)
                 # added by NdO - Aug 8 2019
-                os.system("/Users/doris/SAR/MasTerToolbox/SCRIPTS_MT/PlotTS.sh %s %s -f -r -g -D" % (col,row))
+                os.system("/Users/doris/SAR/AMSTer/SCRIPTS_MT/PlotTS.sh %s %s -f -r -g -D" % (col,row))
 
 tool = ClickTool(iface.mapCanvas())
 iface.mapCanvas().setMapTool(tool)

@@ -116,7 +116,7 @@ c = 1
 d = 1e-8
 fit g(x) 'timeLine_UD_808_605_830_605_Auto_2_0.04_VVP.txt' using 1: ($3 - $6) via c,d
 
-set timestamp "Created by MasTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+set timestamp "Created by AMSTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 
 plot 'timeLine_EW_808_605_830_605_Auto_2_0.04_VVP.txt' u 1: ($3 - $6) with linespoints title 'EW' ls 1, \
 	f(x) ls 4 title 'Lin Fit EW', \
@@ -139,7 +139,7 @@ set rmargin at screen 0.40
 set bmargin at screen 0.87
 set tmargin at screen 0.57
 
-set timestamp "Created by MasTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+set timestamp "Created by AMSTer at ECGS on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
 
 #Plot the background image
 plot '/Volumes/hp-D3602-Data_RAID5/MSBAS/_VVP_S1_Auto_20m_400days/zz_UD_EW_TS_Auto_2_0.04_VVP/_Accross_91_94_Flow_left_timeLines_Loca_808_605_830_605_S.png' binary filetype=png w rgbimage

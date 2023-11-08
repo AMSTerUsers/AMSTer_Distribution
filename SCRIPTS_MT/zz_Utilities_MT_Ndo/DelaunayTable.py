@@ -20,10 +20,12 @@
 #			be wrong in rarer cases. Consider to use this filtering step from the bash script 
 #			of the same name, that is DelaunayTable.py
 #
-# New in Distro V 1.0:	- 
+# V 1.0 (2023/09/19)
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2023/09/19 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 
 import numpy as np

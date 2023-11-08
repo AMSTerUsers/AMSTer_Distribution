@@ -18,13 +18,16 @@
 #
 # Dependencies: 	- gnu grep
 # 
-# CSL InSAR Suite utilities. 
-# NdO (c) 2019/04/04 - could make better with more functions... when time.
+# V1.0: 20200804
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="v1.0.0 Beta CIS script utilities"
-AUT="Nicolas d'Oreye, (c)2015-2019, Last modified on Aug 04, 2020"
-echo " "
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 

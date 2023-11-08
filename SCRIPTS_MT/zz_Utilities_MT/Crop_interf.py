@@ -3,7 +3,7 @@
 # This script is aiming at cropping a part of an interferogram
 #
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS (c) 2022/09/30 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 import sys

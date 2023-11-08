@@ -76,13 +76,15 @@
 # New in Distro V 8.0: - order of listing MAS and SLV dates in DefoInterpolx2Detrendi.txt was wrong 
 #						 in some rare cases, that is when MAS was the SM and was after the date of the SLV. 
 #						 Note that it was not an issue for S1 WS though.  
+# New in Distro V 9.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2016/03/08 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 06, 2023"
+VER="Distro V9.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -466,7 +468,7 @@ PrepareModeI()
  									then
  										echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
  									else 
-										echo "Slave date appears before Master date. I guess you are dealing with non S1 WS and using a pair with the Super Master..."
+										echo "Secondary date appears before Primary date. I guess you are dealing with non S1 WS and using a pair with the Global Primary (SuperMaster)..."
  										echo "${LINE} ${BPERP} ${SLAVEDATE} ${MASTERDATE}" >> ../${MODETOCP}.txt
  								fi
  							else 
@@ -525,7 +527,7 @@ PrepareModeI()
  													then
  														echo "${LINE} ${BPERP} ${MASTERDATE} ${SLAVEDATE}" >> ../${MODETOCP}.txt
  													else 
-														echo "Slave date appears before Master date. I guess you are dealing with non S1 WS and using a pair with the Super Master..."
+														echo "Secondary date appears before Primary date. I guess you are dealing with non S1 WS and using a pair with the Global Primary (SuperMaster)..."
  														echo "${LINE} ${BPERP} ${SLAVEDATE} ${MASTERDATE}" >> ../${MODETOCP}.txt
  												fi
 

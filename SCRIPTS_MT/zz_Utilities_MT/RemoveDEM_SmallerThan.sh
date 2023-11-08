@@ -1,5 +1,8 @@
 #!/bin/bash
 # Remove externalSlantRangeDEM in subdir if smaller than a given size
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+#
 
 SIZE=$1 	# size in b
 

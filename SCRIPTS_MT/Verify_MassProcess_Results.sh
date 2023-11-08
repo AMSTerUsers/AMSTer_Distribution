@@ -8,7 +8,7 @@
 # It will output a series of text files with the status of each of these checks.  
 # it will then check if Geocoded products exists but not the Pair dir
 #
-# Parameters :      - file with the list of pairs supposed to be processed in the form of MASTER_SLAVE dates (Table_...._NoBaselines.txt)
+# Parameters :      - file with the list of pairs supposed to be processed in the form of PRIMARY_SECONDARY dates (Table_...._NoBaselines.txt)
 #                   - dir where Geocoded results are stored (eg. /.../SAR_MASSPROCESS/SAT/TRACK/CROP_SM_DATE_ZOOM_ML/Geocoded)
 #
 # Dependencies:
@@ -25,20 +25,23 @@
 # 				V 1.4: 	- Remove possible trailing / at the end of MASSPROCESSGEOCPATH taken as parameter 2 (would prevent to detect GeocodedRasters dir)
 # 				V 1.5: 	- do notlist itself while searching empty pair dirs in MASSPROCESSPATH
 # New in Distro V 1.6: - replace if -s as -f -s && -f to be compatible with mac os if 
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2015/08/24 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.6 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 19, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
 
 
-PAIRSFILE=$1				# file with the list of pairs supposed to be processed in the form of MASTER_SLAVE dates
+PAIRSFILE=$1				# file with the list of pairs supposed to be processed in the form of PRIMARY_SECONDARY dates
 MASSPROCESSGEOCPATHTMP=$2		# dir where Geocoded results are stored (eg. /.../SAR_MASSPROCESS/SAT/TRACK/CROP_SM_DATE_ZOOM_ML/Geocoded)
 
 # Remove possible trailing /
@@ -417,7 +420,7 @@ echo "Note : "
 echo "    For each pair with a new image, there must be a set of 4 new geocoded files corresponding to the new image amplitude. "
 echo "    The first pair ever processed should have another 4 additional amplitude files because the tw oimages are new.  "
 echo "    If some pairs were swapped during processing, the number of files indicated here will be followed by: (see swapped dir)"
-echo "Pairs with MAS and SLV swapped when SLV is SuperMaster may be ignored in the _GeocNotOK_ExistingPairDir.txt.    "
+echo "Pairs with PRM and SCD swapped when SCD is Global Primary (SuperMaster) may be ignored in the _GeocNotOK_ExistingPairDir.txt.    "
 sort -rk 3,3 Number_Geoc_Files_inPairs.txt
 
 rm -f  ${PAIRSFILE}_NoBaselines_${RNDM1}.txt ${MASSPROCESSPATH}/_CheckResults/PairFiles_NoBaselines_Sorted_NoUnderscore.txt

@@ -14,16 +14,17 @@
 #
 # New in V1.1: 	- debug quotes in gsed and change name of cleaned file
 # New in V1.2: 	- can also clean table from Prepa_MSBAS.sh
-# New in V1.3: 	- test file with -f 
+# New in V1.3 (May 16, 2023): 	- test file with -f 
 #				- backup table before optim
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# I know, it is a bit messy and can be improved.. when time. But it works..
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2020/11/03 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.3 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 16, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

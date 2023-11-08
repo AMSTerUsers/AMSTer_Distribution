@@ -1,20 +1,23 @@
 #!/bin/bash
 # Script to check that there is a SLCImageInfo.txt in each S1.CSL dir and that polarisatin is ok.  
 #
-# Need to be run in dir where all the S1.csl data from a given mode are stored (e.g. /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/DRC_Bukavu_A_174/NoCrop).
+# Need to be run in dir where all the S1.csl data from a given mode are stored 
+#   (e.g. /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/DRC_Bukavu_A_174/NoCrop).
 #
 # Parameters : - None but pol is hard coded.   
 #
 # Dependencies:	- none
 #
-# New in V1.1 Beta:	- check polarisation
+# New in V1.1 Beta (July 18, 2019):	- check polarisation
+# New in Distro V 2.0 20231030:		- Rename MasTer Toolbox as AMSTer Software
+#									- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CSL InSAR Suite utilities. 
-# NdO (c) 2016/02/29 - could make better with more functions... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="v1.1 Beta CIS script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2018, Last modified on July 18, 2019"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

@@ -2,7 +2,7 @@
 # Script to InSARParameters.txt in pair dir in SAR_MASSPROCESS/SAT/TRK/SM_Crop_Zoom_ML 
 #  in the hope of reprocessing. 
 #
-# Need to be run in dir MAS_SLV where i12/InSARProducts are stored 
+# Need to be run in dir PRM_SCD where i12/InSARProducts are stored 
 #
 # Parameters : - None
 #
@@ -14,17 +14,19 @@
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# CSL InSAR Suite utilities. 
-# NdO (c) 2019/05/21 - could make better with more functions... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 
 echo "not finished - do not use..."
 exit 0
 
 PRG=`basename "$0"`
-VER="v3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2018, Last modified on Aug 30, 2023"
+VER="v3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2018, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

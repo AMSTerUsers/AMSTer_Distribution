@@ -1,25 +1,25 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------------------
-# This script is aiming at starting a new CSL InSAR Suite processing for every sat data
+# This script is aiming at starting a new AMSTerEngine processing for every sat data
 # It was fully refurbished to work with similar naming as what is present in the 
-#     CSL InSARParameters.txt files etc... and adapted to the new processing chain 
+#     InSARParameters.txt files etc... and adapted to the new processing chain 
 #     making use of data already read in csl format using script Read_All_Img.sh
 #
 # THIS PROCESSING DO NOT INCLUDE UNWRAPPING AND GEOCODING ON PURPOSE, AND ADD LABEL TO AMPL FIG
 #
-# Parameters : - MAS date
-#              - SLV date
+# Parameters : - PRM date
+#              - SCD date
 #              - PRAMETERS file, incl path (e.g. ___V20190710_LaunchMTparam.txt)
 #              - COMMENT to be added at the end of dir name where the process is run. 
-#                  Optional unless you want process the pair on a SuperMaster. 
+#                  Optional unless you want process the pair on a Global Primary (SuperMaster). 
 #                  See next parameter. 
-#              - SUPERMASTER date : if need coregistration on a super master, a 5th parameter 
+#              - SUPERMASTER date : if need coregistration on a Global Primary (SuperMaster), a 5th parameter 
 #                  with its date is mandatory. A 4th paramerter is then aslo mandatory. 
 #                  It is recommended to use a 4th parameter that includes the date of the 
-#                  supermaster. Someting such as _SMyyyyMMdd would be intuitive. 
+#                  Global Primary (SuperMaster). Someting such as _SMyyyyMMdd would be intuitive. 
 #
 #                  If used for creating amplitude images (e.g for shadow monitoring)
-#				   there is no need to use a Super Master. The 5th param can be set to NOSM 
+#				   there is no need to use a Global Primary (SuperMaster). The 5th param can be set to NOSM 
 #				   (actually it is forced to NOSM when use with 7 param).
 #              - LABELX and LABELY: position of date label in amplitude jpg images.  
 #
@@ -28,7 +28,7 @@
 #				- Crop function (cutAndZoom with option -e that is without considering latitude and hence poor accurate position. )
 #
 # Dependencies:
-#	 - MT and MT Tools, at least V20190716
+#	 - AMSTerEngine and AMSTerEngine Tools, at least V20190716
 #	 - PRAMETERS file, at least V 20190710
 #    - The FUNCTIONS_FOR_MT.sh file with the function used by the script. Will be called automatically by the script
 #    - gnu sed and awk for more compatibility. 
@@ -73,13 +73,16 @@
 # New in Distro V 5.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 6.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2017/12/29 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V6.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -87,8 +90,8 @@ echo " "
 
 # source $HOME/.bashrc
  
-MASINPUT=$1					# date or S1 name of master (for S1 : it could be either in the form of yyyymmdd or S1a/b_sat_trk_a/d)
-SLVINPUT=$2					# date or S1 name of master (for S1 : it could be either in the form of yyyymmdd or S1a/b_sat_trk_a/d)
+MASINPUT=$1					# date or S1 name of Primary (for S1 : it could be either in the form of yyyymmdd or S1a/b_sat_trk_a/d)
+SLVINPUT=$2					# date or S1 name of Secondary (for S1 : it could be either in the form of yyyymmdd or S1a/b_sat_trk_a/d)
 PARAMFILE=$3				# File with the parameters needed for the run
 COMMENT=$4					# Comment for naming dir where process is run
 SUPMASINPUT=$5	
@@ -125,8 +128,8 @@ function GetParam()
 	echo ${PARAM}
 	}
 
-SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the super master as selected by Prepa_MSBAS.sh in
-											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SUPER_MASTERS/MSBAS/VVP/seti/setParametersFile.txt
+SUPERMASTER=`GetParam SUPERMASTER`			# SUPERMASTER, date of the Global Primary (SuperMaster) as selected by Prepa_MSBAS.sh in
+											# e.g. /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/VVP/seti/setParametersFile.txt
 
 PROROOTPATH=`GetParam PROROOTPATH`			# PROROOTPATH, path to dir where data will be processed in sub dir named by the sat name. 
 DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored 
@@ -331,7 +334,7 @@ case ${SATDIR} in
 		# Master must always be TX. Slv is TX except when Topo with master date = slave date :
  		if [ ${MASTDXMODE} != "_TX" ] 
  			then 
- 				EchoTee "Master mode is ${MASTDXMODE}, not TX; please check" 
+ 				EchoTee "Primary mode is ${MASTDXMODE}, not TX; please check" 
  				exit 0
  			else 
  				if [ ${MASNAME} == ${SLVNAME} ] 
@@ -339,7 +342,7 @@ case ${SATDIR} in
  			 			SLVTDXMODE="_RX"
  						# sort out the dir issue when mas = slv	
  			 			EchoTee " MAS == SLV. However, both images must be stored in same dir TRKDIR for the integrity of the processing"
-						EchoTee " Hence, the Slave RX image will be linked in the TX dir with a dummy name, i.e. where millenia is replaced by 9000 (eg. 90190730 instead of 20190730)"
+						EchoTee " Hence, the Secondary RX image will be linked in the TX dir with a dummy name, i.e. where millenia is replaced by 9000 (eg. 90190730 instead of 20190730)"
 						EchoTee " Therefore let's change its date by year 9yyy "
 						DUMMYSLVDATE=`echo ${SLV} | ${PATHGNU}/gsed "s/2/9/1"`
 						if [ ! -d ${DATAPATH}/${SATDIR}/${TDXMODE}${MASTDXMODE}/${CROPDIR}/${DUMMYSLVDATE}.csl ] ; then ln -s ${DATAPATH}/${SATDIR}/${TDXMODE}${SLVTDXMODE}/${CROPDIR}/${SLV}.csl ${DATAPATH}/${SATDIR}/${TDXMODE}${MASTDXMODE}/${CROPDIR}/${DUMMYSLVDATE}.csl ; fi
@@ -377,10 +380,10 @@ cd ${RUNDIR}
 # Log File
 LOGFILE=${RUNDIR}/LogFile_${MAS}_${SLV}_${RUNDATE}.txt
 
-# Get date of last MasTer Engine source dir (require FCT file sourced above)
-GetMasTerEngineVersion
-# Store date of last MasTer Engine source dir
-echo "Last created MasTer Engine source dir suggest SinglePairNoUnwrap processing with ME version: ${LASTVERSIONMT}" > ${RUNDIR}/Processing_Pair_w_MasTerEngine_V.txt
+# Get date of last AMSTer Engine source dir (require FCT file sourced above)
+GetAMSTerEngineVersion
+# Store date of last AMSTer Engine source dir
+echo "Last created AMSTer Engine source dir suggest SinglePairNoUnwrap processing with ME version: ${LASTVERSIONMT}" > ${RUNDIR}/Processing_Pair_w_AMSTerEngine_V.txt
 
 # Check required dir:
 #####################
@@ -470,8 +473,8 @@ echo "Last created MasTer Engine source dir suggest SinglePairNoUnwrap processin
 # define stuffs here below even if no SM because it may be usefull to pick up image coregistered on super master and hence skip coarse coreg 
 if [ $# -eq 7 ] && [ "$5" != "NOSM" ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ ${SATDIR} != "S1" ]
 	then 
-		EchoTee "OK you wanted a super master coregistration"
-		EchoTee "Coregistration of master onto the supermaster MUST be in :" 
+		EchoTee "OK you wanted a Global Primary (SuperMaster) coregistration"
+		EchoTee "Coregistration of Primary onto the Global Primary (SuperMaster) MUST be in :" 
 		EchoTee "${RESAMPDATPATH}/${SATDIR}/${TRKDIR}/(No)Crop"
 		EchoTee "Note : it must be with the same crop !!"
 		SUPERMASTER=`GetDateCSL ${SUPMASINPUT}`
@@ -498,7 +501,7 @@ if [ $# -eq 7 ] && [ "$5" != "NOSM" ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ $
 		
 		if [ -d "${OUTPUTDATA}/" ] && [ ${SUPMASINPUT} != "NOSM" ]
 			then
-   				echo "  //  OK, there is a dir where Super Master is already computed with all slaves:" 
+   				echo "  //  OK, there is a dir where Global Primary (SuperMaster) is already computed with all Secondaries:" 
 				if [ -f ${OUTPUTDATA}/${SUPERMASTER}_${MASNAME}/i12/TextFiles/InSARParameters.txt ] 
 					then 
 						echo "  //  ${OUTPUTDATA}/${SUPERMASTER}_${MASNAME}/i12/TextFiles/InSARParameters.txt \n" 
@@ -514,7 +517,7 @@ if [ $# -eq 7 ] && [ "$5" != "NOSM" ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ $
 						echo "  // Double mount of hp-storeesay. Renamed dir with -1"
 						MODFROMSM="YES"
 					else 
-  						echo "  //  There is no dir where Super Master is already computed with all slaves. I can't run. "
+  						echo "  //  There is no dir where Global Primary (SuperMaster) is already computed with all Secondaries. I can't run. "
   						echo "  //  I need this :"
   						echo ${OUTPUTDATA}
    						exit 1
@@ -524,12 +527,12 @@ if [ $# -eq 7 ] && [ "$5" != "NOSM" ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ $
 		if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 		then 
 			# Not need to try taking advantage of existing Supermatser_Master and Supermaster_Slave coregistration because no coarsecoregistration is performed for S1
-			EchoTee " No coregistration possible on a Super Master with S1 data. Not needed anyway given the quality of the orbits."
+			EchoTee " No coregistration possible on a Global Primary (SuperMaster) with S1 data. Not needed anyway given the quality of the orbits."
 			MODFROMSM="NO"		
 			
 		elif [ ${SATDIR} == "TDX" ] && [ ${MAS} == ${SLVORIG} ] ; then 
 			# Not need to try taking advantage of existing Supermatser_Master and Supermaster_Slave for TandemX
-			EchoTee " No coregistration possible on a Super Master for TDX pair at same date."
+			EchoTee " No coregistration possible on a Global Primary (SuperMaster) for TDX pair at same date."
 			MODFROMSM="NO"		
 		else
 			# one must guess the SUPERMASTER (and let's name it SMFORCOREG) and define the SMCROPDIR if one wants to try skiping module and coarse coreg computation 
@@ -630,7 +633,7 @@ fi
 								EchoTee "Crop applied : Zoom ${ZOOM} ; Interferometric products ML factor ${INTERFML}"
 						else
 							if [ ! -d "${INPUTDATA}/${MASDIR}" ]; then
-									EchoTee "Master ${MAS} not cropped yet. Will crop it."
+									EchoTee "Primary ${MAS} not cropped yet. Will crop it."
 									if [ "${CROPFCT}" == "Crop" ] ; then 
 											Crop ${MASNAME}
 										else
@@ -640,7 +643,7 @@ fi
 									EchoTee "Crop applied : Zoom ${ZOOM} ; Interferometric products ML factor ${INTERFML}"
 							fi
 							if [ ! -d "${INPUTDATA}/${SLVDIR}" ]; then
-									EchoTee "Slave ${SLV} not cropped yet. Will crop it."
+									EchoTee "Secondary ${SLV} not cropped yet. Will crop it."
 									if [ "${CROPFCT}" == "Crop" ] ; then 
 											Crop ${SLVNAME}
 										else
@@ -650,7 +653,7 @@ fi
 									EchoTee "Crop applied : Zoom ${ZOOM} ; Interferometric products ML factor ${INTERFML}"
 							fi
 							if [[ -d "${INPUTDATA}/${MASDIR}" && -d "${INPUTDATA}/${SLVDIR}" ]]; then
-									EchoTee "Master ${MAS} and Slave ${SLV} already cropped."
+									EchoTee "Primary ${MAS} and Secondary ${SLV} already cropped."
 									EchoTee ""
 							fi
 						fi 
@@ -674,12 +677,12 @@ fi
 	# Ratio must be computed after Crop and zoom to get info from zoom 
 	if [ "${SATDIR}" != "S1" ] && [ "${MODFROMSM}" == "YES" ] && [ "${S1MODE}" != "WIDESWATH" ]
 		then
-			EchoTee "Get Rg and Az sampling [m] from SuperMaster"
+			EchoTee "Get Rg and Az sampling [m] from Global Primary (SuperMaster)"
 			RGSAMP=`GetParamFromFile "Range sampling [m]" SuperMaster_SLCImageInfo.txt`   # not rounded 
 			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SuperMaster_SLCImageInfo.txt` # not rounded
 			INCIDANGL=`GetParamFromFile "Incidence angle at median slant range [deg]" SuperMaster_SLCImageInfo.txt` # not rounded
 		else 
-			EchoTee "Get Rg and Az sampling [m] from Master"
+			EchoTee "Get Rg and Az sampling [m] from Primary"
 			RGSAMP=`GetParamFromFile "Range sampling [m]" SinglePair_SLCImageInfo.txt`   # not rounded 
 			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SinglePair_SLCImageInfo.txt` # not rounded
 			INCIDANGL=`GetParamFromFile "Incidence angle at median slant range [deg]" SinglePair_SLCImageInfo.txt` # not rounded
@@ -771,7 +774,7 @@ fi
 	# If SUperMaster requested, must update file after initInSAR of course... 
 	if [ "${MODFROMSM}" == "YES" ]
 		then 
-			EchoTee " Take into account SuperMaster orbitography:"
+			EchoTee " Take into account Global Primary (SuperMaster) orbitography:"
 			ChangeParam "Global master to master InSAR directory path" ${OUTPUTDATA}/${SUPERMASTER}_${MASNAME}/i12/ InSARParameters.txt
 	fi
 
@@ -820,7 +823,7 @@ fi
 					if [ ${SATDIR} == "S1" ] 
 						then 
 							EchoTee "Skip module image and Coarse Coregistration computation for S1 because orbits are good enough." 
-							EchoTee "Ensure that InitInSAR was informed of the SuperMaster orbitography"
+							EchoTee "Ensure that InitInSAR was informed of the Global Primary (SuperMaster) orbitography"
 							cd ${RUNDIR}/i12
 							FORCECOREG=NO  # will not need to force the coarse coregistration despite the SM
 						else 
@@ -828,38 +831,38 @@ fi
 								then 
 									if [ ${CCOHWIN} == 0 ] 
 										then 
-											EchoTee "Master and Slave are already coregistered on a super master and TSX/TDX or ENVISAT orbits are good enough to Skip module image and Coarse Coregistration computation." 
-											EchoTee "You choose that option by setting CCOHWIN=0. Ensure that InitInSAR was informed of the SuperMaster orbitography"
+											EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster) and TSX/TDX or ENVISAT orbits are good enough to Skip module image and Coarse Coregistration computation." 
+											EchoTee "You choose that option by setting CCOHWIN=0. Ensure that InitInSAR was informed of the Global Primary (SuperMaster) orbitography"
 											cd ${RUNDIR}/i12
 											FORCECOREG=NO  # will not need to force the coarse coregistration despite the SM
 										else 
-											EchoTee "Master and Slave are already coregistered on a super master. Although TSX/TDX or ENVISAT orbits are good enough, you choosed NOT to Skip module image and Coarse Coregistration computation by setting CCOHWIN=0." 
+											EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster). Although TSX/TDX or ENVISAT orbits are good enough, you choosed NOT to Skip module image and Coarse Coregistration computation by setting CCOHWIN=0." 
 											EchoTee "Therefore one need to compute module image for the Coarse Coregistration."
 											MakeAmpliImgAndPlot 1 1 ORIGINALFORM 	# Parameter is ML factor for RASTER image in x and y; force ORIGINALFORM for module used for coreg
 											# test if mod is empty - may means that crop is outside of image
 											if [ ! -s ${PATHMAS} ] || [ ! -s ${PATHSLV} ] ; then
-												EchoTeeRed "  // Module file of master and/or slave is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
+												EchoTeeRed "  // Module file of Primary and/or Secondary is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
 											fi	
 											FORCECOREG=YES # will need to force the coarse coregistration despite the SM
 									fi
 								else 
-									EchoTee "Master and Slave are already coregistered on a super master but ERS, RS, CSK, ALOS... orbits are not safe enough to Skip module image and Coarse Coregistration computation." 
+									EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster) but ERS, RS, CSK, ALOS... orbits are not safe enough to Skip module image and Coarse Coregistration computation." 
 									EchoTee "Therefore one need to compute module image for the Coarse Coregistration."
 									MakeAmpliImgAndPlot 1 1 ORIGINALFORM 	# Parameter is ML factor for RASTER image in x and y; force ORIGINALFORM for module used for coreg
 									# test if mod is empty - may means that crop is outside of image
 									if [ ! -s ${PATHMAS} ] || [ ! -s ${PATHSLV} ] ; then
-										EchoTeeRed "  // Module file of master and/or slave is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
+										EchoTeeRed "  // Module file of Primary and/or Secondary is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
 									fi	
 									FORCECOREG=YES # will need to force the coarse coregistration despite the SM
 							fi
 						
 					fi
 				else
-					EchoTee "Master and Slave are not coregistered on a super master. Therefore one need to compute module image for the Coarse Coregistration."
+					EchoTee "Primary and Secondary are not coregistered on a Global Primary (SuperMaster). Therefore one need to compute module image for the Coarse Coregistration."
 					MakeAmpliImgAndPlot 1 1 ORIGINALFORM 	# Parameter is ML factor for RASTER image in x and y; force ORIGINALFORM for module used for coreg
 					# test if mod is empty - may means that crop is outside of image
 					if [ ! -s ${PATHMAS} ] || [ ! -s ${PATHSLV} ] ; then
-						EchoTeeRed "  // Module file of master and/or slave is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
+						EchoTeeRed "  // Module file of Primary and/or Secondary is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
 					fi	
 			fi
 	fi	
@@ -1000,11 +1003,11 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 			# search for a supermaster that was used to coregister all images; if processed with 5 parameters, this is of course the same as SUPERMASTER
 			if [ "${MODFROMSM}" == "YES" ] && [ "${FORCECOREG}" == "NO" ]
 				then 
-					EchoTee "Master and Slave are already coregistered on a super master. Let's take these interpolated.csl image as input image and skip coarse coreg"
-					EchoTee "Ensure that InitInSAR was informed of the SuperMaster orbitography"
+					EchoTee "Primary and Secondary are already coregistered on a Global Primary (SuperMaster). Let's take these interpolated.csl image as input image and skip coarse coreg"
+					EchoTee "Ensure that InitInSAR was informed of the Global Primary (SuperMaster) orbitography"
 					echo
 				else 
-					EchoTee "Master and Slave are not coregistered on a super master or you choosed not to skip coarse coreg."
+					EchoTee "Primary and Secondary are not coregistered on a Global Primary (SuperMaster) or you choosed not to skip coarse coreg."
 					if [ "${SATDIR}" == "TDX" ] && [ "${MAS}" == "${SLVORIG}" ]
 						then 
 							EchoTee "No need to CoraseCoregister TDX tandem"
@@ -1165,7 +1168,7 @@ EchoTee "---------------------------------------------------------------- \n"
 	unset RGML
 	unset AZML
 
-EchoTee " Compute amplitude image of master Zoomed x ML"
+EchoTee " Compute amplitude image of Primary Zoomed x ML"
 
 MASPOL=`GetParamFromFile "Master polarization channel" InSARParameters.txt`
 SLVPOL=`GetParamFromFile "Slave polarization channel" InSARParameters.txt`
@@ -1178,7 +1181,7 @@ SLVPOL=`GetParamFromFile "Slave polarization channel" InSARParameters.txt`
 			MASTERPOLNAME=${MASNAME}.${MASPOL}
 			SLAVEPOLNAME=${SLVNAME}.${SLVPOL}		
 	fi
-		EchoTee " Compute amplitude image of master Zoomed x ML"
+		EchoTee " Compute amplitude image of Primary Zoomed x ML"
 
 		# May not want to keep these files 
 		if [ -e ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.ras ] ; then mv ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.ras ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.beforeInSAR.ras ; fi
@@ -1195,7 +1198,7 @@ SLVPOL=`GetParamFromFile "Slave polarization channel" InSARParameters.txt`
 
 		if [ ${MASX} != ${SLVX} ] || [ ${MASY} != ${SLVY} ] 
 			then 
-				EchoTeeRed "  // Amplitude reduced image size not the same for master and slave ??? Please check"
+				EchoTeeRed "  // Amplitude reduced image size not the same for Primary and Secondary ??? Please check"
 				EchoTee "MASX is ${MASX} and SLVX is ${SLVX}"
 				EchoTee "MASY is ${MASY} and SLVY is ${SLVY}"
 				exit 0
@@ -1203,7 +1206,7 @@ SLVPOL=`GetParamFromFile "Slave polarization channel" InSARParameters.txt`
 
 		if [ ${INCIDX} != ${MASX} ] || [ ${INCIDY} != ${MASY} ] 
 				then 
-					EchoTeeRed "  // Interferometric products size not the same as reduced master and slave ??? Please check"
+					EchoTeeRed "  // Interferometric products size not the same as reduced Primary and Secondary ??? Please check"
 					exit 0
 		fi
 
@@ -1255,7 +1258,7 @@ SLVPOL=`GetParamFromFile "Slave polarization channel" InSARParameters.txt`
 		esac
 
 	# HEADERS
-		EchoTee " Create headers for amplitude image of master and slave Zoomed x ML \n"	
+		EchoTee " Create headers for amplitude image of Primary and Secondary Zoomed x ML \n"	
 		ORIGINALPROJ=${PROJ}
 		PROJ=""
 		CreateHDR ${MASX} ${MASY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.${FLP}

@@ -11,14 +11,15 @@
 #		 V D 1.0.2:	- Use S1DateReader with new option -p to prevent reading S1 images without restituted or precise orbits. This is recommended since March 2021 when S1 images started to be distributed with orginal orbits of poor quality.  
 #		 V D 1.1.0:	- Set S1DateReader option -p after path to image 
 # New in V D 1.2.0: - replace if -s as -f -s && -f to be compatible with mac os if 
-
+# New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# N.d'Oreye, v 1.0 2019/04/25 -                         
-######################################################################################
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2019, Last modified on Jul 19, 2023"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -41,14 +42,14 @@ do
 
 			MASDIFF=`echo "(${MASBYTES} - ${MASSIZE}) " | bc` 
 
-			echo "Master (${MAS}) is	${MASSIZE} bytes and ${MASCOL} x ${MASLIN}, which (x8) is supposed to be ${MASBYTES} bytes => diff is ${MASDIFF}	bytes"
+			echo "Primary (${MAS}) is	${MASSIZE} bytes and ${MASCOL} x ${MASLIN}, which (x8) is supposed to be ${MASBYTES} bytes => diff is ${MASDIFF}	bytes"
 			if [ ${MASDIFF} -ge 1 ]
 				then 
 					echo "Not expected size => re-read it"
 					S1DataReader ${SOURCEDIR}/${MASDIR} P=${INITPOL} -p	# Do not use option -t here because it deletes the separate bursts after stitching but we need them for coreg
 			fi			
 		else
-			echo "Master (${MAS}) not read yet ; read it now "
+			echo "Primary (${MAS}) not read yet ; read it now "
 			S1DataReader ${SOURCEDIR}/${MASDIR} P=${INITPOL} -p	# Do not use option -t here because it deletes the separate bursts after stitching but we need them for coreg
 		
 	fi

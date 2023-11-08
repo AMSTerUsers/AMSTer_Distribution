@@ -5,10 +5,10 @@
 #
 # MUST BE LAUNCHED FROM DIR WHERE DATA ARE PROCESSED THAT IS  SATDIR/TRKDIR
 #
-#   !!!  Because mv search for only master_slave, do not run two of this script for the same data set e.g. with different crop !!
+#   !!!  Because mv search for only Primary_Secondary, do not run two of this script for the same data set e.g. with different crop !!
 #   !!!  Or take care to do it from two different PROROOTPATH (cfr Parameters file) 
 #
-# Parameters :  - Super Master date
+# Parameters :  - Global Primary (SuperMaster) date
 #				- file with the processing parameters (incl path) 
 #				- X and Y position of date label to be added in the jpg of mod
 #
@@ -37,19 +37,21 @@
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
+# New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #
-# MasTer: InSAR Suite automated Mass processing Toolbox. 
-# NdO (c) 2017/12/29 - could make better... when time.
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 MasTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 30, 2023"
+VER="Distro V4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
 
-SUPERMASTERINPUT=$1			# Date of SuperMaster
+SUPERMASTERINPUT=$1			# Date of Global Primary (SuperMaster)
 PARAMFILE=$2				# parmaters file
 LABELX=$3					# position of the date label in jpg fig of mod
 LABELY=$4					# position of the date label in jpg fig of mod
