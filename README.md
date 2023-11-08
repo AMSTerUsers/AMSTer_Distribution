@@ -1,6 +1,6 @@
 # AMSTer Software
 
-AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series. 
 "To crunch the SAR & InSAR mass processing"
 
 This repo contains the shell scripts, codes and doc required for installing and 
