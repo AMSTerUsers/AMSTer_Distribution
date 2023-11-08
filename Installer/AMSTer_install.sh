@@ -2522,13 +2522,15 @@ if [ "${TYPERUN}" == "I" ] ; then
 									echo "  // "
 									if command -v port &> /dev/null
 										then
-									    	echo "MacPorts is installed."
+									    	echo "MacPorts sucessfully installed."
 										else
-									   	 echo "MacPorts is not installed. Please install manually,then relaunch ${PRG} "
+									   	 	echo "MacPorts installation failed. Please install manually, then relaunch ${PRG} "
+									   	 	exit
 									fi
 									
 								else 
-									echo " Format not as expected (pkg). Please check or install manually"			
+									echo " Format not as expected (pkg). Please check or install manually"	
+									exit		
 							fi
 						fi
 					else 
