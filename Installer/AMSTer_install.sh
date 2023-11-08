@@ -166,13 +166,14 @@
 # New in Distro V 5.0 20231030:	- Rename AMSTer Software as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 5.1 20231102:	- proper check of existing string in bashrc (do not fail when similar line exist though with more characters)
+# New in Distro V 5.2 20231108:	- Exit if Mac Port installation fails and suggest to install it manually
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.1 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 02 2023"
+VER="version 5.2 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 08 2023"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -2519,6 +2520,13 @@ if [ "${TYPERUN}" == "I" ] ; then
 									mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
 									mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
 									echo "  // "
+									if command -v port &> /dev/null
+										then
+									    	echo "MacPorts is installed."
+										else
+									   	 echo "MacPorts is not installed. Please install manually,then relaunch ${PRG} "
+									fi
+									
 								else 
 									echo " Format not as expected (pkg). Please check or install manually"			
 							fi
