@@ -1,37 +1,38 @@
-# MasTer Toolbox
+# AMSTer Software
 
-"If you need InSAR, MasTer it"
+AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+"To crunch the SAR & InSAR mass processing"
 
 This repo contains the shell scripts, codes and doc required for installing and 
-running MasTer. 
-(MasTer: InSAR automated Mass processing Toolbox for Multidimensional time series).
+running AMSTer software (formerly named MasTer). 
 
-MasTer is mostly based on 3 elements:
-- an InSAR processor (MasTer Engine)
+ALSTer is mostly based on 3 elements:
+- an InSAR processor (AMSTer Engine)
 - a time series processor (MSBAS; https://doi.org/10.4095/313749)
-- a set of mostly shell (bash) and some python scripts 
+- a set of mostly shell (bash) and some python scripts (AMSTer Toolbox)
 
-MasTer is aiming at processing automatically a large number of interferometric pairs and 
+AMSTer is aiming at processing automatically a large number of interferometric pairs and 
 feeding and running the MSBAS processor [Samsonov and d’Oreye, 2012, 2017; Samsonov et 
 al., 2017, 2020] in order to obtain the desired 2D or 3D deformation maps and time series. 
 
-Of course, MasTer can also perform individual differential interferograms (for deformation 
+Of course, AMSTer can also perform individual differential interferograms (for deformation 
 measurement or DEM creation purposes). 
 
-MasTer can also create time series of coherence or amplitude maps coregistered on a Global 
+AMSTer can also create time series of coherence or amplitude maps coregistered on a Global 
 Primary (both in radar geometry or in geographic coordinates). 
 
-MasTer is able to process any type of SAR data (ERS1 & 2, EnviSAT, ALOS, ALOS2, RadarSAT,
+AMSTer is able to process any type of SAR data (ERS1 & 2, EnviSAT, ALOS, ALOS2, RadarSAT,
 CosmoSkyMed, TerraSAR-X, TanDEM-X (incl. bistatic mode), Sentinel1 A & B (incl. SM mode), 
 Kompsat5, PAZ, SAOCOM, ICEYE...).  
-MasTer Engine is optimised to fit the needs of the MasTer tool, which benefitted from some
+AMSTer Engine is optimised to fit the needs of the AMSTer Toolbox, which benefitted from some
 of its unique specificities.   
 
 Geocoded amplitude, coherence, interferometric phase and deformation maps are computed 
-using MasTer Engine, a command line InSAR processor derived from the Centre Spatial de 
+using AMSTer Engine, a command line InSAR processor derived from the Centre Spatial de 
 Liege (CSL) InSAR Suite (CIS)[Derauw, 1999; Derauw et al, 2019]. 
+AMSTer in a former version was named MasTer.  
 
-The MasTer Engine stays in continuous developments to catch up with new sensors and add 
+The AMSTer Engine stays in continuous developments to catch up with new sensors and add 
 new capabilities. It has interesting features such as : 
 - the ability to perform absolute phase unwrapping or ionospheric mapping using the 
   SplitBand interferometry [Bovenga et al., 2013; Libert & al. 2017],
@@ -43,7 +44,7 @@ new capabilities. It has interesting features such as :
 - tools for TOPSAR coherence tracking, or spectral coherence estimation 
 - adaptive filtering and masking procedure, automatic layover masking …  
 
-In the MasTer Toolbox repository, you will find more scripts in SCRIPTS_MT than what is 
+In the AMSTer repository, you will find more scripts in SCRIPTS_MT than what is 
 required for a "normal" use of MasTer because this is the copy of my development scripts 
 directory. Hence it also contains several scripts and tools that you may never need. 
 
@@ -57,7 +58,7 @@ At least I can try on the best effort basis...
 
 **________**
 
-"MasTer toolbox: an InSAR automated Mass processing Toolbox for Multidimensional time series" © 2023 
+"AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series" © 2023 
 by Nicolas d'Oreye, Dominique Derauw, Sergey Samsonov, Delphine Smittarello, Maxime Jaspard and Gilles Celli 
 is licensed under CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike 4.0 International).
 http://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -80,14 +81,14 @@ Notices:
 
 Moreover, MSBAS is licensed to the https://open.canada.ca/en/open-government-licence-canada
 
-Because MasTer Toolbox program is licensed free of charge, there is no warranty for the program.  
+Because AMSTer Software is licensed free of charge, there is no warranty for the program.  
 
 **References:** 
 
 **___________**
 
 Please cite at least the following references. More can be found in 
-/MasTerToolbox_Distribution/DOC/How_To_Cite_MasTer.txt
+/AMSTer_Distribution/DOC/How_To_Cite_AMSTer.txt
 
 Derauw D., d’Oreye N., Jaspard M., Caselli A. and Samsonov S. (2020)
 Ongoing automated Ground Deformation monitoring of Domuyo – Laguna del Maule area 
@@ -105,12 +106,12 @@ Samsonov S. (2019)
 User manual, source code, and test set for MSBASv3 (Multidimensional Small Baseline Subset version 3) for one- and two-dimensional deformation analysis
 https://doi.org/10.4095/313749
 
-**Develloppers of MasTer:**
+**Develloppers of AMSTer:**
 
 **_______________________**
 
-    Nicolas d'Oreye [1,2] (MasTer Toolbox scripts)
-    Dominique Derauw [3,4] (MasTer Engine)
+    Nicolas d'Oreye [1,2] (AMSTer Toolbox)
+    Dominique Derauw [3,4] (AMSTer Engine)
     Sergey Samsonov [5] (MSBAS)
     Delphine Smittarello [1] (modules for pair selection optimisation, recursive unwrapping...)
     Maxime Jaspard [1] (web interface)
@@ -122,11 +123,14 @@ https://doi.org/10.4095/313749
     [4] Universidad Nacional de Rio Negro, General Roca, Argentina
     [5] Canada Centre for Mapping and Earth Observation, Natural Resources Canada, Ottawa, Canada
 
-The development of the MasTer Toolbox commenced in the early 2010s and leveraged the capabilities of various pre-existing tools, including the CSL InSAR suite, which was fully remastered to be the MasTerEngine. Over time, the MasTer Toolbox underwent incremental enhancements, both independently and within the context of numerous projects, notably (unsorted) RESIST, MUZUBI, GEORISCA, SMMIP, TIGRES, ECTIC, MODUS, VERSUS, advInSAR, Vi-X... These projects were primarily funded by the Belgian Scientific Policy (BelSPo) and the Luxembourgish Fond National de la Recherche (FNR).
+The development of the AMSTer Software commenced in the early 2010s and leveraged the capabilities of various pre-existing tools, including the CSL InSAR suite, which was fully remastered to be the MasTerEngine, then AMSTer Engine. Over time, the AMSTer Software underwent incremental enhancements, both independently and within the context of numerous projects, notably (unsorted) RESIST, MUZUBI, GEORISCA, SMMIP, TIGRES, ECTIC, MODUS, VERSUS, advInSAR, Vi-X... These projects were primarily funded by the Belgian Scientific Policy (BelSPo) and the Luxembourgish Fond National de la Recherche (FNR).
     
 **Updates:**
 
 **________**
+
+- New in V 20231107:
+  1. Rebranding Master as AMSTer. 
 
 - New in V 20231024:
   1. Scripts build_header_msbas_Tables.sh now allows preparing msbas inversion based on tables resulting from a Delaunay Traingulation and/or x-shortest connections, and/or baseline criterias pairs selections. 
