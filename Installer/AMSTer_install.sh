@@ -167,6 +167,7 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 5.1 20231102:	- proper check of existing string in bashrc (do not fail when similar line exist though with more characters)
 # New in Distro V 5.2 20231108:	- Exit if Mac Port installation fails and suggest to install it manually
+#								- if bashrc is created, give ownership to the user
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
@@ -429,6 +430,8 @@ function InsertBelowVARIABLESTitle()
 						sudo echo "##################" >> ${HOMEDIR}/.bashrc
 						sudo echo "" >> ${HOMEDIR}/.bashrc
 						sudo echo "${EXPECTED}" >> ${HOMEDIR}/.bashrc
+						YOURSELF=$(whoami)
+						sudo chown ${YOURSELF} ${HOMEDIR}/.bashrc
 					else
 						echo "  // Let's add the variable after the section named # AMSTer VARIABLES in .bashrc. "
 						TITLEPOS=`grep -n "# AMSTer VARIABLES" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
@@ -3195,7 +3198,7 @@ echo "  // AMSTer Software is freely available (under GPL licence) from https://
 				echo "  // OK, I will try to install AMSTer components from there (AMSTer Engine, MSBAS and SCRIPTS_MT)."
 				while true; do
 			   		echo "Enter the path to the AMSTer_Distribution directory; "
-			   		read -e -p "   You can use Tab for autocompletion or drag/drop the path (e.g. ...YourPath/SAR/AMSTer/AMSTer_Distribution): " PATHDISTRO
+			   		read -e -p "   You can use Tab for autocompletion or drag/drop the path (e.g. ...YourPath/SAR/AMSTer_Distribution): " PATHDISTRO
 					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
 				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
 				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
