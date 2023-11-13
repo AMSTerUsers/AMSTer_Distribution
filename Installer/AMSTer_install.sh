@@ -168,6 +168,7 @@
 # New in Distro V 5.1 20231102:	- proper check of existing string in bashrc (do not fail when similar line exist though with more characters)
 # New in Distro V 5.2 20231108:	- Exit if Mac Port installation fails and suggest to install it manually
 #								- if bashrc is created, give ownership to the user
+#								- alias say was skipping $1. Add \
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
@@ -3616,7 +3617,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
 
 						echo "# Trick to avoid error at usage of say function" >> ${HOMEDIR}/.bashrc 	
-						echo "alias say='echo "$1" | espeak -s 120 2>/dev/null'" >> ${HOMEDIR}/.bashrc 
+						echo "alias say='echo "\$1" | espeak -s 120 2>/dev/null'" >> ${HOMEDIR}/.bashrc 
 				fi 
 
 			
