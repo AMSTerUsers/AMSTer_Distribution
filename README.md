@@ -6,7 +6,7 @@ AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time
 This repo contains the shell scripts, codes and doc required for installing and 
 running AMSTer software (formerly named MasTer). 
 
-ALSTer is mostly based on 3 elements:
+AMSTer is mostly based on 3 elements:
 - an InSAR processor (AMSTer Engine)
 - a time series processor (MSBAS; https://doi.org/10.4095/313749)
 - a set of mostly shell (bash) and some python scripts (AMSTer Toolbox)
