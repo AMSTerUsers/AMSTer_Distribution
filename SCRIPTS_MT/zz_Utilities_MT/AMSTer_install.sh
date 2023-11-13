@@ -166,13 +166,16 @@
 # New in Distro V 5.0 20231030:	- Rename AMSTer Software as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 5.1 20231102:	- proper check of existing string in bashrc (do not fail when similar line exist though with more characters)
+# New in Distro V 5.2 20231108:	- Exit if Mac Port installation fails and suggest to install it manually
+#								- if bashrc is created, give ownership to the user
+#								- alias say was skipping $1. Add \
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.1 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 02 2023"
+VER="version 5.2 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 08 2023"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -428,6 +431,8 @@ function InsertBelowVARIABLESTitle()
 						sudo echo "##################" >> ${HOMEDIR}/.bashrc
 						sudo echo "" >> ${HOMEDIR}/.bashrc
 						sudo echo "${EXPECTED}" >> ${HOMEDIR}/.bashrc
+						YOURSELF=$(whoami)
+						sudo chown ${YOURSELF} ${HOMEDIR}/.bashrc
 					else
 						echo "  // Let's add the variable after the section named # AMSTer VARIABLES in .bashrc. "
 						TITLEPOS=`grep -n "# AMSTer VARIABLES" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
@@ -2519,8 +2524,17 @@ if [ "${TYPERUN}" == "I" ] ; then
 									mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
 									mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
 									echo "  // "
+									if command -v port &> /dev/null
+										then
+									    	echo "MacPorts sucessfully installed."
+										else
+									   	 	echo "MacPorts installation failed. Please install manually, then relaunch ${PRG} "
+									   	 	exit
+									fi
+									
 								else 
-									echo " Format not as expected (pkg). Please check or install manually"			
+									echo " Format not as expected (pkg). Please check or install manually"	
+									exit		
 							fi
 						fi
 					else 
@@ -3185,7 +3199,7 @@ echo "  // AMSTer Software is freely available (under GPL licence) from https://
 				echo "  // OK, I will try to install AMSTer components from there (AMSTer Engine, MSBAS and SCRIPTS_MT)."
 				while true; do
 			   		echo "Enter the path to the AMSTer_Distribution directory; "
-			   		read -e -p "   You can use Tab for autocompletion or drag/drop the path (e.g. ...YourPath/SAR/AMSTer/AMSTer_Distribution): " PATHDISTRO
+			   		read -e -p "   You can use Tab for autocompletion or drag/drop the path (e.g. ...YourPath/SAR/AMSTer_Distribution): " PATHDISTRO
 					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
 				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
 				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
@@ -3603,7 +3617,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
 
 						echo "# Trick to avoid error at usage of say function" >> ${HOMEDIR}/.bashrc 	
-						echo "alias say='echo "$1" | espeak -s 120 2>/dev/null'" >> ${HOMEDIR}/.bashrc 
+						echo "alias say='echo "\$1" | espeak -s 120 2>/dev/null'" >> ${HOMEDIR}/.bashrc 
 				fi 
 
 			
