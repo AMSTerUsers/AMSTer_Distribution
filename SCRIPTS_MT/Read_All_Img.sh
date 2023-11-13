@@ -2,20 +2,25 @@
 # -----------------------------------------------------------------------------------------
 # This script is aiming at reading all images from a given dir and store them in csl 
 #      format where they will be used by the cis automated scripts. 
-# The script will sort S1 images in Asc and Desc specific dir. 
+# The script will sort S1 and SAOCOM images in Asc and Desc specific dir. 
 #
 # It uses the bulk reading for satellites S1, SAOCOM, TDX and ICEYE
 # It compares manually the images to read and those already read, then read only the new ones
 #   for the other satellites, that is ERS, ENVISAT, RS1, RADARSAT, CSK, TSX, PAZ and ALOS2 
 # Bulk reading has the advantage to be fast but it will stop at bad image while manual reading would carry on. 
 #
+# S1 and SAOCOM images of more than 6 months are moved to ${RAW}_FORMER/yyyy dirs
+#
 # Parameters : - path to dir with the raw archives to read.   
 #              - path to dir where images in csl format will be stored (usuallu must end with /NoCrop)
 #              - satellite (to know which dir naming format is used)
-#			   - kml file and path of footprint of zone of interest (optional but useful eg for S1)
-#			   - for S1 or ICEEE : force reading data in yyyy directories if this param is "ForceAllYears" 
+#			   - kml file and path of footprint of zone of interest (optional but useful eg for S1 and manatory for SAOCOM)
+#			   - for S1, SAOCOM or ICEYE : force reading data in yyyy directories if this param is "ForceAllYears" 
 #			   - for S1, if "-n": skip updating the orbits
 #			   - for S1: if orbits are updated, one must provide a path to where the RESAMPLED data are stored 
+#				  as well as the SAR_MASSPORCESS data are stored; these results will be removed and 
+#				  updated at the next processings
+#			   - for SAOCOM: if images are updated, one must provide a path to where the RESAMPLED data are stored 
 #				  as well as the SAR_MASSPORCESS data are stored; these results will be removed and 
 #				  updated at the next processings
 #			   - for S1 or SAOCOM : preferred polarisation (VV, HH, VH, VV or ALLPOL) in order to read only that one to spare room on disk. 
@@ -26,7 +31,7 @@
 #   NOTE: only the 3 first param must be in the right order. No matter the order of the other parameters. 
 #
 #
-# Dependencies:	- AMSTer Engine and AMSTer Engine Tools, at least V20190716. 
+# Dependencies:	- AMSTer Engine and AMSTer Engine Tools, at least V20231108. 
 #				- gnu sed and awk for more compatibility
 #   			- functions "say" for Mac or "espeak" for Linux, but might not be mandatory
 #				- FUNCTIONS_FOR_MT.sh
@@ -119,14 +124,15 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 #								- avoid error message at cat empty MASSPROCESS dir
 # New in Distro V 5.1 20231102:	- Adapt to new SAOCOM reader; needs kml for Region of Interest (mandatory because frames are not reliable)
-#								- debug check previous readings for S1 and SAOCOM 
+#								- debug check previous readings for S1, SAOCOM, TDX and ICEYE 
+# New in Distro V 5.2 20231109:	- Proper handling of SAOCOM images
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 02, 2023"
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 09, 2023"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -525,12 +531,14 @@ case ${SAT} in
 
  		# Check if there are any subfolders ending with ".csl"
 	    if find "${CSL}" -name "*.csl" -print -quit | grep -q .; then
-	      EchoTee "Subfolders with '.csl' found in ${PARENTCSL}"
-	      EchoTee "Check if the links are OK, eg. not from the wrong OS"
-          FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
-	      TestLink ${FIRSTLINK}
+	      EchoTee "Subfolder links with '.csl' found in ${CSL}"
+	      if [ -n "$(find ${CSL} -type l)" ]  ; then
+	      	EchoTee "Check if these links are OK, that is pointing toward a valid directory (proving that these links were not made with another OS)"
+          	FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
+	     	 TestLink ${FIRSTLINK}
+	     	fi
 	    else
-	      EchoTee "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
+	      EchoTee "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
 	    fi
  
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${TRK}/NoCrop/)
@@ -613,9 +621,143 @@ case ${SAT} in
 				fi
 		fi
 
-		# Check if some data with pol != initpol
-		# script here something like for S1 if one wants to check the other polarisations
+		# Check if some data with pol != initpol ? 
+		# Script here something like for S1 if one wants to check the other polarisations.. Not advised for time series though
 
+		# move >6 month to FORMER after sorting because one must read xemt files 
+
+		cd ${CSL}
+		echo
+
+		# sort Asc and Desc orbits
+		EchoTee ""
+		EchoTee "Now sorting Asc and Desc SAOCOM images  "
+		EchoTee "  because mass reading copes with both orbits at the same time. "
+		EchoTeeRed "Do not remove image files (links) from ${CSL} !!"
+		EchoTee " Remember: image not apparently read are outside of kml zone (or better kml cover exist),"
+		EchoTee "           or another (more recent) image was focused for the same date and was hence read instead."
+		EchoTee ""
+		
+		for SAOCOMIMGPATH in ${CSL}/*.csl  # list actually the former links and the new dir if new images were read
+			do
+				SAOCOMIMG=`echo ${SAOCOMIMGPATH##*/}` 				# Trick to get only name without path
+				SAOCOMMODE=`echo ${SAOCOMIMG} | cut -d _ -f 5 | cut -d . -f1` # Get the Asc or Desc mode
+				SAOCOMORBIT=`echo ${SAOCOMIMG} | cut -d _ -f 3 ` 	# Get the orbit nr
+				TRIMORBIT=$(echo ${SAOCOMORBIT} | ${PATHGNU}/gsed 's/^0*//') # orbit nr without leading zeros
+				SAOCOMDATE=`echo ${SAOCOMIMG} | cut -d _ -f 2` 		# Get the date
+				SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
+				
+				# Search for Pedigree.txt if do not exist yet, ie if it is a new reading
+				if [ ! -f "${SAOCOMIMGPATH}/Pedigree.txt" ] 
+					then 
+						echo " No ${SAOCOMIMGPATH}/Pedigree.txt"
+						echo "Check image read: ${SAOCOMIMGPATH}"
+
+						for TSTXEMT in `find ${RAW} -maxdepth 2 -mindepth 1 -type f -name "*.xemt"`
+							do 
+								TSTDATE=`${PATHGNU}/grep "<startTime>" ${TSTXEMT}  | head -1 | ${PATHGNU}/grep -Eo "[0-9]{4}-[0-9]{2}-[0-9]{2}" | ${PATHGNU}/gsed s"/-//g"`
+								TSTORB=`${PATHGNU}/grep "<Path>" ${TSTXEMT} | cut -d ">" -f 2  | cut -d "<" -f 1 `
+								TSTFRAME=`${PATHGNU}/grep "<Row>" ${TSTXEMT} | cut -d ">" -f 2  | cut -d "<" -f 1 | cut -d . -f 1` # cut before dot in case of wierd frame...
+								
+								echo "	In ${TSTXEMT}, I get "
+								echo "	${TSTDATE} compared to ${SAOCOMDATE}" 
+								echo "	${TSTORB} comapred to ${TRIMORBIT}" 
+								echo "	${TSTFRAME} compared to ${SAOCOMOFRAME}"
+		
+								
+								if [ "${TSTDATE}" == "${SAOCOMDATE}" ] && [ "${TSTORB}" == "${TRIMORBIT}" ] && [ "${TSTFRAME}" == "${SAOCOMOFRAME}" ] 
+									then
+										# file contains the same DATE, the same orbit, the same Frame ? 
+										# That is the xemt file I was looking for 
+										XEMTFILE=${TSTXEMT}
+										# and the origonal file name is 
+										RAWIMGFILE=`${PATHGNU}/grep "<id>" ${TSTXEMT} | cut -d ">" -f 2  | cut -d "<" -f 1`
+										# and focus date is 
+										FOCUSDATE=`${PATHGNU}/grep "<startTime>" ${TSTXEMT}  | tail -1 | ${PATHGNU}/grep -Eo "[0-9]{4}-[0-9]{2}-[0-9]{2}" | ${PATHGNU}/gsed s"/-//g"`
+										echo "	That is the xemt file for that image. "		
+										FOUND="YES"						
+										break
+									else 
+										echo "	That is not the xemt file for that image. "	
+										FOUND="NO"
+		
+								fi
+						done 
+						if [ "${FOUND}" == "YES" ] 
+							then 
+								echo ""
+								echo "Raw dir name:				${RAWIMGFILE}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+		   						echo "xemt file and dir name:		${XEMTFILE}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+		   						echo "Focus date: 				${FOCUSDATE}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+		   						echo "Acquisition date: 			${SAOCOMDATE}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+		   						echo "Image full name: 	  ${SAOCOMIMG}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+		   						echo "Orbit: 		${SAOCOMORBIT}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+								echo "Direction: 	${SAOCOMMODE}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+								echo "Frame: 		${SAOCOMOFRAME}" >> ${SAOCOMIMGPATH}/Pedigree.txt
+							else 
+								EchoTee "	Xemt file not found for ${SAOCOMIMG} - probably moved to ${RAW}_FORMER ? " 
+								EchoTee "==> move ${SAOCOMIMGPATH} back in ${RAW} and relaunch; exiting..."
+								exit
+								
+						fi
+				
+						# if data exist in /Data, make a LINK
+						if [ -f "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ] && [ -s "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ]
+							then
+								EchoTee "Data found in ${SAOCOMIMGPATH} for ${SAOCOMDATE} in orbit ${SAOCOMORBIT}, ${SAOCOMMODE} "
+								mkdir -p ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop
+								if [ ! -d ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ]
+									then
+										# There is no  ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE} DIR yet, hence it is a new img; move new img there
+										mv ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
+										#and create a link
+										ln -s ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
+										echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Read_w_AMSTerEngine_V.txt
+									else
+										# There was already a ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl DIR, hence it is an updated (re-created) img; move new img there
+										EchoTee "There was already a ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl directory,"
+										# Get its frame 
+										OLDSAOCOMFRAME=$(${PATHGNU}/grep "Frame" ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Pedigree.txt | ${PATHGNU}/grep -Eo "[0-9]*" )
+
+										# Check if same frame ? 
+										if [ "${SAOCOMOFRAME}" != "${OLDSAOCOMFRAME}" ]
+											then 
+												EchoTee "   though that image was updated (re-created) with another frame. Keep only the most recent. "
+												CREATIONDATEEXISTINGIMG=$(${PATHGNU}/grep "Focus date" ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Pedigree.txt  | ${PATHGNU}/grep -Eo "[0-9]*")
+												CREATIONDATENEWIMG=${FOCUSDATE}
+												if [ "${CREATIONDATEEXISTINGIMG}" -ge "${CREATIONDATENEWIMG}" ]
+													then 
+														EchoTee "Existing image is more recent or same date (${CREATIONDATEEXISTINGIMG} vs ${CREATIONDATENEWIMG}). Keep it..."
+													else 
+														EchoTee "New image is more recent (${CREATIONDATENEWIMG} vs ${CREATIONDATEEXISTINGIMG}). Remove former and replace with new one..."
+														rm -rf ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
+														mv -f ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
+														# Create the link 
+														ln -s ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
+														echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Read_w_AMSTerEngine_V.txt
+														
+														# List updated image in list for further re-processing
+														echo " ${SAOCOMIMG}" >> ${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt  #  List all images in the form of SAO1A_20230401_042_389_A.csl
+														# OR make later a reading of all the updated images like for S1 orbit? : 
+														# ${PATHGNU}/grep -iB 3 "precise orbit update performed" ${CSL}/S1DataReaderLog.txt | ${PATHGNU}/grep Start | ${PATHGNU}/grep -Eo "[0-9]{8}T" | cut -d T -f1 | uniq > ${CSL}/S1DataReaderLog_NEWORB.txt
+												fi
+											else 
+												EchoTee "   though that image was updated (re-created) with the same frame. "
+												EchoTee " This is unexpected... please check and select manually (discard the one you do not want to keep). Stop here. "
+												exit
+										fi
+
+
+								fi
+							else 
+								EchoTee "No data found in ${SAOCOMIMGPATH}. Maybe a problem with the data ? Image will not be moved to ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop"
+								EchoTee "Remove ${SAOCOMIMGPATH}..."
+								rm -rf ${SAOCOMIMGPATH}
+						fi
+				fi
+
+		done
+		echo
 
 		EchoTee ""
 		EchoTee "All S1 SAOCOM read; now moving images created (no acquired !) > 6 months in : "
@@ -657,76 +799,16 @@ case ${SAT} in
 						"No data recently created ; nothing to move."
 				fi
 		fi
-
 		cd ${CSL}
-		echo
 
-		# sort Asc and Desc orbits
-		EchoTee ""
-		EchoTee "Now sorting Asc and Desc SAOCOM images  "
-		EchoTee "  because mass reading copes with both orbits at the same time. "
-		EchoTeeRed "Do not remove image files (links) from ${CSL} !!"
-		EchoTee " Remember: image not apparently read are outside of kml zone (or better kml cover exist),"
-		EchoTee "           or another (more recent) image was focused for the same date and was hence read instead."
-		EchoTee ""
-		for SAOCOMIMGPATH in ${CSL}/*.csl  # list actually the former links and the new dir if new images were read
-			do
-# need adaptation/check from here
-				SAOCOMIMG=`echo ${SAOCOMIMGPATH##*/}` 				# Trick to get only name without path
-				SAOCOMMODE=`echo ${SAOCOMIMG} | cut -d _ -f 5 | cut -d . -f1` # Get the Asc or Desc mode
-				SAOCOMORBIT=`echo ${SAOCOMIMG} | cut -d _ -f 3 ` 	# Get the orbit nr
-				SAOCOMDATE=`echo ${SAOCOMIMG} | cut -d _ -f 2` 		# Get the date
-SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
-				
-				# if data exist in /Data, make a LINK
-				if [ -f "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ] && [ -s "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ]
-					then
-						EchoTee "Data found in ${SAOCOMIMGPATH} for ${SAOCOMDATE} in orbit ${SAOCOMORBIT}, ${SAOCOMMODE} "
-						mkdir -p ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop
-						if [ ! -d ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ]
-							then
-								# There is no  ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE} DIR yet, hence it is a new img; move new img there
-								mv ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
-								#and create a link
-								ln -s ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
-								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Read_w_AMSTerEngine_V.txt
-							else
-								# There was already a ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl DIR, hence it is an updated (re-created) img; move new img there
-								EchoTee "There was already a ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl sirectory,"
-								# Get its frame 
-								OLDSAOCOMFRAME=$(${PATHGNU}/grep "Frame" ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Pedigree.txt | ${PATHGNU}/grep -Eo "[0-9]*" )
-
-								# Check if same frame ? 
-								if [ "${SAOCOMOFRAME}" != "${OLDSAOCOMFRAME}" ]
-									then 
-										EchoTee "   though that image was updated (re-created) with another frame. Froce moving the img. "
-									else 
-										EchoTee "   though that image was updated (re-created) with teh same frame. Froce moving the img. "
-								fi
-								
-								mv -Rf ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
-								# Recreate the link in case frame is not the same 
-								ln -s ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
-								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl/Read_w_AMSTerEngine_V.txt
-								echo " ${SAOCOMIMG}" >> ${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt  #  List all images in the form of SAO1A_20230401_042_A.csl
-
-# OR make later a reading of all the updated images like for S1 orbit 
-#			${PATHGNU}/grep -iB 3 "precise orbit update performed" ${CSL}/S1DataReaderLog.txt | ${PATHGNU}/grep Start | ${PATHGNU}/grep -Eo "[0-9]{8}T" | cut -d T -f1 | uniq > ${CSL}/S1DataReaderLog_NEWORB.txt
-
-						fi
-					else 
-						EchoTee "No data found in ${SAOCOMIMGPATH}; image will not be moved to ${PARENTCSL}_${SAOCOMORBIT}${SAOCOMMODE}/NoCrop"
-				fi
-		done
-		echo
-
-# create here a cleaning like S1 updated obrit		
+# create here a cleaning like S1 updated obrit: CHECK FROM HERE 
+# vvvvv	
 		if [ "${SAR_MASSPROCESS}" != "" ] || [ "${RESAMPLED}" != "" ] ; then
 		
 			#if [ -f "${CSL}/SAOCOMDataReaderLog_${RUNDATE}.txt" ] && [ -s "${CSL}/SAOCOMDataReaderLog_${RUNDATE}.txt" ]  ; then
 			if [ -f "${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt" ] && [ -s "${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt" ]  ; then
 				EchoTee "List all processes to clean in RESAMPLED and SAR_MASSPROCESS which include images that were updated."
-				for IMGTOCLEAN in `cat ${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt`   #  List all images in the form of SAO1A_20230401_042_A.csl
+				for IMGTOCLEAN in `cat ${CSL}/SAOCOM_RE_READ_${RUNDATE}.txt`   #  List all images in the form of SAO1A_20230401_042_389_A.csl
 					do
 						DATEIMGTOCLEAN=`echo "${IMGTOCLEAN}" | cut -d _ -f2 `
 						if [ "${RESAMPLED}" != "" ] ; then
@@ -755,7 +837,7 @@ SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
 				EchoTee "            and ${SAR_MASSPROCESS}/SAOCOM_CLN/"
 
 				# get all modes in ${CSL}/CleanRESAMPLED_${RUNDATE}.txt
-				${PATHGNU}/gsed 's%\/.*%%' ${CSL}/CleanRESAMPLED_${RUNDATE}.txt | sort | uniq > TRKDIR_list_${RUNDATE}_${RNDM1}.txt		# list all mode dirs in RESAMPLED
+				${PATHGNU}/gsed 's%\/.*%%' ${CSL}/CleanRESAMPLED_${RUNDATE}.txt | sort | uniq > TRKDIR_list_${RUNDATE}_${RNDM1}.txt		# list all mode dirs in RESAMPLED, eg. LagunaFea_A_xx 
 				DATAPATH="$(dirname "$PARENTCSL")"  # get the parent dir, one level up
 
 				for TRKDIR in `cat TRKDIR_list_${RUNDATE}_${RNDM1}.txt 2>/dev/null`
@@ -851,7 +933,8 @@ SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
 			else
 				EchoTee " No image re-read."
 				# file is hence empty
-# valid ? 
+# ^^^^^^^
+# TO HERE 
 				rm -f ${CSL}/SAOCOMDataReaderLog_${RUNDATE}.txt
 			fi
 		fi
@@ -879,12 +962,12 @@ SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
 
 		# Check if there are any subfolders ending with ".csl"
 	    if find "${CSL}" -name "*.csl" -print -quit | grep -q .; then
-	      EchoTee "Subfolders with '.csl' found in ${PARENTCSL}"
+	      EchoTee "Subfolders with '.csl' found in ${CSL}"
 	      EchoTee "Check if the links are OK, eg. not from the wrong OS"
 	      FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
 	      TestLink ${FIRSTLINK}
 	    else
-	      EchoTee "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
+	      EchoTee "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
 	    fi
 
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/)
@@ -1531,13 +1614,13 @@ SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
 			REGION=`basename ${PARENTCSL}`
 		
 			# Check if there are any subfolders ending with ".csl"
-	    	if find "${PARENTCSL}" -type d -name "*.csl" -print -quit | grep -q .; then
-	    	  echo "Subfolders with '.csl' found in ${PARENTCSL}"
+	    	if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
+	    	  echo "Subfolders with '.csl' found in $CSL}"
 	    	  echo "Check if the links are OK, eg. not from the wrong OS"
     		  FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
 	    	  TestLink ${FIRSTLINK}
 	    	else
-	    	  echo "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
+	    	  echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
 	    	fi
  	
 			# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_TX/NoCrop/  or ${PARENTCSL}_RX/NoCrop/ )
@@ -1683,13 +1766,13 @@ SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
 		REGION=`basename ${PARENTCSL}`
 		
 		# Check if there are any subfolders ending with ".csl"
-	    if find "${PARENTCSL}" -type d -name "*.csl" -print -quit | grep -q .; then
-	      echo "Subfolders with '.csl' found in ${PARENTCSL}"
+	    if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
+	      echo "Subfolders with '.csl' found in ${CSL}"
 	      echo "Check if the links are OK, eg. not from the wrong OS"
 	      FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
         TestLink ${FIRSTLINK}
 	    else
-	      echo "No subfolders with '.csl' found in ${PARENTCSL}, this is a first image reading"
+	      echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
 	    fi
   
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/)
@@ -2208,6 +2291,11 @@ SAOCOMOFRAME=`echo ${SAOCOMIMG} | cut -d _ -f 4 ` # Get the frame nr
 #  								# create a link back in read dir 
 #  								ln -s ${PARENTCSL}_${SAOCOMORBITDIR}_${SAOCOMORBIT}_${SAOCOMOFRAME}/NoCrop/${IMGDATE}.csl ${CSL}/${CSLFULLNAME}
 # #  								;;								
+					*) 
+								EchoTee "No satellite provided or unrecognozed name... Exiting."
+								exit 
+								;;
+
 				esac	
 			} &
 		done 

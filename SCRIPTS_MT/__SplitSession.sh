@@ -101,7 +101,7 @@ LISTOFPROCESSED=$4	# if -f, it forces to create the list of existing pairs based
 
 if [ $# -lt 3 ] 
 	then 
-		echo “Usage $0 PARAM_FILEPATH TABLE_FILEPATH NUMBER_OF_PARALLEL_PROCESSES” 
+		echo “Usage $0 TABLE_FILEPATH PARAM_FILEPATH NUMBER_OF_PARALLEL_PROCESSES”
 		echo "That is if you have 100 pairs to process and chose 5 parallel processes, "
 		echo "     it will compute 5 sets of 20 pairs in 5 terminal windows."
 		exit
