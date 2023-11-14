@@ -169,13 +169,14 @@
 # New in Distro V 5.2 20231108:	- Exit if Mac Port installation fails and suggest to install it manually
 #								- if bashrc is created, give ownership to the user
 #								- alias say was skipping $1. Add \
+# New in Distro V 5.3 20231114:	- update mac port jkk19 with jdk20
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.2 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 08 2023"
+VER="version 5.3 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 14 2023"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -2878,7 +2879,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to install/update Java? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							PortInstall jdk19
+							PortInstall jdk20
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."

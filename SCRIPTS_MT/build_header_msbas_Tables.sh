@@ -65,13 +65,15 @@
 # New in Distro V 1.0:	- Based on build_header_msbas_criteria.sh v 8.0
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20231113:	- typo in AUT 
+# New in Distro V 2.2 20231114:	- Definitin of PATHMODE was wrong in loop 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"echo " "
+VER="Distro V2.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 14, 2023"
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -166,6 +168,8 @@ PrepareModeI()
 		local NAN
 		local DATEM
 		local DATES
+		
+		i=$1
 		
 		HDRMOD=`find ${PATHMODE[${i}]} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info
 		MODETOCP=`echo $MODE${i}` 			# get only the name without path (that is Defo" and with index, i.e. Defo1)
@@ -339,11 +343,10 @@ PrepareModeI()
 				${PATHGNU}/grep -Fv -f Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ${MODETOCP}_NoChoRestrict.txt > ${MODETOCP}.txt 
 				# do not remove ${MODETOCP}_NoChoRestrict.txt
 		fi	
-	
+
 		# CREATES THE .TXT FILE
 	 	for LINE in `cat -s ${MODETOCP}.txt`
 	 	do
-	
 			# Proceed if a CPU is free 
 			if test "$(jobs | wc -l)" -ge ${CPU} 
 				then
@@ -590,6 +593,11 @@ echo "Run max ${CPU} processes at a time "
 # Prepare Modei dirs and Modei.txt files based on Tables  
 for ((i=1;i<=${NRMODES};i++));
 do 
+	n=`expr "${i}" + ${NRMODES} + 2`;	# Start counting from NRMODES+2 because 2 first parameters and the NRMODES tables are not mode paths, i.e. $n = is path to 1st mode, $n+1= 2nd mode etc... 
+	ROOTPATH[${i}]=${!n}
+	PATHMODE=${!n}/Geocoded/${MODE}		# path to dir where defo maps of ith mode are stored : e.g. /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Virunga_Asc/Resampled_20120702_Crop_NyigoCrater_-1.520_-1.540_29.200_29.220_Zoom1_ML4/Geocoded/Defo 
+	PATHMODE[${i}]=${PATHMODE}			# same as before but named with an index for further call
+
 	echo "  // Start mode ${i}"
 	echo "  //   with: ${PATHMODE[${i}]}"
 	echo "  //   with: ${PATHTABLE[${i}]}"

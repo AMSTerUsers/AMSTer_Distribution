@@ -88,7 +88,7 @@ RegionFolder=$(dirname ${RUNDIR})
 # NdO Jan 25 2021
 mkdir -p ${RegionFolder}/_CombiFiles
 # ONLY COPY PARAM FILE IF IT DOES NOT EXIST TO PRESERVE POSSIBLE ADJUSTMENTS ALREADY PERFORMED TO PARAM FILE   
-cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/
+cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/ 2>/dev/null
 
 #if [ ! -e ${RUNDIR}/_images ]; then mkdir ${RUNDIR}/_images; fi
 # NdO Jan 25 2021
