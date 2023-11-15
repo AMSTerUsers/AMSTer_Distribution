@@ -98,12 +98,14 @@
 # New in Distro V 7.0.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #									- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 7.0.1 20231102:	- Get version of AMSTer in GetAMSTerEngineVersion to avoid reading __HardCodedLines.sh 
+# New in Distro V 7.0.2 20231114:	- Put the path to AMSTerEngine sources in function GetAMSTerEngineVersion instead of calling a function in __HardCodedLines.sh
+#										Indeed, the installer must have put it in {PATHAMSTERENGINE}/_Sources_AE/Older/
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V7.0.1 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 02, 2023"
+FCTVER="Distro V7.0.2 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 14, 2023"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -113,7 +115,7 @@ source $HOME/.bashrc
 
 source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
 	# Path to binaries and sources for tracking the version of AMSTer Engine
-	FunctionsForAEPathSources
+	#	FunctionsForAEPathSources
 # ^^^ ----- Hard coded lines to check --- ^^^ 
 
 	
@@ -280,6 +282,8 @@ function GetAMSTerEngineVersion
 	{
 	PATHS1Reader=`which S1DataReader`
 	PATHAMSTERENGINE=$(basename ${PATHS1Reader})
+	# suppose that sources are where the installer had put it... 
+	eval PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older/
 
 	if [ -f ${PATHAMSTERENGINE}/_History.txt ]
 		then 

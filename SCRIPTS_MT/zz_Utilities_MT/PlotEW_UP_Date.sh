@@ -2,6 +2,7 @@
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
+# From S. Samsonov
 
 TSFILE=$1
 

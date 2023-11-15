@@ -126,13 +126,15 @@
 # New in Distro V 5.1 20231102:	- Adapt to new SAOCOM reader; needs kml for Region of Interest (mandatory because frames are not reliable)
 #								- debug check previous readings for S1, SAOCOM, TDX and ICEYE 
 # New in Distro V 5.2 20231109:	- Proper handling of SAOCOM images
+# New in Distro V 5.3 20231114:	- remove files and dirs > 3 months in S1_CLN in RESAMPLED and MASS_PROCESS. Prepared for SAOCOM as well
+#							      Beware, this cleans the _CLN products for all targets of your satellite on the same disk. 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 09, 2023"
+VER="Distro V5.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 14, 2023"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -832,9 +834,10 @@ case ${SAT} in
 
 				rm -f ${CSL}/CleanRESAMPLED_${RUNDATE}_tmp.txt ${CSL}/CleanMASSPROCESS_${RUNDATE}_tmp.txt
 
-				EchoTee "Move (may prefer delete ?) all processes in RESAMPLED, SAR_MASSPROCESS which include images for which images were re-read"
+				EchoTee "Move in *_CLN all the processes in RESAMPLED and/or SAR_MASSPROCESS which include images that were re-read"
 				EchoTee "   Move them in ${RESAMPLED}/SAOCOM_CLN/"
 				EchoTee "            and ${SAR_MASSPROCESS}/SAOCOM_CLN/"
+				EchoTee "Note that old products in *_CLN (>180 days; see param MACLN in script) will be deleted."
 
 				# get all modes in ${CSL}/CleanRESAMPLED_${RUNDATE}.txt
 				${PATHGNU}/gsed 's%\/.*%%' ${CSL}/CleanRESAMPLED_${RUNDATE}.txt | sort | uniq > TRKDIR_list_${RUNDATE}_${RNDM1}.txt		# list all mode dirs in RESAMPLED, eg. LagunaFea_A_xx 
@@ -1305,9 +1308,10 @@ case ${SAT} in
 #				CHECKMP=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep SuperMaster_MassProc.sh" | ${PATHGNU}/grep LaunchMTparam_  | ${PATHGNU}/grep "/S1/" | wc -l`
 #				if [ ${CHECKMP} -eq 0 ]
 #					then
-						EchoTee "Move (may prefer delete ?) all processes in RESAMPLED, SAR_MASSPROCESS which include images for which Fast 24 frame were updated."
+						EchoTee "Move in *_CLN all the processes in RESAMPLED and/or SAR_MASSPROCESS which include images for which Fast 24 frame were updated"
 						EchoTee "   Move them in ${RESAMPLED}/S1_CLN/CLEANED_FAST24/"
 						EchoTee "            and ${SAR_MASSPROCESS}/S1_CLN/CLEANED_FAST24/"
+						EchoTee "Note that old products in *_CLN (>180 days; see param MACLN in script) will be deleted."
 
 				# get all modes in ${CSL}/FAST24_CleanRESAMPLED_${RUNDATE}.txt
 				${PATHGNU}/gsed 's%\/.*%%' ${CSL}/FAST24_CleanRESAMPLED_${RUNDATE}.txt | sort | uniq > TRKDIR_list_${RUNDATE}_${RNDM1}.txt
@@ -1496,11 +1500,10 @@ case ${SAT} in
 #				CHECKMP=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep SuperMaster_MassProc.sh" | ${PATHGNU}/grep LaunchMTparam_  | ${PATHGNU}/grep "/S1/" | wc -l`
 #				if [ ${CHECKMP} -eq 0 ]
 #					then
-
-						EchoTee "Move (may prefer delete ?) all processes in RESAMPLED, SAR_MASSPROCESS which include images for which orbits were updated"
+						EchoTee "Move in *_CLN all the processes in RESAMPLED and/or SAR_MASSPROCESS which include images for which orbits were updated"
 						EchoTee "   Move them in ${RESAMPLED}/S1_CLN/CLEANED_ORB/"
 						EchoTee "            and ${SAR_MASSPROCESS}/S1_CLN/CLEANED_ORB/"
-
+						EchoTee "Note that old products in *_CLN (>180 days; see param MACLN in script) will be deleted."
 
 				# get all modes in ${CSL}/ORB_CleanRESAMPLED_${RUNDATE}.txt
 				${PATHGNU}/gsed 's%\/.*%%' ${CSL}/ORB_CleanRESAMPLED_${RUNDATE}.txt | sort | uniq > TRKDIR_list_${RUNDATE}_${RNDM1}.txt
@@ -2338,6 +2341,38 @@ if [ ${SAT} = "S1" ] ; then
 fi
 
 #rm -f Img_To_Read.txt List_csl_dates.txt List_csl.txt List_raw.txt 
+
+MACLN=180
+# remove S1_CLN or SAOCOM_CLN if more than MAXCLN days
+if [ "${SAT}" = "S1" ] 
+	then 
+		if [ "${RESAMPLED}" != "" ] ; then 
+			EchoTee "Clean products in ${RESAMPLED}/S1_CLN of more than ${MACLN} days"
+			find ${RESAMPLED}/S1_CLN/ -maxdepth 5 -mindepth 4 -type d -name "*_S1*_*" -mtime +${MACLN} -exec rm -Rf {} \;
+		fi
+		if [ "${SAR_MASSPROCESS}" != "" ] ; then 
+			EchoTee "Clean products in ${SAR_MASSPROCESS}/S1_CLN of more than ${MACLN} days"
+			find ${SAR_MASSPROCESS}/S1_CLN -maxdepth 5 -mindepth 4 -type d -name "*_S1*_*" -mtime +${MACLN} -exec rm -Rf {} \;
+			find ${SAR_MASSPROCESS}/S1_CLN/*/*/*/*/*/ -maxdepth 1 -type f -name "*S1*deg*" -mtime +${MACLN} -exec rm -f {} \;			
+		fi
+fi
+
+#if [ "${SAT}" = "SAOCOM" ] 
+#	then 
+#		if [ "${RESAMPLED}" != "" ] ; then 
+#			EchoTee "Clean products in ${RESAMPLED}/SAOCOM_CLN of more than ${MACLN} days"
+#			find ${RESAMPLED}/SAOCOM_CLN/ -maxdepth 4 -mindepth 3 -type d -name "20[0-9][0-9][0-9][0-9][0-9][0-9]_20[0-9][0-9][0-9][0-9][0-9][0-9]" -mtime +${MACLN} -exec rm -Rf {} \;
+#		fi
+#
+#		if [ "${SAR_MASSPROCESS}" != "" ] ; then 
+#			EchoTee "Clean products in ${SAR_MASSPROCESS}/SAOCOM_CLN of more than ${MACLN} days"
+#			find ${SAR_MASSPROCESS}/SAOCOM_CLN -maxdepth 4 -mindepth 3 -type d -name "20[0-9][0-9][0-9][0-9][0-9][0-9]_20[0-9][0-9][0-9][0-9][0-9][0-9]" -mtime +${MACLN} -exec rm -Rf {} \;
+#			find ${SAR_MASSPROCESS}/SAOCOM_CLN/*/*/*/*/ -maxdepth 1 -type f -name "*SAOCOM*deg*" -mtime +${MACLN} -exec rm -f {} \;			
+#
+#		fi
+#fi
+
+
 
 # For S1 images, check if images exist with pol  different from INITPOL
 #if [ ${SAT} = "S1" ] ; then 

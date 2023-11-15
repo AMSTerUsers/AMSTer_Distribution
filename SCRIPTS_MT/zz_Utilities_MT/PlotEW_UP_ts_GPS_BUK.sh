@@ -2,6 +2,9 @@
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
+# This scripts is only an example and must be edited for several hard coded lines to tune to your needs. 
+#
+# From S. Samsonov
 
 TSFILE=MSBAS_177_217_1.ts
 GPSFILEMM=BUK_.enu
