@@ -4,7 +4,7 @@
 #	- ImageJ
 #	- ghostscript (to avoid ImageJ issue)
 #   - Parameters file must be present in "MSBAS/Region/_CombiFiles" to extract several parameters from it.
-#   - 'satview.jpg' must be present in "MSBAS/Region/_CombiFiles" = Google earth image cropped using headers parameters of deformation file
+#   - 'satview.jpg' and 'AMSTer.png' must be present in "MSBAS/Region/_CombiFiles" = Google earth image cropped using headers parameters of deformation file
 #
 #	Arguments:
 #	- Argument 1 = eps file (TimeLine)
@@ -51,6 +51,7 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 5.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 5.1 20231120:	- Add logo to timestamp  (l392)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -388,6 +389,10 @@ TimeSeriesInfoHPWebTag
 
 convert $combi $crop -gravity northwest -geometry +30+150 -composite $combi
 
+# Add logo to timestamp 
+logo=${WorkDir}/AMSTer.png
+convert ${logo} -resize 125x125 Temp
+convert $combi Temp -gravity southwest -geometry +525+7 -composite $combi
 
 
 # Add Legend to the Time serie image

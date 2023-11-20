@@ -93,6 +93,7 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 9.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 9.1 20231120:	- Change AMSTer text to spaces for AMSTer logo in plot timestamp only if TAG is asked 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -1100,6 +1101,13 @@ fi
 				then 
 					${PATHGNU}/gsed -i "s%# XRANGE%set xrange [${STARTSPANSEC}:${STOPSPANSEC}]%" ${GNUNAME}
 			fi
+
+			# Change AMSTer to AMSTer logo only if Combi file asked
+			if [ ${TAG} == "YES" ]
+				then
+					${PATHGNU}/gsed -i "s%AMSTer%					      			%" ${GNUNAME}
+				fi
+
 
 			gnuplot ${GNUNAME}
 			

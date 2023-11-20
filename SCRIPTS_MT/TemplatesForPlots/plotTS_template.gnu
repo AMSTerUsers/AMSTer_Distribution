@@ -68,9 +68,16 @@ set style rect fc lt -0.2 fs solid 0.15 noborder
 ####################################
 #OTHER_TABLE
 
-set timestamp "Created by AMSTer at INSTITUTE on: %d/%m/%y %H:%M " font "Helvetica,8" textcolor rgbcolor "#2a2a2a" 
+timestamp = strftime("%Y-%m-%d %H:%M:%S", time(0))
+timestamp = "Created by AMSTer at INSTITUTE on: " . timestamp
+set label timestamp at screen 0.01,0.01 left font "Helvetica,8" textcolor rgbcolor "#2a2a2a"
 
 set output "PATH_TO_EPS.eps" 
+
+# Adjust the top and bottom margins
+# set tmargin at screen 0.9
+set bmargin at screen 0.12
+
 CMD_LINE
 #plot 'PATH_TO_EPS.txt' u 1: 3 with linespoints ls 1 
 #plot 'PATH_TO_EPS.txt' u 1: 3 with points ls 1 
