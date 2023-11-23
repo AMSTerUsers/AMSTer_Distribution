@@ -10,13 +10,14 @@
 #						- output also the pol in file name 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20231121:	- Search img bursts numbers for old and new DataReaders
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 21, 2023"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -41,16 +42,28 @@ do
 	echo "Fr Sw busts in img ${MAS}" > ${LOGDIR}/BurstsLists.txt/FramesSwathBurst_Table_${MAS}_${INITPOL}.txt
 	echo "---------------------------" >> ${LOGDIR}/BurstsLists.txt/FramesSwathBurst_Table_${MAS}_${INITPOL}.txt
 	i=0
-	for FRAMESWATHBURSTMODES in `find ./*/* -name "*.${INITPOL}"`
+	#for FRAMESWATHBURSTMODES in `find ./*/* -name "*.${INITPOL}"`	# compatible with only old DataReaders (e.g. V20230420) that is when dir contains e.g. SWx.bx.VV files 
+	for FRAMESWATHBURSTMODES in `find ./*/* -name "SW*.*"`	# compatible with new & old DataReaders that is when dir contains either e.g. SWx.bx.VV files or SWx.bx.csl dir
 		do 
 			i=`echo "$i+1" | bc`
 			FRAME=`echo "${FRAMESWATHBURSTMODES}" | cut -d. -f2 | cut -d / -f2`   	# eg Frame0
-			NFRAME=`echo "${FRAME}" | ${PATHGNU}/grep -Eo "[0-9]*"`							# eg 0
-			SWATH=`echo "${FRAMESWATHBURSTMODES}" | cut -d . -f3  | cut -d / -f3`   # eg SW1
-			NSWATH=`echo "${SWATH}" | ${PATHGNU}/grep -Eo "[0-9]*"`							# eg 1
-			BURST=`echo "${FRAMESWATHBURSTMODES}" | cut -d . -f4`   				# eg b0
-			NBURST=`echo "${BURST}" | ${PATHGNU}/grep -Eo "[0-9]*"`							# eg 0
+			NFRAME=`echo "${FRAME}" | ${PATHGNU}/grep -Eo "[0-9]*"`					# eg 0
 
+
+			FRAMESWATHBURSTMODESEXT="${FRAMESWATHBURSTMODES##*.}"
+			if [[ "${FRAMESWATHBURSTMODESEXT}" == "csl" ]]
+				then
+					# if extension is is csl then name contains no dots (new reader)
+					SWATH=`echo "${FRAMESWATHBURSTMODES}" | cut -d . -f3  | cut -d / -f3  | cut -d b -f1`   # eg SW1
+					NSWATH=`echo "${SWATH}" | ${PATHGNU}/grep -Eo "[0-9]*"`							# eg 1
+					NBURST=`echo "${FRAMESWATHBURSTMODES}" | cut -d . -f3  | cut -d / -f3  | cut -d b -f2`   # eg 0
+				else
+					# if extension is INITPOL then name contains dots (old reader)
+					SWATH=`echo "${FRAMESWATHBURSTMODES}" | cut -d . -f3  | cut -d / -f3`   # eg SW1
+					NSWATH=`echo "${SWATH}" | ${PATHGNU}/grep -Eo "[0-9]*"`							# eg 1
+					BURST=`echo "${FRAMESWATHBURSTMODES}" | cut -d . -f4`   				# eg b0
+					NBURST=`echo "${BURST}" | ${PATHGNU}/grep -Eo "[0-9]*"`							# eg 0
+			fi
 			EXISTING=`grep "${NFRAME}  ${NSWATH}  " ${LOGDIR}/BurstsLists.txt/FramesSwathBurst_Table_${MAS}_${INITPOL}.txt`
 			if [ -z "${EXISTING}" ] 
 				then 

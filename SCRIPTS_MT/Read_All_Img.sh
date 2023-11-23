@@ -128,13 +128,15 @@
 # New in Distro V 5.2 20231109:	- Proper handling of SAOCOM images
 # New in Distro V 5.3 20231114:	- remove files and dirs > 3 months in S1_CLN in RESAMPLED and MASS_PROCESS. Prepared for SAOCOM as well
 #							      Beware, this cleans the _CLN products for all targets of your satellite on the same disk. 
+# New in Distro V 5.4 20231121:	- mute error msg when attempting to list *.csl in empty Quarantine dir
+# New in Distro V 5.5 20231123:	- Allows naming Radarsat2 as RS in workflow
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 14, 2023"
+VER="Distro V5.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 23, 2023"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -1225,7 +1227,7 @@ case ${SAT} in
 					List_All_S1_ImgSize.sh
 					if [ -d ${TRACKS}/Quarantained ] ; then
 						cd ${TRACKS}/Quarantained
-						for IMGQUARANTAINED in `ls -d *.csl `
+						for IMGQUARANTAINED in `ls -d *.csl 2>/dev/null`
 							do
 							rm -Rf ${TRACKS}/NoCrop/${IMGQUARANTAINED}
 						done
@@ -1990,7 +1992,7 @@ case ${SAT} in
 			# Run tests in pseudo parallelism
 			{
 				case ${SAT} in
-					"RADARSAT") 
+					"RS"|"RADARSAT") 
 								IMG=`GetDate ${IMGDIR}`
 								RSAT2DAtaReader ${CSL}/Read_${IMG}.txt -create
 								ChangeInPlace PathToRSAT2Directory "${RAW}/${IMGDIR}" ${CSL}/Read_${IMG}.txt

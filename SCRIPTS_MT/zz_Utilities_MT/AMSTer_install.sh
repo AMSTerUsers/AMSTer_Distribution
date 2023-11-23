@@ -170,13 +170,14 @@
 #								- if bashrc is created, give ownership to the user
 #								- alias say was skipping $1. Add \
 # New in Distro V 5.3 20231114:	- update mac port jkk19 with jdk20
+# New in Distro V 5.4 20231123:	- correct bug in UpdateVARIABLESBashrc when removing existing line
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.3 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 14 2023"
+VER="version 5.4 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 23 2023"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -545,7 +546,7 @@ function UpdateVARIABLESBashrc()
 																# Back it up first if not done yet
 																if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
 
-																grep -v "${TST}"  ${HOMEDIR}/.bashrc >  ${HOMEDIR}/.bashrc_tmp
+																grep -v "^${TST}$"  ${HOMEDIR}/.bashrc >  ${HOMEDIR}/.bashrc_tmp
 																cp -f  ${HOMEDIR}/.bashrc_tmp  ${HOMEDIR}/.bashrc
 																rm -f ${HOMEDIR}/.bashrc_tmp
 																break ;;

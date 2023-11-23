@@ -100,12 +100,14 @@
 # New in Distro V 7.0.1 20231102:	- Get version of AMSTer in GetAMSTerEngineVersion to avoid reading __HardCodedLines.sh 
 # New in Distro V 7.0.2 20231114:	- Put the path to AMSTerEngine sources in function GetAMSTerEngineVersion instead of calling a function in __HardCodedLines.sh
 #										Indeed, the installer must have put it in {PATHAMSTERENGINE}/_Sources_AE/Older/
+# New in Distro V 7.0.3 20231114:	- Debug GetAMSTerEngineVersion
+# New in Distro V 7.0.4 20231122:	- Create fig of amplitude rasters with range based on min,mean + 2 stdev in PlotGeoc with new function MakeFigRAuto
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V7.0.2 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 14, 2023"
+FCTVER="Distro V7.0.4 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 22, 2023"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -281,7 +283,7 @@ function GetParamFromFile()
 function GetAMSTerEngineVersion 
 	{
 	PATHS1Reader=`which S1DataReader`
-	PATHAMSTERENGINE=$(basename ${PATHS1Reader})
+	PATHAMSTERENGINE=$(dirname ${PATHS1Reader})
 	# suppose that sources are where the installer had put it... 
 	eval PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older/
 
@@ -348,6 +350,40 @@ function MakeFigR()
 		if [ "${POP}" == "POPyes" ] ; then open ${FILE}.ras ; fi
 	fi
 	}
+function MakeFigRAuto()
+	{
+	if [ "${FIG}" == "FIGyes"  ] ; then
+		unset WIDTH R E S TYPE COLOR ML FORMAT FILE
+		local WIDTH=$1
+		local R=$2
+		local E=$3
+		local S=$4
+		local TYPE=$5
+		local COLOR=$6
+		local ML=$7
+		local FORMAT=$8
+		local FILE=$9
+		local MEANIMG
+		local STDVIMG
+		local MINIMG
+		local MAXFIG
+		
+		MINIMG=$(gdalinfo -stats ${FILE}  | ${PATHGNU}/grep "Mean" | cut -d , -f1 | cut -d = -f 2)
+		MEANIMG=$(gdalinfo -stats ${FILE}  | ${PATHGNU}/grep "Mean" | cut -d , -f3 | cut -d = -f 2)
+		STDVIMG=$(gdalinfo -stats ${FILE}  | ${PATHGNU}/grep "Mean" | cut -d , -f4 | cut -d = -f 2)
+		
+		MAXFIG=$(echo "( ${MEANIMG} + (2 * ${STDVIMG}))" | bc)
+		R=${MINIMG},${MAXFIG}
+		
+		${PATHTOCPXFIDDLE}/cpxfiddle -w ${WIDTH} -r ${R} -e ${E} -s ${S} -q ${TYPE} -o sunraster -c ${COLOR} -M ${ML} -f ${FORMAT} -l1 ${FILE} > ${FILE}.ras | tee -a ${LOGFILE}
+		# create script if one wants to change paramerters of the plot
+		unset FILENOPATH
+		FILENOPATH=`echo ${FILE} | ${PATHGNU}/gawk -F '/' '{print $NF}'`
+		echo "cpxfiddle -w ${WIDTH} -r ${R} -e ${E} -s ${S} -q ${TYPE} -o sunraster -c ${COLOR} -M ${ML} -f ${FORMAT} -l1 ${FILENOPATH} > ${FILENOPATH}.ras" > ${FILE}.ras.sh
+		chmod +x ${FILE}.ras.sh
+		if [ "${POP}" == "POPyes" ] ; then open ${FILE}.ras ; fi
+	fi
+	}
 function MakeFigR3()
 	{
 	if [ "${FIG}" == "FIGyes"  ] ; then
@@ -371,7 +407,29 @@ function MakeFigR3()
 		if [ "${POP}" == "POPyes" ] ; then open ${FILE}.ras ; fi
 	fi
 	}
-
+function MakeFigR3Auto()
+	{
+	if [ "${FIG}" == "FIGyes"  ] ; then
+		unset WIDTH LENGTH R E S TYPE COLOR ML FORMAT FILE
+		local WIDTH=$1
+		local LENGTH=$2
+		local R=$3
+		local E=$4
+		local S=$5
+		local TYPE=$6
+		local COLOR=$7
+		local ML=$8
+		local FORMAT=$9
+		local FILE=${10}
+		${PATHTOCPXFIDDLE}/cpxfiddle -w ${WIDTH} -r ${R} -e ${E} -s ${S} -q ${TYPE} -o sunraster -c ${COLOR} -M ${ML} -f ${FORMAT} -l1 -L${LENGTH} ${FILE} > ${FILE}.ras | tee -a ${LOGFILE}
+		# create script if one wants to change paramerters of the plot
+		unset FILENOPATH
+		FILENOPATH=`echo ${FILE} | ${PATHGNU}/gawk -F '/' '{print $NF}'`
+		echo "cpxfiddle -w ${WIDTH} -r ${R} -e ${E} -s ${S} -q ${TYPE} -o sunraster -c ${COLOR} -M ${ML} -f ${FORMAT} -l1 -L${LENGTH} ${FILENOPATH} > ${FILENOPATH}.ras" > ${FILE}.ras.sh
+		chmod +x ${FILE}.ras.sh
+		if [ "${POP}" == "POPyes" ] ; then open ${FILE}.ras ; fi
+	fi
+	}
 function MakeFigNoNorm()
 	{
 	if [ "${FIG}" == "FIGyes"  ] ; then
@@ -1858,13 +1916,15 @@ function PlotGeoc()
 		then
 		# plot geocoded Primary
 		PATHGEOMAS=`basename *${MASNAME}*.*.mod.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
-		if [ -f "${PATHGEOMAS}" ] && [ -s "${PATHGEOMAS}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOMAS} ; fi
+		#if [ -f "${PATHGEOMAS}" ] && [ -s "${PATHGEOMAS}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOMAS} ; fi
+		if [ -f "${PATHGEOMAS}" ] && [ -s "${PATHGEOMAS}" ] ; then MakeFigRAuto ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOMAS} ; fi
 	fi
 	if [ "${SLVAMPL}" == "YES" ]
 		then
 		# plot geocoded Secondary
 		PATHGEOSLV=`basename *${SLVNAME}*.*.mod.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
-		if [ -f "${PATHGEOSLV}" ] && [ -s "${PATHGEOSLV}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOSLV} ; fi
+		#if [ -f "${PATHGEOSLV}" ] && [ -s "${PATHGEOSLV}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOSLV} ; fi
+		if [ -f "${PATHGEOSLV}" ] && [ -s "${PATHGEOSLV}" ] ; then MakeFigRAuto ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOSLV} ; fi
 	fi
 	if [ "${COHFILE}" == "YES" ]
 		then
