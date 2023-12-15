@@ -129,6 +129,15 @@ The development of the AMSTer Software commenced in the early 2010s and leverage
 
 **________**
 
+- New in V 20231215:
+  1. AMSTer Engine 20231213 copes with new ESA server for downloading S1 orbits (since Nov 2023).
+  2. Installer (and check installation) scripts updated to cope with new procedure required for the new ESA dataspace server
+  3. New example of script to download S1 images on new ESA server (since Nov 2023)
+  4. Examples of crons scripts (illustrated for Domuyo) redesigned with more variables rather than hard coded lines throughout the scripts
+  5. Examples of crons scripts (illustrated for Domuyo) redesigned for dual criteria used to compute baseline plots in order to accomodate changes in orbital tube after loss of S1B
+  6. cosmetic changes in creation of amplitude images (compute min max from gdalinfo rather than fixed values)
+  7. Update of manuals according to points above 
+
 - New in V 20231107:
   1. Rebranding Master as AMSTer. 
 
