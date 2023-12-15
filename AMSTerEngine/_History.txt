@@ -1,3 +1,24 @@
+/* AMSTerEngine20231213 (© DD & SAREOS) */
+/* ************************************ */
+updateS1Orbits: fully renewed to cope with new COPERNICUS server ditribution and OData api requests. 
+	A .netrc text file must exists in the user home directory containing the following line: 
+	machine identity.dataspace.copernicus.eu login <your COPERNICUS login> password <your password>
+
+/* AMSTerEngine20231113 (© DD & SAREOS) */
+/* ************************************ */
+initInSARLib: Small leak correction. 
+SAOCOMDataReader: kml generation correction. 
+
+/* AMSTerEngine20231110 (© DD & SAREOS) */
+/* *********************************** */
+S1DataReader: Adding the possibility of reading a single S1 zipped file in input and not anymore necessarily within an input directory. 
+
+/* AMSTerEngine20231108 (© DD & SAREOS) */
+/* *********************************** */
+SAOCOMDataReader: Priority is given to kml adequacy onto last processing date to ensure keeping the largest area of interest in data selection. 
+		Addition of processing time, orbit number and row (frame) number within info text file if available. 
+		Bug correction. 
+
 /* AMSTerEngine20231107 (© DD & SAREOS) */
 /* *********************************** */
 CSKDataReader & ICEYEDataReader: Inconsitancy in h5version.h installed under Ubuntu 22.04 or 20.04. In 22.04, H5Ovisit_vers is not defined in place of beeing set to 1 or 2.

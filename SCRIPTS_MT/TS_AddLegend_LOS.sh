@@ -254,6 +254,7 @@ echo "-----------> Start script to convert eps to jpeg file with crop, legend an
 
 rm -f ${RUNDIR}/_images/satview.jpg  	# allows to operate from different computers
 ln -s ${RegionFolder}/_CombiFiles/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
+ln -s ${RegionFolder}/_CombiFiles/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
 ${PATH_SCRIPTS}/SCRIPTS_MT/TimeSeriesInfo_HP.sh ${eps_file} ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ${RateResoSatView}  >> /dev/null 
 
 

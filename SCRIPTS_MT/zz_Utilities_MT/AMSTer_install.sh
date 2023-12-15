@@ -171,13 +171,16 @@
 #								- alias say was skipping $1. Add \
 # New in Distro V 5.3 20231114:	- update mac port jkk19 with jdk20
 # New in Distro V 5.4 20231123:	- correct bug in UpdateVARIABLESBashrc when removing existing line
+# New in Distro V 5.5 20231215:	- Correct bug in AskConfirmLoop
+#								- remove possible quotes when entering path from drag/drop
+#								- add .netrc file for S1 orbit download from Nov 2023 with AMSTer Engine >= V20231213
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.4 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Nov 23 2023"
+VER="version 5.5 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Dec 15 2023"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -1190,7 +1193,7 @@ CompileAMSTerEngine()
 
 function AskConfirmLoop()
 	{
-		local EXITLOOP			
+		#local EXITLOOP			
 		local TOPIC
 		local TOOL
 		
@@ -1210,7 +1213,7 @@ function AskConfirmLoop()
 					* ) echo "Please answer [Y/y]es or [N/n]o.";;
 				esac
 		done
-		if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
+		#if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 	}
 
 DoInstallAMSTerEngine()
@@ -1229,6 +1232,7 @@ DoInstallAMSTerEngine()
 						else
 					       echo "No AMSTerEngineyyyymmdd.tar.xz file exists there."
 						   AskConfirmLoop "Do you want to enter a new path to the source file [y/n]? "	"OK, I skip the installation of AMSTer Engine. "
+						   if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 # 					       read -p "Do you want to enter a new path to the source file [y/n]? " choice
 # 					
 # 					       if [ "$choice" == "n" ]; then
@@ -1257,6 +1261,7 @@ DoInstallAMSTerEngine()
 									echo "No or More than one .tar.xz file in ${PATHDISTRO}/AMSTerEngine/${DIRVERTOINSTALL}/"
 									echo " Remove unnecessary .tar.xz file in dir and/or provide a new path. "
 									AskConfirmLoop "Do you want to enter a new name dir [y/n]?" "OK, I skip the AMSTer Engine installation."
+									if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 # 					      			read -p "Do you want to enter a new name dir [y/n]? " choice
 # 								
 # 					      			if [ "$choice" == "n" ]; then
@@ -1267,6 +1272,7 @@ DoInstallAMSTerEngine()
 						else
 					       echo "Version directory does not exist."
 						   AskConfirmLoop "Do you want to enter a new name dir [y/n]?" "OK, I skip the AMSTer Engine installation."
+						   if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 					       
 # 					       read -p "Do you want to enter a new name dir [y/n]? " choice
 # 					       if [ "$choice" == "n" ]; then
@@ -1435,6 +1441,7 @@ DoInstallMSBAS()
 						else
 					       echo "No MSBAS zip file exists there."
 					       AskConfirmLoop "Do you want to enter a new path to the source zip file [y/n]? " "OK, I skip the MSBAS installation."
+					       if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 					       
 # 						   read -p "Do you want to enter a new path to the source file [y/n]? " choice
 # 						   if [ "$choice" == "n" ]; then
@@ -1458,6 +1465,7 @@ DoInstallMSBAS()
 						else
 					       echo "Version does not exist."
 					       AskConfirmLoop "Do you want to enter a new path to the source zip file [y/n]? " "OK, I skip the msbas installation."
+					       if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 
 # 								read -p "Do you want to enter a new path and zip file [y/n]? " choice
 # 								if [ "$choice" == "n" ]; then
@@ -3202,6 +3210,7 @@ echo "  // AMSTer Software is freely available (under GPL licence) from https://
 				while true; do
 			   		echo "Enter the path to the AMSTer_Distribution directory; "
 			   		read -e -p "   You can use Tab for autocompletion or drag/drop the path (e.g. ...YourPath/SAR/AMSTer_Distribution): " PATHDISTRO
+					PATHDISTRO=$(echo "$PATHDISTRO" | sed -e "s/'//g" -e 's/"//g')
 					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
 				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
 				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
@@ -3210,6 +3219,7 @@ echo "  // AMSTer Software is freely available (under GPL licence) from https://
 				   		else
 				       		echo "Directory ${PATHDISTRO} does not exist or is empty. "
 							AskConfirmLoop "Do you want to enter a new path [y/n]? "  "OK, then you can provide me later with the path where you have the sources of each components."
+							if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 # 							read -p "Do you want to enter a new path [y/n]? " choice
 # 							if [ "$choice" == "n" ] || [ "$choice" == "N" ] 
 # 								then
@@ -3268,6 +3278,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 									else
 								       echo "No ${SCRIPTSDIR} exists."
 								       AskConfirmLoop "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " "OK, I skip the installation of the scripts."
+								       if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 # 										while true ; do
 # 								       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
 # 										
@@ -3304,6 +3315,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 												else
 											       echo "No ${SCRIPTSDIR} exists."
 											       AskConfirmLoop "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " "OK, I skip the installation of the scripts."
+											       if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 
 # 											       		read -p "Do you want to enter a new path to the directory that contains the SCRIPTS_MT [y/n]? " choice
 # 											       		if [ "$choice" == "n" ]; then
@@ -3349,6 +3361,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 									else
 								       echo "No directory ${DOCDIR} exists."
 								       AskConfirmLoop "Do you want to enter a new path to the directory that contains the DOC [y/n]? " "OK, I skip the installation of the documentation."
+								       if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 
 # 								       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
 # 								       		if [ "$choice" == "n" ]; then
@@ -3378,6 +3391,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 												else
 											       echo "No ${DOCDIR} exists."
 												   AskConfirmLoop "Do you want to enter a new path to the directory that contains the DOC [y/n]? " "OK, I skip the installation of the documentation."
+												   if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
 # 											       		read -p "Do you want to enter a new path to the directory that contains the DOC [y/n]? " choice
 # 											       		if [ "$choice" == "n" ]; then
 # 											       		    echo "OK, I skip the installation of the documentation."
@@ -3735,6 +3749,36 @@ while true; do
 				echo "Sorry, target ${S1_ORBITS_DIR} not reachable. Can't perform the S1 orbit update..."
 				break	
 		fi
+
+		# Ensure that .netrc exist with identity.dataspace.copernicus.eu login
+		if [ ! -e ${HOMEDIR}/.netrc ]
+			then 
+				echo "You do not have a .netrc file yet in your home directroy yet. It means that your computer is not configured yet to acess S1 orbits from ESA. "
+				echo "To be able to download the S1 orbits, visit https://dataspace.copernicus.eu and register to get a login and pwd."
+				UPDATENETRC="YES"
+			else
+				echo "You already have a .netrc file in your home directroy "
+				if grep -q "identity.dataspace.copernicus.eu" "${HOMEDIR}/.netrc"
+					then 
+						echo "And it seems to have a line with login and password to dataspace.copernicus.eu"
+						echo "Nevertheless it the download of S1 orbits fails, double check your .netrc file contains a line as follow:"
+						echo "   machine identity.dataspace.copernicus.eu login <YourLogin> password <YourPassword>"
+						UPDATENETRC="NO"
+					else 
+						echo "Though it seems that you do not have a line with login and password to dataspace.copernicus.eu"
+						echo "To be able to download the S1 orbits, visit https://dataspace.copernicus.eu and register to get a login and pwd."
+						UPDATENETRC="YES"
+				fi
+		fi
+		echo ""
+		if [ "${UPDATENETRC}" == "YES" ]
+			then 
+				echo "Enter now your creditentials:"
+				read -p "	Enter your dataspace.copernicus.eu login: "  YourLogin
+				read -p "	Enter your dataspace.copernicus.eu password: "  YourPassword
+				echo "machine identity.dataspace.copernicus.eu login ${YourLogin} password ${YourPassword}" >> ${HOMEDIR}/.netrc		
+		fi
+
 		# updateS1Orbits [S1_ORBITS_DIR] [-ASF] [from=YYYYMMDD]
 		# All or from a given date ? :
 		while true; do

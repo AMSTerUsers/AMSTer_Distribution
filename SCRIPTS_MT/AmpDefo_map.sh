@@ -43,6 +43,7 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20231213:	- Calculate IJAmpMin and IJAmpMax with "gdalinfo -stats" instead of hard coded value
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -55,8 +56,8 @@ source ${HOME}/.bashrc
 # ^^^ ----- Hard coded lines to check -- ^^^ 
 
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on Dec 13, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -83,8 +84,7 @@ function GetParam()
 	echo ${PARAM}
 	}
 	
-IJAmpMin=$(GetParam IJAmpMin)
-IJAmpMax=$(GetParam IJAmpMax)
+
 Crop_X=$(GetParam Crop_X)
 Crop_Y=$(GetParam Crop_Y)
 Crop_L=$(GetParam Crop_L)
@@ -93,8 +93,7 @@ Crop_H=$(GetParam Crop_H)
 PATHFILES=$(dirname ${PATHFILEDEFO})
 
 
-echo "IJAmpMin = ${IJAmpMin}"
-echo "IJAmpMax= ${IJAmpMax}"
+
 echo "Crop_X = ${Crop_X}"
 echo "Crop_Y = ${Crop_Y}"
 echo "Crop_L = ${Crop_L}"
@@ -139,6 +138,18 @@ echo $PATHFILEAMPLI
 AMPLI=`basename ${PATHFILEAMPLI}`
 DEFO=`basename ${PATHFILEDEFO}`
 COH=`basename ${PATHFILECOH}`
+
+# Calculation of MinMax value to clip the amplitude image  
+IJAmpMean=$(gdalinfo -stats ${PATHFILEAMPLI} | grep Mean | cut -d ',' -f 3 | cut -d '=' -f 2)
+IJAmpStddev=$(gdalinfo -stats ${PATHFILEAMPLI} | grep Mean | cut -d ',' -f 4 | cut -d '=' -f 2)
+IJAmpMin=$(echo "$IJAmpMean - (3 * $IJAmpStddev)" | bc -l)
+IJAmpMax=$(echo "$IJAmpMean + (3 * $IJAmpStddev)" | bc -l)
+IJAmpMin=$(echo ${IJAmpMin} | sed 's/^\./0\./'  | sed 's/^-\./-0\./')
+IJAmpMax=$(echo ${IJAmpMax} | sed 's/^\./0\./'  | sed 's/^-\./-0\./')
+echo "IJAmpMean: ${IJAmpMean} --- IJAmpStddev: ${IJAmpStddev}"
+echo "IJAmpMin:  ${IJAmpMin}  ---- IJAmpMax: ${IJAmpMax}"
+
+
 
 Random=$(echo ${RANDOM:0:3})
 echo "" > FijiMacro_${Random}.txt 

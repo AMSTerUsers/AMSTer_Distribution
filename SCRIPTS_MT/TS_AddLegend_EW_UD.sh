@@ -159,7 +159,7 @@ for RUNDIR in ${RUNDIR_UD} ${RUNDIR_EW}
 						sleep 2
 
 						#find $RUNDIR/_images -type f ! -name "TS_*" -delete
-						find $RUNDIR/_images -type f ! -name "TS_*" -exec rm -f {} \;
+						find $RUNDIR/_images -type f ! -name "TS_*" ! -name "AMSTer.png" -exec rm -f {} \;
 						DEFO="MSBAS_LINEAR_RATE_${EW_UD}.bin"
 						cp -p $PATHFILEDEFO $RUNDIR/_images
 						ln -s ${PATHFILEDEFO}.hdr $RUNDIR/_images

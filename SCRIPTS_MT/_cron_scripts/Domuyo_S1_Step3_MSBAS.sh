@@ -19,7 +19,8 @@
 # Hardcoded: - a lot... se below paragraph named HARD CODED but also adapt below depending on the number of modes 
 #			 - suppose everywhere that modes are DefoInterpolx2Detrend
 #
-# Dependencies:	- 
+# Dependencies:	- awk 
+#				- several scripts from SCRIPTS_MT
 #
 # New in Distro V 2.0:	- based on beta version used for VVP, Domuyo, Lux and PF processing at ECGS
 # New in Distro V 2.1:	- updated to use new PlotTS_all_comp.sh that computes as well the location and explanation tags etc...
@@ -34,14 +35,16 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20231116:	- Reshape with variables
+#								- double criteria to compute baseline plot in order to account for the loss of S1B
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 16, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -55,9 +58,29 @@ TODAY=`date`
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
 	# some parameters
 	#################
+
+		# Global Primaries (SuperMasters)
+		SMASC=20180512		# Asc 18
+		SMDESC=20180222		# Desc 83
+
 		# Max baselines (used for all the mode in present case but you can change)
-		BP=20			# max perpendicular baseline 
-		BT=450			# max temporal baseline
+		SET1BP1=20
+		SET1BP2=30
+		SET1BT1=450
+		SET1BT2=450
+		DATECHG1=20220501
+
+		SET2BP1=20
+		SET2BP2=30
+		SET2BT1=450
+		SET2BT2=450
+		DATECHG2=20220501
+
+		# To take into account the whole set of data with both sets 
+		# of baseline criteria, one must take here the largest of each Bp and Bt 
+		# See warning below
+		BP=$(echo "$SET1BP1 $SET1BP2 $SET2BP1 $SET2BP2" | awk '{BP=$1; for(i=2;i<=NF;i++) if($i>BP) BP=$i; print BP}')	# max perpendicular baseline 
+		BT=$(echo "$SET1BT1 $SET1BT2 $SET2BT1 $SET2BT2" | awk '{BT=$1; for(i=2;i<=NF;i++) if($i>BT) BT=$i; print BT}')	# max temporal baseline
 
 		LABEL=Domuyo 	# Label for file naming (used for naming zz_ dirs with results and figs etc)
 
@@ -80,6 +103,31 @@ TODAY=`date`
 		# Path to LaunchParameters.txt files for each mode (need one for each mode)
 		LAUNCHPARAMASC=LaunchMTparam_S1_Arg_Domu_Laguna_A_18_Zoom1_ML4_MassProc_MaskCohWater.txt
 		LAUNCHPARAMDESC=LaunchMTparam_S1_Arg_Domu_Laguna_D_83_Zoom1_ML4_MassProc_Snaphu_WaterCohMask.txt
+
+		# WARNING: 	build_header_msbas_criteria.sh requires all table files with the same Bp and Bt names, hence one MUST link 
+		#			SM tables as tables named with max baselines ; if they exist yet, rename them first as _Real an then link the final table to new name with max baselines 
+
+		# This can be improved by using e.g. build_header_msbas_Tables.sh to cope with several criteria... 
+		# So far, we change all the tables with the same name
+
+		TABLESET1=${SET1}/table_0_${SET1BP1}_0_${SET1BT1}_Till_${DATECHG1}_0_${SET1BP2}_0_${SET1BT2}_After.txt
+		TABLESET1=${SET2}/table_0_${SET2BP1}_0_${SET2BT1}_Till_${DATECHG2}_0_${SET2BP2}_0_${SET2BT2}_After.txt
+		
+		# Just in case a table would exist with the same values as the max Bp and Bt among all the modes, let's keep it with the name table_0_${BP}_0_${BT}_RealBaselinesVal.txt
+		# then link the dual table as a table with the common name table_0_${BP}_0_${BT}.txt for each mode 
+		if [ -f ${SET1}/table_0_${BP}_0_${BT}.txt ] && [ `diff ${SET1}/table_0_${BP}_0_${BT}.txt ${TABLESET1} | wc -l ` -gt 0 ]
+			then 
+				mv ${SET1}/table_0_${BP}_0_${BT}.txt ${SET1}/table_0_${BP}_0_${BT}_RealBaselinesVal.txt
+				ln -s ${TABLESET1} ${SET1}/table_0_${BP}_0_${BT}.txt  2>/dev/null
+		fi
+		
+		if [ -f ${SET2}/table_0_${BP}_0_${BT}.txt ] && [ `diff ${SET2}/table_0_${BP}_0_${BT}.txt ${TABLESET2} | wc -l ` -gt 0 ]
+			then 
+				mv ${SET2}/table_0_${BP}_0_${BT}.txt ${SET2}/table_0_${BP}_0_${BT}_RealBaselinesVal.txt
+				ln -s ${TABLESET2} ${SET2}/table_0_${BP}_0_${BT}.txt  2>/dev/null
+		fi
+	
+
 		
 	# Events tables
 	###############

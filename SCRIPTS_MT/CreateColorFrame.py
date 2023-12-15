@@ -31,9 +31,11 @@
 #	- Create an array with Min/Max value of deformation file and the position of colorframe in the image to add at the same place comments in others scripts. 
 #	- Write all these info in the 5th argument: TemFile 
 #
+# New in Distro V 1.0 20231213:	- convert potential negative infinite value to nan for amplitude file (Array_AmpliMod[_inf] = np.nan)
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# -----------------------------------------------------------------------------------------
 
 
 
@@ -125,7 +127,10 @@ while i < sq_H:
 		j += 1
 	i += 1
 
-Array_AmpliMod = np.log10(Array_AmpliMod)   
+# Convert Amplitude value to log10 for better contrast and convert potential negative infinite value to nan 
+Array_AmpliMod = np.log10(Array_AmpliMod) 
+_inf = np.isinf(Array_AmpliMod)
+Array_AmpliMod[_inf] = np.nan  
 # Add the color legend to the Deformation array and a mask to the Mask array
 #Start the legend at 20 pixels from left and 20 pixels from the top
 

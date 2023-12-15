@@ -31,13 +31,14 @@
 # New in Distro V 3.1 20231006:	- if pyqt6 is missing in Mac OSX, add a message explaining why 
 # New in Distro V 4.0 20231030:	- Rename AMSTer Software as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20231215:	- check .netrc file to access S1 Orbits
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2020/06/15 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Dec 15, 2023"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -909,7 +910,7 @@ fi
 
 echo ""
 echo "6) Testing some configs in mandatory files (Linux only):"
-echo "-----------------------------------------------"  # For Mac and Linux
+echo "--------------------------------------------------------"  # For Mac and Linux
 if [ -f "/etc/ImageMagick/policy.xml" ] ; then 
 	if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | wc -l` -gt 0 ]
 		then 
@@ -1136,9 +1137,58 @@ if [ "${OS}" == "Linux" ] ; then
 	cat .bashrc | grep "export" | grep -v "#" | sed -e "s/^[ \t]*//" | sed "s/^/\t\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
 fi	
 
+echo ""
+echo "8) Check the .netrc file for accessing S1 orbits"
+echo "------------------------------------------------"  # For Mac and Linux
+echo "------------------------------------------------" 
+
+
+# Ensure that .netrc exist with identity.dataspace.copernicus.eu login
+if [ ! -e ${HOMEDIR}/.netrc ]
+	then 
+		echo "$(tput setaf 1)$(tput setab 7)You do not have a .netrc file in your home directroy yet. It means that your computer is not configured yet to acess S1 orbits from ESA. $(tput sgr 0)"
+		echo "$(tput setaf 1)$(tput setab 7)To be able to download the S1 orbits, visit https://dataspace.copernicus.eu and register to get a login and pwd.$(tput sgr 0)"
+		UPDATENETRC="YES"
+	else
+
+		echo "$(tput setaf 2) You already have a .netrc file in your home directroy  $(tput sgr 0)"
+		if grep -q "identity.dataspace.copernicus.eu" "${HOMEDIR}/.netrc"
+			then 
+				echo "$(tput setaf 2) And it seems to have a line with login and password to dataspace.copernicus.eu $(tput sgr 0)"
+				echo "	Nevertheless it the download of S1 orbits fails, double check your .netrc file contains a line as follow:"
+				echo "		machine identity.dataspace.copernicus.eu login <YourLogin> password <YourPassword>"
+				UPDATENETRC="NO"
+			else 
+				echo "$(tput setaf 1)$(tput setab 7)Though it seems that you do not have a line with login and password to dataspace.copernicus.eu$(tput sgr 0)"
+				echo "$(tput setaf 1)$(tput setab 7)To be able to download the S1 orbits, visit https://dataspace.copernicus.eu and register to get a login and pwd.$(tput sgr 0)"
+				UPDATENETRC="YES"
+		fi
+fi
+echo ""
+if [ "${UPDATENETRC}" == "YES" ]
+	then 
+		read -p "	Do you want to configure your .netrc now ? [y/n]: "  yn
+			case $yn in
+			[yY]* ) 				
+					echo " Let's configure your netrc now. Enter your creditentials:"
+					read -p "	Enter your dataspace.copernicus.eu login: "  YourLogin
+					read -p "	Enter your dataspace.copernicus.eu password: "  YourPassword
+					echo "machine identity.dataspace.copernicus.eu login ${YourLogin} password ${YourPassword}" >> ${HOMEDIR}/.netrc		
+					;;
+			[nN]* ) 
+					echo " OK... do no tforget to do it later. "
+					;;
+				* )  
+					echo "Please answer y or n ";;
+			esac		
+fi
+echo ""
+
+
+
 
 echo ""
-echo "8) Summary of all mounted hard disk (just for your info...):"
+echo "9) Summary of all mounted hard disk (just for your info...):"
 echo "------------------------------------------------------------"  # For Mac and Linux
 echo "------------------------------------------------------------" 
 
