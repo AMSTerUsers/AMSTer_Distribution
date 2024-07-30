@@ -73,7 +73,7 @@ if [ "${VERTOOL}" == "NEW" ]
 		rm ${PATHTOSET}/selectedAcquisitionsSpatialRepartition.txt
 
 		# make an eps version (renamed by MODENAME) of the png plot
-		echo "create low resiolution ${MODENAME}.eps version of full resolution baselinePlot_${MODE}.png "
+		echo "create low resolution ${MODENAME}.eps version of full resolution baselinePlot_${MODE}.png "
 		convert ${RUNDIR}/baselinePlot_${MODE}.png eps3:${RUNDIR}/${MODENAME}.eps		# without eps3: the file would be huge, though with best compatibility... 
 
 	else 

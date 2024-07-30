@@ -174,13 +174,15 @@
 # New in Distro V 5.5 20231215:	- Correct bug in AskConfirmLoop
 #								- remove possible quotes when entering path from drag/drop
 #								- add .netrc file for S1 orbit download from Nov 2023 with AMSTer Engine >= V20231213
+# New in Distro V 5.6 20240131:	- Improve search for path to AMSTer_Distribution. Also cope with zipped AMSTer_Distribution package 
+# New in Distro V 5.7 20240208:	- add install python package shapely
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.5 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Dec 15 2023"
+VER="version 5.6 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Jan 31 2024"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -319,9 +321,6 @@ function CheckLasPortVersion()
 	echo "  // The last version available seems to be : "
 	port search --exact ${APTNAME} 2>/dev/null | head -1
 	}
-
-
-
 
 function AskExternalComponent()
 	{
@@ -2291,6 +2290,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							AptInsatll "python3-scipy"
 							AptInsatll "python3-matplotlib"
 							AptInsatll "python3-gdal"
+							AptInsatll "python3-shapely"
 					
 							echo "  // Check python3 version:"
 							python -c 'import sys ; print(sys.path)'
@@ -3014,6 +3014,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PortInstall "py310-scipy"
 							PortInstall "py310-matplotlib"
 							PortInstall "py310-gdal"
+							PortInstall "py310-shapely"
 					
 							echo "  // Check python3 version:"
 							python -c 'import sys ; print(sys.path)'
@@ -3031,6 +3032,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							python get-pip.py
 							
 							${HOMEDIR}/Library/Python/3.10/bin/pip install utm
+
 														
 							# AMSTer Software Organizer
 							/opt/local/bin/python -m pip install pyqt6
@@ -3208,10 +3210,28 @@ echo "  // AMSTer Software is freely available (under GPL licence) from https://
 			[Yy]* ) 
 				echo "  // OK, I will try to install AMSTer components from there (AMSTer Engine, MSBAS and SCRIPTS_MT)."
 				while true; do
-			   		echo "Enter the path to the AMSTer_Distribution directory; "
-			   		read -e -p "   You can use Tab for autocompletion or drag/drop the path (e.g. ...YourPath/SAR/AMSTer_Distribution): " PATHDISTRO
-					PATHDISTRO=$(echo "$PATHDISTRO" | sed -e "s/'//g" -e 's/"//g')
+			   		echo "Enter the path to the AMSTer_Distribution directory (e.g. ...YourPath/SAR/AMSTer_Distribution); "
+			   		read -e -p "   You can use Tab for autocompletion or drag/drop the full path : " PATHDISTRO	# expet something like ...YourPath/SAR/ where it will find AMSTer_Distribution
+					PATHDISTRO=$(echo "${PATHDISTRO}" | ${PATHGNU}/gsed -e "s/'//g" -e 's/"//g' -e 's/"//g')
 					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
+
+					# if AMSTer_Distribution is downloaded from GitHub, it might be zipped 
+					if [[ "${PATHDISTRO}" == *".zip" ]]; then
+						echo "The path to your AMSTer_Distribution ends with .zip and hence must be decompressed. "
+						WHERETOUNZIP=$(dirname ${PATHDISTRO})
+						unzip -d "${WHERETOUNZIP}" "${PATHDISTRO}" # unzip in pwd
+						rm -f "${PATHDISTRO}"
+						PATHDISTRO="${PATHDISTRO%.zip}"
+					fi
+					# if AMSTer_Distribution is downloaded from GitHub, it may be named AMSTer_Distribution-main
+					if [[ "${PATHDISTRO}" == *"-main" ]]; then
+						echo "The path to your AMSTer_Distribution ends with -main (probably downloaded as a package from GitHub). "
+						echo "Rename it without that string..."
+						PATHDISTRONOMAIN="${PATHDISTRO%-main}"
+						mv -f "${PATHDISTRO}" "${PATHDISTRONOMAIN}" 
+						PATHDISTRO="${PATHDISTRONOMAIN}"
+					fi
+
 				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
 				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
 				        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"

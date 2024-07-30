@@ -1,17 +1,25 @@
 #!/opt/local/bin/python
 # -----------------------------------------------------------------------------------------
-# This script aims at displays some stats on a Table All_Pairs_listing
-# Parameter : allPairsListing.txt
-# Dependencies : python3 in env
+# This script aims at displays some stats based on the list of pairs provided as 
+# Table All_Pairs_listing.txt computed by Prepa_MSBAS.sh
+#
+# Parameter :  - Pathto/allPairsListing.txt input file
+#			   - BPmax (m)
+#			   - BTmax (days)
+# 			   - GAPINDAYS (days) : script will check if there are gaps larger than GAPINDAYS between two images used
+#			   - factor (int) : multiplier for BPmax and BTmax to display possible aditional pairs (could be 2 or 3 )
+#
+# Dependencies : python3 in env and modules below
 #
 # New in 1.1 (20230621 - NdO):	- Rename script with starting capital letter and change shebang
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20240214:	- Take new parameters GAPINDAYS and multiplier
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
-# DS (c) 2023/06/01 # Last modified on June 01, 2023
+# DS (c) 2023/06/01 # Last modified on Feb 14, 2024
 # -----------------------------------------------------------------------------------------
 
 ## import modules
@@ -26,8 +34,8 @@ import matplotlib.dates as dates
 
 
 ## Script version
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Delphine Smittarello (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Delphine Smittarello (c)2016-2019, Last modified on Feb 14, 2024"
 print(VER)
 print(AUT)
 
@@ -36,9 +44,9 @@ print(AUT)
 inputfile_path = sys.argv[1]
 BPmax = sys.argv[2]
 BTmax = sys.argv[3]
-
+GAPINDAYS = int(sys.argv[4])
 ## hard coded 
-nbr=2 # factor criteria to restrict the display of possible additional pairs
+nbr=int(sys.argv[5]) # factor criteria to restrict the display of possible additional pairs
 
 
 ## Start
@@ -97,11 +105,14 @@ Bpneg=[]
 listnodein0=[]
 listnodeout0=[]
 listdatenode=[]
+listdateallnodes=[]
+for N in G.nodes():	
+	datenode=datetime.date(int(str(N)[0:4]),int(str(N)[4:6]),int(str(N)[6:8]))
+	listdateallnodes.append(datenode)
 for N in Greduce.nodes():
 	nodein=Greduce.in_degree(N)
 	nodeout=Greduce.out_degree(N)
 	datenode=datetime.date(int(str(N)[0:4]),int(str(N)[4:6]),int(str(N)[6:8]))
-
 	Nodein.append(nodein)
 	Nodeout.append(nodeout)
 	listdatenode.append(datenode)
@@ -113,7 +124,6 @@ print("node IN degree =0")
 print(listnodein0)
 print("node OUT degree =0")
 print(listnodeout0)
-
 
 listdatenode1=[]
 listdatenode2=[]
@@ -181,24 +191,35 @@ print(" ")
 print("Searching for the largest gap between consecutive images")
 print("Max BT between consecutive images is ", np.max(td),"between ", listdatenodesorted[timedeltas.index(np.max(timedeltas))],"and ",listdatenodesorted[timedeltas.index(np.max(timedeltas))+1] )
 
+listdatenodesortedall = sorted(listdateallnodes)
+timedeltasall = [listdatenodesortedall[i] - listdatenodesortedall[i-1] for i in range(1, len(listdatenodesortedall))]
+tdall=[]
+for x in range(0,len(timedeltasall)):
+	tdall.append(timedeltasall[x].total_seconds()/(24*60*60) )
+print(" ")
+print("Searching for gaps over", GAPINDAYS," days between consecutive images")
+
+for  x in range(0, len(tdall)):
+	if tdall[x]>GAPINDAYS	:
+		print("BT between consecutive images is",tdall[x], "days between ", listdatenodesortedall[x],"and ",listdatenodesortedall[x+1] )
 ## PLOTS 
 plotfig=1
 if plotfig==1:
 
-	fig, ((ax1, ax2, ax3),(ax4, ax5, ax6)) = plt.subplots(2, 3)
+	fig, ((ax1, ax2, ax3),(ax4, ax5, ax6),(ax7, ax8, ax9)) = plt.subplots(3, 3)
 	ax1.plot(BT, BP ,'ko', label='All possible pairs')
 	ax1.plot(Bt, Bpneg,'bo', label='restrict to BTmax,BPmax')
 	ax1.set_xlabel('BT(days)')
 	ax1.set_ylabel('BP(m)')
 	ax1.legend()
 
-	ax2.plot(listdatenode,Nodein,'ro', label='In')
-	ax2.set_xlabel('Date')
-	ax2.set_ylabel('InDegree')
-
-	ax3.plot(listdatenode,Nodeout,'go', label='Out')
+	ax3.plot(listdatenode,Nodein,'ro', label='In')
 	ax3.set_xlabel('Date')
-	ax3.set_ylabel('OutDegree')
+	ax3.set_ylabel('InDegree')
+
+	ax6.plot(listdatenode,Nodeout,'go', label='Out')
+	ax6.set_xlabel('Date')
+	ax6.set_ylabel('OutDegree')
 
 	 
 	ax4.plot(DATE1,BT,'ko')
@@ -211,9 +232,23 @@ if plotfig==1:
 	ax5.set_xlabel('Date')
 	ax5.set_ylabel('BP(m)')
 
-	ax6.scatter(listdatenodesorted[1::],td)
-	ax6.set_xlabel('Date')
-	ax6.set_ylabel('Delta T between consecutive images (days)')
+	ax2.scatter(listdatenodesortedall[1::],tdall)
+	ax2.set_xlabel('Date')
+	ax2.set_ylabel('Delta T between consecutive images (days)')
 
+	ax7.plot(listdatenode1,Bt,'bo')
+	ax7.set_xlabel('Date')
+	ax7.set_ylabel('BT(days)')
+	
+	ax8.plot(listdatenode1,Bpneg,'bo')
+	ax8.set_xlabel('Date')
+	ax8.set_ylabel('BP(m)')
+
+	ax9.plot(listdatenode,Nodein,'ro', label='In')
+	ax9.plot(listdatenode,Nodeout,'go', label='Out')
+	ax9.set_xlabel('Date')
+	ax9.set_ylabel('Degree')
+	ax9.legend()
+	
 	plt.show() # affiche la figure à l'écran
 

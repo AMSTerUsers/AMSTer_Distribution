@@ -64,13 +64,17 @@
 # New in Distro V 4.5: - replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 5.0: - Rename MasTer Toolbox as AMSTer Software
 #					   - rename Master and AMSTer as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 5.1 20240423:	- display max and mean Bp, Bt and nr of pairs
+# New in Distro V 5.2 20240617:	- try to make it faster
+# New in Distro V 5.3 20240701:	- discard some changes introduced in V5.2 that prevented proper use with additional tables etc..
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V5.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on July 1, 2024"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -240,6 +244,217 @@ echo "" >> ${SET}/two_lines_header.txt
 # Some functions
 #################
 
+function GetInfoFromTableAndRePlot()
+	{
+	unset TABLEFILE
+	local TABLEFILE		# A 4 col file with 2-lines header, with lines as MAS SLV BP BNT
+	local MEANBP
+	local SUMBP
+	local COUNT_LINES
+	local MAXBP
+	local ABS_VAL
+
+	local MEANBT
+	local SUMBT
+	local MAXBT
+	local tst1
+	local tst2
+	local abs_diff
+
+	local max
+
+	TABLEFILE=$1		# e.g. TABLEFORBPERP=table_0_${BP}_0_${BT}.txt
+	BPFROMFILE=$(basename ${TABLEFILE} | cut -d _ -f 3)
+	BTFROMFILE=$(basename ${TABLEFILE} | cut -d _ -f 5)
+
+	# get Max (abs) Bp and Bt as well as mean Bp and Bt 
+	# and last image date
+
+	# get the max and mean of absolute values for Bp and Bt
+	MEANBP=0
+	SUMBP=0
+	COUNT_LINES=0
+	MAXBP=0
+	ABS_VAL=0
+	
+	MEANBT=0
+	SUMBT=0
+	MAXBT=0
+	tst1=0
+	tst2=0
+	abs_diff=0
+
+	max=0
+	
+	while IFS=$'\t' read -r date1 date2 BPLOCAL BTLOCAL; do
+	 	# sum the abs of Bp
+	 	#ABS_VAL=$(echo "scale=10; if ($BPLOCAL < 0) -1*$BPLOCAL else $BPLOCAL" | bc)
+	 	ABS_VAL=${BPLOCAL#-} # Get absolute value of BPLOCAL
+	 	
+	 	SUMBP=$(echo "$SUMBP + $ABS_VAL" | bc)
+	 	((COUNT_LINES++))
+	 	# Get the max of Bp
+	 	if (( $(echo "$ABS_VAL > $MAXBP" | bc -l) )) ; then MAXBP=$ABS_VAL  ; fi 
+		
+		# transform the dates in days
+	 	ts1=$(date -d "$date1" +%s)
+	 	ts2=$(date -d "$date2" +%s)
+		
+	 	# Calculate the difference in days and its absolute value
+	 	diff=$(( (ts2 - ts1) / (86400) )) # 60 * 60 * 24 = 86400
+	 	abs_diff=${diff#-} # Get absolute value of difference
+		
+		# Get the max Bt
+	 	if (( $(echo "$abs_diff > $MAXBT" | bc -l) )) ; then MAXBT=$abs_diff  ; fi 
+		
+	 	# Accumulate the absolute difference and increment the count
+	 	#SUMBT=$((SUMBT + abs_diff))
+	 	SUMBT=$(echo "$SUMBT + $abs_diff" | bc)
+    	
+	done < <(tail -n +3 "${TABLEFILE}") # start after 2 lines header
+	
+	NRPAIRS=${COUNT_LINES}
+	# Compute the mean of absolute values of all numbers in column 2
+	MEANBP=$(echo "scale=2; $SUMBP / $COUNT_LINES" | bc)
+	# Compute the mean of all absolute differences in time
+	MEANBT=$(echo "scale=2; $SUMBT / $COUNT_LINES" | bc)
+
+	# largest value among col 1 & 2 
+	LASTIMG=$(${PATHGNU}/gawk 'NR>1 {if ($1 > max) max = $1; if ($2 > max) max = $2} END {print max}'  ${TABLEFILE})
+
+	echo "  // ${NRPAIRS} pairs ; Max ${MAXBP}m and ${MAXBT}days"
+	echo "  // 	Mean of absolute baseline values : ${MEANBP}m ans ${MEANBT}days "
+	echo "  // Last image: ${LASTIMG}"
+	echo ""
+
+	# update gnuplot and re-run to take into account the options 
+
+	# Define the replacement string containing special characters
+	#replacement_string="new line with special characters: / \ \' \" %"
+	# original line: theTitle = sprintf("Baseline plot of selected data - All pairs considered\nSuper Master date: %d", superMasterDate)
+	search_string1="selected data"
+	if [ "${DUALCRITERIA}" == "NO" ] 
+		then
+			replacement_string1="selected data with baselines < ${BPFROMFILE}m and ${BTFROMFILE}days ; Observed Max baselines: ${MAXBP}m and ${MAXBT}days"		# BPMAX and BTMAX computed from max allowed criteria; do not mix with MAXBP and MAXBT computed from allPairsLisint.txt
+		else
+			replacement_string1="selected data with baselines < ${BP1}m and ${BT1}days till ${DATECHANGE} then ${BP2}m and ${BT2}days ; Observed Max baselines: ${MAXBP}m and ${MAXBT}days"		# BPMAX and BTMAX computed from max allowed criteria; do not mix with MAXBP and MAXBT computed from allPairsLisint.txt
+	fi
+	search_string2="Super Master date:"
+	replacement_string2="Mean baselines: ${MEANBP}m and ${MEANBT}days ; ${NRPAIRS} pairs ; Last image: ${LASTIMG} ; Super Master date:" # BPMAX and BTMAX computed from max allowed criteria; do not mix with MAXBP and MAXBT computed from allPairsLisint.txt
+
+	# Use sed to search and replace
+	${PATHGNU}/gsed -i "s%${search_string1}%${replacement_string1}%" baselinePlot.gnuplot
+	${PATHGNU}/gsed -i "s%${search_string2}%${replacement_string2}%" baselinePlot.gnuplot
+	
+	# replot	
+	echo
+	echo " //Replot with appropriate title"
+	gnuplot baselinePlot.gnuplot
+	echo 
+
+	}
+
+function GetInfoFromDummyTableAndRePlot()
+	{
+	unset TABLEFILE
+	local TABLEFILE		# A 4 col file with 2-lines header, with lines as MAS SLV BP BNT
+	local MEANBP
+	local SUMBP
+	local COUNT_LINES
+	local MAXBP
+	local ABS_VAL
+
+	local MEANBT
+	local SUMBT
+	local MAXBT
+	local tst1
+	local tst2
+	local abs_diff
+
+	TABLEFILE=$1		# e.g. ${SET}/Dummy_BpMax=${BP1}_MAS_SLV_Before_${DATECHANGE}_Dummy_BpMax=${BP2}_MAS_SLV_After_${DATECHANGE}.txt 
+	
+	# get Max (abs) Bp and Bt as well as mean Bp and Bt 
+	# and last image date
+
+	# get the max and mean of absolute values for Bp and Bt
+	MEANBP=0
+	SUMBP=0
+	COUNT_LINES=0
+	MAXBP=0
+	ABS_VAL=0
+	
+	MEANBT=0
+	SUMBT=0
+	MAXBT=0
+	tst1=0
+	tst2=0
+	abs_diff=0
+	
+	while IFS=$'\t' read -r _ value date1 date2; do
+	 	# sum the abs of Bp
+	    #ABS_VAL=$(echo "scale=10; if ($value < 0) -1*$value else $value" | bc)
+	    ABS_VAL=${value#-} # Get absolute value of value
+	    
+	    SUMBP=$(echo "$SUMBP + $ABS_VAL" | bc)
+	    ((COUNT_LINES++))
+	    # Get the max of Bp
+	    if (( $(echo "$ABS_VAL > $MAXBP" | bc -l) )) ; then MAXBP=$ABS_VAL  ; fi 
+	
+		# transform the dates in days
+	    ts1=$(date -d "$date1" +%s)
+	    ts2=$(date -d "$date2" +%s)
+	    
+	    # Calculate the difference in days and its absolute value
+	    diff=$(( (ts2 - ts1) / (86400) ))
+	    abs_diff=${diff#-} # Get absolute value of difference
+		
+		# Get the max Bt
+	    if (( $(echo "$abs_diff > $MAXBT" | bc -l) )) ; then MAXBT=$abs_diff  ; fi 
+		
+	    # Accumulate the absolute difference and increment the count
+	    #SUMBT=$((SUMBT + abs_diff))
+	    SUMBT=$(echo "$SUMBT + $abs_diff" | bc)
+	done < "${TABLEFILE}"
+	
+	NRPAIRS=${COUNT_LINES}
+	# Compute the mean of absolute values of all numbers in column 2
+	#MEANBP=$(echo "scale=10; $SUMBP / $COUNT_LINES" | bc)
+	#MEANBP=$(printf "%.2f" "$MEANBP")
+	MEANBP=$(echo "scale=2; $SUMBP / $COUNT_LINES" | bc)
+
+	# Compute the mean of all absolute differences in time
+	MEANBT=$(echo "scale=2; $SUMBT / $COUNT_LINES" | bc)
+
+	# largest value among col 3 & 4 
+	LASTIMG=$(${PATHGNU}/gawk 'NR>1 {if ($3 > max) max = $3; if ($4 > max) max = $4} END {print max}'  ${TABLEFILE})
+
+	echo "  // ${NRPAIRS} pairs ; Max ${MAXBP}m and ${MAXBT}days"
+	echo "  // 	Mean of absolute baseline values : ${MEANBP}m ans ${MEANBT}days "
+	echo "  // Last image: ${LASTIMG}"
+	echo ""
+
+	search_string1="selected data"
+	replacement_string1="selected data with baselines < ${BP1}m and ${BT1}days till ${DATECHANGE}, then < ${BP2}m and ${BT2}d \\\n Observed Max baselines: ${MAXBP}m and ${MAXBT}days"		# BPMAX and BTMAX computed from max allowed criteria; do not mix with MAXBP and MAXBT computed from allPairsLisint.txt
+
+	search_string2="Super Master date:"
+	replacement_string2="Mean baselines: ${MEANBP}m ${MEANBT}days ; ${NRPAIRS} pairs ; Last image: ${LASTIMG} ; Super Master date:" # BPMAX and BTMAX computed from max allowed criteria; do not mix with MAXBP and MAXBT computed from allPairsLisint.txt
+
+	# Use sed to search and replace
+	${PATHGNU}/gsed -i "s%${search_string1}%${replacement_string1}%" baselinePlot.gnuplot
+	${PATHGNU}/gsed -i "s%${search_string2}%${replacement_string2}%" baselinePlot.gnuplot
+	# Remove all pairs considered
+	${PATHGNU}/gsed -i "s% - All pairs considered%%" baselinePlot.gnuplot
+	
+	# replot	
+	echo
+	echo " //Replot with appropriate title"
+	gnuplot baselinePlot.gnuplot
+	echo 
+
+	}
+
+
+
 function SpeakOut()
 	{
 	unset MESSAGE 
@@ -393,6 +608,7 @@ function ProcessBaselinePlotNewMethod()
 				echo
  				echo "// Compute BaselinePlot with provided criteria : Bp=${BP} dT=${BT} "	
 				baselinePlot ${SET} ${SET} BpMax=${BP} dTMax=${BT}  # second call of ${SET} is to output results in current dir
+				GetInfoFromTableAndRePlot ${SET}/table_0_${BP}_0_${BT}.txt
 				SM=`grep "Identified Super Master" ${SET}/allPairsListing.txt | cut -d ":" -f2 | ${PATHGNU}/gsed 's/\t//g' | ${PATHGNU}/gsed 's/ //g'`
  				echo "// BaselinePlot computed. New Global Promary (Super Master) is  ${SM}."		
  				TABLEFORBPERP=table_0_${BP}_0_${BT}.txt	
@@ -407,7 +623,9 @@ function ProcessBaselinePlotNewMethod()
 				# first set of criteria :				
 				echo
  				echo "// Compute BaselinePlot with first set of criteria : Bp=${BP1} dT=${BT1} "	
+
 				baselinePlot ${SET} ${SET} BpMax=${BP1} dTMax=${BT1}  # second call of ${SET} is to output results in current dir
+				GetInfoFromTableAndRePlot ${SET}/table_0_${BP1}_0_${BT1}.txt
  				cp baselinePlot.gnuplot baselinePlot_BpMax=${BP1}_BTMax=${BT1}.txt.gnuplot
 	
 				SM=`grep "Identified Super Master" ${SET}/allPairsListing.txt | cut -d ":" -f2 | ${PATHGNU}/gsed 's/\t//g' | ${PATHGNU}/gsed 's/ //g'`
@@ -421,6 +639,8 @@ function ProcessBaselinePlotNewMethod()
 				if [ ! -f table_0_${BP2}_0_${BT2}.txt  ] 
 					then 
 						baselinePlot ${SET} ${SET} BpMax=${BP2} dTMax=${BT2}  # second call of ${SET} is to output results in current dir
+						GetInfoFromTableAndRePlot ${SET}/table_0_${BP2}_0_${BT2}.txt
+
 						cp baselinePlot.gnuplot baselinePlot_BpMax=${BP2}_BTMax=${BT2}.txt.gnuplot
 					else
 						echo "//  .. Skip it because table_0_${BP2}_0_${BT2}.txt  already computed - same criteria as for first part"
@@ -433,6 +653,7 @@ function ProcessBaselinePlotNewMethod()
 				if [ ! -f table_0_${BPMAX}_0_${BTMAX}.txt  ] 
 					then 
 						baselinePlot ${SET} ${SET} BpMax=${BPMAX} dTMax=${BTMAX} 
+						GetInfoFromTableAndRePlot ${SET}/table_0_${BPMAX}_0_${BTMAX}.txt
 						cp baselinePlot.gnuplot baselinePlot_BpMax=${BPMAX}_BTMax=${BTMAX}.txt.gnuplot
 					else 
 						echo "//  .. Skip it because table_0_${BPMAX}_0_${BTMAX}.txt  already computed with same criteria"
@@ -477,7 +698,7 @@ function ProcessBaselinePlotNewMethod()
 				echo
  				echo "// Make merged BaselinePlot with both criteria "	
 				baselinePlot -r ${SET} ${SET}/Dummy_BpMax=${BP1}_MAS_SLV_Before_${DATECHANGE}_Dummy_BpMax=${BP2}_MAS_SLV_After_${DATECHANGE}.txt 
-				
+				GetInfoFromDummyTableAndRePlot	${SET}/Dummy_BpMax=${BP1}_MAS_SLV_Before_${DATECHANGE}_Dummy_BpMax=${BP2}_MAS_SLV_After_${DATECHANGE}.txt	
  				cp baselinePlot.gnuplot baselinePlot_Dummy_BpMax=${BP1}_MAS_SLV_Before_${DATECHANGE}_Dummy_BpMax=${BP2}_MAS_SLV_After_${DATECHANGE}.txt.gnuplot
 
 				# Note that baselinePlot -r creates the following tables:
@@ -1046,6 +1267,7 @@ if [ "${VERTOOL}" == "OLD" ]
 
 		cp allPairsListing.txt SM_Approx_baselines.txt
 		# shape the file
+
 		# remove header, sort, remove leading spaces
 		${PATHGNU}/grep -v "#" SM_Approx_baselines.txt | sort | ${PATHGNU}/gsed "s/^[ \t]*//" > SM_Approx_baselines_sorted.txt
 		# keep only lines containing SM and keep only col 1 (MAS), 2 (SLV), 3 (BP), and -4 (-Bt) tab separated
@@ -1168,8 +1390,11 @@ echo
 rm two_lines_header.txt
 
 # Remove possible double blank lines 
+# this remove all double lines
+#${PATHGNU}/gsed -i '/^$/N;/^\n$/D' ${SET}/table_${BPMIN}_${BP}_${BTMIN}_${BT}.txt 
 
-${PATHGNU}/gsed -i '/^$/N;/^\n$/D' ${SET}/table_${BPMIN}_${BP}_${BTMIN}_${BT}.txt 
+# Remove possible double blank lines at the end of file
+#${PATHGNU}/gsed -i '${/^$/d;N;/^\n$/d;}' ${SET}/table_${BPMIN}_${BP}_${BTMIN}_${BT}.txt 
 
 echo 
 echo "// All done; hope it worked"

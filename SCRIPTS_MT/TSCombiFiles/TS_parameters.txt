@@ -29,8 +29,8 @@ defo-domuyo			# WebPage
 60		# FrameBott (distance between bottom of color frame and top of the legend)
 
 # ImageCreator.sh and TimeSeriesInfo.sh 
-0		# Crop_X (Top left X coordinate of the cropped zone)
-0		# Crop_Y (Top left Y coordinate of the cropped zone)
+1000		# Crop_X (Top left X coordinate of the cropped zone)
+1000		# Crop_Y (Top left Y coordinate of the cropped zone)
 3361	# Crop_L (Horizontal size of the cropped zone)
 2800	# Crop_H (Vertical size of the cropped zone)
 
@@ -39,6 +39,8 @@ defo-domuyo			# WebPage
 15		# CrossBig Size of the cross in defo map as thumbnail if spacement between 2 pts are > treshold)
 15		# CrossSmall Size of the cross in defo map as thumbnail if spacement between 2 pts are < treshold)
 
-5       # RateResoSatView (Rate of pixels number compare with envi files)
-5       # RateResoSatellite (Rate of pixels number compare with envi files)
+2.5     # RateResoSatView (Rate of pixels number compare with envi files)
+2.5     # RateResoSattelite (Rate of pixels number compare with envi files)
+
+
 

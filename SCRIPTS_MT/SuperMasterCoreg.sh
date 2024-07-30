@@ -65,13 +65,19 @@
 # New in Distro V2.6.2 20231003:	- Added stop if it cannot find the S1 Super Master Image (A. Dille)
 # New in Distro V3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V3.1 20240313:	- improve comparison of processed when not the same physical disk before rm
+# New in Distro V3.2 20240422:	- avoid error message when attempting to compute DEM for __TMP_QUANRANTINE
+# New in Distro V3.3 20240425:	- quit loop of coreg with continue instead of exit when no coherence is found
+#								  and Log failure in file ${OUTPUTDATA}/_Fine_Coregistration_Failed.txt
+# New in Distro V3.4 20240530:	- S1 IW: also discard images that would have been placed in temporary quarantine when nr of 
+#								  swaths/bursts or size was not as expected during some cron job step 1
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 30, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -448,15 +454,17 @@ cd ${OUTPUTDATA}
 			if [ "${SATDIR}" == "S1" ]
 				then 
 					ls -d ${OUTPUTDATA}/${SUPERMASTER}* | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d _ -f 2-5 | ${PATHGNU}/grep -v ${SUPERMASTER} | ${PATHGNU}/grep -v Quarantained  | ${PATHGNU}/grep -v TMP_QUARANTINE | ${PATHGNU}/gsed 's/$/.csl/' > Processed_slaves_${RUNDATE}_${RNDM1}.txt
-					# list quaraintained if dir exist and is not empty
-					if [ -d ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained ] && [ `ls -l ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained | wc -l` -gt 1 ] ; then 
-						ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained/*.csl | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d _ -f 3  > Quarantained_${RUNDATE}_${RNDM1}.txt
-					fi
+					# list quaraintained (if dir exist and is not empty : no because __TMP_QUARANTINE may exist without files in Quarantained)
+					#if [ -d ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained ] && [ `ls -l ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained | wc -l` -gt 1 ] ; then 
+						ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained/*.csl 2>/dev/null | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d _ -f 3  > Quarantained_${RUNDATE}_${RNDM1}.txt
+						# also discard images that would have been placed in temporary quarantine (if any) when nr of swaths/bursts or size is not as expected during cron job step 1
+						ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/__TMP_QUARANTINE/*.csl 2>/dev/null | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d _ -f 3  >> Quarantained_${RUNDATE}_${RNDM1}.txt
+					#fi
 				else
 					ls -d ${OUTPUTDATA}/${SUPERMASTER}* | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d _ -f 2 | ${PATHGNU}/grep -v ${SUPERMASTER} | ${PATHGNU}/grep -v Quarantained  | ${PATHGNU}/grep -v TMP_QUARANTINE | ${PATHGNU}/gsed 's/$/.csl/' > Processed_slaves_${RUNDATE}_${RNDM1}.txt
 					# list quaraintained 
 					if [ -d ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained ] && [ `ls -l ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained | wc -l` -gt 1 ] ; then 
-						ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained/*.csl | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d . -f 1  > Quarantained_${RUNDATE}_${RNDM1}.txt
+						ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained/*.csl 2>/dev/null | ${PATHGNU}/gawk -F '/' '{print $NF}' | cut -d . -f 1  > Quarantained_${RUNDATE}_${RNDM1}.txt
 					fi
 			fi
 			if [ ! -s Quarantained_${RUNDATE}_${RNDM1}.txt ] ; then 
@@ -472,7 +480,7 @@ cd ${OUTPUTDATA}
 ##############################################################
 if [ "${LISTTOCOREG}" == "" ]
 	then 
-		ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep -v ${SUPERMASTER} | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep -v Quarantained  | ${PATHGNU}/grep -v TMP_QUARANTINE > All_Slaves_${RUNDATE}_${RNDM1}.txt
+		ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep -v "${SUPERMASTER}" | ${PATHGNU}/grep -v ".txt" | ${PATHGNU}/grep -v "Quarantained"  | ${PATHGNU}/grep -v "TMP_QUARANTINE" > All_Slaves_${RUNDATE}_${RNDM1}.txt
 	else
 		# check list format ; must be as named in DATAPATH, that is date.csl or S1_name.csl 
 		if [ "${SATDIR}" == "S1" ] 
@@ -485,7 +493,7 @@ if [ "${LISTTOCOREG}" == "" ]
 		#if OK, carry on
 		if [ ${TST} -gt 0 ] 
 			then 
-				cat ${LISTTOCOREG} > All_Slaves_${RUNDATE}_${RNDM1}.txt
+				cat ${LISTTOCOREG} | ${PATHGNU}/grep -v "TMP_QUARANTINE" > All_Slaves_${RUNDATE}_${RNDM1}.txt
 			else 
 				EchoTee " Sorry, you list of image to coregister must be in the form of date.csl if not S1 and S1AB_TRK_DATE_AD.csl if S1; Can't run. Exit'" 
 				exit
@@ -685,6 +693,8 @@ echo "Last created AMSTer Engine source dir suggest projecting DEM in slant rang
 
 NPAIRS=`wc -l < New_Slaves_to_process_${RUNDATE}_${RNDM1}.txt`
 
+rm -f "${OUTPUTDATA}"/_Fine_Coregistration_Failed.txt
+
 i=0
 for SLVDIR in `cat -s New_Slaves_to_process_${RUNDATE}_${RNDM1}.txt`    # i.e. SLVDIR is date.csl or S1_name.csl
 do	
@@ -807,8 +817,13 @@ do
 			fineCoregistration		| tee -a ${LOGFILE}
 			#Test Fine Coreg. 
 			TSTFINECOREG=`grep "Total number of anchor points" ${LOGFILE} | tail -n1 | tr -dc '[0-9]'`
-			if [ "${TSTFINECOREG}" -le "4" ] ; then EchoTee "Fine processing seemed to have failes (less than 4 anchor points... Exiting" ; exit 0 ; fi
-
+			#if [ "${TSTFINECOREG}" -le "4" ] ; then EchoTee "Fine processing seemed to have failes (less than 4 anchor points... Exiting" ; exit 0 ; fi
+			if [ "${TSTFINECOREG}" -le "4" ] 
+				then 
+					EchoTee "Fine processing seemed to have failes (less than 4 anchor points... Exiting" 
+					echo "Failed to fine coregister ${SLVDIR} on ${SUPERMASTER}" >> ${OUTPUTDATA}/_Fine_Coregistration_Failed.txt		
+					continue 
+			fi
 			EchoTee "fine coreg done with ${TSTFINECOREG} anchor points" 
 			EchoTee "--------------------------------"		
 	
@@ -940,7 +955,7 @@ if [ "${tst1}" == "${tst2}" ]
 		cp -r * ${OUTPUTDATA}
 
 		diff -r -q ${MAINRUNDIR} ${OUTPUTDATA} | ${PATHGNU}/grep "Only in ${MAINRUNDIR}"  > ${OUTPUTDATA}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
-		cat ${OUTPUTDATA}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep -v ModulesForCoreg > ${OUTPUTDATA}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
+		cat ${OUTPUTDATA}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep -v ModulesForCoreg | ${PATHGNU}/grep -v "DS_Store" > ${OUTPUTDATA}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
 		EchoTee ""
 		EchoTee "Not the same physical disk; Copy and Check if all is copied - ignore messages diff about links. " 
 		EchoTee ""

@@ -89,13 +89,14 @@
 # New in Distro V 6.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 6.1 20231123:	- Allows naming Radarsat2 as RS in workflow
+# New in Distro V 6.2 20240228:	- Fix rounding pix size when smaller than one by allowing scale 2 before division. Now pix size in real insated of integer 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V6.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 23, 2023"
+VER="Distro V6.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 28, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -744,8 +745,8 @@ fi
 # 					unset RET	
 # 			fi
 			
-			PIXSIZEAZ=`echo " ( ${AZSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of ML pixel in az (in m) 
-			PIXSIZERG=`echo " ( ${RGSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of ML pixel in range (in m) 
+			PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of ML pixel in az (in m) 
+			PIXSIZERG=`echo "scale=2; ( ${RGSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of ML pixel in range (in m) 
 
 	fi
 
@@ -1094,8 +1095,8 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 		EchoTee "    without squaring it because pixels were shared at Zoom"		
 		ChangeParam "Range reduction factor" ${INTERFML} InSARParameters.txt
 		ChangeParam "Azimuth reduction factor" ${INTERFML} InSARParameters.txt	  	
-		PIXSIZEAZ=`echo " ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-		PIXSIZERG=`echo " ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+		PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m)  
+		PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
 #		PIXSIZEAZ=`echo " ${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
 #		PIXSIZERG=`echo " ${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
 		
@@ -1110,8 +1111,8 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 					ChangeParam "Azimuth reduction factor" ${INTERFML} InSARParameters.txt	  	
 #					PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
 #					PIXSIZERG=`echo "${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-					PIXSIZEAZ=`echo "( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-					PIXSIZERG=`echo "( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+					PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+					PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
 
 				else  
 					RatioPix ${INTERFML}
@@ -1119,8 +1120,8 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 					ChangeParam "Azimuth reduction factor" ${AZML} InSARParameters.txt
 #					PIXSIZEAZ=`echo "${AZSAMP} * ${AZML}" | bc`  # size of ML pixel in az (in m) 
 #					PIXSIZERG=`echo "${RGSAMP} * ${RGML}" | bc`  # size of ML pixel in range (in m) 
-					PIXSIZEAZ=`echo "( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-					PIXSIZERG=`echo "( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+					PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+					PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
 
 
 					unset RGML

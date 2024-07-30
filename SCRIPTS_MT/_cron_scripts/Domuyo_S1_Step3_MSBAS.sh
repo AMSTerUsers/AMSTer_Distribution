@@ -111,7 +111,7 @@ TODAY=`date`
 		# So far, we change all the tables with the same name
 
 		TABLESET1=${SET1}/table_0_${SET1BP1}_0_${SET1BT1}_Till_${DATECHG1}_0_${SET1BP2}_0_${SET1BT2}_After.txt
-		TABLESET1=${SET2}/table_0_${SET2BP1}_0_${SET2BT1}_Till_${DATECHG2}_0_${SET2BP2}_0_${SET2BT2}_After.txt
+		TABLESET2=${SET2}/table_0_${SET2BP1}_0_${SET2BT1}_Till_${DATECHG2}_0_${SET2BP2}_0_${SET2BT2}_After.txt
 		
 		# Just in case a table would exist with the same values as the max Bp and Bt among all the modes, let's keep it with the name table_0_${BP}_0_${BT}_RealBaselinesVal.txt
 		# then link the dual table as a table with the common name table_0_${BP}_0_${BT}.txt for each mode 

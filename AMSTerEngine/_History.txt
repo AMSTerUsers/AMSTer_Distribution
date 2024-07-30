@@ -1,3 +1,88 @@
+/* AMSTerEngine20240427 (© DD & SAREOS) */
+/* ************************************ */
+updateS1Orbits: json file retreived from server wasn't closed. Recursive call to updateS1Orbits through scripts lead to too many opend files and to crash of updateS1Orbit in the ultimate call.  
+
+/* AMSTerEngine20240419 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: valgrind analysis showed that no files stayed opened preventing renaming. Error probably on windows servers used at ECGS. Nevertheless, to prevent renaming, image listing is now time ordered before frame reading. 
+
+/* AMSTerEngine20240418 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Bug correction in frame merging. Some file pointers were erroneously openend and/or not duly closed. This might be the origin of the renaming failure.
+S1DataDownloader: Now, paging of data listing is taken into account to download the whole listing of available data. Previously only the first page of data listing was considered limiting the search to 20 images a year. 
+
+/* AMSTerEngine20240417 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Now, the provided kml polygon is kept as such for requesting data to COPERNICUS servers. Formerly, it was the circumscribed rectangle that wa considered leading to selction of unwanted frames.
+S1DataReader: On some (windows) configurations, frame renaming fails due to erroneous write permission denial. If this occurs, a second attempt is now performed using the linux/unix mv function in place of the rename() C function. Hope this will solve this issue. 
+
+/* AMSTerEngine20240301 (© DD & SAREOS) */
+/* ************************************ */
+initInSAR : correction of a bug introduced recently and leading to simply disguard Super Master to Master management. 
+paramInSAR.c: Reorganization and simplification, returning to a single function to read InSARParameters.
+
+/* AMSTerEngine20240226 (© DD & SAREOS) */
+/* ************************************ */
+ALOSDataReader: Correction to take into account left or right looking direction. 
+
+/* AMSTerEngine20240218 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Now, cleaning of data to be read is only performed when dealing with zipped archives. For non zipped S1 images, reading is skipped as before, on an image by image basis if a read one already exists. 
+
+/* AMSTerEngine20240216 (© DD & SAREOS) */
+/* ************************************ */
+InSARParameter management: Correction of a bug introduced on january 24 leading to systematic crash of InSAR processing. A Super Master to Master processing was erroneously considered while not existing leading to wrong allocation and segmentation fault. 
+
+/* AMSTerEngine20240215 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Bugs correction: 
+	Former version crashed when the destination directory was not containing any former read S1 images. 
+	Correction in handling a single input zipped file.
+	Messages concerning orbits updates more complete. 
+
+/* AMSTerEngine20240214 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Now, listing of frame to be read is first cleaned with respect to frame already read in destination directory. This to avoid to unzip unecessary files. 
+	If willing to circumvent this step forcing rereading all, use the -o option.
+
+/* AMSTerEngine20240213 (© DD & SAREOS) */
+/* ************************************ */
+initInSAR & InSARParameters.txt management: Addition of field named /* Orbit types */ in case S1 orbit types are known.
+	Valgrind check: Loads of leaks corrections.
+
+/* AMSTerEngine20240212 (© DD & SAREOS) */
+/* ************************************ */
+S1 data management: Addition  of a field in SLCImageInfo.txt stating which type of orbit is considered. Running S1OrbitUpdater should create/update this new field for previously read images. 
+
+/* AMSTerEngine20240211 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Correction in COPERNICUS server reconnexion. 
+
+/* AMSTerEngine20240210 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Correction in naming. Replacing .SAFE extension by .zip to keep the same name convention than before. 
+	Addition of time laps of 10 minutes if reconnection, retrying only once. 
+
+/* AMSTerEngine20240209 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Since ONDA server does not maintain full S1 archive anymore and that now everything is maintained in COPERNICUS servers, a new routine was developped, simply named S1DataDownloader. It uses the same credentials than updateS1Orbits since downloading from the same server adress. 
+Formalism is the same than for ONDA_S1DataDownloader. 
+An additional option -v allows checking the size of already present data on local disk. If size differs from the one on COPERNICUS server, local data is removed and download again if using this option. 
+Take care. Apparently, data on COPERNICUS servers are non-necessarily compressed zipped file. So, data size may strongly differs from previous downloads from other servers (SciHub, ONDA, ASF). So, activating the -v option may lead to complete re-downloading all the data set even if locally present. 
+
+/* AMSTerEngine20240124 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: Modification of paramInSARLib: reading of InSAR parameter file is subdivided in two steps; one to strictly read the parameters, the other to initialize image related parameters. This allows using only the first step in geoProjection call since master, slave and interpolated slave image are not required anymore at this step. In this way, those havy files can be trashed if willing to spare space without preventing geoProjection process. 
+
+/* AMSTerEngine20240116 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Correction in misreading of dy optional parameter.
+initInSAR: Destination path is now correctly expanded and written in the InSARParameters.txt file.
+
+/* AMSTerEngine20240116 (© DD & SAREOS) */
+/* ************************************ */
+updateS1Orbits: Addition of some error controls.
+
 /* AMSTerEngine20231213 (© DD & SAREOS) */
 /* ************************************ */
 updateS1Orbits: fully renewed to cope with new COPERNICUS server ditribution and OData api requests. 

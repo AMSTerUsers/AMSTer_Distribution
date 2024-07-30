@@ -21,6 +21,8 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20240109:	- mute error message when cat LAUNCHF[$i] or LAUNCHF in GetAllPIDs when a Read_All_Img.sh
+# New in Distro V 4.2 20240605:	- remove typo that displayed an extra 1 after the Part nr 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
@@ -45,7 +47,7 @@ function GetAllPIDs()
 				do
 					ID[$i]=`echo ${line} | cut -d " " -f1`
 					LAUNCHF[$i]=`echo  ${line} | gsed 's/.* \///' | ${PATHGNU}/grep -o '^\S*'`  # first take everything after last occurrence of " /" then remove everything after first space
-					if [ ! -z ${LAUNCHF}[$i] ] ; then HD[$i]=`cat /${LAUNCHF[$i]} | ${PATHGNU}/grep -m1 "PROROOTPATH" | ${PATHGNU}/grep -Eo "[0-9]{4}"` ; fi
+					if [ ! -z ${LAUNCHF}[$i] ] ; then HD[$i]=`cat /${LAUNCHF[$i]} 2>/dev/null | ${PATHGNU}/grep -m1 "PROROOTPATH" | ${PATHGNU}/grep -Eo "[0-9]{4}"` ; fi
 					i=`echo "$i + 1" | bc -l`
 			done < tmp.txt
 			i=`echo "$i - 1" | bc -l`
@@ -66,7 +68,7 @@ function GetAllPIDs()
 					LAUNCHF=`ps -eaf | ${PATHGNU}/grep ${PROCESSMODE} | ${PATHGNU}/grep -v "grep"  | ${PATHGNU}/grep -v "LaunchTerminal.sh" | gsed 's/.* \///' | ${PATHGNU}/grep -o '^\S*'`  # first take everything after last occurrence of " /" then remove everything after first space
 			fi
 
-			if [ ! -z ${LAUNCHF} ] ; then HD=`cat /${LAUNCHF} | ${PATHGNU}/grep -m1 "PROROOTPATH" | ${PATHGNU}/grep -Eo "[0-9]{4}"` ; fi
+			if [ ! -z ${LAUNCHF} ] ; then HD=`cat /${LAUNCHF} 2>/dev/null | ${PATHGNU}/grep -m1 "PROROOTPATH" | ${PATHGNU}/grep -Eo "[0-9]{4}"` ; fi
 	fi
 	}
 
@@ -186,7 +188,7 @@ echo "//________________________________________________________________________
 			fi
 			if [[ ${LAUNCH[$i]} == *"_Part"* ]]
 				then	
-					printf "%-30s%-32s%-15s%-15s%-30s%-25s \n" "// SuperMaster_MassProc.sh " "${TRKDIR}   Part ${PART[$i]}" "1      ${ID[$i]}" "   ${HD[$i]}" "${PAIRSTOPROCESS[$i]}" "${PROCESSING[$i]}"
+					printf "%-30s%-32s%-15s%-15s%-30s%-25s \n" "// SuperMaster_MassProc.sh " "${TRKDIR}   Part ${PART[$i]}" "      ${ID[$i]}" "   ${HD[$i]}" "${PAIRSTOPROCESS[$i]}" "${PROCESSING[$i]}"
 				else 
 					printf "%-30s%-32s%-15s%-15s%-30s%25s \n" "// SuperMaster_MassProc.sh " "${TRKDIR}" "1      ${ID[$i]}" "   ${HD[$i]}" "${PAIRSTOPROCESS[$i]}" "${PROCESSING[$i]}" 
 			fi		

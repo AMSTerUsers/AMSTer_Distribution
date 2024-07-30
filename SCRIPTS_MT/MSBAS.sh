@@ -38,13 +38,15 @@
 # New in Distro V 3.2:	- search for msbas version was missing in case of 0 param
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20240109:	- When launched with only 1 param, it was not able to find the last version of msbas
+#								- improve check empty dir at the end
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jan 09, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -121,7 +123,7 @@ if [ $# -eq 3 ] ; then
 	fi
 fi
 
-if [ $# -eq 0 ] ; then 
+if [ $# -eq 0 ] || [ $# -eq 1 ] ; then 
 	LastMsbasV
 fi
 
@@ -287,19 +289,27 @@ Add_hdr_Files_Less_Ras.sh ${PARAMNAME}		# sort files in dir
 # 
  if [ "$#" -eq 1 ] ; then 
  	# delete unecessary TS dir
- 	
-	if [ "$(ls -A zz_LOS_TS${PARAMNAME})" ]; then
- 	    echo "zz_LOS_TS${PARAMNAME} is not Empty. Keep it."
-	else
-    	echo "zz_LOS_TS${PARAMNAME} is Empty. Remove it."
-		rm -Rf zz_LOS_TS${PARAMNAME}
+	if [ -d "zz_LOS_TS${PARAMNAME}" ] && [ "$(ls -A zz_LOS_TS${PARAMNAME})" ]; then
+			echo "zz_LOS_TS${PARAMNAME} is not Empty. Keep it."
+		else
+			echo "zz_LOS_TS${PARAMNAME} does not exist or is Empty. Remove it if appropriate."
+			rm -Rf zz_LOS_TS${PARAMNAME} 2>/dev/null
 	fi
-	if [ "$(ls -A zz_UD_EW_TS${PARAMNAME})" ]; then
- 	    echo "zz_UD_EW_TS${PARAMNAME} is not Empty. Keep it."
-	else
-    	echo "zz_UD_EW_TS${PARAMNAME} is Empty. Remove it."
-		rm -Rf zz_UD_EW_TS${PARAMNAME}
+
+	if [ -d "zz_UD_EW_TS${PARAMNAME}" ] && [ "$(ls -A zz_UD_EW_TS${PARAMNAME})" ]; then
+			 echo "zz_UD_EW_TS${PARAMNAME} is not Empty. Keep it."
+		else
+			echo "zz_UD_EW_TS${PARAMNAME} does not exist or is Empty. Remove it if appropriate."
+			rm -Rf zz_UD_EW_TS${PARAMNAME} 2>/dev/null
 	fi
+ 
+ 	if [ -d "zz_UD_EW_NS_TS${PARAMNAME}" ] && [ "$(ls -A zz_UD_EW_NS_TS${PARAMNAME})" ]; then
+			echo "zz_UD_EW_NS_TS${PARAMNAME} is not Empty. Keep it."
+		else
+			echo "zz_UD_EW_NS_TS${PARAMNAME} does not exist or is Empty. Remove it if appropriate."
+			rm -Rf zz_UD_EW_TS${PARAMNAME} 2>/dev/null
+	fi
+
  	
  #	rm -Rf zz_LOS_TS${PARAMNAME} zz_UD_EW_TS${PARAMNAME}
  fi

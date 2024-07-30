@@ -32,9 +32,11 @@ echo " "
 
 
 # Remove data
-for DIRS in `ls -d S1?_*_*_?_S1?_*_*_? 2> /dev/null`
+#for DIRS in `ls -d S1?_*_*_?_S1?_*_*_? 2> /dev/null`
+for DIRS in `ls -d ????????_???????? 2> /dev/null`
 	do
-		rm -f ${DIRS}/i12/InSARProducts/S1*.interpolated.csl/Data/SLCData.??
-		echo "delete ${DIRS}/i12/InSARProducts/S1?_*.interpolated.csl/Data/SLCData.??"
+		#rm -f ${DIRS}/i12/InSARProducts/S1*.interpolated.csl/Data/SLCData.??
+		rm -f ${DIRS}/i12/InSARProducts/*.interpolated.csl/Data/SLCData.??
+		echo "delete ${DIRS}/i12/InSARProducts/*.interpolated.csl/Data/SLCData.??"
 		
 done

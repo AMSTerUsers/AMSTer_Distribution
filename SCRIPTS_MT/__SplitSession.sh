@@ -21,10 +21,10 @@
 #   
 #
 # Parameters are:
-#       - Table to be splitted
+#       - Table to be split (in the form of "date	date	Bp	Bt"  or "data_date")
 #		- Parameters file (incl path) to be used
-#       - Nr of parallel splitted processes
-#		- optional: -list=filename to use list of pairs or 
+#       - Nr of parallel split processes
+#		- optional: -list=filename (with path) to use list of pairs or 
 #					-f to force checking existing pairs based on Geocoded/DefoInterpolx2Detrend)
 #
 # Dependencies:	- gnu sed and awk for more compatibility. 
@@ -71,13 +71,17 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 5.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 5.1 20240213:	- FUNCTIONS_FOR_MT.sh was not sourced
+# New in Distro V 5.2 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
+# New in Distro V 5.3 20240702:	- add info about format of table to split
+#								- take also table like from Prepa_MSBAS.sh, though without header
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# NdO (c) 2017/12/29 - could make better... when time.
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V5.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 02, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -93,7 +97,7 @@ source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
 	# - SplitDiskSelection for selecting the disks for each session
 # ^^^ ----- Hard coded lines to check --- ^^^ 
 
-TABLEFILEPATH=$1 	# eg /Users/doris/NAS/hp-1650-Data_Share1/SAR_SM/MSBAS/Limbourg/set1/table_0_450_0_250.txt
+TABLEFILEPATH=$1 	# eg /Users/doris/NAS/hp-1650-Data_Share1/SAR_SM/MSBAS/Limbourg/set1/table_0_450_0_250.txt (i.e. "date	date	Bp	Bt")  or "data_date"
 PARAMFILEPATH=$2 	# Usual Parameter file
 N=$3 				# eg 5 if you have 100 pairs and want process 5 terminals, each processing 20 pairs
 LISTOFPROCESSED=$4	# if -f, it forces to create the list of existing pairs based on the files in Geocoded/DefoInterpolx2Detrend 
@@ -110,7 +114,7 @@ fi
 if [ $# -eq 4 ]
 	then 
 		case ${LISTOFPROCESSED} in 
-			"-f") # get the list of proecessed pairs from Geocoded/DefoInterpolx2Detrend
+			"-f") # get the list of proecessed pairs from Geocoded/${DEFOMODE}
 				LISTOFPROCESSED=YES ;;
 			"-list="*)  # Do not compute list of processed pairs to compute wich is still to process because the list of pairs to process is provided instead
 			 	LISTOFPROCESSED=FILE
@@ -130,7 +134,7 @@ if [ $# -eq 4 ]
 			 	
 			*)	# not sure what is wanted hence keep default processing 
 				echo "Not sure what your 4th parameter is. "
-				echo "  This option must be -f to search for list of processed pairs in Geocoded/DefoInterpolx2Detrend or "
+				echo "  This option must be -f to search for list of processed pairs in Geocoded/DefoMode or "
 				echo "                      -file=list to provide a list of pairs to process.  " 
 				echo "Since the 4th parameter provided is of none of these forms, let's keep default processing, "
 				echo "  i.e. compute the list of preocessed pairs from the pair dirs in SAR_MASSPROCESS" 
@@ -199,6 +203,8 @@ DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored
 
 PATHFCTFILE=${FCTFILE%/*}
 
+source ${FCTFILE}
+
 PROPATH=${PROROOTPATH}/${SATDIR}/${TRKDIR}/MASSPROC
 mkdir -p ${PROPATH}
 cd ${PROPATH}
@@ -238,9 +244,44 @@ cd ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}
 #if [ -d ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML} ] ; then cd ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML} ; fi
 case ${LISTOFPROCESSED} in 
 			"YES")
-				# force to build the list of existing pairs based on the files in Geocoded/DefoInterpolx2Detrend
+				# Search for Defo mode 
+				LinkedFile=$(find ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}/Geocoded/DefoInterpolx2Detrend/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1)
+										
+				if [ "${LinkedFile}" == "" ] 
+					then 
+						# There is no file in DefoInterpolx2Detrend, search in DefoInterpolDetrend
+						LinkedFile=$(find ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}/Geocoded/DefoInterpolDetrend/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1) 
+						if [ "${LinkedFile}" == "" ] 
+							then 
+								# There is no file in DefoInterpolDetrend, search in DefoInterpol
+								LinkedFile=$(find ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}/Geocoded/DefoInterpol/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1) 
+								if [ "${LinkedFile}" == "" ] 
+									then 
+										# There is no file in DefoInterpol, search in Defo
+										LinkedFile=$(find ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}/Geocoded/Defo/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1) 
+										if [ "${LinkedFile}" == "" ] 
+											then 
+												# There is no file at all - can't make the fig with amplitude background
+												echo "  // I can't find a deformation file in ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}/Geocoded//Defo[Interpol][x2][Detrend]. "
+												echo "  // Hence I can't check computed pairs, which might be fine if it is a first run. In that case, I suppose that mode will be DefoInterpolx2Detrend. " 
+												echo "  // If it is a first run but do not want that mode, do not run the script with option -f or change hard coded lines ins script."
+												DEFOMODE=DefoInterpolx2Detrend
+											else 
+												DEFOMODE=Defo
+										fi
+									else 
+										DEFOMODE=DefoInterpol
+								fi
+							else 
+								DEFOMODE=DefoInterpolDetrend
+						fi
+					else 
+						DEFOMODE=DefoInterpolx2Detrend
+				fi
+
+				# force to build the list of existing pairs based on the files in Geocoded/${DEFOMODE}
 				rm -f ${PROPATH}/ExistingPairs_${RNDM}.txt
-				for GEOCODEDPAIR in `find ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}/Geocoded/DefoInterpolx2Detrend/ -maxdepth 1 -type f -name "*deg"` ; do 
+				for GEOCODEDPAIR in `find ${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg"` ; do 
 					echo "${GEOCODEDPAIR}" | ${PATHGNU}/grep -Eo "[0-9]{8}_[0-9]{8}">> ${PROPATH}/ExistingPairs_${RNDM}.txt # select date_date where date is 8 numbers
 				done ;;
 			"NO")
@@ -277,8 +318,18 @@ if [  ${LISTOFPROCESSED} == "FILE" ]
 				# Remove header and extract only the pairs in ${TABLEFILEPATH}
 				cat ${TABLEFILEPATH} | tail -n+3 | cut -f 1-2 | ${PATHGNU}/gsed "s/\t/_/g" > ${TABLEFILE}_NoBaselines_${RNDM}.txt 
 			else
-				# If PAIRFILE = list of images to play, it contains already only the dates
-				cp ${TABLEFILEPATH} ${TABLEFILE}_NoBaselines_${RNDM}.txt
+				## If PAIRFILE = list of images to play, it contains already only the dates
+				#cp ${TABLEFILEPATH} ${TABLEFILE}_NoBaselines_${RNDM}.txt
+				if cat ${TABLEFILEPATH} | tail -1 | ${PATHGNU}/grep -q _  
+					then
+						# Pair files contains _ then already ready
+						cp ${TABLEFILEPATH} ${TABLEFILE}_NoBaselines_${RNDM}.txt
+					else 
+						# Pair files does not contains _ and hence need formatting
+						cat ${TABLEFILEPATH} | cut -f 1-2 | ${PATHGNU}/gsed "s/\t/_/g" > ${TABLEFILE}_NoBaselines_${RNDM}.txt
+				fi
+
+
 		 fi
 
 		# Search for only the new ones to be processed:

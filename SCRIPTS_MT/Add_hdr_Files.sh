@@ -22,14 +22,16 @@
 # New in Distro V 2.5: - replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240116:	- allows MSBAS 3D. Note that the inversion of the this third NS component only makes sense if/where the 
+# 								displacement is expected to occur along the steepest slope of the topography (e.g. in 
+# 								case of land slide). That is why it is sometimes referred as 3D SPF (Surface Parallel Flow)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
-
+VER="Distro V3.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jan 16, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 
@@ -79,7 +81,11 @@ if [ ${countMSBASV1} -gt 1 ] ; then lname="MSBASV1" ; echo "You probably process
 
 case ${lname} in 
  	MSBASV4)
+		# Test if process 3D inversion 
+		if ls ./*_NS.bin 1> /dev/null 2>&1 ; then 3D="YES" ; else 3D="NO" ; fi 
+
  		ls *_EW.bin *UD.bin > listdir.tmp
+ 		if [ "${3D}" == "YES" ] ; then ls *_NS.bin >> listdir.tmp ; fi
  		ls MSBAS_NORM_AXY.bin >> listdir.tmp
  		ls MSBAS_NORM_X.bin >> listdir.tmp	
  		ls MSBAS_COND_NUM.bin >> listdir.tmp
@@ -87,12 +93,19 @@ case ${lname} in
  		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
  		mkdir -p zz_UD${PARAMNAME}
  		mkdir -p zz_EW${PARAMNAME} 
- 		mkdir -p zz_UD_EW_TS${PARAMNAME} ;;
+ 		if [ "${3D}" == "YES" ]
+ 			then 
+ 				mkdir -p zz_NS${PARAMNAME} 
+ 				mkdir -p zz_UD_EW_NS_TS${PARAMNAME} 
+ 			else 
+ 				mkdir -p zz_UD_EW_TS${PARAMNAME} 
+ 		fi
+ 		;;
 	MSBASV2)
 		ls *_EW.bin *UD.bin > listdir.tmp
 		ls MSBAS_NORM_AXY.bin >> listdir.tmp
 		ls MSBAS_NORM_X.bin >> listdir.tmp	
-		if [ -f MSBAS_ZSCORE_MASK.bin ] &&  [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
+		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
 		mkdir -p zz_UD${PARAMNAME}
 		mkdir -p zz_EW${PARAMNAME} 
 		mkdir -p zz_UD_EW_TS${PARAMNAME} ;;
@@ -138,18 +151,20 @@ case ${lname} in
 		# add new ones
 		mv *_EW.bin* zz_EW${PARAMNAME}/
 		mv *_UD.bin* zz_UD${PARAMNAME}/ 
+		if [ "${3D}" == "YES" ] ; then 
+			rm -f zz_NS${PARAMNAME}/*_NS.bin*
+			mv *_NS.bin* zz_NS${PARAMNAME}/
+		fi
+
 		echo "Move norms and log and dateTime file in EW${PARAMNAME}"	
 		mv -f MSBAS_NORM_X.bin* zz_EW${PARAMNAME}/ 
 		mv -f MSBAS_NORM_AXY.bin* zz_EW${PARAMNAME}/ 
-		if [ ${lname} == "MSBASV4" ] ; then  
-			mv -f MSBAS_COND_NUM.bin zz_EW${PARAMNAME}/ 
-			mv -f MSBAS_RANK.bin zz_EW${PARAMNAME}/ 
-		fi
-		#if [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_EW${PARAMNAME}/  >> listdir.tmp ; fi
+		if [ -f MSBAS_COND_NUM.bin ] && [ -s MSBAS_COND_NUM.bin ] ; then mv -f MSBAS_COND_NUM.bin zz_EW${PARAMNAME}/ ; fi
+		if [ -f MSBAS_RANK.bin ] && [ -s MSBAS_RANK.bin ] ; then mv -f MSBAS_RANK.bin zz_EW${PARAMNAME}/ ; fi
 		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_EW${PARAMNAME}/ ; fi
 		mv -f MSBAS_TSOUT.txt zz_EW${PARAMNAME}/
 		mv -f MSBAS_TIME_MATRIX.txt zz_EW${PARAMNAME}/
-		#mv MSBAS_*.txt zz_EW${PARAMNAME}/
+
 		cd zz_UD${PARAMNAME}
 		ls *.hdr | ${PATHGNU}/grep -v "RATE" > ../datesTime.txt
 		cd ..
@@ -157,7 +172,14 @@ case ${lname} in
 		${PATHGNU}/gsed -i 's/MSBAS_//g' datesTime.txt
 		mv datesTime.txt zz_UD${PARAMNAME}/
 		cp header.txt zz_UD${PARAMNAME}/
-		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_UD_EW_TS${PARAMNAME}/ ; fi
+
+		if [ "${3D}" == "YES" ] 
+			then 
+				if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_UD_EW__NS_TS${PARAMNAME}/ ; fi
+
+			else 
+				if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_UD_EW_TS${PARAMNAME}/ ; fi
+		fi
 		
 		# Create ratsers 
 		if [ -d zz_EW${PARAMNAME} ] ; then 
@@ -172,6 +194,23 @@ case ${lname} in
 			rm listdir.tmp
 			# make kmz of linear rate
 			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_EW.bin
+			cd ..
+		fi
+
+		# Create ratsers 
+		if [ -d zz_NS${PARAMNAME} ] ; then 
+			cp header.txt zz_NS${PARAMNAME}/
+			cd zz_NS${PARAMNAME}
+			WIDTH=`${PATHGNU}/grep Samples MSBAS_LINEAR_RATE_NS.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
+
+			ls *.bin > listdir.tmp
+			for FILE in `cat -s listdir.tmp`
+				do
+					${PATHTOCPXFIDDLE}/cpxfiddle -w ${WIDTH} -q normal -o sunraster -c jet -M 1/1 -f r4 ${FILE} > ${FILE}.ras
+			done
+			rm listdir.tmp
+			# make kmz of linear rate
+			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_NS.bin
 			cd ..
 		fi
 
@@ -202,10 +241,13 @@ case ${lname} in
 		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_LOS${PARAMNAME}/ ; fi
 		mv -f MSBAS_TSOUT.txt zz_LOS${PARAMNAME}/
 		mv -f MSBAS_TIME_MATRIX.txt zz_LOS${PARAMNAME}/
-		if [ ${lname} == "SBASV4" ] ; then  
-			mv -f MSBAS_COND_NUM.bin zz_EW${PARAMNAME}/ 
-			mv -f MSBAS_RANK.bin zz_EW${PARAMNAME}/ 
-		fi
+		#if [ ${lname} == "SBASV4" ] ; then  
+		#	mv -f MSBAS_COND_NUM.bin zz_LOS${PARAMNAME}/ 
+		#	mv -f MSBAS_RANK.bin zz_LOS${PARAMNAME}/ 
+		#fi
+		if [ -f MSBAS_COND_NUM.bin ] && [ -s MSBAS_COND_NUM.bin ] ; then mv -f MSBAS_COND_NUM.bin zz_LOS${PARAMNAME}/ ; fi
+		if [ -f MSBAS_RANK.bin ] && [ -s MSBAS_RANK.bin ] ; then mv -f MSBAS_RANK.bin zz_LOS${PARAMNAME}/ ; fi
+		
 		#mv MSBAS_*.txt zz_EW${PARAMNAME}/
 		cd zz_LOS${PARAMNAME}
 		ls *.hdr | ${PATHGNU}/grep -v "RATE" > ../datesTime.txt

@@ -30,13 +30,14 @@
 # New in Distro V 2.0: - run as much test in parallel as there are CPUs minus one (to be sure...) using only bash fct
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240612:	- replace ls with find to avoid crash when too many files in dir
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 12, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -108,11 +109,17 @@ do
 	# Run tests in pseudo parallelism
 	{
 		PAIR=`echo "${IMGTOTEST}" | ${PATHGNU}/grep -Eo "_[0-9]{8}_[0-9]{8}_" ` # select _date_date_ where date is 8 numbers
-		SGNLFILE=`ls ${PATHTOMOD} | ${PATHGNU}/grep ${PAIR} | ${PATHGNU}/grep -v .hdr  | ${PATHGNU}/grep -v .ras  | ${PATHGNU}/grep -v .xml` # avoid hdr but also xml if files were open in a gis or ras just in case... 
-		CHECKSGNL=`getStatForZoneInFile ${PATHTOMOD}/${SGNLFILE} ${KML}` # gives the mean coh in zone 
-		
+echo "Pair is ${PAIR}"
+		#SGNLFILE=`ls ${PATHTOMOD} | ${PATHGNU}/grep ${PAIR} | ${PATHGNU}/grep -v .hdr  | ${PATHGNU}/grep -v .ras  | ${PATHGNU}/grep -v .xml` # avoid hdr but also xml if files were open in a gis or ras just in case... 
+		SGNLFILE=`find ${PATHTOMOD} -maxdepth 1 -name "*${PAIR}*deg"` # avoid hdr but also xml if files were open in a gis or ras just in case... 
+echo " SGNLFILE is ${SGNLFILE}"		
+		#CHECKSGNL=`getStatForZoneInFile ${PATHTOMOD}/${SGNLFILE} ${KML}` # gives the mean coh in zone 
+		CHECKSGNL=`getStatForZoneInFile ${SGNLFILE} ${KML}` # gives the mean coh in zone 
+echo "CHECKSGNL is ${CHECKSGNL} from getStatForZoneInFile ${SGNLFILE} ${KML}"		
 		TSTREAL=`echo " ${CHECKSGNL} * ${CHECKSGNL} > 0 " | bc -l`   # Test here if |value| > 0 i.e. exists. 
-			
+echo "TSTREAL is ${TSTREAL}"
+
+exit			
 		if [ ${TSTREAL} -eq 1 ]
 			then 
 				echo "Mean signal in kml is at least ${CHECKSGNL} ; Zone is ok in ${PAIR}"

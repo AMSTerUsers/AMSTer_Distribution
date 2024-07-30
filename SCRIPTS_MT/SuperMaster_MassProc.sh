@@ -90,13 +90,29 @@
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20231123:	- Allows naming Radarsat2 as RS in workflow
+# New in Distro V 3.2 20231222:	- Skip pairs with images that would be stored in .../SAR_CSL/sat/mode/Quarantained
+# New in Distro V 3.3 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
+# New in Distro V 3.4 20240311:	- correct bug in syntax when checking if computation was performed on same computer as final storage 
+#								- display time when processing is finished
+# New in Distro V 3.5 20240313:	- improve comparison of processed when not the same physical disk before rm
+# New in Distro V 3.6 20240425:	- quit loop of coreg with continue instead of exit when no coherence is found
+# New in Distro V 3.7 20240507:	- debug cleaning after processing
+# New in Distro V 3.8 20240510:	- Remove some call of EchoTee fct before def of Log file. Some EchoTeeRed are kept to keep message diplayed as red though it will not be saved in log file 
+#								- do not list in ExistingPairs_${RUNDATE}_${RNDM1}.txt possible wrong dir SMNoCrop... with duplicated pair dirs
+# New in Distro V 3.9 20240530:	- when mass processing is finished, move pair dirs based on list of processed pairs 
+#															and txt files based on RUNDATE and RNDM1 
+#								  variable names to avoid possible flush of running processes if more than one SuperMaster_MassProc.sh is run in the same dir
+# New in Distro V 3.10 20240605:	- clean log file in RUNDIR when no additional pairs to compute
+# New in Distro V 3.11 20240606:	- typo in copying/moving results after mass processing
+# New in Distro V 3.12 20240620:	- avoid copying base dir when copying results to SAR_MASSPROCESS
+#									- remove only processed pairs when comparison with SAR_MASSPROCESS is ok 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 23, 2023"
+VER="Distro V3.12 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 20, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -133,7 +149,7 @@ if [ $# -eq 3 ]
 			 	
 			*)	# not sure what is wanted hence keep default processing 
 				echo "Not sure what your 3rd parameter is. "
-				echo "  This option must be -f to search for list of processed pairs in Geocoded/DefoInterpolx2Detrend or "
+				echo "  This option must be -f to search for list of processed pairs in Geocoded/DefoMode or "
 				echo "                      -file=list to provide a list of pairs to process.  " 
 				echo "Since the 3rd parameter provided is of none of these forms, let's keep default processing, "
 				echo "  i.e. compute the list of preocessed pairs from the pair dirs in SAR_MASSPROCESS" 
@@ -330,7 +346,7 @@ case ${SATDIR} in
 				S1MODE="STRIPMAP"
 				SUPERMASNAME=`echo ${MASDIR} | cut -d. -f1`		
 		fi
-		EchoTee "Processing S1 images in mode ${S1MODE}" 
+		echo "Processing S1 images in mode ${S1MODE}" 
 		
 		# Creates an empty file .../SAR_CSL/S1/REGION/NoCrop/DoNotUpdateProducts_Date_RNDM.txt to let ReadAll_Img.sh to know
 		# that it can't remove the processed products of S1 data of the same mode as the one under progress to avoid prblms
@@ -359,7 +375,7 @@ case ${SATDIR} in
 
 		if [ ${MASTDXMODE} != "_TX" ] 
  			then 
- 				EchoTee "Primary mode is ${MASTDXMODE}, not TX; please check" 
+ 				echo "Primary mode is ${MASTDXMODE}, not TX; please check" 
  				exit 0
 		fi
 		SLVTDXMODE="_TX"
@@ -435,6 +451,20 @@ SUPERMASDIR=${SUPERMASNAME}.csl
 	# Resampled data on SuperMaster in csl format are stored in 
 	OUTPUTDATA=${RESAMPDATPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}
 
+# Prepare
+	# Create working dirs if does not exist yet
+	RUNDIR=${PROPATH}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}
+	mkdir -p ${RUNDIR}
+
+	MASSPROCESSPATHLONG=${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}	# i.e. now as written here
+	mkdir -p ${MASSPROCESSPATHLONG}
+	
+cd ${RUNDIR}				# i.e. now ${PROROOTPATH}/${SATDIR}/${TRKDIR}/SMas_${MAS}/(No)Crop
+cp ${PARAMFILE} ${RUNDIR} 		
+
+# Log File
+LOGFILE=${RUNDIR}/LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt
+
 EchoTee "" 
 EchoTee "---------------------------------------------------------------------"
 EchoTee " Suppose resampled data to SM are stored somewhere on ${OUTPUTDATA}"
@@ -490,16 +520,7 @@ fi
 # Let's Go:
 ###########	
 
-# Prepare
-	# Create working dirs if does not exist yet
-	RUNDIR=${PROPATH}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}
-	mkdir -p ${RUNDIR}
 
-	MASSPROCESSPATHLONG=${MASSPROCESSPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}_Zoom${ZOOM}_ML${INTERFML}	# i.e. now as written here
-	mkdir -p ${MASSPROCESSPATHLONG}
-	
-cd ${RUNDIR}				# i.e. now ${PROROOTPATH}/${SATDIR}/${TRKDIR}/SMas_${MAS}/(No)Crop
-cp ${PARAMFILE} ${RUNDIR} 		
 
 # Check here if it runs on same physical disk as final storage or SAR_MASSPROCESS
 # If 4 1st dir of PROROOTPATH is the same as 4 1st dir of MASSPROCESSPATH, then mv, else cp and check
@@ -512,9 +533,6 @@ cp ${PARAMFILE} ${RUNDIR}
 	MASSPROCESSPATHLONG=`echo ${tmp2}`
 	EchoTee " Processing will be done on ${execdir} and results will be stored in ${storedir}"
 
-
-# Log File
-LOGFILE=${RUNDIR}/LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt
 
 echo "" > ${LOGFILE}
 EchoTee "Processing launched on ${RUNDATE} \n" 
@@ -543,11 +561,48 @@ EchoTee "That is  "
 # List existing pairs in dir in pwd
 cd ${MASSPROCESSPATHLONG}
 
+
+
 case ${LISTOFPROCESSED} in 
 			"YES")
-				# force to build the list of existing pairs based on the files in Geocoded/DefoInterpolx2Detrend
+				# Search for Defo mode 
+				LinkedFile=$(find ${MASSPROCESSPATHLONG}/Geocoded/DefoInterpolx2Detrend/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1)
+										
+				if [ "${LinkedFile}" == "" ] 
+					then 
+						# There is no file in DefoInterpolx2Detrend, search in DefoInterpolDetrend
+						LinkedFile=$(find ${MASSPROCESSPATHLONG}/Geocoded/DefoInterpolDetrend/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1) 
+						if [ "${LinkedFile}" == "" ] 
+							then 
+								# There is no file in DefoInterpolDetrend, search in DefoInterpol
+								LinkedFile=$(find ${MASSPROCESSPATHLONG}/Geocoded/DefoInterpol/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1) 
+								if [ "${LinkedFile}" == "" ] 
+									then 
+										# There is no file in DefoInterpol, search in Defo
+										LinkedFile=$(find ${MASSPROCESSPATHLONG}/Geocoded/Defo/ -maxdepth 1 -type f -name "*deg" 2>/dev/null | head -1) 
+										if [ "${LinkedFile}" == "" ] 
+											then 
+												# There is no file at all - can't make the fig with amplitude background
+												echo "  // I can't find a deformation file in ${MASSPROCESSPATHLONG}/Geocoded/Defo[Interpol][x2][Detrend]. "
+												echo "  // Hence I can't check computed pairs, which might be fine if it is a first run. In that case, I suppose that mode will be DefoInterpolx2Detrend. " 
+												echo "  // If it is a first run but do not want that mode, do not run the script with option -f or change hard coded lines ins script."
+												DEFOMODE=DefoInterpolx2Detrend
+											else 
+												DEFOMODE=Defo
+										fi
+									else 
+										DEFOMODE=DefoInterpol
+								fi
+							else 
+								DEFOMODE=DefoInterpolDetrend
+						fi
+					else 
+						DEFOMODE=DefoInterpolx2Detrend
+				fi
+
+				# force to build the list of existing pairs based on the files in Geocoded/DefoMode
 				rm -f ExistingPairs_${RUNDATE}_${RNDM1}.txt
-				for GEOCODEDPAIR in `find ${MASSPROCESSPATHLONG}/Geocoded/DefoInterpolx2Detrend/ -maxdepth 1 -type f -name "*deg"` ; do 
+				for GEOCODEDPAIR in `find ${MASSPROCESSPATHLONG}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg"` ; do 
 					echo "${GEOCODEDPAIR}" | ${PATHGNU}/grep -Eo "[0-9]{8}_[0-9]{8}">> ExistingPairs_${RUNDATE}_${RNDM1}.txt # select date_date where date is 8 numbers
 				done ;;
 			"NO")
@@ -557,10 +612,10 @@ case ${LISTOFPROCESSED} in
 					if [ "${SATDIR}" == "S1" ]
 							then 
 								#ls -d * | ${PATHGNU}/grep -v ".txt"  | ${PATHGNU}/grep -v "Geocoded" | ${PATHGNU}/grep -v "_CheckResults" | cut -d _ -f 3,7 > ExistingPairs_${RUNDATE}_${RNDM1}.txt
-								find . -maxdepth 1 -type d -name "*_*" | ${PATHGNU}/grep -v "Check" | ${PATHGNU}/grep -v ".txt"  | cut -d _ -f 3,7 > ExistingPairs_${RUNDATE}_${RNDM1}.txt
+								find . -maxdepth 1 -type d -name "*_*" | ${PATHGNU}/grep -v "Check"  | ${PATHGNU}/grep -v "Crop" | ${PATHGNU}/grep -v ".txt"  | cut -d _ -f 3,7 > ExistingPairs_${RUNDATE}_${RNDM1}.txt
 							else 
 								#ls -d * | ${PATHGNU}/grep -v ".txt"  | ${PATHGNU}/grep -v "Geocoded" | ${PATHGNU}/grep -v "_CheckResults" > ExistingPairs_${RUNDATE}_${RNDM1}.txt
-								find . -maxdepth 1 -type d -name "*_*" | ${PATHGNU}/grep -v "Check" | ${PATHGNU}/grep -v ".txt" | cut -d / -f 2 > ExistingPairs_${RUNDATE}_${RNDM1}.txt
+								find . -maxdepth 1 -type d -name "*_*" | ${PATHGNU}/grep -v "Check"  | ${PATHGNU}/grep -v "Crop" | ${PATHGNU}/grep -v ".txt" | cut -d / -f 2 > ExistingPairs_${RUNDATE}_${RNDM1}.txt
 					fi
 				fi		;;
 			"FILE")	
@@ -612,7 +667,25 @@ if [  ${LISTOFPROCESSED} == "FILE" ]
 fi
 
 # sort pairs to process in reverse order to compute first the most recent ones 
-sort -r PairsToProcess_${RUNDATE}_${RNDM1}.txt -o PairsToProcess_${RUNDATE}_${RNDM1}.txt 
+sort -r PairsToProcess_${RUNDATE}_${RNDM1}.txt -o PairsToProcess_${RUNDATE}_${RNDM1}.txt
+
+# Just in case, remove pairs with images that would be stored in .../SAR_CSL/sat/mode/Quarantained
+if [ -n "$(find "${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained" -type d -name '*.csl' -print -quit)" ]; then
+	EchoTee "  (without pairs including images found in ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained)"
+	# get the date of img from dir names in /Quarantained  
+	find "${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained" -maxdepth 1 -type d -name '*.csl' -exec basename {} \; | ${PATHGNU}/grep -Eo '[0-9]{8}' > Quarantained_dates_${RUNDATE}_${RNDM1}.txt
+	# remove all pairs with img in QUanrnatine from PairsToProcess_${RUNDATE}_${RNDM1}.txt
+	cp "PairsToProcess_${RUNDATE}_${RNDM1}.txt" "PairsToProcess_${RUNDATE}_${RNDM1}_tmp1.txt"
+	while IFS= read -r QUARANTAINEDIMG
+		do
+			if [ "${QUARANTAINEDIMG}" != "" ] ; then 
+				${PATHGNU}/grep -v "${QUARANTAINEDIMG}" "PairsToProcess_${RUNDATE}_${RNDM1}_tmp1.txt" > "PairsToProcess_${RUNDATE}_${RNDM1}_tmp2.txt"
+				cp -f "PairsToProcess_${RUNDATE}_${RNDM1}_tmp2.txt" "PairsToProcess_${RUNDATE}_${RNDM1}_tmp1.txt"
+			fi
+	done < "Quarantained_dates_${RUNDATE}_${RNDM1}.txt"
+	cp -f "PairsToProcess_${RUNDATE}_${RNDM1}_tmp1.txt" "PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+fi
+
 
 NPAIRS=`wc -l < PairsToProcess_${RUNDATE}_${RNDM1}.txt`
 EchoTee " ${NPAIRS} pairs :"
@@ -720,6 +793,8 @@ fi
 # Get date of last AMSTer Engine source dir (require FCT file sourced above)
 GetAMSTerEngineVersion
 
+rm -f "${MASSPROCESSPATHLONG}"/_Fine_Coregistration_Failed.txt	
+
 i=0
 # PROCESS PAIRS: coreg and resample, or link to existing if Master is SuperMaster
 for PAIRS in `cat -s ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt`
@@ -767,7 +842,7 @@ do
 			then 
 				EchoTeeYellow "Pair exists and skipped : ${MASSPROCESSPATHLONG}/${MASNAME}_${SLVNAME}"
 			else
-				RUNDIR=/${RUNDIR}/${MASNAME}_${SLVNAME}		# Now where pair must be processed
+				RUNDIR=/${MAINRUNDIR}/${MASNAME}_${SLVNAME}		# Now where pair must be processed
 				mkdir -p ${RUNDIR}
 				cd ${RUNDIR}				
 
@@ -881,7 +956,13 @@ do
 								fineCoregistration		| tee -a ${LOGFILE}
 								#Test Fine Coreg. 
 								TSTFINECOREG=`${PATHGNU}/grep "Total number of anchor points" ${LOGFILE} | tail -n1 | tr -dc '[0-9]'`
-								if [ "${TSTFINECOREG}" -le "4" ] ; then EchoTee " Fine processing seemed to have failed (less than 4 anchor points... Exiting" ; exit 0 ; fi
+								#if [ "${TSTFINECOREG}" -le "4" ] ; then EchoTee " Fine processing seemed to have failed (less than 4 anchor points... Exiting" ; exit 0 ; fi
+								if [ "${TSTFINECOREG}" -le "4" ] 
+									then 
+										EchoTee " Fine processing seemed to have failed (less than 4 anchor points... Exiting" 
+										echo "Failed to fine coregister ${SLVDIR} on ${SUPERMASTER}" >> ${MASSPROCESSPATHLONG}/_Fine_Coregistration_Failed.txt		
+										continue
+								fi
 	
 								EchoTeeYellow "  // fine coreg done with ${TSTFINECOREG} anchor points" 
 								EchoTee "--------------------------------"		
@@ -1109,7 +1190,9 @@ do
 				EchoTee ""
 				EchoTee "Not the same physical disk; Start copying now ${RUNDIR} in background to ${MASSPROCESSPATHLONG}."
 				EchoTee "Comparison will be performed with diff at the end to ensure that everything was copied before removing from processing disk."
-				cp -R ${RUNDIR} ${MASSPROCESSPATHLONG} &
+				#cp -R ${RUNDIR} ${MASSPROCESSPATHLONG} &
+				cp -R ${MASNAME}_${SLVNAME} ${MASSPROCESSPATHLONG} &
+				
 				EchoTee "Associated text files and logs will be copied later"	
 				EchoTee ""
 				EchoTee ""
@@ -1148,7 +1231,7 @@ fi
 
 EchoTee "Dump PairsToProcess_${RUNDATE}_${RNDM1}.txt\n"
 cat ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt >> ${LOGFILE}
-rm -f ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt
+#rm -f ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt
 EchoTee "--------------------------------------------------------" 
 
 # No need to give path here because it is in the PAIRFILE param.
@@ -1173,29 +1256,49 @@ EchoTee "Copying results to ${MASSPROCESSPATHLONG}"
 #tmp2=`RemDoubleSlash  ${MASSPROCESSPATHLONG}`
 #MASSPROCESSPATHLONG=`echo ${tmp2}`
 
+cd ${MAINRUNDIR}
+
 EchoTee " Processing was done on ${execdir} and results must be store in ${storedir}"
 if [ "${execdir}" == "${storedir}" ]
 	then 
 		EchoTee "Same physical disk; Move all processed Pair directories and text (log) files to ${MASSPROCESSPATHLONG}."
-		mv -f ${MAINRUNDIR}/* ${MASSPROCESSPATHLONG}	
+		#mv -f ${MAINRUNDIR}/* ${MASSPROCESSPATHLONG}
+		while IFS=_ read -r MASDATE SLVDATE
+		do	
+			mv -f *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"/
+			mv -f LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt "${MASSPROCESSPATHLONG}"/
+
+		done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+
+
 		# From now on, log file is in ${MASSPROCESSPATHLONG}
-		LOGFILE=${MASSPROCESSPATHLONG}/LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt
+		LOGFILE=${MASSPROCESSPATHLONG}/LogFile_MassProcess_Super${SUPERMASTER}_${RUNDATE}_${RNDM1}.txt
 	else 
 		EchoTee "Not the same physical disk; Processed Pair directories were copied in background to ${MASSPROCESSPATHLONG}."
-		EchoTee "Now move associated text files and logs"
-		cp -R ${MAINRUNDIR}/* ${MASSPROCESSPATHLONG}
- 		# not faster than cp ?
+		EchoTee "Now copy associated text files and logs"
+		#cp -R ${MAINRUNDIR}/* ${MASSPROCESSPATHLONG}
+		
+		cp LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt "${MASSPROCESSPATHLONG}"
+		
+		while IFS=_ read -r MASDATE SLVDATE
+		do	
+			cp -R *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"
+		
+		done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+	
+		# not faster than cp ?
  		#rsync -a --inplace -W --no-compress ${MAINRUNDIR} ${MASSPROCESSPATHLONG}
 		# up to 20% faster than conventionnal rsync but might be limited to 100 characters long file names 
  		#tar cf - *  | (cd ${MASSPROCESSPATHLONG} ; tar xf -)
 
 		# From now on, log file is in ${MASSPROCESSPATHLONG}
-		LOGFILE=${MASSPROCESSPATHLONG}/LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt
+		LOGFILE=${MASSPROCESSPATHLONG}/LogFile_MassProcess_Super${SUPERMASTER}_${RUNDATE}_${RNDM1}.txt
 
-		EchoTee "Compare now with diff to ensure that everything was copied before removing from processing disk."
+		# Do not EchoTee because it would make the log files different in MAINRUNDIR and MASSPROCESSPATHLONG
+		echo "Compare now with diff to ensure that everything was copied before removing from processing disk."
 
 		diff -r -q ${MAINRUNDIR} ${MASSPROCESSPATHLONG} | ${PATHGNU}/grep "Only in ${MAINRUNDIR}" > ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
-		cat ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt | ${PATHGNU}/grep -v Geocoded | ${PATHGNU}/grep -v PairsToProcess_${RUNDATE}_${RNDM1}.txt > ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
+		cat ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt | ${PATHGNU}/grep -v Geocoded | ${PATHGNU}/grep -v PairsToProcess_${RUNDATE}_${RNDM1}.txt | ${PATHGNU}/grep -v "DS_Store"  | ${PATHGNU}/grep -v "LogFile_MassProcess" > ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
 
 		echo ""
 		echo "Ignore messages diff about interpolated.mod wich appears because of links. " 
@@ -1203,15 +1306,17 @@ if [ "${execdir}" == "${storedir}" ]
 
 		if [ -f "${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt" ] && [ -s "${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt" ]
 			then 
-				EchoTee "Not everything was copied - Do not remove from source dir ${MAINRUNDIR}. Check yourself !!" 
-				EchoTee "Attempt a rsync in the mean time"
+				echo "Not everything was copied - Do not remove from source dir ${MAINRUNDIR}. Check yourself !!" 
+				echo "Attempt a rsync in the mean time"
 				rsync -av ${MAINRUNDIR}/ ${MASSPROCESSPATHLONG}
+				echo "Not everything was copied - Do not remove from source dir ${MAINRUNDIR}. Check yourself !!"  >> ${LOGFILE}
+				echo "Attempt a rsync in the mean time" >>  ${LOGFILE}
 
 			else 
 				EchoTee "Everything was copied to ${MASSPROCESSPATHLONG}."
 				# Do not remove until prblm of communication with hp disks is solved...
 
-				if [ `echo ${PROROOTPATH} | ${PATHGNU}/grep $HOME | wc -l` - gt 0 ] 
+				if [ `echo "${PROROOTPATH}" | ${PATHGNU}/grep "$HOME" | wc -l` -eq 0 ] 
 					then 
 						# Processing was not performed in HOME dir, hence check that the disk where it was processed is still mounted before attempting removing files				
 						
@@ -1221,21 +1326,30 @@ if [ "${execdir}" == "${storedir}" ]
 						EchoTee "Remove from source dir (${MAINRUNDIR}) if ${HD} is connected" 
 				
 						# Some warnings or hints... 	
-						echo		
-						echo "If using Remote Desktop, ignore possible message about thinclinet_drives."
-						echo "If scripts hangs over forever when run on Linux, check that df is not causing it (just run it at a Terminal). If so, reboot..."
+						EchoTee		
+						EchoTee "If using Remote Desktop, ignore possible message about thinclinet_drives."
+						EchoTee "If scripts hangs over forever when run on Linux, check that df is not causing it (just run it at a Terminal). If so, reboot..."
 						
 						if [ `df | ${PATHGNU}/grep ${HD} | wc -l` -lt 1 ] 
 							then 
-								echo "Disk seems to be disconnected - DO NOT REMOVE PROCESSED PAIR DIRS"
+								EchoTee "Disk seems to be disconnected - DO NOT REMOVE PROCESSED PAIR DIRS"
 							else 
-								echo "Disk seems ok - REMOVE PROCESSED PAIR DIRS"
-								rm -r ${MAINRUNDIR}/*
+								EchoTee "Disk seems ok - REMOVE PROCESSED PAIR DIRS"
+
+								while IFS=_ read -r MASDATE SLVDATE
+								do	
+									rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
+								done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
 								rm -f ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
 						fi
 					else 
-						echo "REMOVE PROCESSED PAIR DIRS"
-						rm -r ${MAINRUNDIR}/*
+						EchoTee "REMOVE PROCESSED PAIR DIRS"
+						
+						while IFS=_ read -r MASDATE SLVDATE
+						do	
+							rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
+						done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+						
 						rm -f ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
 				fi
 				echo
@@ -1244,19 +1358,24 @@ fi
 
 if [ "${SATDIR}" == "S1" ] ; then rm -f ${FLAGUSAGE} ; fi
 
-# remove old logs > OLDNESS=30 days
+
 cd ${MASSPROCESSPATHLONG}
-OLDNESS=30
+# some cleaning 
+rm -f PairsToProcess_*_tmp*.txt ExistingPairs_*_inverted.txt 2>/dev/null
+
+# remove old logs > OLDNESS=15 days
+OLDNESS=15
 find . -maxdepth 1 -name "LogFile*.txt" -type f -mtime +${OLDNESS} -exec rm -f {} \;
 find . -maxdepth 1 -name "LaunchMTparam_*.txt" -type f -mtime +${OLDNESS} -exec rm -f {} \;
 find . -maxdepth 1 -name "ExistingPairs_*.txt" -type f -mtime +${OLDNESS} -exec rm -f {} \;
 find . -maxdepth 1 -name "PairsToProcess_*.txt" -type f -mtime +${OLDNESS} -exec rm -f {} \;
 find . -maxdepth 1 -name "Check_MoveFromRundir_*.txt" -type f -mtime +${OLDNESS} -exec rm -f {} \;
+find . -maxdepth 1 -name "Quarantained_dates_*.txt" -type f -mtime +${OLDNESS} -exec rm -f {} \;
 
 
 # Search for duplicate files... just in case
 	cd ${MASSPROCESSPATHLONG}/Geocoded
-	EchoTee "Serching for all files containing pair of dates (yyyymmdd_yyyymmdd) and ending with deg... " 
+	EchoTee "Searching for all files containing pair of dates (yyyymmdd_yyyymmdd) and ending with deg... " 
 	find . -maxdepth 1 -type f -name "*deg" > List_Files_Serached_For_Ducplic.txt
 	EchoTee ""
 
@@ -1267,50 +1386,58 @@ find . -maxdepth 1 -name "Check_MoveFromRundir_*.txt" -type f -mtime +${OLDNESS}
 		echo "${IMGTOTEST}" | ${PATHGNU}/grep -Eo "[0-9]{8}_[0-9]{8}" >> List_Pairs_Serached_For_Ducplic.txt
 	done 
 	
-	if [ -f List_Pairs_Serached_For_Ducplic.txt ] && [ -s List_Pairs_Serached_For_Ducplic.txt ] ; then 
-		# show how many times each line is present in file
-		#sort List_Pairs_Serached_For_Ducplic.txt | uniq -c
-		EchoTee ""
-		# count how many duplicated lines 
-		NRDUPLIC=`sort List_Pairs_Serached_For_Ducplic.txt | uniq -cd | wc -l`
-
-		# count how many lines in total 
-		TOT=`cat List_Pairs_Serached_For_Ducplic.txt | wc -l`
-
-		if [ ${NRDUPLIC} -gt 0 ] 
-			then 
-				EchoTee "Directory $pwd contains ${TOT} files, among which ${NRDUPLIC} are duplicated pairs. "
-				EchoTee "See list below (nr_occurrence   date_date):"
-				# show only duplicates lines 
-				sort List_Pairs_Serached_For_Ducplic.txt | uniq -cd > Duplicated_Files.txt
-				EchoTee "Corresponding files are: "
-		
-				for DATES in `sort List_Pairs_Serached_For_Ducplic.txt | uniq -d`
-				#while read -r NR DATES
-					do 
-						${PATHGNU}/find . -maxdepth 1 -type f -name "*${DATES}*deg" -printf "%T@ %Tc %p\n" | sort -n
-						EchoTee "Search for the oldest: " 
-						OLDEST=`${PATHGNU}/find . -maxdepth 1 -type f -name "*${DATES}*deg" -printf "%T@ %Tc %p\n" | sort -n | head -1`
-						OLDESTFILE=`echo "${OLDEST}" | cut -d "/" -f2`
-						EchoTee " // ${OLDESTFILE} and its hdr:"
-						EchoTee ${OLDESTFILE}
-						EchoTee ${OLDESTFILE}.hdr
-						EchoTee " // And probably in GeocodedRasters as well ?:"
-						EchoTee ${MASSPROCESSPATHLONG}/GeocodedRasters/${OLDESTFILE}.ras
-						#rm ${OLDESTFILE}
-						#rm ${OLDESTFILE}.hdr
-
-						EchoTee ""
-				done
-				#done < Duplicated_Files.txt
-
-			else 
-				EchoTee "Directory $pwd contains ${TOT} files, among which none are duplicated pairs. "
-		fi
-		echo ""
-		rm -f List_Pairs_Serached_For_Ducplic.txt List_Files_Serached_For_Ducplic.txt # Duplicated_Files.txt
+	if [ -f List_Pairs_Serached_For_Ducplic.txt ] && [ -s List_Pairs_Serached_For_Ducplic.txt ] 
+		then 
+			# show how many times each line is present in file
+			#sort List_Pairs_Serached_For_Ducplic.txt | uniq -c
+			EchoTee ""
+			# count how many duplicated lines 
+			NRDUPLIC=`sort List_Pairs_Serached_For_Ducplic.txt | uniq -cd | wc -l`
+	
+			# count how many lines in total 
+			TOT=`cat List_Pairs_Serached_For_Ducplic.txt | wc -l`
+	
+			if [ ${NRDUPLIC} -gt 0 ] 
+				then 
+					EchoTee "Directory $pwd contains ${TOT} files, among which ${NRDUPLIC} are duplicated pairs. "
+					EchoTee "See list below (nr_occurrence   date_date):"
+					# show only duplicates lines 
+					sort List_Pairs_Serached_For_Ducplic.txt | uniq -cd > Duplicated_Files.txt
+					EchoTee "Corresponding files are: "
+			
+					for DATES in `sort List_Pairs_Serached_For_Ducplic.txt | uniq -d`
+					#while read -r NR DATES
+						do 
+							${PATHGNU}/find . -maxdepth 1 -type f -name "*${DATES}*deg" -printf "%T@ %Tc %p\n" | sort -n
+							EchoTee "Search for the oldest: " 
+							OLDEST=`${PATHGNU}/find . -maxdepth 1 -type f -name "*${DATES}*deg" -printf "%T@ %Tc %p\n" | sort -n | head -1`
+							OLDESTFILE=`echo "${OLDEST}" | cut -d "/" -f2`
+							EchoTee " // ${OLDESTFILE} and its hdr:"
+							EchoTee ${OLDESTFILE}
+							EchoTee ${OLDESTFILE}.hdr
+							EchoTee " // And probably in GeocodedRasters as well ?:"
+							EchoTee ${MASSPROCESSPATHLONG}/GeocodedRasters/${OLDESTFILE}.ras
+							#rm ${OLDESTFILE}
+							#rm ${OLDESTFILE}.hdr
+	
+							EchoTee ""
+					done
+					#done < Duplicated_Files.txt
+	
+				else 
+					EchoTee "Directory $pwd contains ${TOT} files, among which none are duplicated pairs. "
+			fi
+			echo ""
+			rm -f List_Pairs_Serached_For_Ducplic.txt List_Files_Serached_For_Ducplic.txt # Duplicated_Files.txt
+		else 
+			rm -f List_Pairs_Serached_For_Ducplic.txt
 	fi
 echo "All done - hope it worked." 
+echo "Processing finisehd on $(date) " 
 SpeakOut " Mass processing of satellite ${SATDIR}, mode ${TRKDIR} is finished. Enjoy mass processing."
+
+if [ ${NPAIRS} -eq 0 ] ; then rm -f ${RUNDIR}/LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt ; fi
+PARAMFILENAME=$(basename ${PARAMFILE})
+rm -f "${RUNDIR}/${PARAMFILENAME}"
 
 # done

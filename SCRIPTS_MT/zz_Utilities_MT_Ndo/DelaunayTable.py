@@ -1,6 +1,6 @@
 #!/opt/local/bin/python
 # 
-# This scripts computes an unweighted Delaunay triangulation based on the file  allPairsListing.txt in the pwd. 
+# This scripts computes an unweighted Delaunay triangulation based on the file  allPairsListing_Without_Quanrantained_Data.txt in the pwd. 
 #
 # It takes 1 option:
 #	-Ratio=integer: ratio between X and Y axis for Delaunay triangulation to avoid elongated or shortened triangles
@@ -23,6 +23,9 @@
 # V 1.0 (2023/09/19)
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20231219:	- Remove info about max Bp or Bt because not taken into account
+# New in Distro V 2.2 20231223:	- use allPairsListing_Without_Quanrantained_Data.txt
+# New in Distro V 2.3 20240107:	- specific request from Delphine: two tabs between col 8 & 9
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -37,7 +40,8 @@ import argparse
 import subprocess
 
 # Create an argument parser
-parser = argparse.ArgumentParser(description="Optional max Bp and Bt parameters")
+#parser = argparse.ArgumentParser(description="Optional max Bp and Bt parameters")
+parser = argparse.ArgumentParser(description="Optional ratio between x (Bt) and y (Bp) graph for Delaunay triangulation")
 
 # Define optional parameters 
 #parser.add_argument('-BpMax', type=int, help="Optional max Bp")
@@ -67,7 +71,7 @@ else:
 lines = []
 
 # Read the data from the file, skipping the first 7 header lines
-with open('allPairsListing.txt', 'r') as file:
+with open('allPairsListing_Without_Quanrantained_Data.txt', 'r') as file:
     lines = file.readlines()[7:]
 
 # Define a regular expression pattern to split lines by variable whitespace
@@ -78,14 +82,14 @@ dates = []
 perpendicular_baseline = []
 
 # Read the first date and Bp from line 8 (cols[0]) and store it in the dates list
-with open('allPairsListing.txt', 'r') as file:
+with open('allPairsListing_Without_Quanrantained_Data.txt', 'r') as file:
 	first_line = file.readlines()[7]
 	cols_first_line = pattern.split(first_line.strip())
 	first_date_yyyymmdd = cols_first_line[0]
 	dates.append(first_date_yyyymmdd)  # Assuming the date is in column 0 of the first line
 	perpendicular_baseline.append(0)
 
-# reads all lines from allpairsListing.txt (headerless) until value in col 1 changes
+# reads all lines from allPairsListing_Without_Quanrantained_Data.txt (headerless) until value in col 1 changes
 for line in lines:
 	cols = pattern.split(line.strip())
 	if cols[0] == first_date_yyyymmdd:
@@ -94,11 +98,11 @@ for line in lines:
 	else:
 		break
 
-# Create a dictionary to store Bp and Bt values from column 8 and 9 of allPairsListing.txt
+# Create a dictionary to store Bp and Bt values from column 8 and 9 of allPairsListing_Without_Quanrantained_Data.txt
 column_8_values = {}	# Bp
 column_9_values = {}	# Bt
 
-with open('allPairsListing.txt', 'r') as file:
+with open('allPairsListing_Without_Quanrantained_Data.txt', 'r') as file:
     for line_num, line in enumerate(file, start=1):
         if line_num <= 7:
             continue  # Skip the first 7 lines
@@ -287,7 +291,7 @@ with open(tablename, 'w') as date_pairs_file:
 			date_pair_key = f"{pair[0]}\t{pair[1]}"  # Create the date pair key
 			value_from_column_8 = column_8_values.get(date_pair_key, "N/A")  # Get the corresponding value from column 8
 			value_from_column_9 = column_9_values.get(date_pair_key, "N/A")  # Get the corresponding value from column 9
-			date_pairs_file.write(f"{pair[0]}\t{pair[1]}\t{value_from_column_8}\t{value_from_column_9}\n")
+			date_pairs_file.write(f"{pair[0]}\t{pair[1]}\t{value_from_column_8}\t\t{value_from_column_9}\n")
 # Sort the file based on columns 1 and 2 
 subprocess.run(['sort', '-o', tablename, '-k1,1', '-k2,2', tablename])
 

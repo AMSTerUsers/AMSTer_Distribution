@@ -94,13 +94,21 @@
 # New in Distro V 9.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 9.1 20231120:	- Change AMSTer text to spaces for AMSTer logo in plot timestamp only if TAG is asked 
+# New in Distro V 9.2 20240116:	- allows MSBAS 3D. Note that the inversion of the this third NS component only makes sense if/where the 
+# 								  displacement is expected to occur along the steepest slope of the topography (e.g. in 
+# 								  case of land slide). That is why it is sometimes referred as 3D SPF (Surface Parallel Flow)
+#								- Rename coh files as _YYYYMMDDTyyyymmdd_ instead of  _YYYYMMDD_yyyymmdd_ for error estimation 
+#								  for getLineThroughStack to detect the files to process 
+#								  (i.e. to cope with changes operated in file handling some time ago...)
+# New in Distro V 9.2 20240123:	- Rename rep ENU as DEM to avoid clash with some scripts 
+#								  searching for comp dir with similar name 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V9.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jan 23, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -280,8 +288,8 @@ if [[ $5 =~ ^[0-9]+$ ]] ; then PIX2=$5 ; TWOPIXELS="YES" ; else TWOPIXELS="NO" ;
 			OPTERR=`echo "$@" | ${PATHGNU}/gsed  's/.*-coh=//'  | cut -d " " -f 1`  # get everything after -coh= and before next " ", either avgavg, avgmin, avgminmax or avgavgminmax
 			# list all coh dirs ; one per mode
 			#nr of modes
-			NRMODES=`${PATHGNU}/gfind . -maxdepth 1 -type d -name "Defo*" | wc -l`
-			MODES=`${PATHGNU}/gfind . -maxdepth 1 -type d -name "Defo*" | head -1 | ${PATHGNU}/gsed 's/[0-9]\+$//' | cut -d "/" -f2`  # remove trailing numbers
+			NRMODES=`${PATHGNU}/gfind . -maxdepth 1 -type d -name "Defo*" | grep -v "/ENU"  | wc -l` # avoid searching in ENU which could be present if 3D msbas is performed 
+			MODES=`${PATHGNU}/gfind . -maxdepth 1 -type d -name "Defo*" | grep -v "/ENU" | head -1 | ${PATHGNU}/gsed 's/[0-9]\+$//' | cut -d "/" -f2`  # remove trailing numbers
 			#echo "Search coh for ${NRMODES} modes ${MODES} "
 
 			# search path to coh files for each mode
@@ -299,6 +307,20 @@ if [[ $5 =~ ^[0-9]+$ ]] ; then PIX2=$5 ; TWOPIXELS="YES" ; else TWOPIXELS="NO" ;
 	fi
 
 echo ""
+
+
+# Check if 3D
+#############
+if [ -d  zz_NS${REMARKDIR} ] && [ -n "$(ls -A "zz_NS${REMARKDIR}")" ] 		# if zz_NS${REMARKDIR} exist and is not empty
+	then 
+		ENU="YES" 
+		MULTIMODTITLE="EW+NS+UD"
+	else 
+		ENU="NO" 
+		MULTIMODTITLE="EW+UD"
+fi 
+
+
 
 # Define some functions for plotting events 
 ############################################
@@ -535,7 +557,10 @@ echo ""
 							for COHFILES in `${PATHGNU}/gfind ${COHDIR[${i}]} -maxdepth 1 -type f -name "*${EACHDATE}*" 2> /dev/null`
 								do
 									echo "...Search coh in file ${COHFILES}"
-									PAIR=`echo "${COHFILES}" | ${PATHGNU}/grep -Eo "_[0-9]{8}_[0-9]{8}" ` # select _date_date_ where date is 8 numbers
+									PAIROLD=`echo "${COHFILES}" | ${PATHGNU}/grep -Eo "_[0-9]{8}_[0-9]{8}" ` # select _date_date_ where date is 8 numbers
+									MAS=$(echo "${PAIROLD}" | cut -d _ -f 2 )
+									SLV=$(echo "${PAIROLD}" | cut -d _ -f 3 )
+									PAIR=$(echo "_${MAS}T${SLV}_")
 									extension="${COHFILES##*.}"
 									if [ "${extension}" == "hdr"  ]
 										then 
@@ -603,29 +628,63 @@ echo ""
 		case ${OPTERR} in 
 			"avgavg")   
 				#with symetric error bars using 1/AVGcoh
-				TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-AvgCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:5 with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-AvgCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:5 with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with lines title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:5 with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				fi
 				;;
 			"avgmin")    
 				#with asymetric error bars using  AVGcoh above data and MINcoh below data
-				TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-MinCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$5) with yerrorlines title 'coh/100 (larger is best)' ls 1, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-MinCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$5) with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with lines title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$5) with yerrorlines title 'coh/100 (larger is best)' ls 1, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				fi
+
 				;;
 			"avgminmax")    
 				# with boxes (+ AVG above data) and error bars (min below and max above data)
-				TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [.,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [.,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with lines title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				fi
+
 				;;
 			"avgavgminmax")    
 				# with boxes (+- AVG around data) and error bars (min below and max above data) - not very clear though and not more informative as avgminmax
-				TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [-AvgCoh,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
+				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [-AvgCoh,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
 				#CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:((\\$3/\\$3)-1):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with lines title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				fi
+
 				;;
 			*)   
 				echo "Not a valid -coh option. Must be either avgavg, avgmin, avgminmax or avgavgminmax. Process without error bars"	
-				TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW','PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				fi
+
 				;;	
 		esac
 		}	
@@ -644,29 +703,64 @@ echo ""
 		case ${OPTERR} in 
 			"avgavg")   
 				#with symetric error bars using 1/AVGcoh
-				TITLE="Ground displacement EW+UD ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-AvgCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:5 with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				TITLE="Ground displacement ${MULTIMODTITLE} ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-AvgCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:5 with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:5 with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				fi
+
 				;;
 			"avgmin")    
 				#with asymetric error bars using  AVGcoh above data and MINcoh below data
-				TITLE="Ground displacement EW+UD ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-MinCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$5) with yerrorlines title 'coh/100 (larger is best)' ls 1, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				TITLE="Ground displacement ${MULTIMODTITLE} ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Bars are [-MinCoh,+ AvgCoh] with coh/100 (LARGER IS THE BEST !!)"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$5) with yerrorlines title 'coh/100 (larger is best)' ls 1 ,'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$5) with yerrorlines title 'coh/100 (larger is best)' ls 1, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				fi
+
 				;;
 			"avgminmax")    
 				# with boxes (+ AVG above data) and error bars (min below and max above data)
-				TITLE="Ground displacement EW+UD ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [.,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				TITLE="Ground displacement ${MULTIMODTITLE} ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [.,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:3:(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				fi
+
 				;;
 			"avgavgminmax")    
 				# with boxes (+- AVG around data) and error bars (min below and max above data) - not very clear though and not more informative as avgminmax
-				TITLE="Ground displacement EW+UD ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [-AvgCoh,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
+				TITLE="Ground displacement ${MULTIMODTITLE} ; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}. \\\n\\\n Boxes are [-AvgCoh,+AvgCoh], bars are [-MinCoh,+ MaxCoh] with coh/100 (LARGER IS THE BEST !!)"
 				#CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:((\\$3/\\$3)-1):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with lines title 'EW' ls 1, 'PATH_TO_EW_EPS.txt' u 1:(\\$3-\\$5):(\\$3-\\$6):(\\$3+\\$7):(\\$3+\\$5) with candlestick title 'coh/100 (larger is best)' ls 1 whiskerbars, 'PATH_TO_EW_EPS.txt' u 1:(0):8  with points pt 5 palette notitle, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+				fi
+
 				;;
 			*)   
 				echo "Not a valid -coh option. Must be either avgavg, avgmin, avgminmax or avgavgminmax. Process without error bars"	
-				TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}"
-				CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW','PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN} ${PIX} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
+				fi
+
 				;;	
 		esac
 		}
@@ -675,7 +769,12 @@ echo ""
 ##########################
 if [ ${LINFIT} == "YES" ] 
 	then 
-		GNUTEMPLATE=${GNUTEMPLATEFIT}
+		if [ "${ENU}" == "YES" ]
+			then 
+				GNUTEMPLATE=${GNUTEMPLATEFIT3D}
+			else 
+				GNUTEMPLATE=${GNUTEMPLATEFIT}
+		fi
 	else 
 		GNUTEMPLATE=${GNUTEMPLATENOFIT}
 fi 
@@ -719,7 +818,7 @@ cd zz_EW${REMARKDIR}
 	#HEADING=`cat ${HDR} | ${PATHGNU}/grep "Heading" | cut -d = -f 2 | cut -d " " -f 2 `
 cd .. 
 
-if [ -d  zz_NS${REMARKDIR} ] ; then
+if [ "${ENU}" == "YES" ] ; then
 	cd zz_NS${REMARKDIR}
 
 		HDR=`ls *.hdr | head -1` 
@@ -730,11 +829,23 @@ if [ -d  zz_NS${REMARKDIR} ] ; then
 		getLineThroughStack ${RUNDIRNS} ${LIN1} ${PIX1}
 
 		sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
-#		rm timeLine${LIN1}_${PIX1}.txt
+		rm timeLine${LIN1}_${PIX1}.txt
 		mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt
 
+		#Get min max of values in col3
+		MINNSPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt | tail -1`
+		MAXNSPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt | head -1`
+		if [ "${MINNSPIX1}" == "${MAXNSPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
+		if [ `echo "${MINNSPIX1} > ${MAXNSPIX1}" | bc` -eq 1 ]
+			then 
+				TMP=${MINNSPIX1}
+				MINNSPIX1=${MAXNSPIX1}
+				MAXNSPIX1=${TMP} 
+		fi
+		echo "Time series 1 NS goes from ${MINNSPIX1} to ${MAXNSPIX1}"
 	cd .. 
 fi
+
 cd zz_UD${REMARKDIR}
 
 	HDR=`ls *.hdr | head -1` 
@@ -785,8 +896,6 @@ if [ "${ERR}" == "YES" ]
 		${PATHGNU}/gsed -i "s% 0 % 999999999 %g" ${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN1}_${PIX1}${REMARKDIR}.txt   # this will create a hughe bar in plot pointing out to the erroneous date
 
 		EWFILETOPLOT=${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN1}_${PIX1}${REMARKDIR}
-
-		
 	else 
 		EWFILETOPLOT=${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}
 fi
@@ -794,63 +903,79 @@ fi
 # PLOT (without tags for events)
 cp ${GNUTEMPLATE} plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 
-if [ -d  zz_NS${REMARKDIR} ] 
+# Change title
+if [ "${LINFIT}" == "YES" ]
 	then
-		# Change title
-		TITLE="Ground displacement EW+NS+UD; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
-		CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1: 3 with linespoints title 'EW' ls 1,'PATH_TO_NS_EPS.txt' u 1: 3 with linespoints title 'NS' ls 2,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
-		${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-		${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-	else 
-		# Change title
-		if [ "${LINFIT}" == "YES" ]
+		${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'1.log"' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+		
+		# if coh as error bars if requested 
+		if [ "${ERR}" == "YES" ] 
 			then
-				${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'1.log"' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-				
-				# if coh as error bars if requested 
-				if [ "${ERR}" == "YES" ] 
-					then
-					
-						# set the titme and command line
-						TitleCmdLineMeanCohAtPix ${LIN1} ${PIX1}
+			
+				# set the titme and command line
+				TitleCmdLineMeanCohAtPix ${LIN1} ${PIX1}
 
-						${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-						${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-	
-					else			
-						TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+				${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+
+			else			
+				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				if [ "${ENU}" == "YES" ] 
+					then
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+					
+					else 
 						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW','PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
 				fi
+		fi
 
-				if [ ${LINRATE} == "YES" ] ; then
+		if [ ${LINRATE} == "YES" ] ; then
+			if [ "${ENU}" == "YES" ] 
+				then
+					${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.06 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+					${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f cm\/yr', annualrateNS(d) ) at  graph 0.82,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+					${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(f) ) at  graph 0.82,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+				else 
 					${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 					${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(d) ) at  graph 0.82,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-				fi
+			fi
+		fi
 
-			else 
-				
-				if [ "${ERR}" == "YES" ] 
+	else 
+		
+		if [ "${ERR}" == "YES" ] 
+			then
+				# set the titme and command line
+				TitleCmdLineMeanCohAtPixNoFit ${LIN1} ${PIX1}
+
+				${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+				${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+
+			else			
+				TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				if [ "${ENU}" == "YES" ] 
 					then
-						# set the titme and command line
-						TitleCmdLineMeanCohAtPixNoFit ${LIN1} ${PIX1}
-
-						${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-						${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-	
-					else			
-						TITLE="Ground displacement EW+UD; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
-						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1: 3 with linespoints title 'EW' ls 1,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+					
+					else 
+						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
 				fi
 
-				
-		fi	
-		${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-fi
+		fi
+
+		
+fi	
+${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+#fi
 # Change output name
 ${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}${REMARKDIR}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+
 # Change input time series txt name
 #${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${EWFILETOPLOT}\/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 ${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${EWFILETOPLOT}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+if [ "${ENU}" == "YES" ] ; then
+	${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu	
+fi
 ${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 
 ${PATHGNU}/gsed -i "s%TITLE%${TITLE}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
@@ -893,13 +1018,27 @@ if [ ${TWOPIXELS} == "YES" ] ; then
 
 	cd .. 
 
-	if [ -d  zz_NS${REMARKDIR} ] ; then
+	if [ "${ENU}" == "YES" ] ; then
 		cd zz_NS${REMARKDIR}
+			RUNDIRNS=`pwd`
 			getLineThroughStack ${RUNDIRNS} ${LIN2} ${PIX2}
 
 			sort -n -u timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
 			rm timeLine${LIN2}_${PIX2}.txt
 			mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt
+
+			#Get min max of values in col3
+			MINNSPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt | tail -1`
+			MAXNSPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt | head -1`
+			if [ "${MINNSPIX2}" == "${MAXNSPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
+			if [ `echo "${MINNSPIX2} > ${MAXNSPIX2}"  | bc` -eq 1  ]
+				then 
+					TMP=${MINNSPIX2}
+					MINNSPIX2=${MAXNSPIX2}
+					MAXNSPIX2=${TMP} 
+			fi
+			echo "Time series 2 NS goes from ${MINNSPIX2} to ${MAXNSPIX2}"
+			echo ""
 		cd .. 
 	fi
 	
@@ -950,69 +1089,83 @@ fi
 	# PLOT (without tags for events)
 	cp ${GNUTEMPLATE} plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
-	if [ -d  zz_NS${REMARKDIR} ] 
+	# Change title
+	if [ "${LINFIT}" == "YES" ]
 		then
-			TITLE="Ground displacement EW+NS+UD; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
-			CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1: 3 with linespoints title 'EW' ls 1,'PATH_TO_NS_EPS.txt' u 1: 3 with linespoints title 'NS' ls 2,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
-			${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-			${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-		else 
-			# Change title
-			if [ "${LINFIT}" == "YES" ]
+			${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'2.log"' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+	
+			# if coh as error bars if requested 
+			if [ "${ERR}" == "YES" ] 
 				then
-					${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'2.log"' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-			
-					# if coh as error bars if requested 
-					if [ "${ERR}" == "YES" ] 
+					# set the titme and command line
+					TitleCmdLineMeanCohAtPix ${LIN2} ${PIX2}
+
+					${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+					${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+
+				else			
+					TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+					if [ "${ENU}" == "YES" ] 
 						then
-							# set the titme and command line
-							TitleCmdLineMeanCohAtPix ${LIN2} ${PIX2}
-
-							${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-							${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-
-						else			
-							TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+						
+						else 
 							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW','PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
 					fi
+			fi
 
-					if [ ${LINRATE} == "YES" ] ; then
+			if [ ${LINRATE} == "YES" ] ; then
+				if [ "${ENU}" == "YES" ] 
+					then
+						${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.06 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+						${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f cm\/yr', annualrateNS(d) ) at  graph 0.82,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+						${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(f) ) at  graph 0.82,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+					else 
 						${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 						${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(d) ) at  graph 0.82,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-					fi
+				fi
+			fi
 
-				else 
+		else 
 
-					if [ "${ERR}" == "YES" ] 
-						then
-							# set the titme and command line
-							TitleCmdLineMeanCohAtPixNoFit ${LIN2} ${PIX2}
+			if [ "${ERR}" == "YES" ] 
+				then
+					# set the titme and command line
+					TitleCmdLineMeanCohAtPixNoFit ${LIN2} ${PIX2}
 
-							${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-							${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+					${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+					${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 	
-						else			
-							TITLE="Ground displacement EW+UD; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
-							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1: 3 with linespoints title 'EW' ls 1,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
+				else			
+					TITLE="Ground displacement EW+UD; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+					if [ "${ENU}" == "YES" ] 
+						then
+							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
+						
+						else 
+							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
 					fi
-					
-			fi	
-		
-			${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+			fi
+			
+	fi	
+	
+	${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+
+	# Change output name
+	${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN2}_${PIX2}${REMARKDIR}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+
+	# Change input time series txt name
+	${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${EWFILETOPLOT}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+	if [ "${ENU}" == "YES" ] ; then
+		${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu	
 	fi
+	${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+
 	${PATHGNU}/gsed -i "s%TITLE%${TITLE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
 	# Change INSTITUTE name 
 	${PATHGNU}/gsed -i "s%INSTITUTE%${INSTITUTE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
-
-	# Change output name
-	${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN2}_${PIX2}${REMARKDIR}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-	# Change input time series txt name
-	${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${EWFILETOPLOT}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-
-	#${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${RUNDIREW}\/timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-	${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
 	# Change time span
 	if [ ${SPAN} == "YES" ]
@@ -1046,21 +1199,43 @@ fi
 			#merge line by lines the two txt files
 			paste ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIREW}/timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_EW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
 			paste ${RUNDIRUD}/timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRUD}/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_UD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
-			if [ -d  zz_NS${REMARKDIR} ] 
+
+			if [ "${ENU}" == "YES" ] 
 				then
 					paste ${RUNDIRNS}/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRNS}/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
-					TITLE="Ground displacement EW+NS+UD; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
-# NOT TESTED		# Add events
-					PlotEvents		
 
-					CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1: 3 with linespoints title 'EW' ls 1,'PATH_TO_NS_EPS.txt' u 1: 3 with linespoints title 'NS' ls 2,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
-					${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" ${GNUNAME}
-					${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+					if [ "${LINFIT}" == "YES" ] 
+						then
+							${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'3.log"' ${GNUNAME}
+							TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							# Add events
+							PlotEvents
+
+							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
+
+							if [ ${LINRATE} == "YES" ] ; then
+								${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.06 front /" ${GNUNAME}
+								${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f cm\/yr', annualrateNS(d) ) at  graph 0.82,0.04 front /" ${GNUNAME}
+								${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(f) ) at  graph 0.82,0.02 front /" ${GNUNAME}
+							fi
+
+
+						else 
+							TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							# Add events
+							PlotEvents		
+		
+							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1: 3 with linespoints title 'EW' ls 1,'PATH_TO_NS_EPS.txt' u 1: 3 with linespoints title 'NS' ls 2,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
+							${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" ${GNUNAME}
+							${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+					fi
+
+
 				else 
 					if [ "${LINFIT}" == "YES" ] 
 						then
 							${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'3.log"' ${GNUNAME}
-							TITLE="Ground displacement EW+UD and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
 							# Add events
 							PlotEvents
 
@@ -1072,14 +1247,17 @@ fi
 							fi
 
 						else 
-							TITLE="Ground displacement EW+UD; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
 							# Add events
 							PlotEvents
 						
 							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
 					fi	
-					${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" ${GNUNAME}
+
 			fi
+
+			${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" ${GNUNAME}
+					
 			${PATHGNU}/gsed -i "s%u 1:3%u 1: (\$3 - \$6)%g" ${GNUNAME} # several syntax may be possible
 			${PATHGNU}/gsed -i "s%u 1: 3%u 1: (\$3 - \$6)%g" ${GNUNAME}
 			${PATHGNU}/gsed -i "s%using 1:3%using 1: (\$3 - \$6)%g" ${GNUNAME} # several syntax may be possible
@@ -1092,8 +1270,12 @@ fi
 
 			# Change output name
 			${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+
 			# Change input time series txt name
 			${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%timeLine_EW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+			if [ "${ENU}" == "YES" ] ; then
+				${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}	
+			fi
 			${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%timeLine_UD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
 
 			# Change time span

@@ -85,7 +85,7 @@ g(x) = c+ d*x
 c = 1
 d = 1e-8
 fit g(x) 'PATH_TO_UD_EPS.txt' using 1:3 via c,d
-annualrateUD(b) = ( d * 3153600000. )
+annualrateUD(d) = ( d * 3153600000. )
 # ANNUALRATEUD
 
 

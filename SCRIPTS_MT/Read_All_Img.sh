@@ -130,13 +130,16 @@
 #							      Beware, this cleans the _CLN products for all targets of your satellite on the same disk. 
 # New in Distro V 5.4 20231121:	- mute error msg when attempting to list *.csl in empty Quarantine dir
 # New in Distro V 5.5 20231123:	- Allows naming Radarsat2 as RS in workflow
+# New in Distro V 5.6 20231220:	- Log SAOCOM image with unexpected polarisation (VV if HH is asked and reversely); do not rm these data
+# New in Distro V 5.7 20240213:	- Allows reading S1 zipped files. Files older than 6 months will be sorted in a similar way as for UNZIP data
+# New in Distro V 5.8 20240215:	- Also ready for S1 with zip data when ForceAllYears 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 23, 2023"
+VER="Distro V5.8 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 15, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -189,6 +192,8 @@ if [ $# -gt 3 ]
 		        			INITPOL=""
 		        		else
 		        			INITPOL=$1
+		        			if [ "${INITPOL}" == "VV" ] ; then OTHERPOL="HH" ; fi
+		        			if [ "${INITPOL}" == "HH" ] ; then OTHERPOL="VV" ; fi
 		        	fi
 
 		        	shift 1 ;;
@@ -754,9 +759,22 @@ case ${SAT} in
 
 								fi
 							else 
-								EchoTee "No data found in ${SAOCOMIMGPATH}. Maybe a problem with the data ? Image will not be moved to ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop"
-								EchoTee "Remove ${SAOCOMIMGPATH}..."
-								rm -rf ${SAOCOMIMGPATH}
+								if [ -f "${SAOCOMIMGPATH}/Data/SLCData.${OTHERPOL}" ] && [ -s "${SAOCOMIMGPATH}/Data/SLCData.${OTHERPOL}" ]
+									then 
+										EchoTee "Data are acquired with ${OTHERPOL} instead of ${INITPOL} polarisation. "
+										EchoTee "No problem, though we list them in file ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/___img_with_pol_${OTHERPOL}_instead_of_${INITPOL}.txt for further usage."
+										echo "${SAOCOMDATE}.csl" >> ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/___img_with_pol_${OTHERPOL}_instead_of_${INITPOL}.txt
+										mv ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl
+										# Keep link to avoid reading again next time
+										ln -s ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
+									else 
+										EchoTee "No data found in ${SAOCOMIMGPATH}. Maybe a problem with the data ? "
+										EchoTee "Image ${SAOCOMIMGPATH} will be moved to ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/Quarantained/${SAOCOMDATE}.csl"
+										mv ${SAOCOMIMGPATH} ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/Quarantained/${SAOCOMDATE}.csl
+										# Keep link to avoid reading again next time
+										ln -s ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/Quarantained/${SAOCOMDATE}.csl ${SAOCOMIMGPATH}
+								fi
+
 						fi
 				fi
 
@@ -1000,7 +1018,7 @@ case ${SAT} in
 			then
 				EchoTee ""
 				EchoTeeYellow "Read recent images"
-				if [ `ls -d ${RAW}/*.SAFE 2>/dev/null | wc -l` -le 0 ] ; then
+				if [ `ls -d ${RAW}/*.SAFE 2>/dev/null | wc -l` -le 0 ] && [ `ls ${RAW}/*.zip 2>/dev/null | wc -l` -le 0 ] ; then
 					EchoTee "No recent data."
 					touch ${CSL}/S1DataReaderLog.txt
 				else
@@ -1034,7 +1052,7 @@ case ${SAT} in
 
 			else
 				EchoTeeYellow "Read only recent images"
-				if [ `ls -d ${RAW}/*.SAFE 2>/dev/null | wc -l` -le 0 ] ; then
+				if [ `ls -d ${RAW}/*.SAFE 2>/dev/null | wc -l` -le 0 ] && [ `ls ${RAW}/*.zip 2>/dev/null | wc -l` -le 0 ] ; then
    					EchoTee "No recent data."
    					touch ${CSL}/S1DataReaderLog.txt
 				else
@@ -1125,10 +1143,13 @@ case ${SAT} in
 				# Dir name contains only _yyyy and hence it is probably run to read only data in _FORMER/_YYYY dir. No need to move to FORMER then
 				EchoTee "Probably reading data from _FORMER/_YYYY dir. No need to move them to FORMER again then."
 			else
-				if [ `ls -d ${RAW}/*.SAFE 2>/dev/null | wc -l` -le 0 ] ; then
+				if [ `ls -d ${RAW}/*.SAFE 2>/dev/null | wc -l` -le 0 ] && [ `ls ${RAW}/*.zip 2>/dev/null | wc -l` -le 0 ] ; then
 							EchoTee "No recent data ; nothing to move."
 					else
-						for FILESAFE in `ls -d *.SAFE`
+						ls -d *.SAFE 2>/dev/null  > List_Img_To_Sort_tmp.txt
+						ls *.zip 2>/dev/null  >> List_Img_To_Sort_tmp.txt
+						#for FILESAFE in `ls -d *.SAFE`
+						for FILESAFE in `cat List_Img_To_Sort_tmp.txt`
 							do
 								YEARFILE=`echo ${FILESAFE} | cut -c 18-21`
 								MMFILE=`echo ${FILESAFE} | cut -c 22-23 | ${PATHGNU}/gsed 's/^0*//'`
@@ -1144,6 +1165,7 @@ case ${SAT} in
 										mv ${FILESAFE} ${RAW}_FORMER/_${YEARFILE}
 								fi
 						done
+						rm -f List_Img_To_Sort_tmp.txt
 				fi
 		fi
 

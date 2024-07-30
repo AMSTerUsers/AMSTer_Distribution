@@ -19,6 +19,10 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240116:	- allows MSBAS 3D. Note that the inversion of the this third NS component only makes sense if/where the 
+# 								displacement is expected to occur along the steepest slope of the topography (e.g. in 
+# 								case of land slide). That is why it is sometimes referred as 3D SPF (Surface Parallel Flow)
+# New in Distro V 3.2 20240308:	- Split Session in AS sub dirs instead of MT
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -105,50 +109,50 @@
 		{
 		case $DISK in
 			"1") 
-				DISKPATH=/${PATH1650}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				DISKPATH=/${PATH1650}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"2") 
-				DISKPATH=/${PATH3600}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				DISKPATH=/${PATH3600}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"3") 
-				DISKPATH=/${PATH3601}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				DISKPATH=/${PATH3601}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"4") 
-				DISKPATH=/${PATH3602}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				DISKPATH=/${PATH3602}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"5") 
-				mkdir -p /Volumes/Lacie10TB/PROCESS/MT 								# Hookled on Mac Pro only
-				DISKPATH=/Volumes/Lacie10TB/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /Volumes/Lacie10TB/PROCESS/AS 								# Hookled on Mac Pro only
+				DISKPATH=/Volumes/Lacie10TB/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"6") 
-				mkdir -p /Volumes/SAR_20T_N1/PROCESS/MT								# Hookled on Mac Pro only
-				DISKPATH=/Volumes/SAR_20T_N1/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /Volumes/SAR_20T_N1/PROCESS/AS								# Hookled on Mac Pro only
+				DISKPATH=/Volumes/SAR_20T_N1/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"7") 
-				mkdir -p /${PATHSYNODATA}/PROCESS/MT
-				DISKPATH=/${PATHSYNODATA}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /${PATHSYNODATA}/PROCESS/AS
+				DISKPATH=/${PATHSYNODATA}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"8") 
-				mkdir -p /${PATHSYNOSAR}/PROCESS/MT
-				DISKPATH=/${PATHSYNOSAR}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /${PATHSYNOSAR}/PROCESS/AS
+				DISKPATH=/${PATHSYNOSAR}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;				
 			"9") 
-				mkdir -p /${PATHSYNOCONGO}/PROCESS/MT
-				DISKPATH=/${PATHSYNOCONGO}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /${PATHSYNOCONGO}/PROCESS/AS
+				DISKPATH=/${PATHSYNOCONGO}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;				
 			"10") 
-				mkdir -p ${PATHHOMEDATA}/PROCESS/MT
-				DISKPATH=${PATHHOMEDATA}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p ${PATHHOMEDATA}/PROCESS/AS
+				DISKPATH=${PATHHOMEDATA}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"11") 
-				mkdir -p ${HOME}/PROCESS/MT
-				DISKPATH=${HOME}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p ${HOME}/PROCESS/AS
+				DISKPATH=${HOME}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"12") 
-				DISKPATH=/${PATH1660}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				DISKPATH=/${PATH1660}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"13") 
-				DISKPATH=/${PATH3610}/PROCESS/MT/${SATDIR}_${TRKDIR}_Part_${i}
+				DISKPATH=/${PATH3610}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 
 
@@ -201,6 +205,10 @@
 		#		convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 400x320+630+0 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_NyamCrater.gif
 				convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 450x250+1080+0 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_NyamCrater.gif
 				rm -f  _movie_${SAT}_${TRK}_${REGION}.gif ;;
+			"NyamCrater2_FullCrater_though_jumps")
+		#		convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 400x320+630+0 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_NyamCrater.gif
+				convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 450x250+1080+0 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_NyamCrater.gif
+				rm -f  _movie_${SAT}_${TRK}_${REGION}.gif ;;
 			"CSK_Virunga_Desc_NyamCrater2")
 		#		convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 400x420+1590+1350 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_NyamCrater.gif
 				convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 450x450+1435+1010 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_NyamCrater.gif
@@ -225,7 +233,7 @@
 		esac
 		}	
 		
-# FUNCTIONS_FOR_MT.sh
+# FUNCTIONS_FOR_MT.sh - should be obsolate
 ######################
 	# For tracking the version of AMSTer Engine
 	function FunctionsForAEPathSources()
@@ -246,8 +254,8 @@
 							 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 
 							 s%\/Volumes\/hp-D3601-Data_RAID6%\/\$PATH_3601%g 
 							 s%\/Volumes\/hp-D3602-Data_RAID5%\/\$PATH_3602%g
-							 s%\/Volumes\/hp-1660-Data_Share1%\/\$PATH_1660%g 
-							 s%\/Volumes\/hp-D3610-Data_Share1%\/\$PATH_3610%g 
+							 s%\/Volumes\/hp1660%\/\$PATH_1660%g 
+							 s%\/Volumes\/D3610%\/\$PATH_3610%g 
 							 s%\/mnt\/1650%\/\$PATH_1650%g 
 							 s%\/mnt\/3600%\/\$PATH_3600%g 
 							 s%\/mnt\/3601%\/\$PATH_3601%g 
@@ -277,6 +285,7 @@
 		{
 		GNUTEMPLATENOFIT="/${PATH_SCRIPTS}/SCRIPTS_MT/TemplatesForPlots/plotTS_template_multi.gnu"
 		GNUTEMPLATEFIT="/${PATH_SCRIPTS}/SCRIPTS_MT/TemplatesForPlots/plotTS_template_multi_fit.gnu" 
+		GNUTEMPLATEFIT3D="/${PATH_SCRIPTS}/SCRIPTS_MT/TemplatesForPlots/plotTS_template_multi_fit3D.gnu" 
 		}
 
 # RenamePath_Volumes_MNTtoVOL.sh

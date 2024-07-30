@@ -49,13 +49,15 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
+# New in Distro V 3.2 20240416:	- Search for Asc or Desc mode in dir name compatible with ALOS2 modes, that is e.g. zz_LOS_6811_L_A_Auto_2_0.04_PF 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 16, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -121,6 +123,10 @@ fi	 # ${Mode}Asc or ${Mode}Desc
 if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_UD_" | wc -c` -gt 0 ] ; then Orbit="UD" ; fi	 # UD
 if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_EW_" | wc -c` -gt 0 ] ; then Orbit="EW" ; fi	 # EW
 
+if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_A_Auto" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for ALOS2 type
+if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_D_Auto" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for ALOS2 type
+
+
 if [ "${OrbitMode}" == "LOS" ] ; then TagOrbit="LOS" ; else TagOrbit="${Orbit}" ; fi
 	
 echo "eps file to be decorated = ${eps_file}"
@@ -183,7 +189,30 @@ if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEA
 			#-----------------------------------------------
 
 			#echo "RegionFolder = ${RegionFolder}"
-			LinkedFile=$(find ${RegionFolder}/DefoInterpolx2Detrend1/ -name "defo*deg" | head -1)
+			LinkedFile=$(find ${RegionFolder}/DefoInterpolx2Detrend1/ -name "defo*deg" 2>/dev/null | head -1)
+
+			if [ "${LinkedFile}" == "" ] 
+				then 
+					# There is no file in DefoInterpolx2Detrend1, search in DefoInterpolDetrend1
+					LinkedFile=$(find ${RegionFolder}/DefoInterpolDetrend1/ -name "defo*deg" 2>/dev/null | head -1) 
+					if [ "${LinkedFile}" == "" ] 
+						then 
+							# There is no file in DefoInterpolDetrend1, search in DefoInterpol1
+							LinkedFile=$(find ${RegionFolder}/DefoInterpol1/ -name "defo*deg" 2>/dev/null | head -1) 
+							if [ "${LinkedFile}" == "" ] 
+								then 
+									# There is no file in DefoInterpol1, search in Defo1
+									LinkedFile=$(find ${RegionFolder}/Defo1/ -name "defo*deg" 2>/dev/null | head -1) 
+									if [ "${LinkedFile}" == "" ] 
+										then 
+											# There is no file at all - can't make the fig with amplitude background
+											echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend]1. "
+											echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
+									fi
+							fi
+					fi
+			fi
+
 
 			# Because the script may be launched on a computer with another OS than the one used to build ampli
 			# let's change beginning of path by the corresponding state variable if target file does not exists

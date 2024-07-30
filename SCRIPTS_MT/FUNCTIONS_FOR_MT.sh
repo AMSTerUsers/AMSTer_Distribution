@@ -102,12 +102,16 @@
 #										Indeed, the installer must have put it in {PATHAMSTERENGINE}/_Sources_AE/Older/
 # New in Distro V 7.0.3 20231114:	- Debug GetAMSTerEngineVersion
 # New in Distro V 7.0.4 20231122:	- Create fig of amplitude rasters with range based on min,mean + 2 stdev in PlotGeoc with new function MakeFigRAuto
+# New in Distro V 7.0.5 20231222:	- Avoid error message about .ras file when FIG != FIGyes
+# New in Distro V 7.1.0 20240228:	- Fix rounding pix size when smaller than one by allowing scale 5 before division  
+# New in Distro V 7.1.1 20240425:	- Warns when coarse coreg fails and suggests to put image in quarantine but only log the info in ${OUTPUTDATA}/_Coarse_Coregistration_Failed.txt 
+# New in Distro V 7.1.2 20240426:	- Force handling Nr of anchor points and sigma values read from lig files at coarse coregistration as integers
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V7.0.4 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 22, 2023"
+FCTVER="Distro V7.1.2 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 26, 2024"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -1041,10 +1045,10 @@ function CoarseCoregTestQuality()
 	# Test coregistration nr of anchors
 	for ATTEMPT in 1 2 3 4
 	do
-		NRANCHORPTS=`grep -m ${ATTEMPT} "Total number of anchor points" ${LOGFILE} | tail -n1 | tr -dc '[0-9]'`
+		NRANCHORPTS=$(grep -m ${ATTEMPT} "Total number of anchor points" ${LOGFILE} | tail -n1 | tr -dc '[0-9]')
 		EchoTeeYellow "Number of anchor points for Coarse Coreg is : ${NRANCHORPTS}" 
 		EchoTee ""
-		if [ "${NRANCHORPTS}" -le 10 ] ; then
+		if [ "$((NRANCHORPTS))" -le 10 ] ; then 	# force handling variable as integer
 			# If failed 3 times, attempt to coarse coreg using Fiji - not sure it helps....
 			if [ "${ATTEMPT}" -ge 4 ] ; then	
 					# Failed 3 times; try with Fiji
@@ -1113,36 +1117,44 @@ function CoarseCoregTestQuality()
 	do
 	  EchoTee "Coarse coreg run nr ${ATTEMPT}:"
 	  #SIGMA=`grep -m ${ATTEMPT} sigmaRangeAzimuth ${LOGFILE} | tail -n1 |  cut -d = -f4 | ${PATHGNU}/gsed 's/\t//g' | xargs printf "%.*f\n" 0`  # rounded to 0th digits precision
-	  SIGMA=`grep sigmaRangeAzimuth ${LOGFILE} | tail -n1 |  cut -d = -f4 | ${PATHGNU}/gsed 's/\t//g' | xargs printf "%.*f\n" 0`  # rounded to 0th digits precision
-	  if [ "${SIGMA}" == "" ] ; then
+	  SIGMA=$(grep sigmaRangeAzimuth ${LOGFILE} | tail -n1 |  cut -d = -f4 | ${PATHGNU}/gsed 's/\t//g' | xargs printf "%.*f\n" 0)  # rounded to 0th digits precision
+	  if [ "$((SIGMA))" == "" ] ; then
 	  		EchoTeeRed "  // Coregistration Sigma is null. No Coarse Coreg anchor point found."
 	  	else  
 		  CANDIDATEPT=`grep -m ${ATTEMPT} "Number of candidate anchor points" ${LOGFILE} | cut -d = -f 2 | tr -dc '[0-9]'`
 		  # ratio between candidate and used anchor point to assess quality of coregistration in %
 		  RATIOCANDIANCHORPT=`echo "(${NRANCHORPTS}  * 100)/ ${CANDIDATEPT}" | bc` # Integer  
 		  EchoTee "Coregistration Sigma is ${SIGMA} (Rounded)."
-			if [ "${SIGMA}" -le 1 ] ; then
+			if [ "$((SIGMA))" -le 1 ] ; then
 				EchoTee "Coregistration Sigma is less or = one." 
 				EchoTee "Suppose coregistration is OK"
 				EchoTee "-----------------------------"
 				break
-			elif [ "${SIGMA}" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -ge 5 ]; then
+			elif [ "$((SIGMA))" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -ge 5 ]; then
 				EchoTee "Coregistration Sigma is less or = 2 but ratio between candidate and used anchor point is ${RATIOCANDIANCHORPT} %." 
 				EchoTee "Suppose coregistration is OK"
 				EchoTee "-----------------------------"
 				break
-			elif [ "${SIGMA}" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -le 5 ]; then
+			elif [ "$((SIGMA))" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -le 5 ]; then
 				EchoTee "Coregistration Sigma is less or = 2 but ratio between candidate and used anchor point is ${RATIOCANDIANCHORPT} %."
 				EchoTee "=> Suppose coregistration could be improved."
 				EchoTee "Re-run Coregistration"
 				EchoTee "-----------------------------"
 				coarseCoregistration	| tee -a ${LOGFILE}						
-			elif [ "${SIGMA}" -ge 2 ]; then
+			elif [ "$((SIGMA))" -ge 2 ]; then
 				EchoTee "Coregistration Sigma is greater or = 2 : ${SIGMA}."
 				EchoTee "=> Suppose coregistration could be improved."
 				EchoTee "Re-run Coregistration"
 				EchoTee "-----------------------------"
-				coarseCoregistration	| tee -a ${LOGFILE}			
+				coarseCoregistration	| tee -a ${LOGFILE}	
+			else 
+				EchoTeeRed "Coregistration Sigma seems to be wrong i.e. (null)." 	
+				EchoTeeRed "Continue though you check yourself... probabaly better to put this image in quarantine." 	
+					PATHMASTMP1=`GetParamFromFile "Master image file path" InSARParameters.txt`
+					PATHSLVTMP1=`GetParamFromFile "Slave image file path" InSARParameters.txt`
+					PATHMASTMP2=$(basename ${PATHMASTMP1})
+					PATHSLVTMP2=$(basename ${PATHSLVTMP1})
+				echo "Failed to coarse coreg ${PATHSLVTMP2} on ${PATHMASTMP2}" >> ${OUTPUTDATA}/_Coarse_Coregistration_Failed.txt
 			fi
 		fi
 	done
@@ -1283,11 +1295,13 @@ function InSARprocess()
 	# topo phase (first phase)
 	# IF IMAGE APPEARS UNIFORM COLOR, REMOVE -r OPTION OR CHANGE MIN/MAX LIMITS IN -r OPTION 
 	FIRSTPHASEFILE=`GetParamFromFile " First phase component file path " InSARParameters.txt`
-	MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${FIRSTPHASEFILE} 
-	mv ${FIRSTPHASEFILE}.ras ${FIRSTPHASEFILE}_wrapped.ras
-	mv ${FIRSTPHASEFILE}.ras.sh ${FIRSTPHASEFILE}_wrapped.ras.sh
-	 ${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${FIRSTPHASEFILE}_wrapped.ras.sh
-	MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${FIRSTPHASEFILE} 
+	if [ "${FIG}" == "FIGyes"  ] ; then
+		MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${FIRSTPHASEFILE} 
+		mv ${FIRSTPHASEFILE}.ras ${FIRSTPHASEFILE}_wrapped.ras
+		mv ${FIRSTPHASEFILE}.ras.sh ${FIRSTPHASEFILE}_wrapped.ras.sh
+		${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${FIRSTPHASEFILE}_wrapped.ras.sh
+		MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${FIRSTPHASEFILE} 
+	fi
 	#MakeFig ${ISARRG} 1.0 20 normal jet 4/4 r4 ${FIRSTPHASEFILE}
 	}
 	
@@ -1724,11 +1738,18 @@ function GeocUTM()
 	# Need to asses here the size in ground resolution, hence one must take into account the incidence angle
 	# Following bug correction was applied on July 7th 2021
 	# 	PIXSIZEAZ should be	PIXSIZEAZ=`echo " ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-	PIXSIZEAZ=`echo " ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+	PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
 	EchoTee " PIXSIZEAZ is ${PIXSIZEAZ} from AZSAMP${AZSAMP} / ZOOM${ZOOM} ) * INTERFML${INTERFML} "
 	
-	GEOPIXSIZERND=`echo ${PIXSIZEAZ} | cut -d . -f1`		
-	EchoTee "Rounded PIXSIZEAZ is ${GEOPIXSIZERND}"
+	GEOPIXSIZERND=`echo ${PIXSIZEAZ} | cut -d . -f1`	
+	if [ ${GEOPIXSIZERND} -eq "0" ] 
+		then 
+			GEOPIXSIZERND="1" 
+			EchoTee "Truncated PIXSIZEAZ is 0, hence increased to ${GEOPIXSIZERND}"
+		else
+			EchoTee "Truncated PIXSIZEAZ is ${GEOPIXSIZERND}"
+	fi 	
+	
 
 	# Size of the geocoded pixel rounded to the nearest (up) multiple of 10
 	if [ -z ${GEOPIXSIZERND#?} ]   # test if all but the first digit is null
@@ -1746,6 +1767,8 @@ function GeocUTM()
 		EchoTeeYellow "          Will get the closest multilooked original pixel size." 
 		EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 		
 		GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+		if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
+	
 		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 		;;
 		"Auto") 
@@ -1805,11 +1828,12 @@ function GeocUTM()
 		*) 
 		EchoTeeYellow "Not sure what you wanted => used Closest..." 
 		GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+		if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
 		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 		;;
 	esac
 
-	# Change default parameters : Geoprojected products generic extension 
+	# Change default parameters : Geoprojected products generic extension
 	ChangeParam "Geoprojected products generic extension" ".UTM.${GEOPIXSIZE}x${GEOPIXSIZE}" geoProjectionParameters.txt
 
 	# Change default parameters : interpolation radius (2-3 times resolution might be good; the largest radius the slowest)  
@@ -2333,7 +2357,7 @@ function RenameAllProducts()
 			"bil")
 				mv ${FILE} ${FILENOEXT}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg ;;
 			"ras")
-				mv ${FILE} ${FILENOEXT}_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.ras ;;
+				if [ "${FIG}" == "FIGyes"  ] ; then mv ${FILE} ${FILENOEXT}_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.ras ; fi ;;
 			"hdr")
 				mv ${FILE} ${FILENOEXT}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr ;;
 			"interpolated")
@@ -2356,32 +2380,32 @@ function RenameAllProducts()
 function RenameAllSlantRangeProducts()
 	{
 	mv coherence.${MASPOL}-${SLVPOL} coherence.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-	mv coherence.${MASPOL}-${SLVPOL}.ras coherence.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras
+	if [ "${FIG}" == "FIGyes"  ] ; then mv coherence.${MASPOL}-${SLVPOL}.ras coherence.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 
 	if [ -f deformationMap  ] ; then 
 		mv deformationMap deformationMap.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-		mv deformationMap.ras deformationMap.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras
+	if [ "${FIG}" == "FIGyes"  ] ; then mv deformationMap.ras deformationMap.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 	fi
 	if [ -f deformationMap.interpolated  ] ; then 
 		mv deformationMap.interpolated deformationMap.interpolated.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-		mv deformationMap.interpolated.ras deformationMap.interpolated.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras
+	if [ "${FIG}" == "FIGyes"  ] ; then mv deformationMap.interpolated.ras deformationMap.interpolated.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 	fi
 	if [ -f deformationMap.interpolated.flattened  ] ; then 
 		mv deformationMap.interpolated.flattened deformationMap.interpolated.flattened.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-		mv deformationMap.interpolated.flattened.ras deformationMap.interpolated.flattened.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras
+	if [ "${FIG}" == "FIGyes"  ] ; then mv deformationMap.interpolated.flattened.ras deformationMap.interpolated.flattened.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 	fi
 
 	mv residualInterferogram.${MASPOL}-${SLVPOL} residualInterferogram.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-	mv residualInterferogram.${MASPOL}-${SLVPOL}.ras residualInterferogram.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras
+	if [ "${FIG}" == "FIGyes"  ] ; then mv residualInterferogram.${MASPOL}-${SLVPOL}.ras residualInterferogram.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 	mv residualInterferogram.${MASPOL}-${SLVPOL}.f residualInterferogram.${MASPOL}-${SLVPOL}.f.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-	mv residualInterferogram.${MASPOL}-${SLVPOL}.f.ras residualInterferogram.${MASPOL}-${SLVPOL}.f.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras
+	if [ "${FIG}" == "FIGyes"  ] ; then mv residualInterferogram.${MASPOL}-${SLVPOL}.f.ras residualInterferogram.${MASPOL}-${SLVPOL}.f.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 	
 	if [ -f snaphuZoneMap  ] ; then 
 		mv snaphuZoneMap snaphuZoneMap.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
 	fi
 
 	mv unwrappedPhase.${MASPOL}-${SLVPOL} unwrappedPhase.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-	mv unwrappedPhase.${MASPOL}-${SLVPOL}.ras unwrappedPhase.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras
+	if [ "${FIG}" == "FIGyes"  ] ; then mv unwrappedPhase.${MASPOL}-${SLVPOL}.ras unwrappedPhase.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 	
 	}
 

@@ -1,5 +1,5 @@
 name 		x 	y	radiusX raduisY
-LagunaMaule_Summit 2357 1443 0 0  
+LagunaMaule_Summit 2356 1447 0 0  
 LagunaMaule_W 1653 1443 3 3 
 LagunaMaule_S 2357 2146 3 3
 LagunaFea_1 2494 1698 0 0 

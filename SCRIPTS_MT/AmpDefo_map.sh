@@ -44,6 +44,8 @@
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20231213:	- Calculate IJAmpMin and IJAmpMax with "gdalinfo -stats" instead of hard coded value
+# New in Distro V 4.2 20240221:	- Add sleep of 5 seconds after the call of 'CreateColorFrame.py' to ensure new files are well created
+# New in Distro V 4.3 20240701:	- Replace 'LOS' by 'GEOM' at line 293 (elif [ ${Direction} = 'GEOM' ]) because direction info was not written anymore
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -56,8 +58,8 @@ source ${HOME}/.bashrc
 # ^^^ ----- Hard coded lines to check -- ^^^ 
 
 PRG=`basename "$0"`
-VER="Distro V4.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on Dec 13, 2023"
+VER="Distro V4.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on Jul 1, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -121,7 +123,9 @@ echo '' > ${TempFile}
 #/opt/local/bin/python3.8 ${PATH_SCRIPTS}/SCRIPTS_MT/CreateColorFrame.py ${PATHFILEDEFO} ${PATHFILECOH} ${PATHFILEAMPLI} ${WIDTH} ${TempFile} ${ParamFile}     >> /dev/null 2>&1 
 #python3.8 ${PATH_SCRIPTS}/SCRIPTS_MT/CreateColorFrame.py ${PATHFILEDEFO} ${PATHFILECOH} ${PATHFILEAMPLI} ${WIDTH} ${TempFile} ${ParamFile}     >> /dev/null 2>&1 
 ${PATH_SCRIPTS}/SCRIPTS_MT/CreateColorFrame.py ${PATHFILEDEFO} ${PATHFILECOH} ${PATHFILEAMPLI} ${WIDTH} ${TempFile} ${ParamFile}   # >> /dev/null 2>&1 
-
+# Wait to ensure that new files are well created
+echo "wait 5 seconds to ensure the file is ready"
+sleep 5 
 #Create the associated hdr file for future utilisation (Binary file must be combine with hdr)
 cp ${PATHFILEAMPLI}.hdr ${PATHFILEAMPLI}_2.0.hdr 
 cp ${PATHFILEDEFO}.hdr ${PATHFILEDEFO}_2.0.hdr 
@@ -142,11 +146,12 @@ COH=`basename ${PATHFILECOH}`
 # Calculation of MinMax value to clip the amplitude image  
 IJAmpMean=$(gdalinfo -stats ${PATHFILEAMPLI} | grep Mean | cut -d ',' -f 3 | cut -d '=' -f 2)
 IJAmpStddev=$(gdalinfo -stats ${PATHFILEAMPLI} | grep Mean | cut -d ',' -f 4 | cut -d '=' -f 2)
+echo "IJAmpMean: ${IJAmpMean}"
+echo "IJAmpStddev:  ${IJAmpStddev}"
 IJAmpMin=$(echo "$IJAmpMean - (3 * $IJAmpStddev)" | bc -l)
 IJAmpMax=$(echo "$IJAmpMean + (3 * $IJAmpStddev)" | bc -l)
 IJAmpMin=$(echo ${IJAmpMin} | sed 's/^\./0\./'  | sed 's/^-\./-0\./')
 IJAmpMax=$(echo ${IJAmpMax} | sed 's/^\./0\./'  | sed 's/^-\./-0\./')
-echo "IJAmpMean: ${IJAmpMean} --- IJAmpStddev: ${IJAmpStddev}"
 echo "IJAmpMin:  ${IJAmpMin}  ---- IJAmpMax: ${IJAmpMax}"
 
 
@@ -285,7 +290,7 @@ elif [ ${Direction} = 'UD' ]
 	then
 		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosLeft},${LegTxtPosH} 'Down '" ${PATHFILES}/${FILEOUTPUT}.tif
 		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosRight},${LegTxtPosH} 'Up'" ${PATHFILES}/${FILEOUTPUT}.tif
-elif [ ${Direction} = 'LOS' ]
+elif [ ${Direction} = 'GEOM' ]
 	then
 		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosLeft},${LegTxtPosH} 'Backward sat.'" ${PATHFILES}/${FILEOUTPUT}.tif
 		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosRight_bis},${LegTxtPosH} 'Toward sat.'" ${PATHFILES}/${FILEOUTPUT}.tif

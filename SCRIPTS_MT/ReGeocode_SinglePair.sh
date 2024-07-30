@@ -41,13 +41,15 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20240228:	- Fix rounding pix size when smaller than one by allowing scale 5 before division  
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 28, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -319,12 +321,18 @@ cd  ${RUNDIR}/i12/TextFiles
 
 # Update which products to geocode
 
-	PIXSIZEAZ=`echo " ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+	PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
 	EchoTee " PIXSIZEAZ is ${PIXSIZEAZ} from ( AZSAMP${AZSAMP} / ZOOM${ZOOM} ) * INTERFML${INTERFML} "
 	
-	GEOPIXSIZERND=`echo ${PIXSIZEAZ} | cut -d . -f1`		
-	EchoTee "Rounded PIXSIZEAZ is ${GEOPIXSIZERND}"
-
+	GEOPIXSIZERND=`echo ${PIXSIZEAZ} | cut -d . -f1`	
+	if [ ${GEOPIXSIZERND} -eq "0" ] 
+		then 
+			GEOPIXSIZERND="1" 
+			EchoTee "Truncated PIXSIZEAZ is 0, hence increased to ${GEOPIXSIZERND}"
+		else
+			EchoTee "Truncated PIXSIZEAZ is ${GEOPIXSIZERND}"
+	fi 	
+	
 	# Size of the geocoded pixel rounded to the nearest (up) multiple of 10
 	if [ -z ${GEOPIXSIZERND#?} ]   # test if all but the first digit is null
 		then
@@ -341,6 +349,8 @@ cd  ${RUNDIR}/i12/TextFiles
 		EchoTeeYellow "          Will get the closest multilooked original pixel size." 
 		EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 		
 		GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+		if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
+
 		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 		;;
 		"Auto") 
@@ -374,6 +384,8 @@ cd  ${RUNDIR}/i12/TextFiles
 		*) 
 		EchoTeeYellow "Not sure what you wanted => used Closest..." 
 		GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+		if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
+
 		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 		;;
 	esac

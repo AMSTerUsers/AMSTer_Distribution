@@ -36,7 +36,7 @@
 PRG=`basename "$0"`
 VER="Distro V4.0 AMSTer script utilities"
 AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
-echo " "
+
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -231,6 +231,7 @@ do
 					ChangeGeocParam "Longitude sampling [dd]" ${XPIX} geoProjectionParameters.txt 		
 					ChangeGeocParam "Latitude sampling [dd] " ${YPIX} geoProjectionParameters.txt 		
 			fi
+			
 			ChangeGeocParam "Geoprojected products generic extension" ${FILENAMING} geoProjectionParameters.txt 		
 
 			ChangeGeocParam "esampling method : TRI = Triangulation; AV = weighted average; NN = nearest neighbour" ${RESAMPMETHD} geoProjectionParameters.txt 		

@@ -57,7 +57,7 @@
 ###		T_FLAG = 0							# 1= ONLY FOR R_FLAG 0 : remove topo residuals (eg if pix dem >> interfero) ; 0=no
 ###		C_FLAG = 0							# pixel(s) coordinates of reference region: Nr of ref, line, col of each ref, radius for all ref pix
 ###												e.g: C_FLAG = 2, 452, 822, 237, 259, 32,32	 
-###		I_FLAG = 0							# 0= auto run; 1= ask for coord of pix for time series; 2=taxes coord from par.txt file
+###		I_FLAG = 0							# 0= auto run; 1= ask for coord of pix for time series; 2=takes coord from par.txt file
 ###												e.g: I_FLAG = 2, par.txt		
 ### 	 SET = 034122, -191.72, 42.02074792667776040000, DefoInterpolx2Detrend1.txt    # time of acquisition, Az heading, Incid angle, list_of_InSAR_files
 #
@@ -67,13 +67,16 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 2.1 20231113:	- typo in AUT 
 # New in Distro V 2.2 20231114:	- Definitin of PATHMODE was wrong in loop 
+# New in Distro V 2.3 20240423:	- add usage if launched without parameters 
+# New in Distro V 2.4 20240704:	- change sign of incidence angle if satellite is Right looking
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 14, 2023"
+VER="Distro V2.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 4, 2024"
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -89,6 +92,8 @@ NRMODES=$2			# Nr of modes
 # the path to all the tables, then 
 # the path to pairs and geocoded defo files, for each modes (IN THE SAME ORDER as tables)
 # [--msbasv] if you want to force preparing the header to a given version. If not it will do it for the most recent version available 
+
+if [ $# -lt 2 ] ; then echo "Usage $0 MODE NRMODES PATH2TABLESxNRModes PATHS2SMxNRModes"; exit; fi
 
 echo ""
 
@@ -369,6 +374,8 @@ PrepareModeI()
 			PAIR=`echo ${ROOTPATH[${i}]}/*${MASTERDATE}*_*${SLAVEDATE}*`	# path up to DateMaster_DateSlave  
 	 
 	 		INCIDENCE=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Incidence angle at median slant range"`
+			LOOKDIR=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Look direction"` 
+ 
 	 		BPERP=`updateParameterFile ${PAIR}/i12/TextFiles/InSARParameters.txt "Perpendicular baseline component at image centre"` 
 	 
 	 		HEADREAL=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Azimuth heading"` 
@@ -390,7 +397,8 @@ PrepareModeI()
 	 
 	 				# Dump incidence angle if one wants to do some statistics
 	 				echo  ${INCIDENCE} >> ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
-	 
+	 				echo  ${LOOKDIR} >> ../LookDirection_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+	 				
 	 				# Dump heading if one wants to do some statistics
 	 				echo  ${HEAD} >> ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
 	 	
@@ -644,6 +652,18 @@ do
 	ACQTIME[${i}]=`echo "${ACQTIMESEC[${i}]}" | awk  '{ h = int($1 / 3600) ; m = int((($1 / 3600)-h ) * 60) ; sec = int($1 - ((3600 * h ) + ( 60 * m))) ; printf("%02d%02d%02d\n", h, m, sec) }'`  # ensure that all a integer and 2 digits long
 
 	rm -f AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
+
+	# Check if Right or Left looking
+	# get one image in mode 
+	sort -u LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt -o LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt	# sort and remove duplicate lines in LookDirection file.
+	# I suppose that all acquisition are taken in the same looking geom, hence one can take the first line of the supposed one line LookDirection_... file 
+	LOOKDIR=`head -1 LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt` 
+	
+	if [ "${LOOKDIR}" == "Left looking" ] 
+		then 
+			AVGINCID[${i}]="-${AVGINCID[${i}]}"
+	fi
+
 
 	case ${MSBAS} in 
 		msbasv4)

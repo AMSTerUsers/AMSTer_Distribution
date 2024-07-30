@@ -9,12 +9,15 @@
 #
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
-######################################################################################
+# -----------------------------------------------------------------------------------------
 
 SOURCEDIR=$1  # i.e. SAR_MASSPROCESS/Geocoded/DefoInterpolDetrend
+
+DEFOMODE=$(basename ${SOURCEDIR})
 
 function Interpol()
 	{
@@ -30,7 +33,7 @@ function Interpol()
 
 	# rename according to conventions
 	NEWNAMEFILL=`echo ${FILETOINTERPOL} | gsed 's/.bil/.bil.interpolated/' | gsed 's/deg.interpolated/deg/'` 
-	NEWDIR=`echo ${SOURCEDIR} | gsed 's/DefoInterpolDetrend/DefoInterpolx2Detrend/'`
+	NEWDIR=`echo ${SOURCEDIR} | gsed 's/DefoInterpolDetrend/${DEFOMODE}/'`
 	mv ${FILETOINTERPOL}.interpolated ${NEWDIR}/${NEWNAMEFILL}
 	cp ${FILETOINTERPOL}.hdr ${NEWDIR}/${NEWNAMEFILL}.hdr
 

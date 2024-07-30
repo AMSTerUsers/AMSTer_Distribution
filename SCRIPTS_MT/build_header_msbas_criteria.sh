@@ -34,7 +34,7 @@
 ###		T_FLAG = 0							# 1= ONLY FOR R_FLAG 0 : remove topo residuals (eg if pix dem >> interfero) ; 0=no
 ###		C_FLAG = 0							# pixel(s) coordinates of reference region: Nr of ref, line, col of each ref, radius for all ref pix
 ###												e.g: C_FLAG = 2, 452, 822, 237, 259, 32,32	 
-###		I_FLAG = 0							# 0= auto run; 1= ask for coord of pix for time series; 2=taxes coord from par.txt file
+###		I_FLAG = 0							# 0= auto run; 1= ask for coord of pix for time series; 2=takes coord from par.txt file
 ###												e.g: I_FLAG = 2, par.txt		
 ### 	 SET = 034122, -191.72, 42.02074792667776040000, DefoInterpolx2Detrend1.txt    # time of acquisition, Az heading, Incid angle, list_of_InSAR_files
 #
@@ -78,13 +78,15 @@
 #						 Note that it was not an issue for S1 WS though.  
 # New in Distro V 9.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 9.1 20240423:	- add usage if launched without parameters 
+# New in Distro V 9.2 20240704:	- change sign of incidence angle if satellite is Right looking
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V9.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 4, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -102,6 +104,8 @@ MAXBT=$4			# Max Btemp
 # Next parameters are the path to pairs and geocoded defo files, for each mode (eg /Users/doris/NAS/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Desc/Resampled_20160103_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML10)
 
 echo ""
+if [ $# -lt 4 ] ; then echo "Usage $0 MODE NRMODES MAXBP MAXBT PATHS2SMxNRModes"; exit; fi
+
 
 RNDM1=`echo $(( $RANDOM % 10000 ))`
 # Dump Command line used in CommandLine.txt
@@ -399,6 +403,8 @@ PrepareModeI()
 #		fi
  
  		INCIDENCE=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Incidence angle at median slant range"`
+ 		LOOKDIR=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Look direction"` 
+ 		
  		BPERP=`updateParameterFile ${PAIR}/i12/TextFiles/InSARParameters.txt "Perpendicular baseline component at image centre"` 
  
  		HEADREAL=`updateParameterFile ${PAIR}/i12/TextFiles/masterSLCImageInfo.txt "Azimuth heading"` 
@@ -430,6 +436,7 @@ PrepareModeI()
  			then
  				# Dump incidence angle if one wants to do some statistics
  				echo  ${INCIDENCE} >> ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+ 				echo  ${LOOKDIR} >> ../LookDirection_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
  
  				# Dump heading if one wants to do some statistics
  				echo  ${HEAD} >> ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
@@ -490,7 +497,8 @@ PrepareModeI()
  								echo "But you requested to keep it (see ${ADDPAIRSFILE})"
  								# Dump incidence angle if one wants to do some statistics
  								echo  ${INCIDENCE} >> ../IncidenceAngles_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
- 
+  								echo  ${LOOKDIR} >> ../LookDirection_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
+
  								# Dump heading if one wants to do some statistics
  								echo  ${HEAD} >> ../Heading_${MODETOCP}_Max${MAXBP}m_Max${MAXBT}days.txt
  	
@@ -591,6 +599,8 @@ for ((i=1;i<=${NRMODES};i++));
 do 
 	# Remove white lines before computing average
 	${PATHGNU}/gsed -i ' /^$/d' IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
+	${PATHGNU}/gsed -i ' /^$/d' LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
+
 	${PATHGNU}/gsed -i ' /^$/d' Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
 	${PATHGNU}/gsed -i ' /^$/d' AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
 	
@@ -607,6 +617,16 @@ do
 	rm -f AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
 
 
+	# Check if Right or Left looking
+	# get one image in mode 
+	sort -u LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt -o LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt	# sort and remove duplicate lines in LookDirection file.
+	# I suppose that all acquisition are taken in the same looking geom, hence one can take the first line of the supposed one line LookDirection_... file 
+	LOOKDIR=`head -1 LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt` 
+	
+	if [ "${LOOKDIR}" == "Left looking" ] 
+		then 
+			AVGINCID[${i}]="-${AVGINCID[${i}]}"
+	fi
 
 
 	case ${MSBAS} in 

@@ -52,13 +52,15 @@
 # New in Distro V 5.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 5.1 20231120:	- Add logo to timestamp  (l392)
+# New in Distro V 5.2 20240603:	- Extract "LOS" from speed deformation filename instead of complete path (since ALOS2)
+# New in Distro V 5.3 20240620:	- from VD_5.2, come back in complete path with replacing the extraction of "LOS" to "_LOS" to filter "ALOS" stuff 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V5.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 20, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -256,7 +258,7 @@ convert $crop -draw "fill White stroke yellow stroke-width 3.5 line $NewX2,$Y21 
 
 
 
-if [[ ${AmpliCohDefo} == *"LOS"* ]] && [ -e ${SatView} ];
+if [[ ${AmpliCohDefo} == *"_LOS"* ]] && [ -e ${SatView} ];
     then
             echo "Create crop on Satellite view as we are on Line Of Sight"
             for i in `seq 1 4`
@@ -366,6 +368,11 @@ if [[ ${AmpliCohDefo} == *"LOS"* ]] && [ -e ${SatView} ];
             convert $crop2 -draw "fill White stroke White stroke-width 3.5 line $NewX1,$Y11 $NewX1,$Y12" $crop2	#Build cross on a duplicate images $crop2
             convert $crop2 -draw "fill White stroke yellow stroke-width 3.5 line $X21,$NewY2 $X22,$NewY2" $crop2	#Build cross on a duplicate images $crop2
             convert $crop2 -draw "fill White stroke yellow stroke-width 3.5 line $NewX2,$Y21 $NewX2,$Y22" $crop2	#Build cross on a duplicate images
+		else
+
+			echo "Do not create a crop on satview.jpg because:"
+			echo "     --> _LOS is not included in ${AmpliCohDefo}"
+			echo "     --> OR ${SatView}  doesn\'t exist"
     fi
 
 

@@ -16,6 +16,7 @@
 # New in Distro V 2.0:	- Count itself the number of *deg files in dir 
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240129:	- convert the generator expression to a list before passing it to np.vstack
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -48,7 +49,8 @@ print('Nr of coherence files *deg in dir:', nroffiles)
 filenames = sorted(glob.glob('*deg'))
 
 X = [np.fromfile("%s" % (filenames[i]),dtype=float32)  for i in range(int(nroffiles)) ]
-Y = np.vstack((x.ravel() for x in X))
+#Y = np.vstack((x.ravel() for x in X))
+Y = np.vstack(list(x.ravel() for x in X))
 Z1 = np.median(Y,axis = 0)
 Z2 = np.mean(Y,axis = 0)
 Z2 = np.float32(Z2)

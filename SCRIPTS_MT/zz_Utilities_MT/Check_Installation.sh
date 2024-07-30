@@ -32,13 +32,14 @@
 # New in Distro V 4.0 20231030:	- Rename AMSTer Software as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20231215:	- check .netrc file to access S1 Orbits
+# New in Distro V 4.2 20240610:	- update chech gdal version for mac
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2020/06/15 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Dec 15, 2023"
+VER="Distro V4.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on June 10, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -855,7 +856,7 @@ case ${OS} in
 				#echo "$(tput setaf 1)$(tput setab 7)--> ImageMagick  : failed$(tput sgr 0)"	
 				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ImageMagick:" "failed$(tput sgr 0)"
 		fi		
-		if [ `gdalinfo 2>/dev/null | wc -l` -gt 0 ] 
+		if [ `gdalinfo --version 2>/dev/null | wc -l` -gt 0 ] 
 			then 
 				VER=$(gdalinfo --version | ${PATHGNU}/grep "GDAL" | ${PATHGNU}/gawk '{ print $2 }' )
 				#echo "--> gdal :$(tput setaf 2)		passed$(tput sgr 0)		Version	$(tput setaf 2)${VERLPK}$(tput sgr 0)"

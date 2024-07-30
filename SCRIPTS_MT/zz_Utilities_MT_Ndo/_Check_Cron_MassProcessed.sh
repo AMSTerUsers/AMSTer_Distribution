@@ -5,7 +5,8 @@
 # all the X last existing raw images
 #
 # Dependencies:	- color terminal
-#				- gnu sed and awk			
+#				- gnu sed and awk	
+#				- python script _Check_kml_in_kml 		
 #
 # A lot is hard coded for each mode
 # 
@@ -31,13 +32,23 @@
 # New in V 3.5 (Aug 9, 2023): - Search the acq time in RAW CSK naming compatible with new format
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20231219:	- Add check LagunaFea SAOCOM
+# New in Distro V 4.2 20240104:	- Add comment when image can't be resampled on Global Primary though can be used as Slave
+#								- Display message when image is Global Primary
+#								- Display only the shortest Bp from + and - value obtained for a given Bt and display message on 2 more lines
+# New in Distro V 4.3 20240208:	- if SAOCOM not read, check if it related to not overlapping kml
+# New in Distro V 4.4 20240307:	- debug unzip kml of SAOCOM image for checking AOI
+# New in Distro V 4.5 20240423:	- update tables
+#								- add Funu
+# New in Distro V 4.6 20240717:	- update baselines for some targets (VVP, Domuyo, LUX, PF)
+#								- check VVP CSK at the end 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 17, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -47,10 +58,13 @@ echo " "
 # How many iumages to check from now 
 OLD=5		#  X last expected S1 images
 OLDCSK=2 	#  X last existing raw CSK images
+OLDSAOCOM=5 #  X last existing raw Saocom images
 
 # Hard coded : Length of interval between images (in days)
 DELTAS1=12 		# Nr of days expected between 2 S1 images acquired in that mode (e.g. 12 daysfor S1)
-DELTACSK=1
+DELTACSK=1 		# Nr of days expected between 2 CSK images acquired in that mode (for a constellation)
+DELTASAOCOM=8 	# Nr of days expected between 2 SAOCOM images acquired in that mode (for a constellation)
+
 # See more hard coded before checking each mode
 
 # basics
@@ -154,6 +168,46 @@ esac
 		#echo "Date of ${X}th image from Today is: ${LASTSIMG} "
 		}
 
+	function GetXthFormerImgSAOCOM()
+		{
+		unset DELTA 		#  Interval in days of image acquisition in that mode
+		unset FIRSTIMG		#  Date of first image YYYYMMDD acquired in that mode 
+		unset EXPECTEDTIME	#  hh time of acquisition (written in file name); required to assess if asc or desc
+
+		DELTA=$1
+		FIRSTIMG=$2
+		EXPECTEDTIME=$3
+
+		while [ "${TST}" == "OFF" ]
+		do
+			j=($j+1)
+			
+			FIRSTIMGSEC=`${PATHGNU}/gdate -d"${FIRSTIMG} 12:00:00" +%s`  		# Date if first img in sec
+			DELTASEC=`echo "( ${DELTA} * 86400 ) " | bc`	# Interval in sec of image acquisition in that mode
+			NROFIMG=`echo "( ${TODAYSEC} - ${FIRSTIMGSEC} ) / ${DELTASEC}" | bc`  # Nr of images acquired in that mode since first image (bc answers only integer part which is what we want)
+			LASTIMGSEC=`echo "(( (${NROFIMG} - (${j}) + 1 ) * ${DELTASEC} ) + ${FIRSTIMGSEC} )  " | bc`
+			LASTSIMG=`${PATHGNU}/gdate -d @${LASTIMGSEC} +"%Y%m%d"`		# Date of Xth image from now
+
+			# check raw:
+			EXPECTEDYYYY=`echo ${LASTSIMG} | cut -c 1-4 `
+			EXPECTEDMM=`echo ${LASTSIMG} | cut -c 5-6 `
+			EXPECTEDDD=`echo ${LASTSIMG} | cut -c 7-8 `
+			#LAST1=`find ${PATHRAW}/ -maxdepth 2 -mindepth 1 -type f -name "*.xemt" -exec grep -m 1 startTime {} \; | sed -n '/<startTime>${EXPECTEDYYYY}-${EXPECTEDMM}-${EXPECTEDDD}T${EXPECTEDTIME}:/p' 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+			eval LAST1=`find ${PATHRAW}/ -maxdepth 2 -mindepth 1 -type f -name "*.xemt" -exec grep -m 1 startTime {} \; | sed -n '/<startTime>'${EXPECTEDYYYY}'-'${EXPECTEDMM}'-'${EXPECTEDDD}'T'${EXPECTEDTIME}'/p' 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+
+			
+			if [ ${LAST1} -eq 0 ] 
+				then 
+					#Because there is no predefnied revisiting time with SAOCOM, to avoid displaying missing at every day that we are obliged to test, let's skip that i when there is no data
+					TST="OFF"
+				else 
+					TST="ON"
+			fi 
+		done
+
+		#echo "Date of ${X}th image from Today is: ${LASTSIMG} "
+		}
+
 # Check if img is in baseline plot table or in approximateBaselinesTable.txt
 	function ImgInPlotTable()
 		{
@@ -220,7 +274,9 @@ esac
 										EXTRATABLE=`basename ${PATHBASELINE} | cut -d . -f 1`
 
 										CONSISTENCY="${yellow}Data not in MassProcess nor in baseline table (from ${DATEBP}) but image is ${INTABLE} times in approximateBaselinesTable.txt (from ${DATETABLE}).${normal}" 
-										CONSISTENCY2="${yellow}Min Bp (here: [-]${MINBP}m with [-]${BTWITHMINBP}days) or Bt (here: [-]${MINBT}days with [-]${BPWITHMINBT}m) larger than criteria ? May want to add some pairs in ${EXTRATABLE}_AdditionalPairs.txt ?${normal}"
+										CONSISTENCY2="${yellow}Min Bp (here: [-]${MINBP}m with [-]${BTWITHMINBP}days) or Bt (here: [-]${MINBT}days with [-]${BPWITHMINBT}m) larger than criteria ? ${normal}"
+										CONSISTENCY3="${yellow} May want to add some pairs in ${EXTRATABLE}_AdditionalPairs.txt ?${normal}"
+										
 								fi
 								;;
 							"DD")   	
@@ -258,13 +314,24 @@ esac
 											then 
 												#SIGNMINBT="\${MINBT}" 
 												#search Bp with that min Bt
-												BPWITHMINBT=`cat ${PATHTABLE}/allPairsListing.txt | ${PATHGNU}/grep ${LASTSIMG} | ${PATHGNU}/grep \\\"${MINBT} " | ${PATHGNU}/gawk '{ print $8 }' `	# need these 3 backslashes to get grep to ignore the negative signe before MINBT...
+												#BPWITHMINBT=`cat ${PATHTABLE}/allPairsListing.txt | ${PATHGNU}/grep ${LASTSIMG} | ${PATHGNU}/grep \\\"${MINBT} " | ${PATHGNU}/gawk '{ print $8 }' `	# need these 3 backslashes to get grep to ignore the negative signe before MINBT...
+												BPWITHMINBT=`cat ${PATHTABLE}/allPairsListing.txt | ${PATHGNU}/grep ${LASTSIMG} | ${PATHGNU}/grep \\\"${MINBT} " | ${PATHGNU}/gawk '{ print $8, $8 < 0 ? -$8 : $8 }' | sort -g -k2 | ${PATHGNU}/gawk '{ print $1 }'| head -n 1`
+													# need these 3 backslashes to get grep to ignore the negative signe before MINBT...
+													# gawk '{ print $8, $8 < 0 ? -$8 : $8 }' prints both the original value from column 8 and its absolute value as a second column. If the value is negative, it prints the positive version; otherwise, it prints the value unchanged.
+													# sort -g -k2 sorts the lines based on the absolute values (second column).
+													# gawk '{ print $1 }' prints the original values from column 8 after the sorting
+													# head -1 takes the first, that is the smallest, value
 												
 											else 
 												#SIGNMINBT="${MINBT}" 
 												#search Bp with that min Bt
-												BPWITHMINBT=`cat ${PATHTABLE}/allPairsListing.txt | ${PATHGNU}/grep ${LASTSIMG} | ${PATHGNU}/grep " ${MINBT} " | ${PATHGNU}/gawk '{ print $8 }' `
-										
+												#BPWITHMINBT=`cat ${PATHTABLE}/allPairsListing.txt | ${PATHGNU}/grep ${LASTSIMG} | ${PATHGNU}/grep " ${MINBT} " | ${PATHGNU}/gawk '{ print $8 }' `
+												BPWITHMINBT=`cat ${PATHTABLE}/allPairsListing.txt | ${PATHGNU}/grep ${LASTSIMG} | ${PATHGNU}/grep " ${MINBT} " | ${PATHGNU}/gawk '{ print $8, $8 < 0 ? -$8 : $8 }' | sort -g -k2 | ${PATHGNU}/gawk '{ print $1 }'| head -n 1`
+													# need these 3 backslashes to get grep to ignore the negative signe before MINBT...
+													# gawk '{ print $8, $8 < 0 ? -$8 : $8 }' prints both the original value from column 8 and its absolute value as a second column. If the value is negative, it prints the positive version; otherwise, it prints the value unchanged.
+													# sort -g -k2 sorts the lines based on the absolute values (second column).
+													# gawk '{ print $1 }' prints the original values from column 8 after the sorting
+													# head -1 takes the first, that is the smallest, value
 										fi
 										#search Bp with that min Bt
 										#BPWITHMINBT=`cat ${PATHTABLE}/allPairsListing.txt | ${PATHGNU}/grep ${LASTSIMG} | ${PATHGNU}/grep " ${SIGNMINBT} " | ${PATHGNU}/gawk '{ print $8 }' `
@@ -272,7 +339,8 @@ esac
 										EXTRATABLE=`basename ${PATHBASELINE} | cut -d . -f 1`
 		
 										CONSISTENCY="${yellow}Data not in MassProcess nor in baseline table (from ${DATEBP}) but image is ${INTABLE} times in allPairsListing.txt (from ${DATETABLE}).${normal}" 
-										CONSISTENCY2="${yellow}Min Bp (here: ${MINBP}m with ${BTWITHMINBP}days) or Bt (here: ${MINBT}days with ${BPWITHMINBT}m) larger than criteria ? May want to add some pairs in ${EXTRATABLE}_AdditionalPairs.txt ?${normal}"
+										CONSISTENCY2="${yellow}Min Bp (here: ${MINBP}m with ${BTWITHMINBP}days) or Bt (here: ${MINBT}days with ${BPWITHMINBT}m) larger than criteria ? ${normal}"
+										CONSISTENCY3="${yellow} May want to add some pairs in ${EXTRATABLE}_AdditionalPairs.txt ?${normal}"
 								fi
 								;;		
 				esac
@@ -414,6 +482,10 @@ esac
 					# print second line for long CONSISTENCY message
 					printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n " "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
 					printf "%-132s %-50s\n" " " "${CONSISTENCY2}" 
+					if [ "${CONSISTENCY3}" != "" ]
+						then
+							printf "%-132s %-50s\n" " " "${CONSISTENCY3}" 
+					fi
 			fi
 		}
 
@@ -430,17 +502,27 @@ function CheckCSK()
 			LAST2=`find ${PATHCSL}/*${LASTSIMG}*/Data/ -maxdepth 1 -type f -name "SLCData*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
 			if [ ${LAST2} -eq 0 ] ; then LASTCSL="${reverse} missing       ${normal}" ; else LASTCSL="OK, ${LAST2} file " ; fi
 
-			LAST3=`find ${PATHRESAMP}/ -maxdepth 1 -type d -name "*_${LASTSIMG}*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
-			if [ ${LAST3} -eq 0 ] 
+			# check RESAMPLED
+			# search for Global Primary as the first date of the first subdir named yyyymmdd_yyyymmdd
+			GLOBPRIM=`find ${PATHRESAMP}/ -maxdepth 1 -type d -name '[0-9][0-9][0-9][0-9][0-1][0-9][0-3][0-9]_[0-9][0-9][0-9][0-9][0-1][0-9][0-3][0-9]' | head -n 1 | ${PATHGNU}/gawk -F/ '{print $NF}' | ${PATHGNU}/gawk -F_ '{print $1}'`
+			if [ "${GLOBPRIM}" == "${LASTSIMG}" ] 
 				then 
-					LASTRESAMPL="${reverse} missing       ${normal}" 
+					LAST3=0
+					LASTRESAMPL="${green}Global Primary ${normal}"
 				else 
-					LAST31=`find ${PATHRESAMP}/*_${LASTSIMG}/ -type d -name "*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
-					if [ ${LAST31} -lt 9 ] ; then LASTRESAMPL="${reverse} miss sub dirs ${normal}" ; else	LASTRESAMPL="OK, ${LAST31} dirs " ; fi 
+					LAST3=`find ${PATHRESAMP}/ -maxdepth 1 -type d -name "*_${LASTSIMG}*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+					if [ ${LAST3} -eq 0 ] 
+						then 
+							LASTRESAMPL="${reverse} missing       ${normal}" 
+						else 
+							LAST31=`find ${PATHRESAMP}/*_${LASTSIMG}/ -type d -name "*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+							if [ ${LAST31} -lt 9 ] ; then LASTRESAMPL="${reverse} miss sub dirs ${normal}" ; else	LASTRESAMPL="OK, ${LAST31} dirs " ; fi 
+					fi
 			fi
 
-			# check MASS_PROCESS:
+			# check MASS_PROCESS 
 			LAST4=`find ${PATHMASSPROCESS}/ -maxdepth 1 -type d -name "*${LASTSIMG}*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+
 			# and Geocoded
 			LAST5=`find ${PATHMASSPROCESS}/Geocoded/DefoInterpolx2Detrend -maxdepth 1 -type f -name "*${LASTSIMG}*deg" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
 			if [ ${LAST4} -eq 0 ]  
@@ -467,6 +549,15 @@ function CheckCSK()
 				elif [ ${LAST3} -eq 0 ] && [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] ; then 
 					CONSISTENCY="${green}Data not resampled yet (may need to wait tomorrow ?)${normal}"
 					CONSISTENCY2=""
+				elif [ ${LAST3} -eq 0 ] && [ ${LAST4} -ne 0 ] && [ ${LAST5} -ne 0 ] && [ ${LAST6} -ne 0 ] ; then 
+					if  [ "${GLOBPRIM}" == "${LASTSIMG}" ] 
+						then 
+							CONSISTENCY="Everything seems OK"
+							CONSISTENCY2=""
+						else 
+							CONSISTENCY="${green}Everything seems OK, though image can't be resampled on Global Primary (CSK-CSG pair?) => used as Secondary only${normal}"
+							CONSISTENCY2=""
+					fi
 				elif [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] ; then 
 					# check if img is in baseline plot table or in approximateBaselinesTable.txt
 					ImgInPlotTable
@@ -495,8 +586,148 @@ function CheckCSK()
 					# print second line for long CONSISTENCY message
 					printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n " "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
 					printf "%-132s %-50s\n" " " "${CONSISTENCY2}" 
+					if [ "${CONSISTENCY3}" != "" ]
+						then
+							printf "%-132s %-50s\n" " " "${CONSISTENCY3}" 
+					fi
 			fi
 		}
+		
+function CheckSAOCOM()
+		{
+			# Provide date of expected ith last imag as LASTSIMG
+			GetXthFormerImgSAOCOM ${DELTASAOCOM} ${FIRSTIMG} ${EXPECTEDTIME}
+
+			# check raw:
+			LAST1=`find ${PATHRAW}/ -maxdepth 2 -mindepth 1 -type f -name "*.xemt" -exec grep -m 1 startTime {} \; | sed -n '/<startTime>'${EXPECTEDYYYY}'-'${EXPECTEDMM}'-'${EXPECTEDDD}'T'${EXPECTEDTIME}'/p' 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+			if [ ${LAST1} -eq 0 ] ; then LASTRAW="${reverse} missing       ${normal}" ; else LASTRAW="OK, ${LAST1} dirs "	; fi
+
+			# check CSL:
+			LAST2=`find ${PATHCSL}/*${LASTSIMG}*/Data/ -maxdepth 1 -type f -name "SLCData*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+			if [ ${LAST2} -eq 0 ] 
+				then 
+					# Check if kml for reading is included in kml from raw image
+					KMLFORREAD="${PATH_1650}/SAR_CSL/SAOCOM/LagunaFea/LagunaFea.kml"	
+					
+					KMLFROMIMGPATH=$(find "${PATHRAW}" -mindepth 2 -maxdepth 2 -type f -name "*.xemt" -exec grep -q '<startTime>'"${EXPECTEDYYYY}"'-'"${EXPECTEDMM}"'-'"${EXPECTEDDD}"'T'"${EXPECTEDTIME}" {} \; -exec dirname {} \;)
+					# that is e.g /Volumes/D3610/SAR_DATA/SAOCOM/LagunaFea-UNZIP/EOL1ASARSAO1B8849848
+					
+					KMLFROMIMGFILE=`find ${KMLFROMIMGPATH} -maxdepth 1 -mindepth 1 -type f -name "*.xemt" | sed "s/.xemt//"` 
+					# that is e.g /Volumes/D3610/SAR_DATA/SAOCOM/LagunaFea-UNZIP/EOL1ASARSAO1B8849848/S1B_OPER_SAR_EOSSP__CORE_L1A_OLF_20240204T153150
+
+					if [ -d "${KMLFROMIMGFILE}" ]
+						then
+    						# image is unzipped. Lets get its kml that must be in Images
+    						KMLFROMIMG=`find ${KMLFROMIMGFILE}/Images/ -type f -name "*.kml" `
+						else
+							# image is not unzipped. Lets unzip only the kml in ${KMLFROMIMGPATH} 
+							unzip -j "${KMLFROMIMGFILE}.zip" "*.kml" -d ${KMLFROMIMGPATH} >/dev/null 2>&1
+							KMLFROMIMG=`find ${KMLFROMIMGPATH}/ -type f -name "*.kml" `
+					fi
+					
+					TESTKML=`_Check_kml_in_kml.py ${KMLFORREAD} ${KMLFROMIMG} 2>/dev/null | grep "True" | wc -l`
+					LASTCSL="${reverse} missing       ${normal}"
+					rm -f ${KMLFROMIMG} 
+				else 
+					LASTCSL="OK, ${LAST2} file "		
+			fi
+
+			# check RESAMPLED
+			# search for Global Primary as the first date of the first subdir named yyyymmdd_yyyymmdd
+			GLOBPRIM=`find ${PATHRESAMP}/ -maxdepth 1 -type d -name '[0-9][0-9][0-9][0-9][0-1][0-9][0-3][0-9]_[0-9][0-9][0-9][0-9][0-1][0-9][0-3][0-9]' | head -n 1 | ${PATHGNU}/gawk -F/ '{print $NF}' | ${PATHGNU}/gawk -F_ '{print $1}'`
+			if [ "${GLOBPRIM}" == "${LASTSIMG}" ] 
+				then 
+					LAST3=0
+					LASTRESAMPL="${green}Global Primary ${normal}"
+				else 
+					LAST3=`find ${PATHRESAMP}/ -maxdepth 1 -type d -name "*_${LASTSIMG}*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+					if [ ${LAST3} -eq 0 ] 
+						then 
+							LASTRESAMPL="${reverse} missing       ${normal}" 
+						else 
+							LAST31=`find ${PATHRESAMP}/*_${LASTSIMG}/ -type d -name "*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+							if [ ${LAST31} -lt 9 ] ; then LASTRESAMPL="${reverse} miss sub dirs ${normal}" ; else	LASTRESAMPL="OK, ${LAST31} dirs " ; fi 
+					fi
+			fi
+			
+			# check MASS_PROCESS:
+			LAST4=`find ${PATHMASSPROCESS}/ -maxdepth 1 -type d -name "*${LASTSIMG}*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+			
+			# and Geocoded
+			LAST5=`find ${PATHMASSPROCESS}/Geocoded/DefoInterpolx2Detrend -maxdepth 1 -type f -name "*${LASTSIMG}*deg" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+			if [ ${LAST4} -eq 0 ]  
+				then 
+					LASTMP="${reverse} missing       ${normal}" 
+					if [ ${LAST5} -eq 0 ] ; then LASTGEOC="${reverse} missing          ${normal}" ; else LASTGEOC="& ${LAST5} files" ; fi
+				else 
+					LASTMP="OK, ${LAST5} dirs " 
+					if [ ${LAST5} -eq 0 ] ; then LASTGEOC="${red}but not in Geoc${normal}" ; else LASTGEOC="& ${LAST5} files" ; fi
+			fi
+			
+			# check MSBAS:
+			LAST6=`find ${PATHMSBAS}/${MSBASMODE} -maxdepth 1 -type f -name "*${LASTSIMG}*deg" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
+			if [ ${LAST6} -eq 0 ] ; then LASTMSBAS="${reverse} missing       ${normal}" ; else LASTMSBAS="OK, ${LAST6} links " ; fi
+
+			# check consistency:
+			if [ ${LAST1} -eq 0 ] && [ ${LAST2} -eq 0 ] && [ ${LAST3} -eq 0 ] && [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] 
+				then
+					CONSISTENCY="No data acquired (check maybe with space agency)"
+					CONSISTENCY2=""
+				elif [ ${LAST2} -eq 0 ] && [ ${LAST3} -eq 0 ] && [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] ; then 
+					if [ ${TESTKML} -eq 0 ] 
+						then 
+							CONSISTENCY="${red}Img outside kml${normal}"
+						else
+							CONSISTENCY="${red}Data not read ; check raw zip files${normal}"
+					fi
+					CONSISTENCY2=""
+				elif [ ${LAST3} -eq 0 ] && [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] ; then 
+					CONSISTENCY="${green}Data not resampled yet (may need to wait tomorrow ?)${normal}"
+					CONSISTENCY2=""
+				elif [ ${LAST3} -eq 0 ] && [ ${LAST4} -ne 0 ] && [ ${LAST5} -ne 0 ] && [ ${LAST6} -ne 0 ] ; then 
+					if  [ "${GLOBPRIM}" == "${LASTSIMG}" ] 
+						then 
+							CONSISTENCY="Everything seems OK"
+							CONSISTENCY2=""
+						else 
+							CONSISTENCY="${green}Everything seems OK, though image can't be resampled on Global Primary => used as Secondary only${normal}"
+							CONSISTENCY2=""
+					fi
+				elif [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] ; then 
+					# check if img is in baseline plot table or in approximateBaselinesTable.txt
+					ImgInPlotTable
+				elif [ ${LAST6} -eq 0 ] && [ ${LAST4} -ne 0 ]  && [ ${LAST5} -ne 0 ] ; then 
+					CONSISTENCY="${blue}No MSBAS invertion yet (may need to wait tomorrow or check empty defo map in data base)${normal}"
+					CONSISTENCY2=""
+				elif [ ${LAST4} -ne ${LAST5} ] ; then 
+					CONSISTENCY="${red}Not same number of dir and geocoded files. Please check Mass Processing${normal}"
+					CONSISTENCY2=""
+				elif [ ${LAST5} -ne ${LAST6} ] ; then 
+					CONSISTENCY="Not same number of geocoded files and files in msbas. May be not a problem if msbas is performed with a more restrictive criteria."
+					CONSISTENCY2=""
+				elif [ ${LAST4} -eq 0 ] && [ ${LAST5} -ne 0 ] ; then 
+					CONSISTENCY="${magenta}No dir in MassProcess; check copy from processing dir or wait for orbit updated reprocessing.${normal}"
+					CONSISTENCY2=""
+				else 
+					CONSISTENCY="Everything seems OK"
+					CONSISTENCY2=""
+			fi
+			# Print line
+			if [ "${CONSISTENCY2}" == "" ]
+				then
+					# print on one line
+					printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n" "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
+				else
+					# print second line for long CONSISTENCY message
+					printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n " "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
+					printf "%-132s %-50s\n" " " "${CONSISTENCY2}" 
+					if [ "${CONSISTENCY3}" != "" ]
+						then
+							printf "%-132s %-50s\n" " " "${CONSISTENCY3}" 
+					fi
+			fi
+		}
+		
 function PrintHeader()
 	{
 	HD1="From Now"
@@ -539,13 +770,13 @@ echo "# Sentinel-1 "
 echo "############################"
 PrintHeader
 	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_VVP_S1_Auto_20m_400days/
+	PATHMSBAS=$PATH_3602/MSBAS/_VVP_S1_Auto_70m_400days/
 
 echo "${bold}DRC VVP Sentinel-1 Asc 174; satellite A${normal}"
 	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_A_174/NoCrop
 	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310
 	PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310_Zoom1_ML4
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set6/table_0_20_0_400.txt
+	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set6/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
 	MSBASMODE=DefoInterpolx2Detrend1
 	FIRSTIMG=20141017  # YYYYMMDD
 	SENSOR=A
@@ -573,7 +804,7 @@ echo "${bold}DRC VVP Sentinel-1 Desc 21; satellite A${normal}"
 	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_D_21/NoCrop
 	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014
 	PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014_Zoom1_ML4
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set7/table_0_20_0_400.txt  
+	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set7/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
 	MSBASMODE=DefoInterpolx2Detrend2
 	FIRSTIMG=20141007  # YYYYMMDD
 	SENSOR=A
@@ -596,46 +827,6 @@ echo "${bold}DRC VVP Sentinel-1 Desc 21; satellite A${normal}"
 # 			CheckS1
 # 	done
 
- echo ""
- echo "############################"
- echo "# VVP"
- echo "# CSK "
- echo "############################"
- PrintHeaderCSK
- 	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/CSK/SuperSite/Auto_Curl
- 	PATHMSBAS=$PATH_3602/MSBAS/_VVP_CSK_Auto_151m_200days/
- echo "${bold}DRC VVP CSK Asc ${normal}"
- 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Asc/NoCrop
- 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Asc/SMNoCrop_SM_20160627
- 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Asc/SMNoCrop_SM_20160627_Zoom1_ML23
- 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set1/table_0_150_0_200.txt
- 	MSBASMODE=DefoInterpolx2Detrend1
- 	FIRSTIMG=20230105  	# YYYYMMDD
- 	EXPECTEDTIME=04		# hh time of acquisition (written in file name); required to assess if asc or desc
- 
- 	j=0
- 	# Check the last images
- 	for i in $(seq 1 ${OLDCSK})			
- 		do 
- 			TST="OFF"
- 			CheckCSK
- 	done
- echo "${bold}DRC VVP CSK Desc ${normal}"
- 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Desc/NoCrop
- 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Desc/SMNoCrop_SM_20160105
- 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Desc/SMNoCrop_SM_20160105_Zoom1_ML23
- 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set2/table_0_150_0_200.txt
- 	MSBASMODE=DefoInterpolx2Detrend2
- 	FIRSTIMG=20230128  	# YYYYMMDD
- 	EXPECTEDTIME=15		# hh time of acquisition (written in file name); required to assess if asc or desc
- 	j=0
- 	# Check the last images
- 	for i in $(seq 1 ${OLDCSK})			
- 		do 
- 			TST="OFF"
- 			CheckCSK
- 	done
-
 echo
 echo "############################"
 echo "# Domuyo"
@@ -645,11 +836,11 @@ PrintHeader
 	MSBASMODE=DefoInterpolx2Detrend1_Full
 
 echo "${bold}Domuyo Sentinel-1 Asc 18; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_A_18/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_A_18/SMNoCrop_SM_20180512
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_A_18/SMNoCrop_SM_20180512_Zoom1_ML4
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450.txt  
-	PATHMSBAS=$PATH_3602/MSBAS/_Domuyo_S1_Auto_20m_450days/
+	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/NoCrop
+	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_20180512
+	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_20180512_Zoom1_ML4
+	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450_Till_20220501_0_80_0_450_After.txt
+	PATHMSBAS=$PATH_3602/MSBAS/_Domuyo_S1_Auto_80m_450days/
 	FIRSTIMG=20141030  # YYYYMMDD
 	SENSOR=A
 	# Check the last images 
@@ -673,10 +864,10 @@ echo "${bold}Domuyo Sentinel-1 Asc 18; satellite A${normal}"
 
 PrintHeader
 echo "${bold}Domuyo Sentinel-1 Desc 83; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_D_83/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_D_83/SMNoCrop_SM_20180222
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_D_83/SMNoCrop_SM_20180222_Zoom1_ML4
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set2/table_0_20_0_450.txt 
+	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/NoCrop
+	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCrop_SM_20180222
+	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCrop_SM_20180222_Zoom1_ML4
+	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set2/table_0_20_0_450_Till_20220501_0_80_0_450_After.txt
 	MSBASMODE=DefoInterpolx2Detrend2_Full
 	FIRSTIMG=20141023  # YYYYMMDD
 	SENSOR=A
@@ -699,13 +890,14 @@ echo "${bold}Domuyo Sentinel-1 Desc 83; satellite A${normal}"
 # 			CheckS1
 # 	done
 
+
 echo
 echo "############################"
 echo "# PF"
 echo "############################"
 PrintHeader
 	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_PF_S1_Auto_90m_70_50days/
+	PATHMSBAS=$PATH_3610/MSBAS/_PF_S1_Auto_90m_70_50days/
 
 # echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite A${normal}"
 # 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_IW_A_144/NoCrop
@@ -736,10 +928,10 @@ PrintHeader
 
 PrintHeader
 echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 IW; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_IW_D_151/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_IW_D_151/SMNoCrop_SM_20200622
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_IW_D_151/SMNoCrop_SM_20200622_Zoom1_ML2
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set4/table_0_70_0_70.txt 
+	PATHCSL=$PATH_1660/SAR_CSL/S1/PF_IW_D_151/NoCrop
+	PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_IW_D_151/SMNoCrop_SM_20200622
+	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_IW_D_151/SMNoCrop_SM_20200622_Zoom1_ML2
+	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set4/table_0_70_0_70_Till_20220501_0_90_0_70_After.txt 
 	MSBASMODE=DefoInterpolx2Detrend4
 	FIRSTIMG=20161005  # YYYYMMDD
 	SENSOR=A
@@ -766,10 +958,10 @@ echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 IW; satellite A${normal}"
 PrintHeader
 	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION_SM-SLC.UNZIP
 echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 SM; satellite A ${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_SM_A_144/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85_Zoom1_ML8
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set1/table_0_50_0_50.txt 
+	PATHCSL=$PATH_1660/SAR_CSL/S1/PF_SM_A_144/NoCrop
+	PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85
+	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85_Zoom1_ML8
+	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set1/table_0_50_0_50_Till_20220501_0_90_0_50_After.txt
 	MSBASMODE=DefoInterpolx2Detrend1
 	FIRSTIMG=20220518  # YYYYMMDD
 	SENSOR=A
@@ -828,15 +1020,15 @@ echo "# LUX"
 echo "############################"
 PrintHeader
 	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-LUXEMBOURG-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_LUX_S1_Auto_20m_400days/
+	PATHMSBAS=$PATH_3602/MSBAS/_LUX_S1_Auto_70m_400days/
 
 echo "${bold}LUXEMBOURG Sentinel-1 Asc 88; satellite A${normal}"
 	PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_A_88/NoCrop
 	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_A_88/SMNoCrop_SM_20190406
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/LUX_A_88/SMNoCrop_SM_20190406_Zoom1_ML4
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set2/table_0_20_0_400.txt
+	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_A_88/SMNoCrop_SM_20190406_Zoom1_ML2
+	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set2/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
 	MSBASMODE=DefoInterpolx2Detrend1
-	FIRSTIMG=20141222  # YYYYMMDD ancien 20160203
+	FIRSTIMG=20141104  # YYYYMMDD ancien 20160203
 	SENSOR=A
 	# Check the last images
 	for i in $(seq 1 ${OLD})			
@@ -861,10 +1053,10 @@ PrintHeader
 echo "${bold}LUXEMBOURG Sentinel-1 Desc 139; satellite A${normal}"
 	PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_D_139/NoCrop
 	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_D_139/SMNoCrop_SM_20210920
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/LUX_D_139/SMNoCrop_SM_20210920_Zoom1_ML4
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set6/table_0_20_0_400.txt  
+	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_D_139/SMNoCrop_SM_20210920_Zoom1_ML2
+	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set6/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt 
 	MSBASMODE=DefoInterpolx2Detrend2
-	FIRSTIMG=20141226  # YYYYMMDD ancien 20160326
+	FIRSTIMG=20141015  # YYYYMMDD ancien 20160326
 	SENSOR=A
 	# Check the last images 
 	for i in $(seq 1 ${OLD})			
@@ -916,13 +1108,13 @@ echo "# Guadeloupe"
 echo "############################"
 PrintHeader
 	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-GUADELOUPE-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_Guadeloupe_S1_Auto_50m_150days/
+	PATHMSBAS=$PATH_3602/MSBAS/_Guadeloupe_S1_Auto_90m_150days/
 
 echo "${bold}GUADELOUPE Sentinel-1 Asc 164; satellite A${normal}"
 	PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_A_164/NoCrop
 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622
 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622_Zoom1_ML2
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set1/table_0_50_0_150.txt
+	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set1/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
 	MSBASMODE=DefoInterpolx2Detrend1
 	FIRSTIMG=20141203  # YYYYMMDD
 	SENSOR=A
@@ -937,7 +1129,7 @@ echo "${bold}GUADELOUPE Sentinel-1 Desc 54; satellite A${normal}"
 	PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_D_54/NoCrop
 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410
 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410_Zoom1_ML2
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set2/table_0_50_0_150.txt 
+	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set2/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
 	MSBASMODE=DefoInterpolx2Detrend2
 	FIRSTIMG=20150206  # YYYYMMDD
 	SENSOR=A
@@ -946,3 +1138,130 @@ echo "${bold}GUADELOUPE Sentinel-1 Desc 54; satellite A${normal}"
 		do 
 			CheckS1
 	done
+	
+	echo
+	
+	
+echo
+echo "############################"
+echo "# Funu"
+echo "############################"
+PrintHeader
+	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
+	PATHMSBAS=${PATH_3602}/MSBAS/_Funu_S1_Auto_Max3Shortests
+
+echo "${bold}Funu Sentinel-1 Asc 174; satellite A${normal}"
+	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
+	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608
+	PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608_Zoom1_ML2
+	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set1/table_0_0_MaxShortest_3.txt
+	MSBASMODE=DefoInterpolx2Detrend1
+	FIRSTIMG=20141017  # YYYYMMDD
+	SENSOR=A
+	# Check the last images
+	for i in $(seq 1 ${OLD})			
+		do 
+			CheckS1
+	done
+	
+	PrintHeader
+echo "${bold}Funu Sentinel-1 Desc 21; satellite A${normal}"
+	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
+	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517
+	PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517_Zoom1_ML2
+	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set2/table_0_0_MaxShortest_3.txt
+	MSBASMODE=DefoInterpolx2Detrend2
+	FIRSTIMG=20141007  # YYYYMMDD
+	SENSOR=A
+	# Check the last images 
+	for i in $(seq 1 ${OLD})			
+		do 
+			CheckS1
+	done
+	
+	echo
+
+	
+ echo ""
+ echo "############################"
+ echo "# VVP"
+ echo "# CSK "
+ echo "############################"
+ PrintHeaderCSK
+ 	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/CSK/SuperSite/Auto_Curl
+ 	PATHMSBAS=$PATH_3602/MSBAS/_VVP_CSK_Auto_151m_200days/
+ echo "${bold}DRC VVP CSK Asc ${normal}"
+ 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Asc/NoCrop
+ 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Asc/SMNoCrop_SM_20160627
+ 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Asc/SMNoCrop_SM_20160627_Zoom1_ML23
+ 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set1/table_0_150_0_200.txt
+ 	MSBASMODE=DefoInterpolx2Detrend1
+ 	FIRSTIMG=20230105  	# YYYYMMDD
+ 	EXPECTEDTIME=04		# hh time of acquisition (written in file name); required to assess if asc or desc
+ 
+ 	j=0
+ 	# Check the last images
+ 	for i in $(seq 1 ${OLDCSK})			
+ 		do 
+ 			TST="OFF"
+ 			CheckCSK
+ 	done
+ echo "${bold}DRC VVP CSK Desc ${normal}"
+ 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Desc/NoCrop
+ 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Desc/SMNoCrop_SM_20160105
+ 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Desc/SMNoCrop_SM_20160105_Zoom1_ML23
+ 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set2/table_0_150_0_200.txt
+ 	MSBASMODE=DefoInterpolx2Detrend2
+ 	FIRSTIMG=20230128  	# YYYYMMDD
+ 	EXPECTEDTIME=15		# hh time of acquisition (written in file name); required to assess if asc or desc
+ 	j=0
+ 	# Check the last images
+ 	for i in $(seq 1 ${OLDCSK})			
+ 		do 
+ 			TST="OFF"
+ 			CheckCSK
+ 	done
+
+
+	
+echo "#####################################"
+echo "# LagunaFea SAOCOM - Delaunay Ratio30"
+echo "#####################################"
+ PrintHeader
+ 	PATHRAW=$PATH_3610/SAR_DATA/SAOCOM/LagunaFea-UNZIP
+ 	MSBASMODE=DefoInterpolx2Detrend1
+ 
+ echo "${bold}LagunaFea SAOCOM Asc 42; satellite A${normal}"
+ 	PATHCSL=$PATH_1650/SAR_CSL/SAOCOM/LagunaFea_042_A/NoCrop
+ 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/SAOCOM/LagunaFea_042_A/SMNoCrop_SM_20231010
+ 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/SAOCOM/LagunaFea_042_A/SMNoCrop_SM_20231010_Zoom1_ML8
+ 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LagunaFea/set1/table_0_0_DelaunayRatio30.0_0.txt
+ 	PATHMSBAS=$PATH_3602/MSBAS/_LagunaFea_SAOCOM_Auto_DelaunayRatio30
+ 	FIRSTIMG=20230401  # YYYYMMDD
+  	EXPECTEDTIME=11		# hh time of acquisition (written in file name); required to assess if asc or desc
+ 
+ 	j=0
+ 	# Check the last images 
+ 	for i in $(seq 1 ${OLDSAOCOM})			
+ 		do 
+  			TST="OFF"
+  			CheckSAOCOM
+ 	done
+ 
+ PrintHeader
+ echo "${bold}LagunaFea SAOCOM Desc 152; satellite A${normal}"
+ 	PATHCSL=$PATH_1650/SAR_CSL/SAOCOM/LagunaFea_152_D/NoCrop
+ 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/SAOCOM/LagunaFea_152_D/SMNoCrop_SM_20231105
+ 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/SAOCOM/LagunaFea_152_D/SMNoCrop_SM_20231105_Zoom1_ML8
+ 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LagunaFea/set2/table_0_0_DelaunayRatio30.0_0.txt
+ 	MSBASMODE=DefoInterpolx2Detrend2
+ 	FIRSTIMG=20230716  # YYYYMMDD
+  	EXPECTEDTIME=21		# hh time of acquisition (written in file name); required to assess if asc or desc
+ 
+ 	j=0
+ 	# Check the last images 
+ 	for i in $(seq 1 ${OLDSAOCOM})			
+ 		do 
+  			TST="OFF"
+  			CheckSAOCOM
+ 	done

@@ -27,6 +27,7 @@
 #
 # Dependencies:	- gnu sed and awk for more compatibility. 
 #				- FUNCTIONS_FOR_MT.sh
+#				- RenamePathAfterMove_in_SAR_MASSPROC.sh
 #
 # New in Distro V 1.0:	- Based on developpement version and Beta V1.1.0
 # New in Distro V 1.1:	- also re-create the scripts to make the rasters 
@@ -42,13 +43,28 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20240227:	- Debug reading master name 
+#								- more robust search for SAT and MODE in case of characters after SAR_MASSPROCESS in dir naming
+#								- offer to make the renaming of path if not done yet
+#								- debug naming UTM.RESxRES
+#								- execute fig scripts from ./
+#								- solve mix between ResInterf and FiltInterf
+# 								- Fix rounding pix size when smaller than one by allowing scale 5 before division  
+# New in Distro V 4.2 20240417:	- Fix MASDATE and SLVDATE search from RUNDIR
+# New in Distro V 4.3 20240527:	- proper managment when asking no mask to cope with v > 20200121
+#								  Note that when re-geocoding products that were computer with the old 
+#								  masking method (1=keep; 0=mask; no 3rd level), regeocoding MUST
+#								  be done without mask otherwise everything will be masked...  
+#								- fix detrend x 2 when no mask is required 
+#								- offer to change the list of products to geocode if not satisfied with suggested list
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 27, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -63,23 +79,29 @@ if [ $# -lt 2 ] ; then
 		exit 0
 fi
 
+if [[ "${INTERPOL}" != "AFTER" && "${INTERPOL}" != "BEFORE" && "${INTERPOL}" != "BOTH" &&  "${INTERPOL}" != "NONE" ]] ; then 
+		echo "Please provided an INTERPOLATION option as second parameter: AFTER, BEFORE, BOTH or NONE"
+		exit 0
+	
+fi 
+
 source ${PATH_SCRIPTS}/SCRIPTS_MT/FUNCTIONS_FOR_MT.sh
 
 # vvv ----- Hard coded lines to check --- vvv 
 FIG=FIGyes  # or FIGno
 # only the deformation maps
 #  		DEFOMAP	MASAMPL	SLVAMPL	COH	INTERF	FILTINTERF	RESINTERF	UNWPHASE INCIDENCE 
-#FILESTOGEOC="YES NO NO NO NO NO NO NO NO"
+FILESTOGEOC="YES YES YES YES YES YES YES YES NO"
 # All
-FILESTOGEOC="YES YES NO YES NO YES YES YES YES"
+#FILESTOGEOC="YES YES NO YES NO YES YES YES YES"
 # All but ampl
 #FILESTOGEOC="YES NO NO YES NO YES YES YES YES"
 #FILESTOGEOC="NO NO NO YES NO NO NO NO NO"
 # ^^^ ----- Hard coded lines to check -- ^^^ 
 
 MASSPROCDIR="$(pwd)"
-SAT=`echo ${MASSPROCDIR} | ${PATHGNU}/gsed 's/.*SAR_MASSPROCESS\///' | cut -d / -f1`
-MODE=`echo ${MASSPROCDIR} | ${PATHGNU}/gsed 's/.*SAR_MASSPROCESS\///' | cut -d / -f2`
+SAT=`echo ${MASSPROCDIR} | ${PATHGNU}/gsed 's/.*SAR_MASSPROCESS//' | cut -d / -f2`
+MODE=`echo ${MASSPROCDIR} | ${PATHGNU}/gsed 's/.*SAR_MASSPROCESS//' | cut -d / -f3`
 
 if [ $# -eq 3 ] ; then 
 	# Function to extract parameters from config file: search for it and remove tab and white space
@@ -143,21 +165,21 @@ fi
 # 		echo "WARNING : script not designd for S1 in STRIPMAP."
 # fi
 
-				SpeakOut "Do you want to move results in Geocoded and rasters in GeocodedRasters ?" 
-				while true; do
-					read -p "Do you want to move results in Geocoded and rasters in GeocodedRasters ?"  yn
-					case $yn in
-						[Yy]* ) 
-							echo "OK, you are probably re-running mass processing..."
-							MVRES="YES"
-							break ;;
-						[Nn]* ) 
-							echo "OK, you are probably re-running pairs other than for mass processing..."
-							MVRES="NO"
-							break ;;
-						* ) echo "Please answer yes or no.";;
-					esac
-				done
+SpeakOut "Do you want to move results in Geocoded and rasters in GeocodedRasters ?" 
+while true; do
+	read -p "Do you want to move results in Geocoded and rasters in GeocodedRasters ?"  yn
+	case $yn in
+		[Yy]* ) 
+			echo "OK, you are probably re-running mass processing..."
+			MVRES="YES"
+			break ;;
+		[Nn]* ) 
+			echo "OK, you are probably re-running pairs other than for mass processing..."
+			MVRES="NO"
+			break ;;
+		* ) echo "Please answer yes or no.";;
+	esac
+done
 
 
 # Change LISTTOGEOC type if not in the form of S1A_174_20141017_A_S1A_174_20141110_A
@@ -173,6 +195,7 @@ echo "List of products that will be geocoded : "
 echo "DEFOMAP	MASAMPL	SLVAMPL	COH	INTERF	FILTINTERF	RESINTERF	UNWPHASE INCIDENCE" 
 echo "${FILESTOGEOC}"
 
+	
 while true; do
     read -p "Do you agree with that list ? [y/n] "  yn
     case $yn in
@@ -190,23 +213,152 @@ while true; do
         break ;;
         [Nn]* ) 
         echo "Then change the hard coded list in script and relaunch"
-        exit 0
+		while true; do
+			read -p "Do you want to geocode DEFOMAP ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, DEFOMAP will be re-geocoded."
+			    	DEFOMAP="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, DEFOMAP will not be re-geocoded."
+			    	DEFOMAP="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+ 		while true; do
+			read -p "Do you want to geocode MASAMPL ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, MASAMPL will be re-geocoded."
+			    	MASAMPL="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, MASAMPL will not be re-geocoded."
+			    	MASAMPL="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done
+		while true; do
+			read -p "Do you want to geocode SLVAMPL ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, SLVAMPL will be re-geocoded."
+			    	SLVAMPL="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, SLVAMPL will not be re-geocoded."
+			    	SLVAMPL="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+		
+		while true; do
+			read -p "Do you want to geocode COH ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, COH will be re-geocoded."
+			    	COH="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, COH will not be re-geocoded."
+			    	COH="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+		while true; do
+			read -p "Do you want to geocode INTERF ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, INTERF will be re-geocoded."
+			    	INTERF="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, INTERF will not be re-geocoded."
+			    	INTERF="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+		while true; do
+			read -p "Do you want to geocode FILTINTERF ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, FILTINTERF will be re-geocoded."
+			    	FILTINTERF="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, FILTINTERF will not be re-geocoded."
+			    	FILTINTERF="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+		while true; do
+			read -p "Do you want to geocode RESINTERF ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, RESINTERF will be re-geocoded."
+			    	RESINTERF="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, RESINTERF will not be re-geocoded."
+			    	RESINTERF="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+		while true; do
+			read -p "Do you want to geocode UNWPHASE ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, UNWPHASE will be re-geocoded."
+			    	UNWPHASE="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, UNWPHASE will not be re-geocoded."
+			    	UNWPHASE="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+		while true; do
+			read -p "Do you want to geocode INCIDENCE ? [y/n] "  yn
+			case $yn in
+			    [Yy]* ) 
+			    	echo "OK, INCIDENCE will be re-geocoded."
+			    	INCIDENCE="YES"
+				    break ;;
+			    [Nn]* ) 
+			    	echo "OK, INCIDENCE will not be re-geocoded."
+			    	INCIDENCE="NO"
+			    	break ;;
+			    * ) echo "Please answer yes or no.";;
+			esac
+		done 
+        		
+        		FILESTOGEOC="${DEFOMAP} ${MASAMPL} ${SLVAMPL} ${COH} ${INTERF} ${FILTINTERF} ${RESINTERF} ${UNWPHASE} ${INCIDENCE}"
         break ;;
         * ) echo "Please answer yes or no.";;
     esac
 done
+
 echo ""
 echo "Attention : need the Parameters files in TextFiles with the right path and in the format of your mounted disks depending on the OS. "
 echo "If needed, run RenamePathAfterMove_in_SAR_MASSPROC.sh to get the right path and RenamePath_Volumes.sh or similar to get it in the right format."
 while true; do
-    read -p "Are you sure that all the TextFiles/ have the correct path and format ? [y/n] "  yn
+    read -p "Do you need to change the paths in all the TextFiles ? [y/n] "  yn
     case $yn in
-        [Yy]* ) 
-        	echo "OK, let's go again."
-		    break ;;
         [Nn]* ) 
-        	echo "Please do... "
-        	exit 0
+        	echo "OK, let's carry on with the re-geocoding."
+		    break ;;
+        [Yy]* ) 
+        	echo "OK, lets do it... "
+        	RenamePathAfterMove_in_SAR_MASSPROC.sh ${SAT}
         	break ;;
         * ) echo "Please answer yes or no.";;
     esac
@@ -262,6 +414,8 @@ function GetParamFromFile()
 	updateParameterFile ${parameterFilePath} ${KEY}
 	}
 
+i=1
+N=$(cat ${LISTTOGEOC} | wc -l)
 for DIR in `cat -s ${LISTTOGEOC}` 
 do 
 	if [ ${CHANGEDIRNAME} == "YES" ] ; then 
@@ -280,7 +434,10 @@ do
 			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_incidence  ; fi
 	fi
 	echo ""
-	echo "***** Process ${DIR}"
+	echo "*****************************************************"
+	echo "***** Process ${DIR}, i.e. pair ${i}/${N} ***********"
+	echo "*****************************************************"
+	
 	# remove possible existing old Projection Map
 	rm -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/projMat.UTM.*
 
@@ -328,26 +485,32 @@ do
 	HEADINGFULL=`GetParamFromFile "Azimuth heading" SLCImageInfo.txt ` # must cut to 2 decimal
 	HEADING=`echo "${HEADINGFULL}" | cut -c 1-5`
 	NEWNAME=${SAT}_${MODE}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
-	NAMING=`GetParamFromFile "Geoprojected products generic extension" geoProjectionParameters.txt ` # e.g. .UTM.100x100 (beware of starting dot !)
 
 	if [ $# -eq 3 ] ; then 
 			RUNDIR=${MASSPROCDIR}/${DIR}
 			
 			# get AZSAMP. Attention, needs original az sampling
-			MASDATE=`basename ${RUNDIR} | cut -d _ -f 1`
-			SLVDATE=`basename ${RUNDIR} | cut -d _ -f 2`
-			MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
+			MASDATE=`basename ${RUNDIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
+			SLVDATE=`basename ${RUNDIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
+			MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
 			KEY=`echo "Azimuth sampling [m]" | tr ' ' _`
-			parameterFilePath=${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASNAME}.csl/Info/SLCImageInfo.txt
+			parameterFilePath="${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASNAME}.csl/Info/SLCImageInfo.txt"
+
 			AZSAMP=`updateParameterFile ${parameterFilePath} ${KEY}` # not rounded
-		
+
 			# Update which products to geocode
 		
-			PIXSIZEAZ=`echo " ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+			PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
 			EchoTee " PIXSIZEAZ is ${PIXSIZEAZ} from ( AZSAMP${AZSAMP} / ZOOM${ZOOM} ) * INTERFML${INTERFML} "
 			
-			GEOPIXSIZERND=`echo ${PIXSIZEAZ} | cut -d . -f1`		
-			EchoTee "Rounded PIXSIZEAZ is ${GEOPIXSIZERND}"
+			GEOPIXSIZERND=`echo ${PIXSIZEAZ} | cut -d . -f1`	
+			if [ ${GEOPIXSIZERND} -eq "0" ] 
+				then 
+					GEOPIXSIZERND="1" 
+					EchoTee "Truncated PIXSIZEAZ is 0, hence increased to ${GEOPIXSIZERND}"
+				else
+					EchoTee "Truncated PIXSIZEAZ is ${GEOPIXSIZERND}"
+			fi 	
 		
 			# Size of the geocoded pixel rounded to the nearest (up) multiple of 10
 			if [ -z ${GEOPIXSIZERND#?} ]   # test if all but the first digit is null
@@ -365,6 +528,8 @@ do
 				EchoTeeYellow "          Will get the closest multilooked original pixel size." 
 				EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 		
 				GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+				if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
+
 				EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 				;;
 				"Auto") 
@@ -398,6 +563,8 @@ do
 				*) 
 				EchoTeeYellow "Not sure what you wanted => used Closest..." 
 				GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+				if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
+				
 				EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 				;;
 			esac
@@ -415,27 +582,61 @@ do
 			ChangeGeocParam "ID smoothing factor" ${IDSMOOTH} geoProjectionParameters.txt
 			ChangeGeocParam "ID weighting exponent" ${IDWEIGHT} geoProjectionParameters.txt
 			ChangeGeocParam "FWHM : Lorentzian Full Width at Half Maximum" ${FWHM} geoProjectionParameters.txt
-			# Since 2020 01 21 MasTer Engine masking method is defined by either "mask" (all method but CIS) or "zoneMap" (for CIS in topo mode); no more path to mask
+			# Since 2020 01 21 AMSTer Engine masking method is defined by either "mask" (all method but CIS) or "zoneMap" (for CIS in topo mode); no more path to mask
 			# In cas eof Snaphu or DetPhun, no need to change here below
 			# ChangeParam "Mask " ${PATHTOMASK} geoProjectionParameters.txt
+			if [ ${APPLYMASK} == "APPLYMASKyes" ] 
+				then 
+					case ${UW_METHOD} in 
+						"SNAPHU")  
+							# Check that path to mask in ParamFile.txt PATHTOMASK is the same as the one as link in master dir
+							LINKMASK="${MASTERPATH}/Data/slantRangeMask"
+							TARGETLINKMASK=$(readlink "${LINKMASK}")
+							if [ -f "${TARGETLINKMASK}" ] && [ -s "${TARGETLINKMASK}" ]
+								then 
+									if [ "${PATHTOMASK}" == "${LINKMASK}" ]
+										then
+											EchoTee "Link to mask in Primary image directory in SAR_CSL is OK: ${PATHTOMASK}"
+										else 
+											EchoTee "Link to mask in Primary image directory in SAR_CSL does not point toward expected mask, that was "
+											EchoTee "  (${PATHTOMASK})"
+											# if mask alraedy projected, just rebuild the Link
+											MASKNAME=$(basename ${PATHTOMASK})
+											if [ -f "${MASTERPATH}/Data/${MASKNAME}" ] && [ -s "${MASTERPATH}/Data/${MASKNAME}" ]
+												then 
+													EchoTee "But the projected mask already exist. Rebuild the link "
+													# remove existing link 
+													rm -f ${LINKMASK}
+													ln -s ${MASTERPATH}/Data/${MASKNAME} ${MASTERPATH}/Data/slantRangeMask 
+													# create new link
+												else 
+													#if not, reproject the mask 
+													EchoTee "And no mask of that name was already projected. Hence compute it here."
+													MasterDEM.sh ${MAS} ${PARAMFILE}
+											fi
+									fi
+								else 
+									EchoTee "Link to mask in Primary image directory in SAR_CSL does not exist."
+									EchoTee "  Hence compute the mask here"
+									MasterDEM.sh ${MAS} ${PARAMFILE}
+									
+							fi
+							ChangeParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection " "mask" geoProjectionParameters.txt
+							;; 
+						 "CIS") 
+							ChangeParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection " "zoneMap" geoProjectionParameters.txt
+							;;
+							*)
+							EchoTee "Do not know the type of mask to apply. Perform with classical mask. Please check script if it is not what you expected"
+							ChangeParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection " "mask" geoProjectionParameters.txt
+							;;
+					esac
+				else 
+					ChangeParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection " "NoMsk" geoProjectionParameters.txt
+			fi
+
 			ChangeGeocParam "Zone index" ${ZONEINDEX} geoProjectionParameters.txt
 		
-		   if [ "${UW_METHOD}" == "CIS" ]
-		        then
-					# can make use of the mask generated for the borders at the unwrapping step:
-					EchoTeeYellow "Geocoding using mask generated by CIS unwrapping method. "
-					EchoTeeYellow "    It is built based on coh cleaning threshold (chose wizely) and is only usable "
-					EchoTeeYellow "    by CIS unwrapping method to mask low coh pixels in contact with the borders of the image. "
-					# Since 2020 01 21 CIS masking method is defined by either "mask" (all method but CIS) or "zoneMap" (for CIS in topo mode); no more path to mask
-					# For CIS unwrapping and topo mode, it is advised to change mask as zoneMap here below
-		  			 if [ "${APPLYMASK}" == "APPLYMASKyes" ]
-		      		 	then
-		      		 		ChangeGeocParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection ([mask] or [zoneMap])" mask geoProjectionParameters.txt
-		      		 	else
-		      		 		ChangeGeocParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection ([mask] or [zoneMap])" zoneMap geoProjectionParameters.txt
-					fi
-					# ChangeParam "Mask " zoneMap geoProjectionParameters.txt
-			fi
 	fi
 
 	cd ${MASSPROCDIR}/${DIR}/i12
@@ -453,7 +654,9 @@ do
  	fi
 
 	geoProjection -rk ./TextFiles/geoProjectionParameters.txt
-
+	
+	# NAMING must be read after geoprojection to be up to date  
+	NAMING=`GetParamFromFile "Geoprojected products generic extension" geoProjectionParameters.txt ` # e.g. .UTM.100x100 (beware of starting dot !)
 
 	if [ "${MVRES}" == "YES" ]
 		then
@@ -470,9 +673,9 @@ do
 						if [ -e deformationMap.flatttened${NAMING}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.flatttened${NAMING}.bil ; fi
 						if [ -e deformationMap.interpolated${NAMING}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated${NAMING}.bil ; fi
 						if [ -e deformationMap.interpolated.flattened${NAMING}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened${NAMING}.bil ; fi
-						if [ -e deformationMap.interpolated${NAMING}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated${NAMING}.bil.interpolated ; fi
-		#				if [ -e deformationMap.interpolated.flattened${NAMING}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened${NAMING}.bil.interpolated ; fi
+
 				fi
+
 				if [ "${MASAMPL}" == "YES" ]
 					then
 					# plot geocoded master
@@ -534,7 +737,7 @@ do
 					DEFOGEOCFILE=`ls -f deformationMap.UTM*.bil` 
 					DEFOGEOCHDRFILE=`echo ${DEFOGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 					# Make fig
-					deformationMap${NAMING}.bil.ras.sh
+					#./deformationMap${NAMING}.bil.ras.sh  # already done at line 677	
 					cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/Defo/${DEFOGEOCFILE}_${NEWNAME}.ras
 					mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}_${NEWNAME}.ras
 		
@@ -550,7 +753,7 @@ do
 							DEFOGEOCHDRFILE=`echo ${DEFOGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 							# Make fig
-							deformationMap.interpolated${NAMING}.bil.ras.sh
+							# ./deformationMap.interpolated${NAMING}.bil.ras.sh # already done at line 679
 							cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/DefoInterpol/${DEFOGEOCFILE}_${NEWNAME}.ras
 							mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}_${NEWNAME}.ras
 
@@ -566,7 +769,7 @@ do
 							DEFOGEOCHDRFILE=`echo ${DEFOGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 							# Make fig
-							deformationMap.interpolated.flattened${NAMING}.bil.ras.sh
+							# ./deformationMap.interpolated.flattened${NAMING}.bil.ras.sh  #  already done at line 680
 							cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/DefoInterpolDetrend/${DEFOGEOCFILE}_${NEWNAME}.ras
 							mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${DEFOGEOCFILE}_${NEWNAME}.ras
 
@@ -600,6 +803,7 @@ do
 							GEOPIXL=`GetParamFromFile "Y size of geoprojected products" geoProjectionParameters.txt`
 
 							#if [ `/usr/bin/find ${MASSPROCDIR}/Geocoded/DefoInterpolDetrend/ -name "deformationMap.interpolated.flattened.UTM*${MAS}_${SLV}*deg" -type f 2>/dev/null | wc -l` -ge 1 ] # if a link exists in /GeoProjection, one must interpolate the file which is already in /Geocoded
+							# deformationMap.interpolated.flattened${NAMING}.bil_${NEWNAME} was already moved and renamed in Geocoded in 779
 							if [  -f ${MASSPROCDIR}/Geocoded/DefoInterpolDetrend/deformationMap.interpolated.flattened${NAMING}.bil_${NEWNAME} ] 
 								then 
 									# i.e. did interpolation before unwrapping and a detrending; will now make another interpol
@@ -607,9 +811,9 @@ do
 									PATHDEFOGEOMAP=`echo "${MASSPROCDIR}/Geocoded/DefoInterpolDetrend/deformationMap.interpolated.flattened${NAMING}.bil_${NEWNAME}" | ${PATHGNU}/gsed "s%\/\/%/%g"  `
 							 
 									NAMEDEFOGEOMAP=`basename ${PATHDEFOGEOMAP}`
-									fillGapsInImage ${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}  # attention, interpolated file is locate where input file is and ended with .interpolated
+									fillGapsInImage ${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}  # attention, interpolated file is locate where input file is and ended with .interpolated. Here in DefoInterpolDetrend
 									NEWNAMEINTERP=`echo "${NAMEDEFOGEOMAP}.interpolated" | ${PATHGNU}/gsed "s/.bil\_/.bil.interpolated\_/" | ${PATHGNU}/gsed "s/deg.interpolated/deg/"`  # eg deformationMap.interpolated.flattened.UTM.100x100.bil.interpolated_S1_DRC_VVP_A_174-37.0deg_20190313_20191220_Bp-18.9m_HA749.0m_BT282days_Head102.1deg
-									mv -f ${PATHDEFOGEOMAP}.interpolated ${NEWNAMEINTERP} # ie mv to GeoProjection with final naming 
+									mv -f ${PATHDEFOGEOMAP}.interpolated ${MASSPROCDIR}/Geocoded/DefoInterpolx2Detrend/${NEWNAMEINTERP} # ie mv to Geocoded in DefoInterpolx2Detrend with final naming 
 
 									# Make fig
 									MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 ${MASSPROCDIR}/Geocoded/DefoInterpolx2Detrend/deformationMap.interpolated.flattened${NAMING}.bil.interpolated_${NEWNAME}
@@ -619,7 +823,7 @@ do
 			
 									#cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${NEWNAMEINTERP}.ras ${MASSPROCDIR}/GeocodedRasters/DefoInterpolx2Detrend/${NEWNAMEINTERP}.ras
 
-									mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${NEWNAMEINTERP} ${MASSPROCDIR}/Geocoded/DefoInterpolx2Detrend/${NEWNAMEINTERP}
+									#mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${NEWNAMEINTERP} ${MASSPROCDIR}/Geocoded/DefoInterpolx2Detrend/${NEWNAMEINTERP} # debug already done in 828
 									#ln -sf ${MASSPROCDIR}/Geocoded/DefoInterpolx2Detrend/${NEWNAMEINTERP} ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${NEWNAMEINTERP}
 									cp -f ${MASSPROCDIR}/Geocoded/DefoInterpolDetrend/${NAMEDEFOGEOMAP}.hdr ${MASSPROCDIR}/Geocoded/DefoInterpolx2Detrend/${NEWNAMEINTERP}.hdr
 									${PATHGNU}/gsed -i "/Description =/s/$/.interpolated/" ${MASSPROCDIR}/Geocoded/DefoInterpolx2Detrend/${NEWNAMEINTERP}.hdr  #add .interpolated at the end of Description =  line
@@ -646,7 +850,7 @@ do
 					AMPLGEOCHDRFILE=`echo ${AMPLGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 					# Make fig
-					${AMPLGEOCFILE}.ras.sh
+					./${AMPLGEOCFILE}.ras.sh
 					cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${AMPLGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/Ampli/${AMPLGEOCFILE}_${NEWNAME}.ras
 					mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${AMPLGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${AMPLGEOCFILE}_${NEWNAME}.ras
 
@@ -661,7 +865,7 @@ do
 					AMPLGEOCHDRFILE=`echo ${AMPLGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 					# Make fig
-					${AMPLGEOCFILE}.ras.sh
+					./${AMPLGEOCFILE}.ras.sh
 					cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${AMPLGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/Ampli/${AMPLGEOCFILE}_${NEWNAME}.ras
 					mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${AMPLGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${AMPLGEOCFILE}_${NEWNAME}.ras
 
@@ -676,7 +880,7 @@ do
 					COHGEOCHDRFILE=`echo ${COHGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 					# Make fig
-					${COHGEOCFILE}.ras.sh
+					./${COHGEOCFILE}.ras.sh
 					cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${COHGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/Coh/${COHGEOCFILE}_${NEWNAME}.ras
 					mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${COHGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${COHGEOCFILE}_${NEWNAME}.ras
 
@@ -688,11 +892,11 @@ do
 			#if [ "${INTERF}" == "YES" ] ; then   ; fi
 			if [ "${FILTINTERF}" == "YES" ] 
 				then 
-					INTERFGEOCFILE=`ls -f residualInterferogram.??-??.UTM*.bil` 
+					INTERFGEOCFILE=`ls -f residualInterferogram.??-??.f.UTM*.bil` 
 					INTERFGEOCHDRFILE=`echo ${INTERFGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 					# Make fig
-					${INTERFGEOCFILE}.ras.sh
+					./${INTERFGEOCFILE}.ras.sh
 					cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${INTERFGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/InterfFilt/${INTERFGEOCFILE}_${NEWNAME}.ras
 					mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${INTERFGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${INTERFGEOCFILE}_${NEWNAME}.ras
 
@@ -703,11 +907,11 @@ do
 			fi
 			if [ "${RESINTERF}" == "YES" ] 
 				then 
-					RESINTERFGEOCFILE=`ls -f residualInterferogram.??-??.f.UTM*.bil` 
+					RESINTERFGEOCFILE=`ls -f residualInterferogram.??-??.UTM*.bil` 
 					RESINTERFGEOCHDRFILE=`echo ${RESINTERFGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 					# Make fig
-					${RESINTERFGEOCFILE}.ras.sh
+					./${RESINTERFGEOCFILE}.ras.sh
 					cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${RESINTERFGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/InterfResid/${RESINTERFGEOCFILE}_${NEWNAME}.ras
 					mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${RESINTERFGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${RESINTERFGEOCFILE}_${NEWNAME}.ras
 
@@ -722,7 +926,7 @@ do
 					UFGEOCHDRFILE=`echo ${UFGEOCFILE} | ${PATHGNU}/gsed s/.bil/.hdr/`
 
 					# Make fig
-					${UFGEOCFILE}.ras.sh
+					./${UFGEOCFILE}.ras.sh
 					cp -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${UFGEOCFILE}.ras ${MASSPROCDIR}/GeocodedRasters/UnwrapPhase/${UFGEOCFILE}_${NEWNAME}.ras
 					mv -f ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${UFGEOCFILE}.ras ${MASSPROCDIR}/${DIR}/i12/GeoProjection/${UFGEOCFILE}_${NEWNAME}.ras
 
@@ -824,4 +1028,5 @@ do
 			
 	fi # end of move to Geocoded and GeocodedRaster
 	cd  ${MASSPROCDIR}
+	i=`echo "${i} + 1" | bc -l`
 done 
