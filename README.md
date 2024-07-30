@@ -129,6 +129,17 @@ The development of the AMSTer Software commenced in the early 2010s and leverage
 
 **________**
 
+- New in V 20240730:
+  1. AMSTer Engine 20240427: new S1 downloading, reading (incl. from zip files), orbit managment; proper handling of Left looking sensors  
+  2. Scripts for performing 3D inversion (either when displacement is expected along the steepest slopes like for landslides, or when enough looking diversity is available)
+  3. Updated and improved installer
+  4. Several minor imporvements or small corrections in scripts.
+  5. Some new tools e.g. to test and compare baseline plots, compute Earth to satellite unit vectors, replot Double Difference time series after cron step 3 etc...
+  6. New example of script to download S1 images on new ESA server (since ESA dataspace replaces Scihub)
+  7. Updated examples of crons scripts (illustrated for Domuyo)
+  8. Add slides of 2024 training course
+  9. Update of manuals according to points above 
+
 - New in V 20231215:
   1. AMSTer Engine 20231213 copes with new ESA server for downloading S1 orbits (since Nov 2023).
   2. Installer (and check installation) scripts updated to cope with new procedure required for the new ESA dataspace server
