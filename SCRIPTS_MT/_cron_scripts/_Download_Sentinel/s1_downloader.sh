@@ -1,9 +1,33 @@
 #!/opt/local/bin/bash
+#
+# Script to download SENTINEL-1 productFiles based on AOI (Area of Interest)
+# SENTINEL APIs documentation (replace SciHub interfaces):
+# https://documentation.dataspace.copernicus.eu/APIs/OData.html
+#
+# It will send an e-mail summarising the results. 
+#
+# It also unzip the downloaded images
+#
+# This script is provided as an example and must be tuned to your needs:
+# - Mounting of the disks is performed for Mac computer; change the method if needed
+# - sending the mail is performed with Mac app; change the method if needed 
+# - your e-mail address
+# - your login and password to esa web site 
+# - your path where to save the data
+# - and of course, your targets (footprints, orbits etc...)
+#
+# Dependencies: 
+# - curl, wget
+# - 7zip
+# - app to send mail 
+# ...
+#
+# Written by G. Celli for AMSTer software at ECGS
 
-VERSION="1.0beta6-2023.12.14"
+VERSION="1.0.0-2024.06.18"
 
 # Default values
-# Start and End Date
+# Start and End Date - obsolate
 START_DATE=$1
 END_DATE=$2
 
@@ -19,11 +43,11 @@ LIST_CATALOGUE_ONLY=false
 EMAIL_RECIPIENTS="YourEmail@Address.com"
 
 #EMAIL_SUBJECT="[${HOSTNAME}] Sentinel1 emergency download for "
-EMAIL_SUBJECT="Sentinel1 COPERNICUS downloads for "
+EMAIL_SUBJECT="SENTINEL-1 downloads for "
 
 ##########################################################################################
 
-# new since 2.5.1b1 - use automount feature of Mac OS X to mount smb network discs
+# Use macOS automount feature to mount smb network discs
 # Whole SMB_URL=/Users/doris/NAS-Discs/hp-D3600-Data_Share1/SAR_DATA/S1/
 SMB_SHARE_NAME="hp-D3600-Data_Share1" # do not use a slash at beginning and end
 SMB_SHARE_MOUNTED_ON_LOCAL_DIR="${HOME}/NAS-Discs/${SMB_SHARE_NAME}"
@@ -46,7 +70,7 @@ CMD_GNU_STAT="/opt/local/bin/gstat"
 CMD_JQ="/opt/local/bin/jq"
 
 # Use wget to download quicklook-file, handles way better URLs with dollar "$" signs
-CMD_WGET=/opt/local/bin/wget
+CMD_WGET="/opt/local/bin/wget"
 
 CMD_DU="/opt/local/libexec/gnubin/du -sb"
 CMD_TEE="/opt/local/libexec/gnubin/tee"
@@ -55,6 +79,7 @@ CMD_TEE="/opt/local/libexec/gnubin/tee"
 # -aos: Skip extracting of existing files
 # x: for extracting files with its directory content
 CMD_UNZIP="/opt/local/bin/7zz x -bb0 -bd -aos "
+
 
 ##########################################################################################
 # ESA-Site login details
@@ -65,8 +90,8 @@ PASSWORD="YourPassword"
 # Display help
 function show_help
 {
-    echo "USAGE: sentinel1_downloader_ingestiondate.sh [OPTION_1] [OPTION_2] [OPTION_3] ... "
-    echo "This script downloads Sentinel1 data of a given country using the ESA's OData interface of the Data Hub Service (DHuS)."
+    echo "USAGE: sentinel1_downloader.sh [COUNTRY] --startdate=YYYY-MM-DD --endate=YYYY-MM-DD  [OPTION_3] ... "
+    echo "This script downloads Sentinel1 data of a given country using the ESA's COPERNICUS OData interface."
     echo " -h, --help       display this help message"
     echo ""
     echo ""
@@ -74,12 +99,15 @@ function show_help
     echo ""
     echo "      -1, --belgium    download Sentinel1 data of Belgium"
     echo "      -2, --capvert    download Sentinel1 data of Capvert"
-    echo "      -3, --congo      download Sentinel1 data of Congo"
+    echo "      -3a, --congo      download Sentinel1 data of Congo A174"
+    echo "      -3d, --congo      download Sentinel1 data of Congo D21"
     echo "      -4, --cameroon   download Sentinel1 data of Cameroon"
-    echo "      -5, --luxembourg download Sentinel1 data of Luxembourg"
+    echo "      -5a, --luxembourg download Sentinel1 data of Luxembourg A88"
+    echo "      -5d, --luxembourg download Sentinel1 data of Luxembourg D139"
     echo "      -6, --tanzania   download Sentinel1 data of Tanzania"
     echo "      -7, --erta_ale   download Sentinel1 data of Ethiopia (Erta Ale)"
-    echo "      -8, --hawaii     download Sentinel1 data of Hawaii"
+    echo "      -8a, --hawaii     download Sentinel1 data of Hawaii A124"
+    echo "      -8d, --hawaii     download Sentinel1 data of Hawaii D87"
     echo "      -9, --tristan    download Sentinel1 data of Tristan de Cuna"
     echo "		-10, --domuyo18	 download Sentinel1 data of Domuyo - ASCENDING 18"
     echo "		-11, --domuyo83	 download Sentinel1 data of Domuyo - DESCENDING 83"
@@ -194,8 +222,8 @@ do
                         # incl. Belgium
                         polygon="POLYGON((2.4495477846656244 51.09857384337633,3.404380618761151 51.42802325283006,4.555534222483794 51.555813466481226,5.198038559445268 51.51140532353608,7.134475241676382 50.91890083858132,6.313497477781164 50.06165685491578,6.679368002995337 49.618519748347836,8.169621117892092 49.1362978376153,7.812674264024606 48.76711197844659,6.715062688382086 48.82589534889004,6.313497477781164 49.0895684890138,6.099329365460672 49.34022139167058,5.474672371192572 49.34022139167058,5.028488803858213 49.68207378905507,4.716160306724163 49.80893300681208,4.153969011882872 49.906733443756224,3.9219535568690054 50.07311281836337,3.984419256295816 50.19894786989019,3.5917777170415803 50.26744571831401,3.0474337648936642 50.60279667420565,2.556631840825871 50.78368908203797,2.4495477846656244 51.09857384337633,2.4495477846656244 51.09857384337633))"
                         sensormode="IW"
-                        orbitDirection="DESCENDING"
-                        relOrbitNumber="139"
+                        orbitDirection="ASCENDING"
+                        relOrbitNumber="88"
                         ;;
 
     -5d  | --luxembourgD139) COUNTRY="LUXEMBOURG"
@@ -315,7 +343,7 @@ do
 	-16	| --karthala86)	COUNTRY="KARTHALA_SM"
 						polygon="POLYGON((43.2069351946721 -11.3434508578491, 43.5403432377049 -11.3458995003596, 43.5403432377049 -11.9512819903538, 43.2044377561476 -11.9512819903538, 43.2069351946721 -11.3434508578491))"
 						sensormode="SM"
-                        orbitDirection="ASCENDING"                        
+                        orbitDirection="ASCENDING"
                         relOrbitNumber="86"
 						# Will be stored on a different HD
 						SMB_SHARE_NAME=${SMB_SHARE_NAME}/
@@ -326,14 +354,14 @@ do
 	-17	| --guadeloupeD54)	COUNTRY="GUADELOUPE"
 						polygon="POLYGON((-60.97642182170839 16.51471201845488,-61.82468479885705 16.52432647142963, -61.81692856642155 15.86193868727157, -60.98425058771025 15.8650629729729, -60.97642182170839 16.51471201845488))"
 						sensormode="IW"
-                        orbitDirection="DESCENDING"                        
+                        orbitDirection="DESCENDING"
                         relOrbitNumber="54"
 						# Will be stored on a different HD
 						;;
 	-18	| --guadeloupeA164)	COUNTRY="GUADELOUPE"
 						polygon="POLYGON((-60.97642182170839 16.51471201845488,-61.826997 16.49533, -61.81692856642155 15.86193868727157, -60.98425058771025 15.8650629729729, -60.97642182170839 16.51471201845488))"
 						sensormode="IW"
-                        orbitDirection="ASCENDING"                        
+                        orbitDirection="ASCENDING"
                         relOrbitNumber="164"
 						# Will be stored on a different HD
 						;;
@@ -546,11 +574,10 @@ if [ ! -e "${LOG_PATH}" ]
 fi
 
 ##########################################################################################
-
 echo "" | ${CMD_TEE} -a "${LOG_FILE}"
 echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
-echo " Detailed Log" | ${CMD_TEE} -a "${LOG_FILE}"
-echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+echo " DETAILED LOG" | ${CMD_TEE} -a "${LOG_FILE}"
+#echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
 echo "" | ${CMD_TEE} -a "${LOG_FILE}"
 
 echo "This is script: $0 v${VERSION} running on $FULLHOSTNAME"	| ${CMD_TEE} -a "${LOG_FILE}"
@@ -585,7 +612,7 @@ echo "" 				| ${CMD_TEE} -a "${LOG_FILE}"
 if [ "${LAST_48HOURS_DOWNLOAD}" = true ]; then
 	EMAIL_SUBJECT=${EMAIL_SUBJECT}"${COUNTRY} product=${prodType} - 48hours ago"
 else
-	EMAIL_SUBJECT=${EMAIL_SUBJECT}"${COUNTRY} product=${prodType} - Start: ${START_DATE} End: ${END_DATE}"
+	EMAIL_SUBJECT=${EMAIL_SUBJECT}"${COUNTRY} product=${prodType} - from: ${START_DATE} to: ${END_DATE}"
 fi
 
 ##########################################################################################
@@ -721,9 +748,9 @@ function get_curl_catalogue_without_orbitnumber() {
 }
 
 #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
-echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-echo "=> Getting catalogue" | ${CMD_TEE} -a "${LOG_FILE}"
-#echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+#echo "" | ${CMD_TEE} -a "${LOG_FILE}"
+echo "Getting catalogue of Product-IDs...." | ${CMD_TEE} -a "${LOG_FILE}"
+#echo "" | ${CMD_TEE} -a "${LOG_FILE}"
 
 if [[ -z $relOrbitNumber ]]; then
     #echo "Orbit Number not provided" | ${CMD_TEE} -a "${LOG_FILE}"
@@ -780,10 +807,10 @@ echo "-Nr - | -- Product-ID ---------------------- | -- ProductName ------------
 for ((i=0; i < numberOfProducts; i++));
 do
     #printf "[%03d]: ${productIDArray[$i]} | ${productNameArray[$i]} | ${remoteZipFileSizeArray[$i]} | ${productFilePublicatioDateArray[$i]} | ${quicklookFilesArray[$i]}\n" ${i} | ${CMD_TEE} -a "${LOG_FILE}"
-    printf "[%03d] | ${productIDArray[$i]} | ${productNameArray[$i]} | ${remoteZipFileSizeArray[$i]} | ${productFilePublicatioDateArray[$i]} \n" ${i} | ${CMD_TEE} -a "${LOG_FILE}"
+    printf "[%03d] | ${productIDArray[$i]} | ${productNameArray[$i]} | ${remoteZipFileSizeArray[$i]} | ${productFilePublicatioDateArray[$i]} \n" $((i+1)) | ${CMD_TEE} -a "${LOG_FILE}"
 done
 
-echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+#echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
 
 echo "" | ${CMD_TEE} -a "${LOG_FILE}"
    
@@ -794,10 +821,8 @@ echo "" | ${CMD_TEE} -a "${LOG_FILE}"
 
 if [[ "$LIST_CATALOGUE_ONLY" = false ]];
 then
-   
     echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
-    echo "START PROCESSING DOWNLOADS " | ${CMD_TEE} -a "${LOG_FILE}" 
-  
+    echo "PROCESSING DOWNLOADS" | ${CMD_TEE} -a "${LOG_FILE}" 
     # Prepare productFile download by generating the required ACCESS_TOKEN
     echo "Getting new access token..." | ${CMD_TEE} -a "${LOG_FILE}"
 
@@ -806,10 +831,9 @@ then
                                 -d "username=${USERNAME}" -d "password=${PASSWORD}" \
                                 -d 'grant_type=password' \
                                 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token') > access_token.txt
-                                
     # We use the simpler "jq" command (Copernicus website uses 'Python3' and 'awk' to extract "access_token")
     access_token_with_quotes=$(echo "${RAW_ACCESS_TOKEN}" | $CMD_JQ '.access_token')
-    
+
     # Remove double-quotes
     ACCESS_TOKEN="${access_token_with_quotes//\"/}"
 
@@ -823,71 +847,67 @@ then
     #echo "Refresh Token: ${REFRESH_TOKEN}" | ${CMD_TEE} -a "${LOG_FILE}"
     #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
 
+    # Reset bash built-n "SECONDS"
+    SECONDS=0
 
     # Acces time limit in seconds (10 minutes)
     # After this time limit continue to download with the refreshed ACCESS TOKEN
     ACCESS_TOKEN_TIME_LIMIT_IN_SECONDS=600
-
-    # Reset bash built-n "SECONDS"
-    #SECONDS=0
-
-    TOKEN_REFRESHED=false
+    
+    #TOKEN_REFRESHED=false
     download_required=false
 
     declare -a downloadedFilesArray # succesfully downloaded product files
     declare -a downloadedFileSizeArray
     declare -a failedDownloadsArray
-    
     declare -a unzippedFilesArray
     declare -a failedUnzippedFilesArray
 
     echo "" | ${CMD_TEE} -a "${LOG_FILE}"
-  
+    
     for (( i=0; i < numberOfProducts; i++ ));
     do
-        
         prodID="${productIDArray[$i]}"              # e.g: 7d96670d-8229-4041-ab36-f43163bb6f38
         prodName="${productNameArray[$i]}"          # e.g: S1A_IW_SLC__1SDV_20231211T095725_20231211T095752_051605_063B0A_B6F1.SAFE
         zippedProdName="${prodName}.zip"            # e.g: S1A_IW_SLC__1SDV_20231211T095725_20231211T095752_051605_063B0A_B6F1.SAFE.zip
         prodSize="${remoteZipFileSizeArray[$i]}"    # e.g.:  8143757724
- 
 
-        printf "+-[%03d]:${prodID} | ${prodName} | ${prodSize}\n" ${i} | ${CMD_TEE} -a "${LOG_FILE}"
+        printf "+-[%03d]:${prodID} | ${prodName} | ${prodSize}\n" $((i+1)) | ${CMD_TEE} -a "${LOG_FILE}"
 
-        echo "+--Checking local presence of zipped product file: ${zippedProdName}" | ${CMD_TEE} -a "${LOG_FILE}"
-        
+        echo "+--Checking local presence of zipped product file..." | ${CMD_TEE} -a "${LOG_FILE}"
+
         if [ -e "${ZIP_DOWNLOAD_DIR}/${zippedProdName}" ]; then
-            echo "+--Local file name: ${zippedProdName} exists!" | ${CMD_TEE} -a "${LOG_FILE}"
+            echo "+--Local file exists!" | ${CMD_TEE} -a "${LOG_FILE}"
             localZipFileSize=$(${CMD_GNU_STAT} -c %s "${ZIP_DOWNLOAD_DIR}/${zippedProdName}")
-            
             echo "+--Local file size = ${localZipFileSize} | Remote file size: ${prodSize}" | ${CMD_TEE} -a "${LOG_FILE}"
-            
-            if [ "${localZipFileSize}" -ne "${prodSize}" ]; then
-                echo "+---ALERT: Local file; ${zippedProdName} not correctly downloaded!" | ${CMD_TEE} -a "${LOG_FILE}"
-                echo "+---Deleting local file: ${zippedProdName} (server doesn't support resume download)." | ${CMD_TEE} -a "${LOG_FILE}"
-                echo "+---Will be downloaded by next startup."  | ${CMD_TEE} -a "${LOG_FILE}"
+
+            if [ "${localZipFileSize}" -ne "${prodSize}" ];
+            then
+                echo "+--Local file: ${zippedProdName} not correctly downloaded!" | ${CMD_TEE} -a "${LOG_FILE}"
+                echo "+--Deleting local file: ${zippedProdName} (server doesn't support resume download)." | ${CMD_TEE} -a "${LOG_FILE}"
+                echo "+--Will be downloaded next."  | ${CMD_TEE} -a "${LOG_FILE}"
                 /bin/rm "${ZIP_DOWNLOAD_DIR}/${zippedProdName}"
                 download_required=true
             else
-                echo "+---No download required: Local and remote file sizes matches." | ${CMD_TEE} -a "${LOG_FILE}"
+                echo "+--No download required: Local and remote file sizes matches." | ${CMD_TEE} -a "${LOG_FILE}"
                 echo "" | ${CMD_TEE} -a "${LOG_FILE}"
                 download_required=false
             fi
         else
-            echo "+--Remote product file ${zippedProdName} not downloaded yet, will be downloaded". | ${CMD_TEE} -a "${LOG_FILE}"
+            echo "+--Remote product file not downloaded yet." | ${CMD_TEE} -a "${LOG_FILE}"
             download_required=true
         fi  
 
         if [[ ${download_required} = true ]];
         then 
-            echo "+--Trying to download product file: ${prodID} with name: ${zippedProdName}" | ${CMD_TEE} -a "${LOG_FILE}"
-            
-            if [[ SECONDS -gt $ACCESS_TOKEN_TIME_LIMIT_IN_SECONDS ]];
+
+            echo "+--Trying to download remote product file..." | ${CMD_TEE} -a "${LOG_FILE}"
+                       
+            if [[ SECONDS -ge $ACCESS_TOKEN_TIME_LIMIT_IN_SECONDS ]];
             then
             
-                echo "$SECONDS seconds since last download(s) passed, need to refesh access token..." | ${CMD_TEE} -a "${LOG_FILE}"
-                echo "" | ${CMD_TEE} -a "${LOG_FILE}"
-
+                echo "+->$SECONDS seconds since last download(s) passed, refeshing access token..." | ${CMD_TEE} -a "${LOG_FILE}"
+                
                 # Generate a new refresh token with previous REFRESH_TOKEN
                 RAW_REFRESHED_TOKEN=$(${CMD_CURL} --location --request POST \
                     'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token' \
@@ -919,57 +939,61 @@ then
 
             if  eval "${CMD_CURL}" --fail "${curl_prod_opts[*]}"; then
                 
-                echo "+--SUCCESS! Download done for zipped product file:${zippedProdName}" | ${CMD_TEE} -a "${LOG_FILE}"
+                echo "+--SUCCESS! Download done." | ${CMD_TEE} -a "${LOG_FILE}"
                 downloadedFilesArray+=("${zippedProdName}")
                 downloadedFileSizeArray+=("${prodSize}")
 
                 # Quicklook file URL: curl and wget have problems to read dollar signs (need tp convert /$value to /\$value )
                 # get Quicklook file URL - if we store the URL to a file we can read it with 'wget -i'
                 # https://catalogue.dataspace.copernicus.eu/odata/v1/Assets(6fe22346-965c-41e2-9ac4-e2b604e40a4c)/$value
-                
                 quicklookURL=${quicklookFilesArray[$i]}
                 echo "${quicklookURL}" > "${QUICKLOOK_FILE_URL}"
 
                 quicklookFileName="${prodName}.png"
-                echo "+--Downloading Quicklook file - URL: ${quicklookURL}" | ${CMD_TEE} -a "${LOG_FILE}"
+                #echo "+--DEBUG: Downloading Quicklook file from  URL: ${quicklookURL}" | ${CMD_TEE} -a "${LOG_FILE}"
+                echo "+--Downloading Quicklook file: ${quicklookFileName}" | ${CMD_TEE} -a "${LOG_FILE}"
                 
                 # Since the URL contains a dollar sign at the end with "$value" read the file with '-i'
                 ${CMD_WGET} -O "${ZIP_DOWNLOAD_DIR}/${quicklookFileName}" -i "${QUICKLOOK_FILE_URL}"
                 # Remove the quicklook file
                 /bin/rm "${QUICKLOOK_FILE_URL}"
-
             else 
                 echo "+-FAIL! Download failed for ${zippedProdName}" | ${CMD_TEE} -a "${LOG_FILE}"
+                echo "+--Deleting failed downloaded Zip-file." | ${CMD_TEE} -a "${LOG_FILE}"
+                /bin/rm "${ZIP_DOWNLOAD_DIR}/${zippedProdName}"
                 failedDownloadsArray+=("${zippedProdName}")
+                
             fi
 
             secs=$SECONDS
             hrs=$(( secs/3600 )); mins=$(( (secs-hrs*3600)/60 )); secs=$(( secs-hrs*3600-mins*60 ))
             printf '+--Download time spent: %02d:%02d:%02d\n' $hrs $mins $secs | ${CMD_TEE} -a "${LOG_FILE}"
             echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
-            echo "" | ${CMD_TEE} -a "${LOG_FILE}"
+            echo "" | ${CMD_TEE} -a "${LOG_FILE}"        
         fi
     done
 
-    echo " END PROCESSING DOWNLOADS" | ${CMD_TEE} -a "${LOG_FILE}" 
-    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+    #echo "" | ${CMD_TEE} -a "${LOG_FILE}"
+    #echo " END PROCESSING DOWNLOADS" | ${CMD_TEE} -a "${LOG_FILE}" 
+    #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
     echo "" | ${CMD_TEE} -a "${LOG_FILE}"
+    
 
    
     ##########################################################################################
     # Unzip files 
     ##########################################################################################
     
-    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
-    echo "START UNZIPPING FILES" | ${CMD_TEE} -a "${LOG_FILE}" 
-    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
-
-
     numberOfDownloadedFiles=${#downloadedFilesArray[@]}
 
     if [[ $numberOfDownloadedFiles -gt 0 ]]; then
 
-        echo "+-Trying to unzip ${numberOfDownloadedFiles} files to ${UNZIP_DIR}" | ${CMD_TEE} -a "${LOG_FILE}"
+    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+    echo "UNZIPPING FILES" | ${CMD_TEE} -a "${LOG_FILE}" 
+    #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+    echo "" | ${CMD_TEE} -a "${LOG_FILE}"
+
+    echo "+-Trying to unzip ${numberOfDownloadedFiles} files to ${UNZIP_DIR}" | ${CMD_TEE} -a "${LOG_FILE}"
 
         for (( i=0; i < numberOfDownloadedFiles; i++ ));
         do
@@ -977,7 +1001,7 @@ then
             prodFileToUnzip="${downloadedFilesArray[$i]}"
             remoteZipFileSize="${downloadedFileSizeArray[$i]}"
 
-            printf "+--[%03d]: ${prodFileToUnzip} with size: ${remoteZipFileSize} bytes \n" ${i} | ${CMD_TEE} -a "${LOG_FILE}"
+            printf "+-[%03d]: ${prodFileToUnzip} with size: ${remoteZipFileSize} bytes \n" $((i+1)) | ${CMD_TEE} -a "${LOG_FILE}"
 
             # Check if unzipped directory exists - we need to remove .zip from prodFileToUnzip
             # e.g prodFileToUnzip: S1A_IW_SLC__1SDV_20231211T095659_20231211T095727_051605_063B0A_4A67.SAFE.zip
@@ -987,28 +1011,27 @@ then
             unzippedProdNameDirectory="${UNZIP_DIR}${unzippedProdName}"
 
             if [[  -d "${unzippedProdNameDirectory}" ]]; then
-					echo "+--UnZip-Dir: ${unzippedProdNameDirectory}  exists !" | ${CMD_TEE} -a "${LOG_FILE}"
+					echo "+-UnZip-Dir: ${unzippedProdNameDirectory}  exists !" | ${CMD_TEE} -a "${LOG_FILE}"
       				
                     localDirSize=$(${CMD_DU} "${unzippedProdNameDirectory}" | cut -f1 )
-					echo "+--UnZip-Dir size in bytes: ${localDirSize}" | ${CMD_TEE} -a "${LOG_FILE}"
+					echo "+-UnZip-Dir size in bytes: ${localDirSize}" | ${CMD_TEE} -a "${LOG_FILE}"
 
                 if [[ "${localDirSize}" -ge "${remoteZipFileSize}" ]]; then
-                    echo "+--Unzip-Dir size is bigger or equal to remote Zip-File, seems OK." | ${CMD_TEE} -a "${LOG_FILE}"
-                    echo "+--UnZipping product file not required."  | ${CMD_TEE} -a "${LOG_FILE}"
+                    echo "+-Unzip-Dir size is bigger or equal to remote Zip-File, seems OK." | ${CMD_TEE} -a "${LOG_FILE}"
+                    echo "+-UnZipping product file not required."  | ${CMD_TEE} -a "${LOG_FILE}"
 
                 elif [[ "${localDirSize}" -lt "${remoteZipFileSize}" ]]; then
-                    echo "+--Unzip-Dir is smaller than size of ${prodFileToUnzip}"  | ${CMD_TEE} -a "${LOG_FILE}"
-                    echo "+--Unzip-Dir size ${localDirSize} | ZipFile size: ${remoteZipFileSize}"
+                    echo "+-Unzip-Dir is smaller than size of ${prodFileToUnzip}"  | ${CMD_TEE} -a "${LOG_FILE}"
+                    echo "+-Unzip-Dir size ${localDirSize} | Zip-File size: ${remoteZipFileSize}"
                     hrs=$(( secs/3600 )); mins=$(( (secs-hrs*3600)/60 )); secs=$(( secs-hrs*3600-mins*60 ))
                     unzipRatio=$(( localDirSize / remoteZipFileSize))
                     #echo "+--Unzip-Dir is probably OK. Please check its content manually."  | ${CMD_TEE} -a "${LOG_FILE}"
                     
-                    echo "+--Unzip Ratio: $unzipRatio"
+                    echo "+-Unzip Ratio: $unzipRatio"
                     # In Bash - decimals are not supported. Either use integers only, or use bc or awk to compare.
                     # https://www.shellcheck.net/wiki/SC2072
-                    if [[ $(echo "${unzipRatio} <= 0.95" | bc) == 1 ]]; then
-
-                        echo "+--Unzip-Dir should be deleted and file ${prodFileToUnzip} should be unzipped manually !"  | ${CMD_TEE} -a "${LOG_FILE}"
+                    if [[ $(echo "${unzipRatio} <= 0.90" | bc) == 1 ]]; then
+                        echo "+--Unzip-Ratio is <= 0.90: Unzip-Dir seems to have missing or corrupted files, please check content."  | ${CMD_TEE} -a "${LOG_FILE}"
                     else
                         echo "+--Unzip-Dir is probably OK, please check manually."  | ${CMD_TEE} -a "${LOG_FILE}"
                     fi
@@ -1021,21 +1044,26 @@ then
                     echo "+--Unzipping done for Zip-File: ${prodFileToUnzip}" | ${CMD_TEE} -a "${LOG_FILE}"
                     unzippedFilesArray+=("${prodFileToUnzip}")
                 else
-                    printf "+--Fatal Error unzipping file Nr.[%03d/%03d] ${prodFileToUnzip}. Skipping!" | ${CMD_TEE} -a "${LOG_FILE}"
+                    printf "+--Fatal Error unzipping file ${prodFileToUnzip}. Skipping!" | ${CMD_TEE} -a "${LOG_FILE}"
                     echo "+--Zipped file ${prodFileToUnzip} will be deleted and redownloaded by next launch."
-
                     failedUnzippedFilesArray+=("${prodFileToUnzip}")
                 fi # END -- if [ ${unzipReturnVal} -eq "0" ];
             fi
             echo "" | ${CMD_TEE} -a "${LOG_FILE}"
         done
-    fi
+    
+    #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+    #echo "END UNZIPPING FILES" | ${CMD_TEE} -a "${LOG_FILE}" 
+    #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
 
+    fi  # unzipping files
+
+    #echo "" | ${CMD_TEE} -a "${LOG_FILE}"
     echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
-    echo "END UNZIPPING FILES" | ${CMD_TEE} -a "${LOG_FILE}" 
-    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_FILE}"
+    echo " Done for ${platformname} ${COUNTRY} ${prodType} $sensormode $relOrbitNumber $orbitDirection" | ${CMD_TEE} -a "${LOG_FILE}"
+    echo " in dir: ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_FILE}"
     echo "" | ${CMD_TEE} -a "${LOG_FILE}"
-
+    
     ##########################################################################################
     # SUMMARY Header
     ##########################################################################################
@@ -1043,38 +1071,41 @@ then
     # Create LOG Summary - use a redirect to file - do not append to file with 'tee' command for the first line since it can generate null character
     echo "${platformname} download process done for ${COUNTRY} | productType:${prodType}" > "${LOG_SUMMARY_HEADER}"
     echo "sensormode=$sensormode | relativeOrbitNumber:$relOrbitNumber | orbitDirection:$orbitDirection" | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
-    echo "Start date:$START_DATE to end date:$END_DATE" | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
-    echo "$((SECONDS / 60)) minutes and $((SECONDS % 60)) seconds elapased." | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
+    echo "" | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
+    echo "Catalog query Start Date:${START_DATE} to End Date:${END_DATE}" | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
+    echo "" | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
+    echo "Elapsed time: $((SECONDS / 60)) minutes and $((SECONDS % 60)) seconds." | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
     echo "Working dir: ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
+    echo "Log file written to: ${LOG_ALL}"
     echo "" | ${CMD_TEE} -a "${LOG_SUMMARY_HEADER}"
     
-   ##########################################################################################
+    ##########################################################################################
     # SUMMARY various infos
     ##########################################################################################
     echo "--------------------------------------------" | ${CMD_TEE} "${LOG_SUMMARY}" # note not -a for appending
-    echo "START SUMMARY" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-    echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-
+    echo "SUMMARY" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+    #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+    
     numberOfDownloadedFiles=${#downloadedFilesArray[@]}
 
     if [[ numberOfDownloadedFiles -gt 0 ]]; then
         # For the first echo don't append to the summary log or else it will append to previous summary file.
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo " * Total of downloaded files: $numberOfDownloadedFiles" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "   Succesfully downloaded the following $numberOfDownloadedFiles product files in dir: ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "+-Total of downloaded files: $numberOfDownloadedFiles" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        #echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "+--Succesfully downloaded the following files in ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        #echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         
         for (( i=0; i < numberOfDownloadedFiles; i++ ));
         do
-            printf "Nr.[%03d]: ${downloadedFilesArray[$i]} \n" ${i} | ${CMD_TEE} -a "${LOG_SUMMARY}"
+            printf "+->[%03d]: ${downloadedFilesArray[$i]} \n" $((i+1)) | ${CMD_TEE} -a "${LOG_SUMMARY}"
         done
-        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-    
     else
         # For the first echo don't append to the summary log or else it will append to previous summary file.    
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         echo "* No product file(s) downloaded." | ${CMD_TEE} -a "${LOG_SUMMARY}"
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
     fi
@@ -1084,74 +1115,82 @@ then
         
         # For the first echo don't append to the summary log or else it will append to previous summary file.
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "* Total of failed downloads: $numberOfFailedDownloads" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}" 
+        echo "+-Total of failed downloads: $numberOfFailedDownloads" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "  Failed downloads of the following files in dir: ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "+--Failed downloads of the following files in: ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         
         for (( i=0; i < numberOfFailedDownloads; i++ ));
         do
-            printf "Nr.[%03d]:${failedDownloadsArray[$i]} \n" ${i} | ${CMD_TEE} -a "${LOG_SUMMARY}"
+            printf "+->[%03d]:${failedDownloadsArray[$i]} \n" $((i+1)) | ${CMD_TEE} -a "${LOG_SUMMARY}"
         done
     else
         # For the first echo don't append to the summary log or else it will append to previous summary file.    
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}" 
         echo "* No failed downloads reported." | ${CMD_TEE} -a "${LOG_SUMMARY}"
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        
     fi
 
-
+    
     numberOfUnzippedFiles=${#unzippedFilesArray[@]}
     if [[ numberOfUnzippedFiles -gt 0 ]]; then
         # For the first echo don't append to the summary log or else it will append to previous summary file.          
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "* Total of unzipped files: $numberOfUnzippedFiles." | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        #echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}" 
+        echo "+-Total of unzipped files: $numberOfUnzippedFiles." | ${CMD_TEE} -a "${LOG_SUMMARY}"
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"      
-        
-        echo " Unzipped the following product files in ${UNZIP_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        #echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}" 
 
+        echo "+--Unzipped the following product files in ${UNZIP_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        #echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         for (( i=0; i < numberOfUnzippedFiles; i++ ));
         do
-            printf "[%03d]:${unzippedFilesArray[$i]} \n" ${i} | ${CMD_TEE} -a "${LOG_SUMMARY}"
+            printf "+->[%03d]:${unzippedFilesArray[$i]} \n" $((i+1)) | ${CMD_TEE} -a "${LOG_SUMMARY}"
         done
    
     else
         # For the first echo don't append to the summary log or else it will append to previous summary file.    
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        #echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}" 
+        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         echo "* No product files unzipped." | ${CMD_TEE} -a "${LOG_SUMMARY}"
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
     fi
     
-   
+    
+
     numberOfFailedUnzippedFiles=${#failedUnzippedFilesArray[@]}
 
     if [[ numberOfFailedUnzippedFiles -gt 0 ]]; then
         # For the first echo don't append to the summary log or else it will append to previous summary file.          
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
         #echo "+-Failed unzipped files: " | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo " * Failed to unzip $numberOfFailedUnzippedFiles files in ${UNZIP_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}" 
+        echo "+-Total of failed unzipped files: ${numberOfFailedUnzippedFiles}." | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "+-Failed to unzip these files in ${UNZIP_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
 
         for (( i=0; i < numberOfFailedUnzippedFiles; i++ ));
         do
-            printf "[%03d]:${failedUnzippedFilesArray[$i]} \n" ${i} | ${CMD_TEE} -a "${LOG_SUMMARY}"
+            printf "+->[%03d]:${failedUnzippedFilesArray[$i]} \n" $((i+1)) | ${CMD_TEE} -a "${LOG_SUMMARY}"
         done
     else
         # For the first echo don't append to the summary log or else it will append to previous summary file.    
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+        echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}" 
         echo "* No failed unzipped files reported." | ${CMD_TEE} -a "${LOG_SUMMARY}"
         #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
     fi
 
     echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-    echo " Processing done in dir: ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-    echo "END SUMMARY" | ${CMD_TEE} -a "${LOG_SUMMARY}"
-    echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+    echo "Processing done in: ${ZIP_DOWNLOAD_DIR}" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+    echo "Log file written to: ${LOG_ALL}"
 
+    #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+    #echo "END SUMMARY" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+    #echo "--------------------------------------------" | ${CMD_TEE} -a "${LOG_SUMMARY}"
+    #echo "" | ${CMD_TEE} -a "${LOG_SUMMARY}"
 
     # Combine the summary header and summary log and the log file together into LOG_ALL
     /bin/cat "${LOG_SUMMARY_HEADER}" "${LOG_SUMMARY}" "${LOG_FILE}" > "${LOG_ALL}"
@@ -1166,5 +1205,4 @@ then
         /usr/bin/mail -s "${EMAIL_SUBJECT}" "${EMAIL_RECIPIENTS}" < "${LOG_ALL}"
     fi
 
-           
 fi # END - if [[ LIST_QUERY_ONLY = false ]]
