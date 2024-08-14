@@ -37,7 +37,7 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20231116:	- Reshape with variables
 #								- double criteria to compute baseline plot in order to account for the loss of S1B
-# New in Distro V 5.0.0 20240530:	- reprocessing with DEM referred to Geoid 
+# New in Distro V 5.0.0 20240530:	- reprocessing with DEM corrected from Geoidal height 
 # New in Distro V 5.1.0 20240624:	- enlarge BP2 (from back to 20220501) to cope with new S1 orbital tube from 05 2024
 
 #

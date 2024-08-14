@@ -21,7 +21,7 @@ STRINGTOKILL=$1
 #  		echo "Kill S1?_88_${MAS}_A_S1?_88_${SLV}_A"
 #  		rm -Rf S1?_88_${MAS}_A_S1?_88_${SLV}_A
 # done
-
+find . -maxdepth 1 -type d -name "*${STRINGTOKILL}*"
 find . -maxdepth 1 -type d -name "*${STRINGTOKILL}*" -exec rm -Rf {} \;
 
 

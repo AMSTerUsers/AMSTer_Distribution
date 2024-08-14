@@ -106,12 +106,13 @@
 # New in Distro V 7.1.0 20240228:	- Fix rounding pix size when smaller than one by allowing scale 5 before division  
 # New in Distro V 7.1.1 20240425:	- Warns when coarse coreg fails and suggests to put image in quarantine but only log the info in ${OUTPUTDATA}/_Coarse_Coregistration_Failed.txt 
 # New in Distro V 7.1.2 20240426:	- Force handling Nr of anchor points and sigma values read from lig files at coarse coregistration as integers
+# New in Distro V 7.1.3 20240812:	- Correct bug introduced in V7.1.2 at CoarseCoregTestQuality fct. It created wrong error msg for processes other than S1 IW and tried to improve a successful coarse coreg. 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V7.1.2 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 26, 2024"
+FCTVER="Distro V7.1.3 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 12, 2024"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -1048,7 +1049,7 @@ function CoarseCoregTestQuality()
 		NRANCHORPTS=$(grep -m ${ATTEMPT} "Total number of anchor points" ${LOGFILE} | tail -n1 | tr -dc '[0-9]')
 		EchoTeeYellow "Number of anchor points for Coarse Coreg is : ${NRANCHORPTS}" 
 		EchoTee ""
-		if [ "$((NRANCHORPTS))" -le 10 ] ; then 	# force handling variable as integer
+		if [ "${NRANCHORPTS}" -le 10 ] ; then 	# force handling variable as integer
 			# If failed 3 times, attempt to coarse coreg using Fiji - not sure it helps....
 			if [ "${ATTEMPT}" -ge 4 ] ; then	
 					# Failed 3 times; try with Fiji
@@ -1118,30 +1119,30 @@ function CoarseCoregTestQuality()
 	  EchoTee "Coarse coreg run nr ${ATTEMPT}:"
 	  #SIGMA=`grep -m ${ATTEMPT} sigmaRangeAzimuth ${LOGFILE} | tail -n1 |  cut -d = -f4 | ${PATHGNU}/gsed 's/\t//g' | xargs printf "%.*f\n" 0`  # rounded to 0th digits precision
 	  SIGMA=$(grep sigmaRangeAzimuth ${LOGFILE} | tail -n1 |  cut -d = -f4 | ${PATHGNU}/gsed 's/\t//g' | xargs printf "%.*f\n" 0)  # rounded to 0th digits precision
-	  if [ "$((SIGMA))" == "" ] ; then
+	  if [ "${SIGMA}" == "" ] ; then
 	  		EchoTeeRed "  // Coregistration Sigma is null. No Coarse Coreg anchor point found."
 	  	else  
 		  CANDIDATEPT=`grep -m ${ATTEMPT} "Number of candidate anchor points" ${LOGFILE} | cut -d = -f 2 | tr -dc '[0-9]'`
 		  # ratio between candidate and used anchor point to assess quality of coregistration in %
 		  RATIOCANDIANCHORPT=`echo "(${NRANCHORPTS}  * 100)/ ${CANDIDATEPT}" | bc` # Integer  
 		  EchoTee "Coregistration Sigma is ${SIGMA} (Rounded)."
-			if [ "$((SIGMA))" -le 1 ] ; then
+			if [ "${SIGMA}" -le 1 ] ; then
 				EchoTee "Coregistration Sigma is less or = one." 
 				EchoTee "Suppose coregistration is OK"
 				EchoTee "-----------------------------"
 				break
-			elif [ "$((SIGMA))" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -ge 5 ]; then
+			elif [ "${SIGMA}" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -ge 5 ]; then
 				EchoTee "Coregistration Sigma is less or = 2 but ratio between candidate and used anchor point is ${RATIOCANDIANCHORPT} %." 
 				EchoTee "Suppose coregistration is OK"
 				EchoTee "-----------------------------"
 				break
-			elif [ "$((SIGMA))" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -le 5 ]; then
+			elif [ "${SIGMA}" -le 2 ] && [ "${RATIOCANDIANCHORPT}" -le 5 ]; then
 				EchoTee "Coregistration Sigma is less or = 2 but ratio between candidate and used anchor point is ${RATIOCANDIANCHORPT} %."
 				EchoTee "=> Suppose coregistration could be improved."
 				EchoTee "Re-run Coregistration"
 				EchoTee "-----------------------------"
 				coarseCoregistration	| tee -a ${LOGFILE}						
-			elif [ "$((SIGMA))" -ge 2 ]; then
+			elif [ "${SIGMA}" -ge 2 ]; then
 				EchoTee "Coregistration Sigma is greater or = 2 : ${SIGMA}."
 				EchoTee "=> Suppose coregistration could be improved."
 				EchoTee "Re-run Coregistration"

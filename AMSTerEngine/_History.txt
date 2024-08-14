@@ -1,3 +1,36 @@
+/* AMSTerEngine20240814 (© DD & SAREOS) */
+/* ************************************ */
+Bug correction in function get the circumscribed rectangle of a give polygon. This fuction might lead to generating a non convex polygon which in turns lead to wrong selction of burst in S1DatReader. 
+geoProjection: Double free corretion.
+
+/* AMSTerEngine20240808 (© DD & SAREOS) */
+/* ************************************ */
+Loads of leak corrections in S1 data management routines. 
+New mask implementation now functionnal up to generation. In addition to the three basis mask (geographical, threshold, fixed detrend), now a sequence of event masks can be given in input to slantRangeDEM. A directory containing all the event masks to be consider can be given in parameter file. All mask names must start with eventMaskYYYYMMDD. They all have to use the same masking value. Slant range projected event masks will all be saved within the master image. 
+
+/* AMSTerEngine20240604 (© DD & SAREOS) */
+/* ************************************ */
+slantRangeDEM: Fully new masking method implemented. Masks are still coded in byte. But now, masks can be combined in a single one automatically. Up to now, three different masks can be given and combined in a single one. Each binary mask must be given in Lat-Lon on WGS84. They can each have their own resolution and extend. They will be combined to cope with external DEM projected in slant range. For each binary mask given in entry, masking value must be given.
+First mask is a purely geographical one that will always be taken into account when requested (like water bodies, borders, ...)
+The other masks are conditional ones. 
+Second mask is the coherence mask that will be considered at phase unwrapping step and stay activated only if coherence is below a given threshold.
+Third mask is a fixed geographical mask that will be taken into account for automatic best plane removal at end of phase unwrapping (still not activated). 
+
+/* AMSTerEngine20240601 (© DD & SAREOS) */
+/* ************************************ */
+SAOCOMDataReader: correction of rejection of images that do not encompass aoi based on real fram coverage. 
+
+/* AMSTerEngine20240531 (© DD & SAREOS) */
+/* ************************************ */
+SAOCOMDataReader: Additiobn of option -I to force selecting only images encompassing the given aoi. 
+	Test is done at listing cleaning step and once again after reading, when the correct image frame without black borders is determined. 
+Bug correction in routine readInfoImageFromTextFile: Lat-Lon and UTM aoi weren't correctly read. 
+
+/* AMSTerEngine20240530 (© DD & SAREOS) */
+/* ************************************ */
+SAOCOMDataReader: Addition of option -o for data ordering. In bulk data reader, subdirs are created with respect to heading direction, beam, track and frame number.	
+	So, former image named SAO1A_20191202_042_389_A.csl will be saved in firectory .../Ascending/S3/Track042/Frame389/SAO1A_20191202_A.csl
+
 /* AMSTerEngine20240427 (© DD & SAREOS) */
 /* ************************************ */
 updateS1Orbits: json file retreived from server wasn't closed. Recursive call to updateS1Orbits through scripts lead to too many opend files and to crash of updateS1Orbit in the ultimate call.  
@@ -158,7 +191,7 @@ geoProjection: bug correction in masked coherence handling.
 /* ************************************ */
 phaseUnwrapping: Correction in 3-level mask management. 
 		The 3-level mask is used in two ways with snaphu. 
-		First, the mask is converted to binary maske taking into account coherence level and saved as binarySlantRangeMask. 
+		First, the mask is converted to binary mask taking into account coherence level and saved as binarySlantRangeMask. 
 		Once converted to binary mask, it is used to mask coherence. It is this masked coherence that is sent to snaphu. 
 		Additionally, the mask is send to snaphu through its -M option. 
 		Now, 3-level mask is also applicable to homemade branch cut phase unwrapping. 

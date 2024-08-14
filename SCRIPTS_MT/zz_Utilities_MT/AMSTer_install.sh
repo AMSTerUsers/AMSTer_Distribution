@@ -176,13 +176,15 @@
 #								- add .netrc file for S1 orbit download from Nov 2023 with AMSTer Engine >= V20231213
 # New in Distro V 5.6 20240131:	- Improve search for path to AMSTer_Distribution. Also cope with zipped AMSTer_Distribution package 
 # New in Distro V 5.7 20240208:	- add install python package shapely
+# New in Distro V 5.8 20240814:	- correct snaphu makefile (since v2.0.7)
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.6 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Jan 31 2024"
+VER="version 5.8 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 14 2024"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -834,6 +836,11 @@ function InstallSnaphu()
 												SNAPHUSOURCEDIR=$(find "${HOMEDIR}/SAR/EXEC/" -type d -name "*snaphu*" | grep "snaphu" | xargs ls -td 2>/dev/null | head -1)
 
 												cd ${SNAPHUSOURCEDIR}/src
+												
+												# needed for makefile in snaphu V 2.0.7, which had the following default line incompatible with some architecture: 
+												# CFLAGS		=	-arch x86_64 $(OPTIMFLAGS) -Wall # -arch arm64 -Wuninitialized -m64 -D NO_CS2 
+												sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
+
 												make
 												mv ${SNAPHUSOURCEDIR}/bin/snaphu ${HOMEDIR}/SAR/EXEC/
 												mv ${SNAPHUSOURCEDIR} ${HOMEDIR}/SAR/EXEC/Sources_Installed
@@ -877,6 +884,11 @@ function InstallSnaphu()
 
 
 							cd ${SNAPHUSOURCEDIR}/src
+																			
+							# needed for makefile in snaphu V 2.0.7, which had the following default line incompatible with some architecture: 
+							# CFLAGS		=	-arch x86_64 $(OPTIMFLAGS) -Wall # -arch arm64 -Wuninitialized -m64 -D NO_CS2 
+							sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
+
 							make
 							mv ${SNAPHUSOURCEDIR}/bin/snaphu ${HOMEDIR}/SAR/EXEC/
 							#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 

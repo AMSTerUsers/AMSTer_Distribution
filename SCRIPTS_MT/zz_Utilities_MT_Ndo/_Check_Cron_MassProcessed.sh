@@ -897,7 +897,7 @@ echo "# PF"
 echo "############################"
 PrintHeader
 	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION-SLC.UNZIP
-	PATHMSBAS=$PATH_3610/MSBAS/_PF_S1_Auto_90m_70_50days/
+	PATHMSBAS=$PATH_3602/MSBAS/_PF_S1_Auto_90m_70_50days/
 
 # echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite A${normal}"
 # 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_IW_A_144/NoCrop

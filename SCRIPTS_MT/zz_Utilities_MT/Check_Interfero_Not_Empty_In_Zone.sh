@@ -29,13 +29,14 @@
 # New in Distro V 2.0: - run as much test in parallel as there are CPUs minus one (to be sure...) using only bash fct
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -74,17 +75,18 @@ case ${OS} in
 	"Linux") 
 		NCPU=`nproc` 	;;
 	"Darwin")
-		NCPU=`sysctl -n hw.ncpu` 
+		#NCPU=`sysctl -n hw.ncpu` 
+		NCPU=$(gnproc)
 		
-		 waitn ()
-		{ StartJobs="$(jobs -p)"
-		  CurJobs="$(jobs -p)"
-		  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
-		  do
-		    sleep 1
-		    CurJobs="$(jobs -p)"
-		  done
-		}
+		waitn ()
+			{ StartJobs="$(jobs -p)"
+			  CurJobs="$(jobs -p)"
+			  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
+			  do
+			    sleep 1
+			    CurJobs="$(jobs -p)"
+			  done
+			}
 		
 		;;
 esac			

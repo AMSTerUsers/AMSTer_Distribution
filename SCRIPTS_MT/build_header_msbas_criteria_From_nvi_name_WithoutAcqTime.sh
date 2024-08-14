@@ -76,13 +76,14 @@
 #					   - correct a confusion between FILEONLY and LINENOPATH	
 # New in Distro V 9.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 9.1 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V9.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -152,18 +153,19 @@ case ${OS} in
 	"Linux") 
 		NCPU=`nproc` 	;;
 	"Darwin")
-		NCPU=`sysctl -n hw.ncpu` 
+		#NCPU=`sysctl -n hw.ncpu` 
+		NCPU=$(gnproc)
 		
 		# must define a function because old bash on Mac does not know wait -n option
 		waitn ()
-		{ StartJobs="$(jobs -p)"
-		  CurJobs="$(jobs -p)"
-		  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
-		  do
-		    sleep 1
-		    CurJobs="$(jobs -p)"
-		  done
-		}
+			{ StartJobs="$(jobs -p)"
+			  CurJobs="$(jobs -p)"
+			  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
+			  do
+			    sleep 1
+			    CurJobs="$(jobs -p)"
+			  done
+			}
 		
 		;;
 esac			

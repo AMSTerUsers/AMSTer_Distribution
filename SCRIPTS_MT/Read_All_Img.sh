@@ -133,13 +133,16 @@
 # New in Distro V 5.6 20231220:	- Log SAOCOM image with unexpected polarisation (VV if HH is asked and reversely); do not rm these data
 # New in Distro V 5.7 20240213:	- Allows reading S1 zipped files. Files older than 6 months will be sorted in a similar way as for UNZIP data
 # New in Distro V 5.8 20240215:	- Also ready for S1 with zip data when ForceAllYears 
+# New in Distro V 5.9 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
+#								- Start log earlier
+# New in Distro V 5.10 20240814:	- Read S1 data with -k option to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle )
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.8 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 15, 2024"
+VER="Distro V5.10 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 14, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -153,6 +156,11 @@ SAT=$3					# satellite
 # vvv ----- Hard coded lines to check --- vvv
 source /$HOME/.bashrc
 # ^^^ ----- Hard coded lines to check --- ^^^
+
+RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
+RNDM1=`echo $(( $RANDOM % 10000 ))`
+LOGFILE=${CSL}/LogFile_ReadAll_${RUNDATE}.txt
+echo "" > ${LOGFILE}
 
 if [ $# -lt 3 ] ; then echo "Usage $0 PATH_TO_RAW_IMG PATH_TO_CSL_STORAGE SATELLITE [KML] [ForceAllYears] [-n] [Path_To_S1_RESAMPLED] [Path_To_S1_SAR_MASSPROCESS] [PREFERRED_POL]"; exit; fi
 
@@ -235,24 +243,25 @@ source ${FCTFILE}
 		"Linux")
 			NCPU=`nproc` 	;;
 		"Darwin")
-			NCPU=`sysctl -n hw.ncpu`
-
+			#NCPU=`sysctl -n hw.ncpu`
+			NCPU=$(gnproc)
+			
 			# must define a function because old bash on Mac does not know wait -n option
 			waitn ()
-			{ StartJobs="$(jobs -p)"
-			  CurJobs="$(jobs -p)"
-			  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
-			  do
-				sleep 1
-				CurJobs="$(jobs -p)"
-			  done
-			}
+				{ StartJobs="$(jobs -p)"
+				  CurJobs="$(jobs -p)"
+				  while diff -q  <(echo -e "$StartJobs") <(echo -e "$CurJobs") >/dev/null
+				  do
+					sleep 1
+					CurJobs="$(jobs -p)"
+				  done
+				}
 
 			;;
 	esac
 
 	CPU=$((NCPU-1))
-	echo "Run max ${CPU} processes at a time "
+	EchoTee "Run max ${CPU} processes at a time "
 
 CSLEND=`echo -n ${CSL} | tail -c 7`
 if [ "${CSLEND}" != "/NoCrop" ] && [ ${SAT} != "CSK" ]; then echo "Check your CSL dir. It must end with NoCrop instead of ${CSLEND}" ; exit 0 ; fi
@@ -281,9 +290,6 @@ function SpeakOut()
 
 
 
-RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
-RNDM1=`echo $(( $RANDOM % 10000 ))`
-LOGFILE=${CSL}/LogFile_ReadAll_${RUNDATE}.txt
 
 if [ ${SAT} == "ENVISAT" ] && [ ! -d ${ENVORB} ]
 		then
@@ -327,7 +333,6 @@ echo ""
 # Path where to store data in csl format
 if [ -d "${CSL}" ]
 then
-   echo "" > ${LOGFILE}
    EchoTee " OK: a directory exist where I can store the data in csl format." 
    EchoTee "     They will be stored in ${CSL}"
    if [ ${SAT} == "S1" ]  
@@ -349,7 +354,6 @@ else
    echo " I will create a new one. I guess it is the first run for that mode."
    echo ""
    mkdir -p ${CSL}
-   echo "" > ${LOGFILE}
    EchoTee " NO expected ${CSL} directory. I created a new one. "
 
 fi
@@ -1025,10 +1029,10 @@ case ${SAT} in
 					if [[ "${INITPOL}" == "ALLPOL" ]]
 						then
 							# Read all polarisations
-							S1DataReader ${RAW} ${CSL} ${KMLS1}
+							S1DataReader ${RAW} ${CSL} ${KMLS1} -k 
 						else
 							# Read only requested polarisation
-							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL}
+							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL} -k
 					fi
 					cp ${CSL}/S1DataReaderLog.txt ${CSL}/S1DataReaderLog_Recent.txt
 				fi
@@ -1040,10 +1044,10 @@ case ${SAT} in
 						if [[ "${INITPOL}" == "ALLPOL" ]]
 							then
 								# Read all polarisations
-								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1}
+								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1} -k
 							else
 								# Read only requested polarisation
-								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1} P=${INITPOL}
+								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1} P=${INITPOL} -k
 						fi
 						cp ${CSL}/S1DataReaderLog.txt ${CSL}/S1DataReaderLog_Former.txt 2>/dev/null
 				fi
@@ -1059,10 +1063,10 @@ case ${SAT} in
 					if [[ "${INITPOL}" == "ALLPOL" ]]
 						then
 							# Read all polarisations
-							S1DataReader ${RAW} ${CSL} ${KMLS1}
+							S1DataReader ${RAW} ${CSL} ${KMLS1} -k
 						else
 							# Read only requested polarisation
-							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL}
+							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL} -k
 					fi
 				fi
 		fi
@@ -1086,7 +1090,7 @@ case ${SAT} in
 								done < ${CSL}/List_IMG_pol_HH_${RUNDATE}.txt
 
 								cd  ${RAW}_FORMER/___tmp_img_pol_HH
-								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=HH
+								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=HH -k
 
 								# get them back
 								while read -r FILEHHPO
@@ -1113,7 +1117,7 @@ case ${SAT} in
 								done < ${CSL}/List_IMG_pol_VV_${RUNDATE}.txt
 
 								cd  ${RAW}_FORMER/___tmp_img_pol_VV
-								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=VV
+								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=VV -k
 
 								# get them back
 								while read -r FILEVVPO
