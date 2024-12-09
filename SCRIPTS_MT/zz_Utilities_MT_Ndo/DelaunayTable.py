@@ -18,7 +18,7 @@
 #
 # WARNING: 	the filtering of the Delaunay connections with the Python script below seems to 
 #			be wrong in rarer cases. Consider to use this filtering step from the bash script 
-#			of the same name, that is DelaunayTable.py
+#			of the same name, that is DelaunayTable.ph
 #
 # V 1.0 (2023/09/19)
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software

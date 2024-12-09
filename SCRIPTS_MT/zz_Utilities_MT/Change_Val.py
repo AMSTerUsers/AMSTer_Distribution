@@ -14,6 +14,7 @@
 #
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20214418:	- change byte type 0->255 instead of signed byte -128->127
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -25,7 +26,8 @@ import sys
 
 filetoprocess = sys.argv[1]
 FindVal = float(sys.argv[2])  # Convert the argument to a float
-ReplaceVal = float(sys.argv[3])  # Convert the argument to a float
+#ReplaceVal = float(sys.argv[3])  # Convert the argument to a float
+ReplaceVal = int(sys.argv[3])  # Convert the argument to a int
 INPUTformat = sys.argv[4]
 
 if len(sys.argv) != 5:
@@ -36,8 +38,11 @@ if INPUTformat not in ('float32', 'byte'):
     print("Invalid file format. Please specify 'float32' or 'byte'.")
     sys.exit(1)
 
+
 try:
-    A = np.fromfile(filetoprocess, dtype=np.float32 if INPUTformat == 'float32' else np.byte)
+	#A = np.fromfile(filetoprocess, dtype=np.float32 if INPUTformat == 'float32' else np.byte) # np.byte corresponds to a signed 8-bit integer in NumPy, meaning values range from -128 to 127, not 0–255. If your file uses unsigned bytes (0–255), the dtype should be np.uint8.
+    A = np.fromfile(filetoprocess, dtype=np.float32 if INPUTformat == 'float32' else np.uint8)
+
     # Make a copy of the original data
     B = A.copy()
 

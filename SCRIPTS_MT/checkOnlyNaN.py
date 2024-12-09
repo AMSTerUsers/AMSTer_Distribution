@@ -15,6 +15,7 @@
 # New in Distro V 2.1:  - add argument check (NdO Jul 8 2022)
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240918:	- corr check nr of arguments
 #
 # launch command : python thisscript.py param1 param2
 #
@@ -34,7 +35,7 @@ filetoprocess = sys.argv[1]
 INPUTformat = sys.argv[2]
 
 #Check nr of arguments  
-if len(sys.argv) != 2:
+if len(sys.argv) != 3:
 	print("Bad nr of arguments. Provide file test if full of NaN and input file fromat (byte or float32")
 
 

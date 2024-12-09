@@ -138,7 +138,7 @@ if [ "${PIXFILELIST}" == "" ] ; then
 		echo "No pixel list provided. Will run without pixel time series."
 		echo "  If you want to output time series for given pixels, also add a Comment for dir naming. See script."
 	else 
-		${PATHGNU}/gsed -i "s%I_FLAG = 0%I_FLAG = 2,${PIXFILELIST}%" header.txt
+		${PATHGNU}/gsed -i "s%I_FLAG = 0%I_FLAG = 2, ${PIXFILELIST}%" header.txt
 fi
 
 ##msbasv2 header.txt 					# run (m)sbas

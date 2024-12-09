@@ -1,6 +1,81 @@
+/* AMSTerEngine20241015 (© DD & SAREOS) */
+/* ************************************ */
+slantRangeDEM: Correction of a bug in external georeferenced file management leading to freeing a non allocated pointer. 
+
+/* AMSTerEngine20241011 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Addition of a cleaning step of listing of data to download in case of direct read of frames. 
+A listing is established with already read frames at destination (so, already downloaded, decompress and read).
+Found frames Id are removed from the list of data to be downloaded. 
+
+/* AMSTerEngine20241010 (© DD & SAREOS) */
+/* ************************************ */
+getSRTMDEM: Bug correction in destination directory determination based on given kml when EXTERNAL_DEMS_DIR is not defined. 
+/* AMSTerEngine20241008 (© DD & SAREOS) */
+/* ************************************ */
+getSRTMDEM: Function available in agregateSRTMTile to correct existing DEM for geoidal heigh is reintroduce. 
+It is working in the same way. If first parameter is an existing DEM, this latter one is corrected if required. 
+If first parameter is a kml, SRTM DEM is downloaded from NASA servers. 
+
+/* AMSTerEngine20241004 (© DD & SAREOS) */
+/* ************************************ */
+Nothing new...
+Except that modifications and corrections done on 20240906 version were erroneously trashed and were missing in the last version. 
+
+/* AMSTerEngine20240925 (© DD & SAREOS) */
+/* ************************************ */
+KML management: Now, path containing environment variables are correctly considered. 
+agregateSRTMTiles is dismissed as SRTM tikes in .bil format are not available anymore on usgs EarthExplorer web site. 
+getSRTMDEM: Download SRTM tiles encompassing given kml from NASA servers,
+aggragate thems and save DEM within DEM directory defined by
+EXTERNAL_DEMS_DIR environmental variable
+Saved DEM will have the same name than given kml.
+SRTM tiles are fetched from:
+	https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_HGT.001/2000.02.11/
+Add your credentials to your .netrc file correspondingly
+if EXTERNAL_MASKS_DIR environmental variable is defined, waterBody will also be saved
+
+
+/* AMSTerEngine20240906 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Addition of option -r. If set, image is imediately read with S1DataReader and downloaded archive is trashed to save space. It is thus working as if COPERNICUS servers were archive drives. The same kml given for download is used for reading. Options -s (automatic stitching), -o (overwright existing frames) and -k (use exact kml for burst selection) can also be added in addition to option -r. 
+
+/* AMSTerEngine20240905 (© DD & SAREOS) */
+/* ************************************ */
+cutAndZoom: Correction to cope with updated kml/polygon management. 
+
+/* AMSTerEngine20240826 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Implementation of unzipping error handling to avoid crah when uncompressing badly formatted/downloaded files. 
+
+/* AMSTerEngine20240826 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Very old bug correction in polygonIntersects and segmentIntersect function leading to missing some bursts in burst selection when using a kml with option -k. 
+
+/* AMSTerEngine20240826 (© DD & SAREOS) */
+/* ************************************ */
+initInSAR: If a kml is given but no external DEM is made available, then all kml points are supposed to have a height equal to the scene average height for recalculation of the slant range - azimuth area of interest.  
+
+/* AMSTerEngine20240822 (© DD & SAREOS) */
+/* ************************************ */
+initInSAR: Mishandling of input kml corrected. Now, it is correctly taken into account provided an external DEM is made avalable either on command line or if an external slant range DEM is included in master image. 
+
+/* AMSTerEngine20240821 (© DD & SAREOS) */
+/* ************************************ */
+Very old bug correction in S1 header management. Some leaks corrections.
+baselinePlot: Double free correction.
+
+/* AMSTerEngine20240820 (© DD & SAREOS) */
+/* ************************************ */
+Bug correction in external DEM management. Excluding value was not correctly read. 
+
+/* AMSTerEngine20240819 (© DD & SAREOS) */
+/* ************************************ */
+Other bug correction in function to get the circumscribed rectangle of a give polygon leading to a possible memory leak. 
+
 /* AMSTerEngine20240814 (© DD & SAREOS) */
 /* ************************************ */
-Bug correction in function get the circumscribed rectangle of a give polygon. This fuction might lead to generating a non convex polygon which in turns lead to wrong selction of burst in S1DatReader. 
+Bug correction in function to get the circumscribed rectangle of a give polygon. This fuction might lead to generating a non convex polygon which in turns lead to wrong selction of burst in S1DatReader. 
 geoProjection: Double free corretion.
 
 /* AMSTerEngine20240808 (© DD & SAREOS) */

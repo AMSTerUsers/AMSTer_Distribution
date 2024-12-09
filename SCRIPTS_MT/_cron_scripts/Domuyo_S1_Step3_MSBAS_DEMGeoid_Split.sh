@@ -46,14 +46,15 @@
 # New in Distro V 5.1.0 20240624:	- enlarge BP2 (from back to 20220501) to cope with new S1 orbital tube from 05 2024
 # New in Distro V 6.0.0 20240805:	- split in two parts
 # 									- simplify some fcts
+# New in Distro V 6.1.0 20240805:	- Crop empty lines to speed up the process
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V6.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 5, 2024"
+VER="Distro V6.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 4, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -734,6 +735,10 @@ cd ${MSBASDIR}
 	# because interferos are detreneded, i.e. averaged to zero, there is no need to calibrate again 
 	${PATHGNU}/gsed -i 's/C_FLAG = 10/C_FLAG = 0/' ${MSBASDIR}/header.txt
 	# Here, ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi.txt datasets
+
+	# crop empty lines 
+	${PATHGNU}/gsed -i 's/WINDOW_SIZE = 0, 5360, 0, 4800/WINDOW_SIZE = 550, 4960, 500, 4200/' ${MSBASDIR}/header.txt
+
 
 	# Check again that files are OK
 		# ensure that format is ok, that is with 4 columns 

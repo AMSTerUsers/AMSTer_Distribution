@@ -135,14 +135,15 @@
 # New in Distro V 5.8 20240215:	- Also ready for S1 with zip data when ForceAllYears 
 # New in Distro V 5.9 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
 #								- Start log earlier
-# New in Distro V 5.10 20240814:	- Read S1 data with -k option to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle )
+# New in Distro V 5.10 20240814:	- Read S1 data with -k option to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle)
+# New in Distro V 5.11 20240826:	- set option to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle) as additional parameter named EXACTKML
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.10 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 14, 2024"
+VER="Distro V5.11 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 26, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -204,6 +205,12 @@ if [ $# -gt 3 ]
 		        			if [ "${INITPOL}" == "HH" ] ; then OTHERPOL="VV" ; fi
 		        	fi
 
+		        	shift 1 ;;
+		        "EXACTKML")
+		        	# for S1 IW: EXACTKML force to read images with option -k, that is 
+		        	#   to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle)
+		        	EXACTKML=$1
+		        	EXACTKML="-k"
 		        	shift 1 ;;
 		        *)
 		         # If the parameter is not recognized, print an error message and exit
@@ -1029,10 +1036,10 @@ case ${SAT} in
 					if [[ "${INITPOL}" == "ALLPOL" ]]
 						then
 							# Read all polarisations
-							S1DataReader ${RAW} ${CSL} ${KMLS1} -k 
+							S1DataReader ${RAW} ${CSL} ${KMLS1} ${EXACTKML}
 						else
 							# Read only requested polarisation
-							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL} -k
+							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL} ${EXACTKML}
 					fi
 					cp ${CSL}/S1DataReaderLog.txt ${CSL}/S1DataReaderLog_Recent.txt
 				fi
@@ -1044,10 +1051,10 @@ case ${SAT} in
 						if [[ "${INITPOL}" == "ALLPOL" ]]
 							then
 								# Read all polarisations
-								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1} -k
+								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1} ${EXACTKML}
 							else
 								# Read only requested polarisation
-								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1} P=${INITPOL} -k
+								S1DataReader ${RAW}_FORMER ${CSL} ${KMLS1} P=${INITPOL} ${EXACTKML}
 						fi
 						cp ${CSL}/S1DataReaderLog.txt ${CSL}/S1DataReaderLog_Former.txt 2>/dev/null
 				fi
@@ -1063,10 +1070,10 @@ case ${SAT} in
 					if [[ "${INITPOL}" == "ALLPOL" ]]
 						then
 							# Read all polarisations
-							S1DataReader ${RAW} ${CSL} ${KMLS1} -k
+							S1DataReader ${RAW} ${CSL} ${KMLS1} ${EXACTKML}
 						else
 							# Read only requested polarisation
-							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL} -k
+							S1DataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL} ${EXACTKML}
 					fi
 				fi
 		fi
@@ -1090,7 +1097,7 @@ case ${SAT} in
 								done < ${CSL}/List_IMG_pol_HH_${RUNDATE}.txt
 
 								cd  ${RAW}_FORMER/___tmp_img_pol_HH
-								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=HH -k
+								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=HH ${EXACTKML}
 
 								# get them back
 								while read -r FILEHHPO
@@ -1117,7 +1124,7 @@ case ${SAT} in
 								done < ${CSL}/List_IMG_pol_VV_${RUNDATE}.txt
 
 								cd  ${RAW}_FORMER/___tmp_img_pol_VV
-								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=VV -k
+								S1DataReader ${RAW} ${CSL} ${KMLS1}	P=VV ${EXACTKML}
 
 								# get them back
 								while read -r FILEVVPO

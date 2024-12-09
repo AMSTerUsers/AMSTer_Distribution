@@ -24,13 +24,14 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20240924:	- if provided with a dir, search for i12 in that dir
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 24, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -51,7 +52,7 @@ DIRTOPROCESS=$1	# DIR where to rename path. If no parameter provided, it will do
 if [ "$#" -eq 1 ]
 	then
     	echo "Rename path only in ${DIRTOPROCESS}"
-    	cd i12/TextFiles
+    	cd ${DIRTOPROCESS}/i12/TextFiles
 					cp -n InSARParameters.txt InSARParameters_original_ExtHDpath.txt # do not copy if exist already
 					RenameVolNameToVariable InSARParameters_original_ExtHDpath.txt InSARParameters.txt
 # 					${PATHGNU}/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
@@ -75,6 +76,7 @@ if [ "$#" -eq 1 ]
 # 											 s%\/mnt\/3602%\/\$PATH_3602%g" geoProjectionParameters_original_ExtHDpath.txt > geoProjectionParameters.txt
 					fi
 					echo "Files in ${DIRTOPROCESS}/i12/TextFiles renamed."
+		cd ${NEWDIR}
     else 
     	echo "Rename path only in subdirs"
 

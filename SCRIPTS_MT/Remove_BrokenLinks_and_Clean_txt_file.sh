@@ -25,13 +25,14 @@
 # New in Distro V 2.5: - replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20240903:	- typo in output message: was written Shell instead of Shall
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 03, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -84,7 +85,7 @@ if [ -f "${PATHSITE}/CleanedLinks_${RNDM1}_tmp.txt" ] && [ -s "${PATHSITE}/Clean
 	sort ${PATHSITE}/CleanedLinks_${RNDM1}_tmp.txt | uniq > ${PATHSITE}/CleanedLinks_${RNDM1}.txt
 	rm -f ${PATHSITE}/CleanedLinks_${RNDM1}_tmp.txt
 
-	echo "  // Shell clean:" 
+	echo "  // Shall clean:" 
 	cat  ${PATHSITE}/CleanedLinks_${RNDM1}.txt
 
 	# Remove defo map link

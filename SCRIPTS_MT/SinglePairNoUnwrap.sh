@@ -77,14 +77,15 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 6.1 20231123:	- Allows naming Radarsat2 as RS in workflow
 # New in Distro V 6.2 20240228:	- Fix rounding pix size when smaller than one by allowing scale 2 before division. Now pix size in real insated of integer 
+# New in Distro V 7.0 20241015:	- multi level mask 
+# New in Distro V 7.1 20241202:	- debug PATHTOMASK
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V6.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 28, 2024"
-
+VER="Distro V7.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -179,9 +180,44 @@ POWSPECSMOOTFACT=`GetParam "POWSPECSMOOTFACT,"`	# POWSPECSMOOTFACT, Power spectr
 APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
 if [ ${APPLYMASK} == "APPLYMASKyes" ] 
  then 
-  PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	if [ "${PATHTOMASK}" != "" ]
+		then 
+			# old Version of LaunchParamFiles.txt, i.e. =< 20231026
+			MASKBASENAME=`basename ${PATHTOMASK##*/}`  
+		else 
+			# Version of LaunchParamFiles.txt, i.e. >= 202341015
+			PATHTOMASKGEOC=`GetParam "PATHTOMASKGEOC,"`			# PATHTOMASKGEOC, geocoded "Geographical mask" file name and path (water body etc..)
+			DATAMASKGEOC=`GetParam "DATAMASKGEOC,"`				# DATAMASKGEOC, value for masking in PATHTOMASKGEOC
+
+			PATHTOMASKCOH=`GetParam "PATHTOMASKCOH,"`			# PATHTOMASKCOH, geocoded "Thresholded coherence mask" file name and path (mask at unwrapping below threshold)
+			DATAMASKCOH=`GetParam "DATAMASKCOH,"`				# DATAMASKCOH, value for masking in PATHTOMASKCOH
+
+			PATHTODIREVENTSMASKS=`GetParam "PATHTODIREVENTSMASKS,"` # PATHTODIREVENTSMASKS, path to dir that contains event mask(s) named eventMaskYYYYMMDDThhmmss_YYYYMMDDThhmmss(.hdr) for masking at Detrend with all masks having dates in Primary-Secondary range of dates
+			DATAMASKEVENTS=`GetParam "DATAMASKEVENTS,"`			# DATAMASKEVENTS, value for masking in PATHTODIREVENTSMASKS 
+
+			if [ "${PATHTOMASKGEOC}" != "" ] ; then MASKBASENAMEGEOC=`basename ${PATHTOMASKGEOC##*/}` ; else MASKBASENAMEGEOC=NoGeogMask  ; fi
+			if [ "${PATHTOMASKCOH}" != "" ] ; then MASKBASENAMECOH=`basename ${PATHTOMASKCOH##*/}` ; else MASKBASENAMECOH=NoCohMask  ; fi
+			if [ "${PATHTODIREVENTSMASKS}" != "" ] 
+				then 
+				    if [ "$(find "${PATHTODIREVENTSMASKS}" -type f | head -n 1)" ]
+				    	then 
+				    		MASKBASENAMEDETREND=`basename ${PATHTODIREVENTSMASKS}` 
+				    		MASKBASENAMEDETREND=Detrend${MASKBASENAMEDETREND}
+				    	else 
+				    		echo "${PATHTODIREVENTSMASKS} exist though is empty, hence apply no Detrend mask " 
+				    		MASKBASENAMEDETREND=NoAllDetrend
+				    fi
+				else 
+					MASKBASENAMEDETREND=NoAllDetrend
+			fi
+
+			MASKBASENAME=${MASKBASENAMEGEOC}_${MASKBASENAMECOH}_${MASKBASENAMEDETREND}
+
+	fi
  else 
   PATHTOMASK=`echo "NoMask"`
+  MASKBASENAME=`echo "NoMask"` 
 fi
 
 SKIPUW=`GetParam "SKIPUW,"`					# SKIPUW, SKIPyes skips unwrapping and geocode all available products
@@ -710,11 +746,6 @@ fi
 		else 
 			IMGWITHDEM=${MASNAME} 		# When computed during SinglePair without SuperMaster 
 	fi
-
-	if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
-		then MASKBASENAME=`basename ${PATHTOMASK##*/}`  
-		else MASKBASENAME=`echo "NoMask"` # not sure I need it
-	fi 	# i.e. "NoMask" or "mask file name without ext" from Param file
 
 	# Need this for ManageDEM
 	if [ "${ZOOM}" == "1"  ] 

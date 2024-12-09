@@ -77,13 +77,18 @@
 # New in Distro V 9.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 9.1 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
+# New in Distro V 9.2 20240919:	- add usage if launched without parameters 
+#								- remove first empty line (if any) in files before comparing 
+#								  with grep -Fvf in order to avoid resulting empty file
+#								- make grep -Fvf with fct LinesInFile2NotInFile1, where FILE 1 si sort and uniq for safety
+#								- can't guess right or left looking from naming. Hence warn user at the end to change sign of incidence angle in header file if sensor is left looking
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2024"
+VER="Distro V9.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 19, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -101,6 +106,8 @@ MAXBT=$4			# Max Btemp
 # Next parameters are the path to pairs and geocoded defo files, for each mode (eg /Users/doris/NAS/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Desc/Resampled_20160103_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML10)
 
 echo ""
+if [ $# -lt 4 ] ; then echo "Usage $0 MODE NRMODES MAXBP MAXBT PATHS2SMxNRModes"; exit; fi
+
 
 RNDM1=`echo $(( $RANDOM % 10000 ))`
 # Dump Command line used in CommandLine.txt
@@ -173,6 +180,30 @@ esac
 CPU=$((NCPU-1))
 echo "Run max ${CPU} processes at a time "
 
+# Functions
+###########
+
+LinesInFile2NotInFile1()
+{
+	local LINESTOSKIP
+	local FILETOSEARCH
+	local FLITERED
+
+	LINESTOSKIP=$1
+	FILETOSEARCH=$2
+	FLITERED=$3
+
+	# just in case...
+	sort ${LINESTOSKIP} | uniq > temp.txt
+	mv temp.txt ${LINESTOSKIP}
+
+	# remove possible first empty line to avoid prblm with grep -Fvf
+	${PATHGNU}/sed -i '1{/^$/d}' ${LINESTOSKIP}
+	${PATHGNU}/sed -i '1{/^$/d}' ${FILETOSEARCH}
+	# take all lines in FILETOSEARCH that are not in LINESTOSKIP and save in FLITERED
+	${PATHGNU}/grep -Fvf ${LINESTOSKIP} ${FILETOSEARCH}  > ${FLITERED}
+
+}
 PrepareModeI()
 {
 	# Prepare j_th mode
@@ -289,7 +320,10 @@ PrepareModeI()
 				sort  _files_in_${MODE}${i}_NoPath.txt | uniq >  _files_in_${MODE}${i}_NoPath_sorted.txt 	# i.e. info from existing MODEi dir
 
 				rm _files_in_${MODE}${i}_NoPath.txt
-				${PATHGNU}/grep -Fvf _files_in_${MODE}${i}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt  > _Files_Not_In_Dir_but_in_${MODE}${i}.txt
+				# take all lines in FILE2 that are not in FILE1 and save in FILE3
+				#${PATHGNU}/grep -Fvf _files_in_${MODE}${i}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt  > _Files_Not_In_Dir_but_in_${MODE}${i}.txt
+				LinesInFile2NotInFile1 "_files_in_${MODE}${i}_NoPath_sorted.txt" "_tmps_Processes_pairs_sorted.txt" "_Files_Not_In_Dir_but_in_${MODE}${i}.txt"
+				
 				${PATHGNU}/gsed -i "s%^%${PATHMODE}\/%g"  _Files_Not_In_Dir_but_in_${MODE}${i}.txt # add again the path at beginning of each line
 				#diff _files_in_${MODE}${i}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt | ${PATHGNU}/grep "deg" | ${PATHGNU}/gsed s/\>//g | ${PATHGNU}/gsed s/\<//g
 				rm  _tmps_Processes_pairs.txt _files_in_${MODE}${i}_NoPath_sorted.txt
@@ -297,7 +331,10 @@ PrepareModeI()
 			sort ${MODETOCP}_NoPath.txt | uniq > ${MODETOCP}_NoPath_sorted.txt
 			rm 	${MODETOCP}_NoPath.txt 		
 			
-			${PATHGNU}/grep -Fvf _tmps_Processes_pairs_sorted.txt ${MODETOCP}_NoPath_sorted.txt > ${MODETOCP}_NoPath_only_new.txt
+			# take all lines in FILE2 that are not in FILE1 and save in FILE3
+			#${PATHGNU}/grep -Fvf _tmps_Processes_pairs_sorted.txt ${MODETOCP}_NoPath_sorted.txt > ${MODETOCP}_NoPath_only_new.txt
+			LinesInFile2NotInFile1 "_tmps_Processes_pairs_sorted.txt" "${MODETOCP}_NoPath_sorted.txt" "${MODETOCP}_NoPath_only_new.txt"
+
 			rm  ${MODETOCP}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt 
 			
 			${PATHGNU}/gsed -i "s%^%${PATHMODE}\/%g"  ${MODETOCP}_NoPath_only_new.txt # add again the path at beginning of each line
@@ -333,7 +370,11 @@ PrepareModeI()
 					done < ${ADDPAIRSFILE} 
 					# i.e. Out_Of_Range_${MAXBP}m_${MAXBT}days.txt contains now only the out-of-range pairs that we do not want to keep
 			fi 		
-			${PATHGNU}/grep -Fv -f Out_Of_Range_${MAXBP}m_${MAXBT}days.txt ${MODETOCP}_FullToCheck.txt > ${MODETOCP}.txt 
+
+			# take all lines in FILE2 that are not in FILE1 and save in FILE3
+			#${PATHGNU}/grep -Fv -f Out_Of_Range_${MAXBP}m_${MAXBT}days.txt ${MODETOCP}_FullToCheck.txt > ${MODETOCP}.txt 
+			LinesInFile2NotInFile1 "Out_Of_Range_${MAXBP}m_${MAXBT}days.txt" "${MODETOCP}_FullToCheck.txt" "${MODETOCP}.txt"
+			
 			# hence ${MODETOCP}.txt contains now the only the new pairs and the Out_of_Range that we WANT to keep (with full path and no tailing info about baselines)
 			rm -f ${MODETOCP}_FullToCheck.txt
 	fi
@@ -363,7 +404,11 @@ PrepareModeI()
 					done < ${ADDPAIRSFILE} 
 
 			fi 		
-			${PATHGNU}/grep -Fv -f Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ${MODETOCP}_NoChoRestrict.txt > ${MODETOCP}.txt 
+
+			# take all lines in FILE2 that are not in FILE1 and save in FILE3
+			#${PATHGNU}/grep -Fv -f Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ${MODETOCP}_NoChoRestrict.txt > ${MODETOCP}.txt 
+			LinesInFile2NotInFile1 "Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt" "${MODETOCP}_NoChoRestrict.txt" "${MODETOCP}.txt"
+
 			# do not remove ${MODETOCP}_NoChoRestrict.txt
 	fi	
 	
@@ -386,8 +431,8 @@ PrepareModeI()
 
   		#LINENOPATH=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}'` 	# Line with file name as deformationMap.....deg without path
  		FILEONLY=`echo ${LINE} | ${PATHGNU}/gawk -F '/' '{print $NF}'` 	# Line with file name as deformationMap.....deg without path
-
-  		MASTERDATE=`echo ${LINE} | ${PATHGNU}/grep -oP '\D+\K\d+' | ${PATHGNU}/gsed -n '/[0-9]\{8\}/p' | head -2  | tail -1`
+ 
+ 		MASTERDATE=`echo ${LINE} | ${PATHGNU}/grep -oP '\D+\K\d+' | ${PATHGNU}/gsed -n '/[0-9]\{8\}/p' | head -2  | tail -1`
  		SLAVEDATE=`echo ${LINE} | ${PATHGNU}/grep -oP '\D+\K\d+' | ${PATHGNU}/gsed -n '/[0-9]\{8\}/p' | tail -1`
  		#MASTERDATE=`echo ${LINE} | ${PATHGNU}/grep -E -o '\b[0-9]{8}\b' | head -2 | head -1`
  		#SLAVEDATE=`echo ${LINE} | ${PATHGNU}/grep -E -o '\b[0-9]{8}\b' | head -2 | tail -1`
@@ -639,10 +684,15 @@ OS=`uname -a | cut -d " " -f 1 `
 
 case ${OS} in 
 	"Linux") 
-		espeak "Do not forget to change acquisition time in header file." ;;
+		espeak "Do not forget to change acquisition time in header file." 
+		espeak "Change sign of incidence angle in header.txt if sensor is left looking." ;;
 	"Darwin")
 		say "Do not forget to change acquisition time in header file." 	;;
+		say "Change sign of incidence angle in header.txt if sensor is left looking." 	;;
+
 	*)
 		echo "Do not forget to change acquisition time in header file." 	;;
+		echo "Change sign of incidence angle in header.txt if sensor is left looking." 	;;
+
 esac			
 

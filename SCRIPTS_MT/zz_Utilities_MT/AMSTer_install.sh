@@ -177,14 +177,20 @@
 # New in Distro V 5.6 20240131:	- Improve search for path to AMSTer_Distribution. Also cope with zipped AMSTer_Distribution package 
 # New in Distro V 5.7 20240208:	- add install python package shapely
 # New in Distro V 5.8 20240814:	- correct snaphu makefile (since v2.0.7)
-
+# New in Distro V 5.9 20240903:	- force python version as much as possible
+#								- force symbolic links if exist (to avoid prblm e.g. when updating ubuntu version)
+#								- add python package scikit-gstat for computation of Variogram
+# New in Distro V 5.10 20241125:	- Debug python link 
+# New in Distro V 5.11 20241126:	- Debug check path to Distribution directory and if not empty
+#									- add lib mpi for Linux
+# New in Distro V 5.12 20241203:	- if EXTERNAL_DEMS_DIR or EXTERNAL_MASKS_DIR exist, offers to keep or change
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.8 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 14 2024"
+VER="version 5.12 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Dec 02 2024"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -207,6 +213,8 @@ if [ "${OS}" == "Darwin" ]
 				echo " // It will only be effective in a new Terminal, hence close the present Terminal and relaunch the prensent script in that new terminal"
 				exit
 		fi
+		
+		PROCESSOR=$(uname -m)
 fi
 				
 
@@ -1415,11 +1423,11 @@ function TstPathGnuFctLinux()
 		if [ "${WHEREISFCT}" != "${PATHGNU}/${FCT}" ] 
 			then 
 				echo "${FCT} is in ${TSTPATHFCT} instead of ${PATHGNU}. Let's link it to ${PATHGNU}/${FCT} (and to ${PATHGNU}/${GFCT} for security)" 
-				sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${FCT} 2>/dev/null 
-				sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null 
+				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/${FCT} 2>/dev/null 
+				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null 
 			else 
 				echo "Link ${FCT} to ${GFCT} in ${PATHGNU} for security" 
-				sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null
+				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null
 		fi
 	}
 
@@ -1965,7 +1973,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 							AptInsatll "libhdf5-dev" 
 							AptInsatll "gmt"
 							AptInsatll "libnetcdf-dev"
-
+							AptInsatll "libmpich-dev"
+							AptInsatll "libopenmpi-dev"
+							
 							#sudo apt install openjpeg  
 							AptInsatll "graphicsmagick ffmpeg "
 							echo "  // Your GDAL version is:"
@@ -2028,11 +2038,11 @@ if [ "${TYPERUN}" == "I" ] ; then
 							if [ "${WHEREISGAWK}" != "${PATHGNU}/gawk" ] 
 								then 
 									echo "gawk is in ${PATHGAWK} instead of ${PATHGNU}. Let's link it to ${PATHGNU}/gawk (and to ${PATHGNU}/awk for security)" 
-									sudo ln -s "${WHEREISGAWK}" ${PATHGNU}/gawk 2>/dev/null 
-									sudo ln -s "${WHEREISGAWK}" ${PATHGNU}/awk 2>/dev/null 
+									sudo ln -sf "${WHEREISGAWK}" ${PATHGNU}/gawk 2>/dev/null 
+									sudo ln -sf "${WHEREISGAWK}" ${PATHGNU}/awk 2>/dev/null 
 								else 
 									echo "Link agwk to awk in ${PATHGNU} for security" 
-									sudo ln -s "${WHEREISGAWK}" ${PATHGNU}/awk 2>/dev/null
+									sudo ln -sf "${WHEREISGAWK}" ${PATHGNU}/awk 2>/dev/null
 							fi
 
 							TstPathGnuFctLinux "sed"
@@ -2051,7 +2061,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							TstPathGnuFctLinux "find"
 							
 							WHEREISWGET=`which wget`
-							if [ "${WHEREISWGET}" != "${PATHGNU}/wget" ] ; then echo "wget seems not in ${PATHGNU}; please check. I make a link though" ; sudo ln -s "${WHEREISWGET}" ${PATHGNU}/wget 2>/dev/null ; fi
+							if [ "${WHEREISWGET}" != "${PATHGNU}/wget" ] ; then echo "wget seems not in ${PATHGNU}; please check. I make a link though" ; sudo ln -sf "${WHEREISWGET}" ${PATHGNU}/wget 2>/dev/null ; fi
 
 							cd  ${HOMEDIR}
 							break ;;
@@ -2311,8 +2321,13 @@ if [ "${TYPERUN}" == "I" ] ; then
 							sudo mkdir -p /opt/local/
 							sudo mkdir -p /opt/local/bin
 							WHEREISPYTHON=`which python3`				#(To know where it is installed, e.g. /usr/bin)
-							sudo ln -s ${WHEREISPYTHON} /opt/local/bin/python	2>/dev/null
-							sudo ln -s ${WHEREISPYTHON} /opt/local/bin/python3 2>/dev/null
+							sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python	2>/dev/null
+
+							if [ "${WHEREISPYTHON}" != "/opt/local/bin/python3" ]
+								then 
+									sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python3	2>/dev/null
+							fi
+
 
 							# UTM package
 							echo "  // Install also utm packege for python v3. "
@@ -2325,6 +2340,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 							
 							# AMSTer Software Optimisation 
 							/opt/local/bin/python -m pip install networkx
+
+							# for computing Variogram 
+							/opt/local/bin/python -m pip install scikit-gstat
+
 							
 							break ;;
 					[Nn]* ) 
@@ -2841,7 +2860,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							TstPathGnuFctMac "gfind" 
 							
 							WHEREISWGET=`which wget`
-							if [ "${WHEREISWGET}" != "${PATHGNU}/wget" ] ; then echo "wget is in ${WHEREISWGET} instead of ${PATHGNU}; please check. I make a link though" ; sudo ln -s "${WHEREISWGET}" ${PATHGNU}/wget 2>/dev/null ; fi
+							if [ "${WHEREISWGET}" != "${PATHGNU}/wget" ] ; then echo "wget is in ${WHEREISWGET} instead of ${PATHGNU}; please check. I make a link though" ; sudo ln -sf "${WHEREISWGET}" ${PATHGNU}/wget 2>/dev/null ; fi
 					
 							cd ${HOMEDIR}
 							break ;;
@@ -3022,37 +3041,44 @@ if [ "${TYPERUN}" == "I" ] ; then
 							sudo port select --set python python310 	# To make this the default Python or Python 3
 							sudo port select --set python3 python310 	# To make this the default Python or Python 3
 							PortInstall "py310-opencv4"
-							PortInstall "py-numpy"
+							PortInstall "py310-numpy"
 							PortInstall "py310-scipy"
 							PortInstall "py310-matplotlib"
 							PortInstall "py310-gdal"
 							PortInstall "py310-shapely"
-					
+							
 							echo "  // Check python3 version:"
 							python -c 'import sys ; print(sys.path)'
-
+		
 							echo "  // Create link for smooth call of python by all the scripts"
 							sudo mkdir -p /opt/local/
 							sudo mkdir -p /opt/local/bin
 							WHEREISPYTHON=`which python3`				#(To know where it is installed, e.g. /usr/bin)
-							sudo ln -s ${WHEREISPYTHON} /opt/local/bin/python	2>/dev/null
-							sudo ln -s ${WHEREISPYTHON} /opt/local/bin/python3 2>/dev/null
 
+							sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python	2>/dev/null
+							if [ "${WHEREISPYTHON}" != "/opt/local/bin/python3" ]
+								then 
+									sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python3	2>/dev/null
+							fi
+							
 							# UTM package
 							echo "  // Install also utm packege for python v3 using pip. "
 							curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-							python get-pip.py
+							/opt/local/bin/python3.10 get-pip.py
 							
-							${HOMEDIR}/Library/Python/3.10/bin/pip install utm
-
+							#${HOMEDIR}/Library/Python/3.10/bin/pip install utm
+							/opt/local/bin/python3.10 -m pip install utm
 														
 							# AMSTer Software Organizer
-							/opt/local/bin/python -m pip install pyqt6
-							/opt/local/bin/python -m pip install appscript
-	
+							/opt/local/bin/python3.10 -m pip install pyqt6
+							/opt/local/bin/python3.10 -m pip install appscript
+			
 							# AMSTer Software Optimisation
-							/opt/local/bin/python -m pip install networkx
-						
+							/opt/local/bin/python3.10 -m pip install networkx
+
+							# for computing Variogram 
+							/opt/local/bin/python3.10 -m pip install scikit-gstat
+
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -3244,7 +3270,7 @@ echo "  // AMSTer Software is freely available (under GPL licence) from https://
 						PATHDISTRO="${PATHDISTRONOMAIN}"
 					fi
 
-				    if [ -d "${PATHDISTRO}" ] && [ -n "$(find "${PATHDISTRO}/" -empty)" ] 
+				    if [ -d "${PATHDISTRO}" ] && [ "$(ls -A "${PATHDISTRO}")" ] 
 				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
 				        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
 				       		break
@@ -3571,23 +3597,113 @@ if [ "${TYPERUN}" == "I" ] ; then
 		UpdateVARIABLESBashrc "ENVISAT_PRECISES_ORBITS_DIR" "export ENVISAT_PRECISES_ORBITS_DIR=\${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ENV_ORB"
 		UpdateVARIABLESBashrc "EARTH_GRAVITATIONAL_MODELS_DIR" "export EARTH_GRAVITATIONAL_MODELS_DIR=\${PATH_DataSAR}/SAR_AUX_FILES/EGM"
 
-		while true; do
-			read -p "Do you want to define an EXTERNAL_DEMS_DIR state variable (not needed ; may be conflicting with full automation with AMSTer Software ) ?  [y/n] "  yn
-			case $yn in
-				[Yy]* ) 
-					echo
-					echo "  // OK, let's tdo it. "
-					UpdateVARIABLESBashrc "EXTERNAL_DEMS_DIR" "export EXTERNAL_DEMS_DIR=\${PATH_DataSAR}/DEMS"
-					mkdir -p ${PATH_DataSAR}/DEMS
-					break ;;
-				[Nn]* ) 
-					echo
-					echo "  // OK, you know... "
-					break ;;
-				* ) 
-					echo "Please answer [y]es or [n]o.";;
-			esac
-		done
+		TST=$(grep "export EXTERNAL_DEMS_DIR" ${HOMEDIR}/.bashrc )
+		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+			then 
+				while true; do
+					read -p "Do you want to define an EXTERNAL_DEMS_DIR state variable ?  [y/n] "  yn
+					case $yn in
+						[Yy]* ) 
+							echo
+							echo "  // OK, let's do it. "
+							echo "Enter the path to the directory where you want the DEM to be created by getSRTMDEM."
+							echo "  (something like: ${HOME}/SAR_TMP/DEMS)"
+							echo "  If it does not exist, it will be created."
+							read -p "Path to DEMS directory: " DECLAREDEMDIR
+		
+							UpdateVARIABLESBashrc "EXTERNAL_DEMS_DIR" "export EXTERNAL_DEMS_DIR=${DECLAREDEMDIR}"
+							mkdir -p ${DECLAREDEMDIR}
+							break ;;
+						[Nn]* ) 
+							echo
+							echo "  // OK, you know... "
+							break ;;
+						* ) 
+							echo "Please answer [y]es or [n]o.";;
+					esac
+				done
+			else
+				echo "  // Your .bashrc contains the following EXTERNAL_DEMS_DIR state variable: "
+				grep "export EXTERNAL_DEMS_DIR" ${HOMEDIR}/.bashrc
+				
+				while true; do
+					read -p "Do you want to change it ?  [y/n] "  yn
+					case $yn in
+						[Yy]* ) 
+							echo
+							echo "  // OK, let's do it. "
+							echo "Enter the path to the directory where you want the DEM to be created by getSRTMDEM."
+							echo "  (something like: ${HOME}/SAR_TMP/DEMS)"
+							echo "  If it does not exist, it will be created."
+							read -p "Path to DEMS directory: " DECLAREDEMDIR
+		
+							UpdateVARIABLESBashrc "EXTERNAL_DEMS_DIR" "export EXTERNAL_DEMS_DIR=${DECLAREDEMDIR}"
+							mkdir -p ${DECLAREDEMDIR}
+							break ;;
+						[Nn]* ) 
+							echo
+							echo "  // OK, you know... "
+							break ;;
+						* ) 
+							echo "Please answer [y]es or [n]o.";;
+					esac
+				done
+		fi
+	
+	
+		TST=$(grep "export EXTERNAL_MASKS_DIR" ${HOMEDIR}/.bashrc )
+		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+			then 
+				while true; do
+					read -p "Do you want to define an EXTERNAL_MASKS_DIR state variable ?  [y/n] "  yn
+					case $yn in
+						[Yy]* ) 
+							echo
+							echo "  // OK, let's do it. "
+							echo "Enter the path to the directory where you want the MASKS to be created by getSRTMDEM."
+							echo "  (something like: ${HOME}/SAR_TMP/MASKS)"
+							echo "  If it does not exist, it will be created."
+		
+							read -p "Path to MASKS directory:" DECLAREMASKDIR
+		
+							UpdateVARIABLESBashrc "EXTERNAL_MASKS_DIR" "export EXTERNAL_MASKS_DIR=${DECLAREMASKDIR}"
+							mkdir -p ${DECLAREMASKDIR}
+							break ;;
+						[Nn]* ) 
+							echo
+							echo "  // OK, you know... "
+							break ;;
+						* ) 
+							echo "Please answer [y]es or [n]o.";;
+					esac
+				done
+			else
+				echo "  // Your .bashrc contains the following EXTERNAL_MASKS_DIR state variable: "
+				grep "export EXTERNAL_MASKS_DIR" ${HOMEDIR}/.bashrc
+				while true; do
+					read -p "Do you want to change it ?  [y/n] "  yn
+					case $yn in
+						[Yy]* ) 
+							echo
+							echo "  // OK, let's do it. "
+							echo "Enter the path to the directory where you want the MASKS to be created by getSRTMDEM."
+							echo "  (something like: ${HOME}/SAR_TMP/MASKS)"
+							echo "  If it does not exist, it will be created."
+							read -p "Path to MASKS directory:" DECLAREMASKDIR
+		
+							UpdateVARIABLESBashrc "EXTERNAL_MASKS_DIR" "export EXTERNAL_MASKS_DIR=${DECLAREMASKDIR}"
+							mkdir -p ${DECLAREMASKDIR}
+							break ;;
+						[Nn]* ) 
+							echo
+							echo "  // OK, you know... "
+							break ;;
+						* ) 
+							echo "Please answer [y]es or [n]o.";;
+					esac
+				done
+		fi
+				
 
 
 

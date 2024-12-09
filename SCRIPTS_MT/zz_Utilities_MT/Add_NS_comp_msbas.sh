@@ -14,6 +14,9 @@
 # The script will first check if a geocoded DEM at the same grid as the deformation maps 
 # exists. Then it will detrend and apply a Gaussian spatial filter, 
 # then compute the first derivatives along X and Y directions (i.e. EW and NS)
+#
+# NOTE: if image is not S1 IW, one may need to search for computing the DEM in a pair dir 
+#		where the primary is the global primary image instead of dir of first pair
 # 
 # Parameters are : 
 #       - FG: width of the Gaussian kernel filter (in meters - e.g 10000 that is 10km) 
@@ -41,13 +44,15 @@
 #								  is recommended.  
 # New in Distro V 1.3 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
 #								- update path in image before re-geocode DEM
+# New in Distro V 1.4 20240924:	- more robust to change all path in Parameters.txt files with 
+#								  global variables for disk names
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 05, 2024"
+VER="Distro V1.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 24, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -242,6 +247,9 @@ if test -e ${GEOCDEMDIR}/externalSlantRangeDEM.UTM*.hdr
 		ChangeGeocParam "Geoproject filtered interferogram" "NO" 
 		ChangeGeocParam "Geoproject residual interferogram" "NO" 
 		ChangeGeocParam "Geoproject unwrapped phase" "NO" 
+
+		# change path with state variables 
+		RenamePath_Volumes.sh ${GEOCDEMDIR}/${PAIRDIR}/
 	
 		# Because of a bug in geoProjection, one must ensure that there is a non-empty Data and Headers dir in InSARProducts
 			RESAMPSLVPATH=$(find ${GEOCDEMDIR}/${PAIRDIR}/i12/InSARProducts/ -maxdepth 1 -type d -name "*${SLV}*.interpolated.csl" )

@@ -29,13 +29,16 @@
 # New in Distro V 2.3 20231229:	- Check that PATHTOQUANRANTINEDDATA contains subdirs named *.csl + is not empty
 # New in Distro V 2.4 20240423:	- display max and mean Bp, Bt and nr of pairs
 # New in Distro V 2.5 20240620:	- mute find error message when there is no quarantine data
+# New in Distro V 2.6 20240903:	- more mute find error message when there is no quarantine data
+# New in Distro V 3.0 20241030:	- ensure that the Delaunay table contains only once each pair
+#								  and Primary image comes before Secondary image   
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 20, 2024"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -92,7 +95,7 @@ LASTLINK=$(find . -maxdepth 1 -name '*.csl' -exec basename {} \; | tail -1) 2>/d
 PATHTOQUANRANTINEDDATA=$(readlink -f ${LASTLINK} | ${PATHGNU}/gawk -F"NoCrop" '/NoCrop/{print $1 "Quarantained"}') 2>/dev/null # read target of link and get everything before NoCrop and add Quanrantined at the end
 
 # Just in case, remove pairs with images that would be stored in .../SAR_CSL/sat/mode/Quarantained
-if [ -n "$(find "${PATHTOQUANRANTINEDDATA}" -type d -name '*.csl' -print -quit)" ] && [ -n "$(ls -A "${PATHTOQUANRANTINEDDATA}")" ]   # Check that dir contains subdirs named *.csl and is not empty
+if [ -n "$(find "${PATHTOQUANRANTINEDDATA}" -type d -name '*.csl' -print -quit 2>/dev/null)" ] && [ -n "$(ls -A "${PATHTOQUANRANTINEDDATA}")" ]   # Check that dir contains subdirs named *.csl and is not empty
 	then
 		echo " // Remove images from allPairsListing.txt that are in ${PATHTOQUANRANTINEDDATA}."
 		# get the date of img from dir names in /Quarantained  
@@ -112,6 +115,20 @@ if [ -n "$(find "${PATHTOQUANRANTINEDDATA}" -type d -name '*.csl' -print -quit)"
 fi
 
 python ${PATH_SCRIPTS}/SCRIPTS_MT/zz_Utilities_MT_Ndo/DelaunayTable.py ${PARAMFORPYTHON}
+
+## Clean table for doublons and inverted MAS SLV
+#################################################
+# search for most recent Delaunay table 
+FILETOSWAP=$(ls -t table_0_0_Delaunay* | head -n 1)
+cp ${FILETOSWAP} ${FILETOSWAP}_with_doublons.txt
+
+# swap col 1 and 2 if dates are in wrong order and ensure that separator is a tab
+awk 'BEGIN { FS = OFS = "\t" } { if ($2 < $1) { t = $1; $1 = $2; $2 = t } print }' ${FILETOSWAP} > ${FILETOSWAP}.Conditionnal.inverted.txt
+
+# sort (starting from line 3 to keep header untouched) and ensure that there is no duplication
+{ head -n 2 ${FILETOSWAP}.Conditionnal.inverted.txt; tail -n +3 ${FILETOSWAP}.Conditionnal.inverted.txt | sort -u; } > ${FILETOSWAP}
+# clean files
+rm -f ${FILETOSWAP}.Conditionnal.inverted.txt
 
 echo
 if [ "${MAXBP}" != "" ] && [ "${MAXBT}" != "" ] ; then

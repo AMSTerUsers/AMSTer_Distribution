@@ -105,10 +105,10 @@ export -f UnzipAndMove
 export -f CheckAndUnzip
 
 # Full CPU capabilities
-find . -type f -name '*.zip' -print0 | parallel -0 CheckAndUnzip {}	
+#find . -type f -name '*.zip' -print0 | parallel -0 CheckAndUnzip {}	
 
 # restrict to 90% capabilities
-#find . -type f -name '*.zip' -print0 | parallel -j 90% -0 CheckAndUnzip {}		
+find . -type f -name '*.zip' -print0 | parallel -j 50% -0 CheckAndUnzip {}		
 
 unset ZIPDIRLOCAL
 unset UNZIPDIRLOCAL

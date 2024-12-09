@@ -652,7 +652,7 @@ cd ${MSBASDIR}
 		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
 
 		# test if MSBAS_log.txt contains "completed 100%" ; if not log error 
-#		if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt 
+#		if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/MSBAS_LOG.txt 
 #	 		then 
 # 				echo "MSBAS ok" 
 # 			else 
@@ -662,7 +662,7 @@ cd ${MSBASDIR}
 # 				wait 
 # 				
 # 				${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
-# 				if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt ; then echo "Solved after cleaning DefoInterpolx2Detrend's txt"; else  echo "!! MSBAS crashed on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt ; fi
+# 				if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/MSBAS_LOG.txt ; then echo "Solved after cleaning DefoInterpolx2Detrend's txt"; else  echo "!! MSBAS crashed on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt ; fi
 # 		fi
 
 		# Make baseline plot 

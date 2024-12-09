@@ -9,14 +9,20 @@
 #
 # Parameters:	- PATH to DIR where image in CSL format are stored (e.g. /${PATH_1650}/SAR_CSL/S1/TRK/NoCrop/)
 #				- either expected nr of bursts OR "Dummy" to simply read the nr of bursts and coordinates of an image
-#				- expected (0;0) longitude 
-#				- expected (0;0) latitude 
-#				- expected (maxRange;0) longitude 
-#				- expected (maxRange;0) latitude 
-#				- expected (0;maxAzimuth) longitude 
-#				- expected (0;maxAzimuth) latitude 
-#				- expected (maxRange;maxAzimuth) longitude 
-#				- expected (maxRange;maxAzimuth) latitude 
+#				And if test against expected kml footprint (within hardcoded TOLERANCE):
+#					- expected (0;0) longitude 
+#					- expected (0;0) latitude 
+#					- expected (maxRange;0) longitude 
+#					- expected (maxRange;0) latitude 
+#					- expected (0;maxAzimuth) longitude 
+#					- expected (0;maxAzimuth) latitude 
+#					- expected (maxRange;maxAzimuth) longitude 
+#					- expected (maxRange;maxAzimuth) latitude 
+#				Or if test against expected area of interest (no TOLERANCE needed):
+#					- expected min long
+#					- expected max long 
+#					- expected min lat 
+#					- expected max lat
 
 #
 # Note: expected lat or long are approximative coordinates. Corner of images will be searched for being max TOLERANCE deg from these coordinates, 

@@ -42,15 +42,17 @@
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20240228:	- Fix rounding pix size when smaller than one by allowing scale 5 before division  
-
+# New in Distro V 5.0 20241015:	- multi level mask 
+# New in Distro V 5.1 20241202:	- debug PATHTOMASK
+# New in Distro V 5.2 20241203:	- debug possible crach to fin MASNAME
+# 								- also OK with polarisation other than VV
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 28, 2024"
-
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 03, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -96,13 +98,51 @@ IDWEIGHT=`GetParam "IDWEIGHT,"`				# ID weighting exponent
 FWHM=`GetParam "FWHM,"`						# Lorentzian Full Width at Half Maximum
 ZONEINDEX=`GetParam "ZONEINDEX,"`			# Zone index  
 UW_METHOD=`GetParam "UW_METHOD,"`			# UW_METHOD, Select phase unwrapping method (SNAPHU, CIS or DETPHUN)
+
 APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
 if [ ${APPLYMASK} == "APPLYMASKyes" ] 
  then 
-  PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	if [ "${PATHTOMASK}" != "" ]
+		then 
+			# old Version of LaunchParamFiles.txt, i.e. =< 20231026
+			MASKBASENAME=`basename ${PATHTOMASK##*/}`  
+		else 
+			# Version of LaunchParamFiles.txt, i.e. >= 202341015
+			PATHTOMASKGEOC=`GetParam "PATHTOMASKGEOC,"`			# PATHTOMASKGEOC, geocoded "Geographical mask" file name and path (water body etc..)
+			DATAMASKGEOC=`GetParam "DATAMASKGEOC,"`				# DATAMASKGEOC, value for masking in PATHTOMASKGEOC
+
+			PATHTOMASKCOH=`GetParam "PATHTOMASKCOH,"`			# PATHTOMASKCOH, geocoded "Thresholded coherence mask" file name and path (mask at unwrapping below threshold)
+			DATAMASKCOH=`GetParam "DATAMASKCOH,"`				# DATAMASKCOH, value for masking in PATHTOMASKCOH
+
+			PATHTODIREVENTSMASKS=`GetParam "PATHTODIREVENTSMASKS,"` # PATHTODIREVENTSMASKS, path to dir that contains event mask(s) named eventMaskYYYYMMDDThhmmss_YYYYMMDDThhmmss(.hdr) for masking at Detrend with all masks having dates in Primary-Secondary range of dates
+			DATAMASKEVENTS=`GetParam "DATAMASKEVENTS,"`			# DATAMASKEVENTS, value for masking in PATHTODIREVENTSMASKS 
+
+			if [ "${PATHTOMASKGEOC}" != "" ] ; then MASKBASENAMEGEOC=`basename ${PATHTOMASKGEOC##*/}` ; else MASKBASENAMEGEOC=NoGeogMask  ; fi
+			if [ "${PATHTOMASKCOH}" != "" ] ; then MASKBASENAMECOH=`basename ${PATHTOMASKCOH##*/}` ; else MASKBASENAMECOH=NoCohMask  ; fi
+			if [ "${PATHTODIREVENTSMASKS}" != "" ] 
+				then 
+				    if [ "$(find "${PATHTODIREVENTSMASKS}" -type f | head -n 1)" ]
+				    	then 
+				    		MASKBASENAMEDETREND=`basename ${PATHTODIREVENTSMASKS}` 
+				    		MASKBASENAMEDETREND=Detrend${MASKBASENAMEDETREND}
+				    	else 
+				    		echo "${PATHTODIREVENTSMASKS} exist though is empty, hence apply no Detrend mask " 
+				    		MASKBASENAMEDETREND=NoAllDetrend
+				    fi
+				else 
+					MASKBASENAMEDETREND=NoAllDetrend
+			fi
+
+			MASKBASENAME=${MASKBASENAMEGEOC}_${MASKBASENAMECOH}_${MASKBASENAMEDETREND}
+
+	fi
  else 
   PATHTOMASK=`echo "NoMask"`
+  MASKBASENAME=`echo "NoMask"` 
 fi
+
+
 RADIUSMETHD=`GetParam "RADIUSMETHD,"`		# LetCIS (CIS will compute best radius) or forced to a given radius 
 	
 FORCEGEOPIXSIZE=`GetParam "FORCEGEOPIXSIZE,"` # Pixel size (in m) wanted for your final products. Required for MSBAS
@@ -132,9 +172,9 @@ SAT="${BASEDIRNAME2##*/}"
 # get AZSAMP. Attention, needs original az sampling
 	MASDATE=`basename ${RUNDIR} | cut -d _ -f 1`
 	SLVDATE=`basename ${RUNDIR} | cut -d _ -f 2`
-	MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
+	MASNAME=`ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/*/ | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
 	KEY=`echo "Azimuth sampling [m]" | tr ' ' _`
-	parameterFilePath=${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASNAME}.csl/Info/SLCImageInfo.txt
+	parameterFilePath="${MASNAME}.csl/Info/SLCImageInfo.txt"
 	AZSAMP=`updateParameterFile ${parameterFilePath} ${KEY}` # not rounded
 
 echo "List of products that will be geocoded : "
@@ -467,10 +507,10 @@ cd ${RUNDIR}/i12
 		 COHFILE=`find ./InSARProducts -type f -name "coherence.??-??*" ! -name "*.ras*"` # search coh file but not raster nor sh
 		 if [ -f "${COHFILE}" ] && [ -s "${COHFILE}" ] 
 			then 
-				if [ ${COHFILE} != "./InSARProducts/coherence.VV-VV" ] 
+				if [ ${COHFILE} != "./InSARProducts/coherence.${POL}-${POLSLV}" ] 
 					then 
 						echo "Your files were renamed, probably because of a SinglePair processing. Need to recreate original naming befor coregistration"
-						mv -f ${COHFILE} ./InSARProducts/coherence.${POL}-${POL} 
+						mv -f ${COHFILE} ./InSARProducts/coherence.${POL}-${POLSLV} 
 				fi
 		 fi
 	fi
@@ -479,9 +519,9 @@ cd ${RUNDIR}/i12
 		  RESIDFILE=`find ./InSARProducts -type f -name "residualInterferogram.??-??*" ! -name "*.ras*" ! -name "*.f*"` # search coh file but not raster nor sh
 		 if [ -f "${RESIDFILE}" ] && [ -s "${RESIDFILE}" ] 
 			then 
-				if [ ${RESIDFILE} != "./InSARProducts/residualInterferogram.VV-VV" ] 
+				if [ ${RESIDFILE} != "./InSARProducts/residualInterferogram.${POL}-${POLSLV}" ] 
 					then 
-						mv -f ${RESIDFILE} ./InSARProducts/residualInterferogram.${POL}-${POL} 
+						mv -f ${RESIDFILE} ./InSARProducts/residualInterferogram.${POL}-${POLSLV} 
 				fi
 		 fi	
 	fi			
@@ -490,9 +530,9 @@ cd ${RUNDIR}/i12
 		 RESIDFILEFILT=`find ./InSARProducts -type f -name "residualInterferogram.??-??.f*" ! -name "*.ras*"` # search coh file but not raster nor sh
 		 if [ -f "${RESIDFILEFILT}" ] && [ -s "${RESIDFILEFILT}" ]
 			then 
-				if [ ${RESIDFILEFILT} != "./InSARProducts/residualInterferogram.VV-VV.f" ] 
+				if [ ${RESIDFILEFILT} != "./InSARProducts/residualInterferogram.${POL}-${POLSLV}.f" ] 
 					then 
-						mv -f ${RESIDFILEFILT} ./InSARProducts/residualInterferogram.${POL}-${POL}.f 
+						mv -f ${RESIDFILEFILT} ./InSARProducts/residualInterferogram.${POL}-${POLSLV}.f 
 				fi
 		 fi	
 	fi
@@ -501,9 +541,9 @@ cd ${RUNDIR}/i12
 		 UNWRFILE=`find ./InSARProducts -type f -name "unwrappedPhase.??-??.*" ! -name "*.ras*" ! -name "*.zoneMap*"` # search coh file but not raster nor sh
 		 if [ -f "${UNWRFILE}" ] && [ -s "${UNWRFILE}" ] 
 			then 
-				if [ ${UNWRFILE} != "./InSARProducts/unwrappedPhase.VV-VV" ] 
+				if [ ${UNWRFILE} != "./InSARProducts/unwrappedPhase.${POL}-${POLSLV}" ] 
 					then 
-						mv -f ${UNWRFILE} ./InSARProducts/unwrappedPhase.${POL}-${POL}
+						mv -f ${UNWRFILE} ./InSARProducts/unwrappedPhase.${POL}-${POLSLV}
 				fi
 		 fi	
 	fi
@@ -633,15 +673,15 @@ fi
 	 EchoTee ""
 	# # ensure that products are renamed as before 
 	if [ ${COH} == "YES" ] ; then 
-	 NRGEOC=`find ./GeoProjection -type f -name "coherence.VV-VV*" ! -name "*.ras*" | wc -l` 
+	 NRGEOC=`find ./GeoProjection -type f -name "coherence.${POL}-${POLSLV}*" ! -name "*.ras*" | wc -l` 
 		 if [ ${NRGEOC} -gt 1 ] 
 			then 
 				# get the oldest (do not rename it as _original because it would cause prblms if used for MultiLuanchForMask.sh)
-				OLDESTCOHFILE=`ls -lt ./GeoProjection/coherence.VV-VV* | ${PATHGNU}/grep -v ".ras" | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".hdr" | tail -1 | cut -d / -f 2-`  #i.e. name preceded by GeoProjection/
+				OLDESTCOHFILE=`ls -lt ./GeoProjection/coherence.${POL}-${POLSLV}* | ${PATHGNU}/grep -v ".ras" | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".hdr" | tail -1 | cut -d / -f 2-`  #i.e. name preceded by GeoProjection/
 				# mv -n ${OLDESTCOHFILE} ${OLDESTCOHFILE}_original
 		
 				# get the youngest and rename it as the oldest
-				NEWESTCOHFILE=`ls -lt ./GeoProjection/coherence.VV-VV* | ${PATHGNU}/grep -v ".ras" | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".hdr" | head -1 | cut -d / -f 2-`  #i.e. name preceded by GeoProjection/
+				NEWESTCOHFILE=`ls -lt ./GeoProjection/coherence.${POL}-${POLSLV}* | ${PATHGNU}/grep -v ".ras" | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".hdr" | head -1 | cut -d / -f 2-`  #i.e. name preceded by GeoProjection/
 
 				if [ ${NEWESTCOHFILE} != ${OLDESTCOHFILE} ] 
 					then 

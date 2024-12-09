@@ -14,7 +14,7 @@
 #					- expected (0;maxAzimuth) latitude 
 #					- expected (maxRange;maxAzimuth) longitude 
 #					- expected (maxRange;maxAzimuth) latitude 
-#				Or if test against expected area of interest (no TOLERANCE needed):
+#				Or if test against expected area of interest (no TOLERANCE needed): image must at least contains the coordinates below
 #					- expected min long
 #					- expected max long 
 #					- expected min lat 

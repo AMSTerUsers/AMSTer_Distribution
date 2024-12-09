@@ -19,6 +19,7 @@
 # Dependencies: - $PATHGNU/ggrep
 #				- dgalinfo
 #				- python3.10 flip_raster.py script
+#				- agregateSRTMTiles or getSRTMDEM for correcting geoidal height
 #
 # New in V1.1:	- if DEM is referred to Geoid, it computes directly the height correction
 # New in V1.2:	- force output DEM in env i format as float32
@@ -30,17 +31,19 @@
 #				- no need to offset by half LLLONGSAMPL or LLLATGSAMPL because dgal takes into account
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
-#								- Renamed FUNCTIONS_FOR_MT.sh
-# 
-## New in Distro V 4.0 20231030: - Rename MasTer Toolbox as AMSTer Software
-#								 - rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#								- Renamed FUNCTIONS_FOR_MT.sh 
+# New in Distro V 4.0 20231030: - Rename MasTer Toolbox as AMSTer Software
+#								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.0 20231030: - Add line in .txt with Excluding values 
+# New in Distro V 5.0 20231030: - Cope with new fct getSRTMDEM instead of agregateSRTMTiles since AMSTerEngine V Oct 2024 
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V5.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 09, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -66,8 +69,14 @@ if [ -f ${DEM}.hdr ]
 		DEMbaseName=${DEM}
 fi
 
-
-
+# check version of AMSTer Engine. From October 2024, agregateSRTMTiles is replaced by getSRTMDEM
+if [ -f ${PATH_SCRIPTS}/AMSTerEngine/getSRTMDEM ]
+	then 
+		CORRFCT=getSRTMDEM
+	else 
+		CORRFCT=agregateSRTMTiles
+	
+fi 
 # first flip the raster file (Works with envi files but should also be OK for TIF and maybe other recognized formats)
 ${PATH_SCRIPTS}/SCRIPTS_MT/zz_Utilities_MT/flip_raster.py ${DEM} -o ${DEMbaseName}_flip.bil -of ENVI
 
@@ -108,6 +117,7 @@ echo "${LLLONG}		/* Lower left corner longitude [dd] */" >> ${DEMbaseName}_flip0
 echo "${LLLAT}		/* Lower left corner latitude [dd] */" >> ${DEMbaseName}_flip0.bil.txt
 echo "${LLLONGSAMPL}		/* Longitude sampling [dd] */" >> ${DEMbaseName}_flip0.bil.txt
 echo "${LLLATSAMPL}		/* Latitude sampling [dd] */" >> ${DEMbaseName}_flip0.bil.txt
+echo "NaN                                     		/* Excluding value */" >> ${DEMbaseName}_flip0.bil.txt
 
 while true; do
 	read -p "Is your DEM referred to Ellipsoid (E), Geoid (G) or you do not know (Q) ? Please specify by typing E, G or Q:  " EGQ
@@ -121,11 +131,11 @@ while true; do
 		"G")
 			echo ""
 			echo "OK, you confirm that your DEM is referred to Geoidal height while you will need it referred to Ellipsoid. "
-			echo "I will run agregateSRTMTiles to correct it from the geoidal height. It will be renamed _CorrGeoid "
+			echo "I will run ${CORRFCT} to correct it from the geoidal height. It will be renamed _CorrGeoid "
  			cp ${DEMbaseName}_flip0.bil.txt ${DEMbaseName}_flip0.bil.txt.NoCorr
  			cp ${DEMbaseName}_flip0.bil ${DEMbaseName}_flip0.bil.NoCorr
- 			echo "agregateSRTMTiles ${DEMbaseName}_flip0.bil"
- 			agregateSRTMTiles ${DEMbaseName}_flip0.bil
+ 			echo "${CORRFCT} ${DEMbaseName}_flip0.bil"
+ 			${CORRFCT} ${DEMbaseName}_flip0.bil
  			mv -f ${DEMbaseName}_flip0.bil.txt ${DEMbaseName}_flip0.bil_CorrGeoid.txt
  			mv -f ${DEMbaseName}_flip0.bil ${DEMbaseName}_flip0.bil_CorrGeoid
  			mv -f ${DEMbaseName}_flip0.bil.txt.NoCorr ${DEMbaseName}_flip0.bil.txt 
@@ -140,7 +150,7 @@ while true; do
 			echo "I add nothing about that in the .txt file, which means that AMSTerEngine will consider "
 			echo "  that it is NOT corrected from geoidal height yet. In any case AMSTer Engine will work but you might have"
 			echo "  small errors (manly geocoding errors) if referrence is not appropirate. Contact your DEM provider to check."
-			echo "If it turns out that your DEM is referred to Geoid, YOU MUST RUN agregateSRTMTiles to correct it from the geoidal height."
+			echo "If it turns out that your DEM is referred to Geoid, YOU MUST RUN ${CORRFCT} to correct it from the geoidal height."
 			rm -f ${DEMbaseName}_flip0.hdr
 			break ;;			
 		*)

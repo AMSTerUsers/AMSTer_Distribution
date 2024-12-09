@@ -129,6 +129,29 @@ The development of the AMSTer Software commenced in the early 2010s and leverage
 
 **________**
 
+- New in V 20241203:
+  1. AMSTer Engine 20241203: 
+  	- getSRTMDEM now replaces agregateSRTMfiles. It allows downloading SRTM tiles and stitch them in a DEM formatted for AMSTer (including referencing to ellipsoid) and creates water bodies mask. 
+    - New masking strategy: 0 means keep; 1 means always masked (in a geographical mask); 2 means masked at unwrapping unless coherence is above a given threshold; 3 means masked to compute the phase ramp to remove at detrending step. 
+  2. MSBAS version for full 3D inversion (only valid when enough LOS diversity is available, e.g. when right and left looking sensor - for test and development use only)  
+  3. AMSTer Toolbox scripts: 
+    - multi-level masking
+    - Procedure for performing msbas inversion in two parts (see also example of cron script Domuyo_S1_Step3_MSBAS_DEMGeoid_Split.sh)
+    - Possibility to read only the bursts of S1 data overlapping the kml of interest
+    - New example of cron scripts to perform 3D inversion: application to Funu land slide (RD Congo) 
+   	- minor bugs and corrections
+    - New small tools: 
+    	+ to check NaN's in all maps in dir at a given pixel X Y coordinates (Check_NaN_Pix_In_All_Maps.sh)
+    	+ for making raster files based on envi files (Envi2ras.sh) 
+    	+ to  compare (double difference) time series of a msbas inversion performed in 2 parts and in full (Compare_Full_And_Parts_msbas_TS.py)
+    	+ to search for all products made with AMSTer Engine version > given date (Search_All_Made_With_AE_Version_After.sh)
+    	+ to check that all files ending with "deg" in the current dir has another file ending with ".hdr" extension. It also checks that there is no "hdr" file without "deg" file (Check_deg_hdr_in_dir.sh)
+ 		+ to compute variogram of a velocity map (Variogram.py)
+ 		+ to remove pairs with Bt above a given threshold in DefoModei.txt or restrictedPairSelection[_DefoInterpolx2Detrendi].txt (Trim_Bt_In_Defomodei.txt.sh and Trim_Bt_In_restrictPairSelection.txt.sh)
+ 		+ to check pairs processed twice, as MAS_SLV and SLV_MAS (Check_MasSlv_SlvMas_Pairs.sh)
+ 		+ for changing 255 in 0 and 0 in 1 in envi byte file (Change_Val255_0_in_0_1.py) or swap 0 and 1 in mask files in bytes (Swap_0_1_in_ByteFile.py)
+  4. Manual updated accordingly
+ 
 - New in V 20240730:
   1. AMSTer Engine 20240427: new S1 downloading, reading (incl. from zip files), orbit managment; proper handling of Left looking sensors  
   2. Scripts for performing 3D inversion (either when displacement is expected along the steepest slopes like for landslides, or when enough looking diversity is available)

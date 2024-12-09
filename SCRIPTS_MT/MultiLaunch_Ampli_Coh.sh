@@ -25,7 +25,7 @@
 #	- gnu sed and awk for more compatibility. 
 #	- bc for basic computations
 #   - functions "say" for Mac or "espeak" for Linux, but might not be mandatory
-#	- byte2float.py
+#	- byte2float.py, Swap_0_1_in_ByteFile.py 
 #
 # Hard coded:	- Path to .bashrc (sourced for safe use in cronjob)
 #
@@ -37,17 +37,20 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20241202:	- Mask before interpolation after unwrapping ok with the 3 version of masking methods (old 1=keep; intermediate 1,2=mask in one file, latest 1,2,3 are masked in multiple masks)
+#								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
+#								- take mask(s) basename only if exist  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
-echo " "
+echo " " 
 
 # vvv ----- Hard coded lines to check --- vvv 
 source /$HOME/.bashrc 
@@ -105,6 +108,49 @@ FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are s
 
 ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
 INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
+
+APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
+if [ ${APPLYMASK} == "APPLYMASKyes" ] 
+ then 
+	PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	if [ "${PATHTOMASK}" != "" ]
+		then 
+			# old Version of LaunchParamFiles.txt, i.e. =< 20231026
+			MASKBASENAME=`basename ${PATHTOMASK##*/}`  
+		else 
+			# Version of LaunchParamFiles.txt, i.e. >= 202341015
+			PATHTOMASKGEOC=`GetParam "PATHTOMASKGEOC,"`			# PATHTOMASKGEOC, geocoded "Geographical mask" file name and path (water body etc..)
+			DATAMASKGEOC=`GetParam "DATAMASKGEOC,"`				# DATAMASKGEOC, value for masking in PATHTOMASKGEOC
+
+			PATHTOMASKCOH=`GetParam "PATHTOMASKCOH,"`			# PATHTOMASKCOH, geocoded "Thresholded coherence mask" file name and path (mask at unwrapping below threshold)
+			DATAMASKCOH=`GetParam "DATAMASKCOH,"`				# DATAMASKCOH, value for masking in PATHTOMASKCOH
+
+			PATHTODIREVENTSMASKS=`GetParam "PATHTODIREVENTSMASKS,"` # PATHTODIREVENTSMASKS, path to dir that contains event mask(s) named eventMaskYYYYMMDDThhmmss_YYYYMMDDThhmmss(.hdr) for masking at Detrend with all masks having dates in Primary-Secondary range of dates
+			DATAMASKEVENTS=`GetParam "DATAMASKEVENTS,"`			# DATAMASKEVENTS, value for masking in PATHTODIREVENTSMASKS 
+
+			if [ "${PATHTOMASKGEOC}" != "" ] ; then MASKBASENAMEGEOC=`basename ${PATHTOMASKGEOC##*/}` ; else MASKBASENAMEGEOC=NoGeogMask  ; fi
+			if [ "${PATHTOMASKCOH}" != "" ] ; then MASKBASENAMECOH=`basename ${PATHTOMASKCOH##*/}` ; else MASKBASENAMECOH=NoCohMask  ; fi
+			if [ "${PATHTODIREVENTSMASKS}" != "" ] 
+				then 
+				    if [ "$(find "${PATHTODIREVENTSMASKS}" -type f | head -n 1)" ]
+				    	then 
+				    		MASKBASENAMEDETREND=`basename ${PATHTODIREVENTSMASKS}` 
+				    		MASKBASENAMEDETREND=Detrend${MASKBASENAMEDETREND}
+				    	else 
+				    		echo "${PATHTODIREVENTSMASKS} exist though is empty, hence apply no Detrend mask " 
+				    		MASKBASENAMEDETREND=NoAllDetrend
+				    fi
+				else 
+					MASKBASENAMEDETREND=NoAllDetrend
+			fi
+
+			MASKBASENAME=${MASKBASENAMEGEOC}_${MASKBASENAMECOH}_${MASKBASENAMEDETREND}
+
+	fi
+ else 
+  PATHTOMASK=`echo "NoMask"`
+  MASKBASENAME=`echo "NoMask"` 
+fi
 
 source ${FCTFILE}
 
@@ -270,8 +316,43 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 						cp ${TMPDIR}/InSARProductsDoNotGeoc/incidence.fl?p.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr 
 
 						# mask coherence 
-						ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
+						#ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
+	
+						if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
+							then 
+								EchoTee "Multiply coherence map with mask."
+								if [ -f "${RUNDIR}/i12/InSARProducts/binarySlantRangeMask" ]
+									then 
+										EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
+										EchoTee "  hence we must inverse the binarySlantRangeMask before multiply it with the coherence/"
+										# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
+										Swap_0_1_in_ByteFile.py ${TMPDIR}/i12/InSARProducts/binarySlantRangeMask
+										byte2Float.py ${TMPDIR}/i12/InSARProducts/binarySlantRangeMask_Swap01
+										mv -f ${TMPDIR}/i12/InSARProducts/slantRangeMask ${TMPDIR}/i12/InSARProducts/slantRangeMask_original
+										mv -f ${TMPDIR}/i12/InSARProducts/binarySlantRangeMask_Swap01 ${TMPDIR}/i12/InSARProducts/slantRangeMask
+										ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
+									else 
+										if [ -f "${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask" ] 											
+											then 
+												EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
+												EchoTee "Because processing is performed for Coh and Ampl only, I guess there is no unwrapping and no Detrend masks, "
+												EchoTee "  hence we must inverse the thresholdedSlantRangeMask before multiply it with the coherence/"
+
+												# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
+												Swap_0_1_in_ByteFile.py ${TMPDIR}/i12/InSARProducts/thresholdedSlantRangeMask
+												byte2Float.py ${TMPDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+												mv -f ${TMPDIR}/i12/InSARProducts/slantRangeMask ${TMPDIR}/i12/InSARProducts/slantRangeMask_original
+												mv -f ${TMPDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${TMPDIR}/i12/InSARProducts/slantRangeMask
+												ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
+											else
+												EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
+												# i.e. use old masking method with single level masks where 0 = masked
+												ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
+										fi
+								fi
+						fi
 						mv ${TMPDIR}/InSARProducts/${COHFILE}_X_slantRangeMask ${TMPDIR}/InSARProducts/${COHFILE}.masked
+	
 						POL=`ls ${TMPDIR}/InSARProducts/interfero.??-?? | cut -d . -f 2`
 						cp ${TMPDIR}/InSARProducts/coherence.${POL}.ras.sh ${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh
 						${PATHGNU}/gsed -i "s/coherence.${POL}/${COHFILE}.masked/g" ${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh

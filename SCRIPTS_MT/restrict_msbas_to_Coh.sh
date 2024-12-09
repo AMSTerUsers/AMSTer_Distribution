@@ -31,6 +31,8 @@
 # New in Distro V 1.7: - replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.0 20241030:	- typo: $ was missing in lines mv ($){RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt...
+#								- mute error message for rm files if they do not exist when performing restrict coh on pair selection from table rather than criteria
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -105,7 +107,7 @@ if [ -f "${RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt" ] && [ -s "${RUN
 				sort ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}_tmp.txt | uniq > ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}.txt
 				rm -f ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}_tmp.txt
 			else 
-				mv {RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}.txt		
+				mv ${RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}.txt		
 		fi
 fi
 
@@ -210,14 +212,14 @@ if [ -f "${RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt" ] && [ -s "${RUN
 				sort ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}_tmp.txt | uniq > ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}.txt
 				rm -f ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}_tmp.txt
 			else 
-				mv {RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}.txt		
+				mv ${RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt ${RUNDIR}/${MODETOCLEAN}_Full/Coh_Table_${MODETOCLEAN}.txt		
 		fi
 fi
 
-rm List_ToCheck_For_Coh_${COHTHRESHOLD}_${KMLNAME}.txt List_ToCheck_For_Coh_${COHTHRESHOLD}_${KMLNAME}_WithoutForceExclude.txt
+rm List_ToCheck_For_Coh_${COHTHRESHOLD}_${KMLNAME}.txt List_ToCheck_For_Coh_${COHTHRESHOLD}_${KMLNAME}_WithoutForceExclude.txt 2>/dev/null
 
 # to avoid confusion, keep only the Out_Of_Range*m_*days.txt in ${RUNDIR}/${MODETOCLEAN} because is the only one to ne complete 
-rm ${RUNDIR}/${MODETOCLEAN}_Full/Out_Of_Range*m_*days.txt
+rm ${RUNDIR}/${MODETOCLEAN}_Full/Out_Of_Range*m_*days.txt  2>/dev/null
 
 # Remove old cmd line files 
 find ${RUNDIR} -maxdepth 1 -name "CommandLine_*.txt" -type f -mtime +15 -exec rm -f {} \;

@@ -107,12 +107,18 @@
 # New in Distro V 7.1.1 20240425:	- Warns when coarse coreg fails and suggests to put image in quarantine but only log the info in ${OUTPUTDATA}/_Coarse_Coregistration_Failed.txt 
 # New in Distro V 7.1.2 20240426:	- Force handling Nr of anchor points and sigma values read from lig files at coarse coregistration as integers
 # New in Distro V 7.1.3 20240812:	- Correct bug introduced in V7.1.2 at CoarseCoregTestQuality fct. It created wrong error msg for processes other than S1 IW and tried to improve a successful coarse coreg. 
+# New in Distro V 7.1.3 20240814:	- fct SlantRangeExtDEM adapted to old and new (>June 2024) AMSTer Engine slantRangeDEM fonction (i.e. for 3 level masks)
+# New in Distro V 8.0.0 20241015:	- Allow usage of multiple masks 
+# New in Distro V 8.0.1 20241114:	- Add masking with events masks in PATHTODIREVENTSMASKS
+#									- no slantRangeMask.txt anymore
+# New in Distro V 8.1.1 20241202:	- ManageDEM: Check that Detrend masks from ${PATHTODIREVENTSMASKS} are all projected in Slant Range in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/
+# New in Distro V 8.1.2 20241203:	- externalSlantRangeDEM.txt saved with mask version in fct ManageDEM and SlantRangeExtDEM
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V7.1.3 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 12, 2024"
+FCTVER="Distro V8.1.2 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 03, 2024"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -686,13 +692,64 @@ function ManageDEM()
 				else
 					if [ "${APPLYMASK}" == "APPLYMASKyes" ] ; then 
 							EchoTee " externalSlantRangeDEM exist for ${IMGWITHDEM}, and you want a mask. "
-							if [ -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ] ; then 
-									EchoTee " slantRangeMask_${MASKBASENAME} exist."
-									EchoTee " I will update the link to appropriate existing slantRangeMask (and its txt file in /Info).   \n"
-									rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
-									rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask.txt
-									ln -sf ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
-									cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask_${MASKBASENAME}.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask.txt
+							if [ -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ] 
+								then 
+									EchoTee " slantRangeMask_${MASKBASENAME} exist,"
+
+									# Check that if detrend masks are requeted, they are all projected
+									# If maskbasename contains NoAllDetrend 
+									if [[ "${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME}" == *"NoAllDetrend"* ]]
+										then
+ 											EchoTee " and do not expect Detrend masks. No need to recompute here"
+ 											EchoTee " I will update the link to appropriate existing slantRangeMask.   \n"
+											rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
+											ln -sf ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
+											cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_${MASKBASENAME}.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt
+ 										else 
+  											EchoTee " and expect Detrend masks. Check if they are all already in slant range in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/:"
+
+ 											# check that all masks (with or without extension) in ${PATHTODIREVENTSMASKS} are projected in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/
+ 											# if not, reproject the DEM and masks
+ 											
+ 											# Flag for tracking missing files
+											missing_files=false
+
+ 											# masks must be envi files with hdr extensions. List them all from  ${PATHTODIREVENTSMASKS}
+ 											for files in `find  ${PATHTODIREVENTSMASKS} -maxdepth 1 -type f -name "*.hdr"` ; do		# list all mask.hdr files with path 
+ 												# seach corresponding mask file (with or without extension)
+ 												base_name_hdr="${files##*/}"  							# mask header without path
+												filename_hdr_no_ext="${base_name_hdr%.*}"				# mask header without path and without .hdr
+ 												
+ 												mask_file=$(${PATHGNU}/find "${PATHTODIREVENTSMASKS}" -maxdepth 1 -type f -name "${filename_hdr_no_ext}*" ! -name "${filename_hdr_no_ext}.hdr")	# full path to mask (with or without extension)
+ 												base_name_mask_file=$(basename "$mask_file")																								# mask name (with or without extension)
+ 												if [[ -f "${mask_file}" ]]
+ 													then
+ 														# mask corresponding to hdr file exist, hence it must be tested if present in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/
+ 														if [[ -f "${INPUTDATA}/${IMGWITHDEM}.csl/Data/${base_name_mask_file}" ]]
+															then
+																EchoTee "	Mask ${base_name_mask_file} in slant range is in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/"
+															else
+																EchoTee "	No mask ${base_name_mask_file} in slant range is in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/"
+																missing_files=true
+														fi
+  													else
+ 														 EchoTee "Mask ${mask_file} corresponding to hdr file does not exist, hence it is not a valid mask to test"
+ 												fi
+ 											done
+											
+											if [ ${missing_files} == "true" ]
+												then
+													EchoTee " Not all the requested Detrend masks in ${PATHTODIREVENTSMASKS} are in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/."
+													EchoTee "  Hence, I recompute the DEM and masks projection here. "
+													
+													# If IMGWITHDEM is S1 name without .csl (from SuperMaster_MassProc.sh), add csl extension here then extract only date
+													if [[ ${IMGWITHDEM} == *"S1"* ]] &&  [[ ${IMGWITHDEM} != *".csl"* ]]; then IMGWITHDEM=${IMGWITHDEM}.csl ; IMGWITHDEM=`GetDateCSL ${IMGWITHDEM}` ; fi
+						
+													MasterDEM.sh ${IMGWITHDEM} ${PARAMFILE}
+												else
+													EchoTee " All detrend masks in ${PATHTODIREVENTSMASKS} are in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/. No need to recompute here"
+											fi
+									fi
 								else 
 									EchoTee " externalSlantRangeDEM did exist but not the requested mask ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME}."
 									EchoTee "  Recompute it here. "
@@ -705,7 +762,8 @@ function ManageDEM()
 						else 
 							EchoTee " externalSlantRangeDEM exist for ${IMGWITHDEM}, and you do not want a mask. Clean possible mask links."
 							rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
-							rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask.txt			
+							# and rename externalSlantRangeDEM.txt
+							cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt
 					fi
 			fi	;;   	
 		*) 
@@ -743,25 +801,53 @@ function UpdateSlantRangeTXT()
 				SAMPLDEM=`echo "( ${SAMPLEDEG} * 40000000 ) / 360 " | bc `
 				echo " SAMPLDEM is ${SAMPLDEM}"
 			else
-				XDEMDIM=`GetParamFromFile "X (longitude) dimension [pixels]" externalDEM.txt`
-				ChangeParam "X (longitude) dimension [pixels]" ${XDEMDIM} slantRange.txt
-				YDEMDIM=`GetParamFromFile "Y (latitude) dimension [pixels]" externalDEM.txt` 
-				ChangeParam "Y (latitude) dimension [pixels]" ${YDEMDIM} slantRange.txt
-
-				LLLON=`GetParamFromFile "Lower left corner longitude [dd]" externalDEM.txt`
-				ChangeParam "Lower left corner longitude [dd]" ${LLLON} slantRange.txt
-				LLLAT=`GetParamFromFile "Lower left corner latitude [dd]" externalDEM.txt`
-				ChangeParam "Lower left corner latitude [dd]" ${LLLAT} slantRange.txt
-
-				LONSAMPDEMSC=`GetParamFromFile "Longitude sampling [dd]" externalDEM.txt`  # i.e. from externalDEM.txt=${DEMDIR}/${DEMNAME}.txt
-				ChangeParam "Longitude sampling [dd]" ${LONSAMPDEMSC} slantRange.txt
-				LATSAMPDEM=`GetParamFromFile "Latitude sampling [dd]" externalDEM.txt`
-				ChangeParam "Latitude sampling [dd]" ${LATSAMPDEM} slantRange.txt
+	####### New here			
+				if ${PATHGNU}/grep -q "Georeferenced mask file path" slantRange.txt
+					then
+						# if ${RUNDIR}/slantRange.txt contains line with "Georeferenced mask file path"
+						#    it is the old version of AMSTer Engine slantRangeDEM fonction 
+						#    and one must provide the dimensions, sampling and corner Lon Lat
+						XDEMDIM=`GetParamFromFile "X (longitude) dimension [pixels]" externalDEM.txt`
+						ChangeParam "X (longitude) dimension [pixels]" ${XDEMDIM} slantRange.txt
+						YDEMDIM=`GetParamFromFile "Y (latitude) dimension [pixels]" externalDEM.txt` 
+						ChangeParam "Y (latitude) dimension [pixels]" ${YDEMDIM} slantRange.txt
 		
-				#LONSAMPDEM=$(printf "%.20f" $LONSAMPDEMSC)  # avoid scientific exp format
-				LONSAMPDEM=`echo "$LONSAMPDEMSC" | ${PATHGNU}/gawk '{printf("%0.20f",$0);}'`  # avoid scientific exp format
+						LLLON=`GetParamFromFile "Lower left corner longitude [dd]" externalDEM.txt`
+						ChangeParam "Lower left corner longitude [dd]" ${LLLON} slantRange.txt
+						LLLAT=`GetParamFromFile "Lower left corner latitude [dd]" externalDEM.txt`
+						ChangeParam "Lower left corner latitude [dd]" ${LLLAT} slantRange.txt
+		
+						LONSAMPDEMSC=`GetParamFromFile "Longitude sampling [dd]" externalDEM.txt`  # i.e. from externalDEM.txt=${DEMDIR}/${DEMNAME}.txt
+						ChangeParam "Longitude sampling [dd]" ${LONSAMPDEMSC} slantRange.txt
+						LATSAMPDEM=`GetParamFromFile "Latitude sampling [dd]" externalDEM.txt`
+						ChangeParam "Latitude sampling [dd]" ${LATSAMPDEM} slantRange.txt
+				
+						#LONSAMPDEM=$(printf "%.20f" $LONSAMPDEMSC)  # avoid scientific exp format
+						LONSAMPDEM=`echo "$LONSAMPDEMSC" | ${PATHGNU}/gawk '{printf("%0.20f",$0);}'`  # avoid scientific exp format
+		
+						SAMPLDEM=`echo "( ${LONSAMPDEM} * 40000000 ) / 360 " | bc ` 					
+					else
+						# if not, it is the version of AMSTer Engine slantRangeDEM fonction > June 2024
+						#    and there is no need to provide the dimensions, sampling and corner Lon Lat
+						#    though we compute the values just in case....
+						XDEMDIM=`GetParamFromFile "X (longitude) dimension [pixels]" externalDEM.txt`
+						YDEMDIM=`GetParamFromFile "Y (latitude) dimension [pixels]" externalDEM.txt` 
+		
+						LLLON=`GetParamFromFile "Lower left corner longitude [dd]" externalDEM.txt`
+						LLLAT=`GetParamFromFile "Lower left corner latitude [dd]" externalDEM.txt`
+		
+						LONSAMPDEMSC=`GetParamFromFile "Longitude sampling [dd]" externalDEM.txt`  # i.e. from externalDEM.txt=${DEMDIR}/${DEMNAME}.txt
+						LATSAMPDEM=`GetParamFromFile "Latitude sampling [dd]" externalDEM.txt`
+				
+						#LONSAMPDEM=$(printf "%.20f" $LONSAMPDEMSC)  # avoid scientific exp format
+						LONSAMPDEM=`echo "$LONSAMPDEMSC" | ${PATHGNU}/gawk '{printf("%0.20f",$0);}'`  # avoid scientific exp format
+		
+						SAMPLDEM=`echo "( ${LONSAMPDEM} * 40000000 ) / 360 " | bc ` 					
+						
+				fi
 
-				SAMPLDEM=`echo "( ${LONSAMPDEM} * 40000000 ) / 360 " | bc ` 
+
+
 		fi	
 	# Reduction factor for DEM pix 
 		EchoTee " Pix size no ML : ${AZSAMP} x ${RGSAMP} meters (from SLCImageInfo.txt)"
@@ -817,16 +903,160 @@ function SlantRangeExtDEM()
 	EchoTee ""
 	if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
 		then 
-			EchoTeeYellow "Following geocoded mask will be used :"
-			EchoTeeYellow "${PATHTOMASK}" 
-			EchoTeeYellow "Be sure that it is at least larger than the area of interest." 
+			if ${PATHGNU}/grep -q "Georeferenced mask file path" ${RUNDIR}/slantRange.txt	# i.e. created with AMSTerEngine < June 2024. Expects 1 mask
+				then
+					EchoTeeYellow "${RUNDIR}/slantRange.txt was created using AMSTerEngine V < June 2024" 
+					if [ "${PATHTOMASK}" != "" ]
+						then 
+							EchoTeeYellow "and mask was defined in LaunchMTParam.txt file version 20231026 as PATHTOMASK as expected. " 
+							EchoTee ""
+							# if path to mask is PATHTOMASK, then it a parameter file V20231026 and a mask at one or more level:
+							EchoTeeYellow "Following geocoded mask will be used :"
+							EchoTeeYellow " ${PATHTOMASK}" 
+							EchoTeeYellow "Be sure that it is at least larger than the area of interest." 
+							
+						else
+							EchoTeeYellow "and mask was defined as PATHTOMASKGEOC and/or PATHTOMASKCOH and/or PATHTOMASKDETREND,  " 
+							EchoTeeYellow " that is LaunchMTParam.txt file version 20241015 or after. "
+							EchoTee ""
 
-			ChangeParam "Georeferenced mask file path" ${PATHTOMASK} slantRange.txt
+							if [ "${PATHTOMASKGEOC}" != "" ] || [ "${PATHTOMASKCOH}" != "" ] || [ "${PATHTOMASKDETREND}" != "" ]
+								then 
+									# if path to mask is PATHTOMASKGEOC and/or PATHTOMASKCOH and/or PATHTOMASKDETREND, 
+									# then it a parameter file V20241015 and (a) mask(s) at one or more level:
+									
+									# Create an array with non-empty values
+									non_empty_paths=()
+									
+									# Add non-empty variables to the array
+									[ -n "${PATHTOMASKGEOC}" ] && non_empty_paths+=("${PATHTOMASKGEOC}")
+									[ -n "${PATHTOMASKCOH}" ] && non_empty_paths+=("${PATHTOMASKCOH}")
+									[ -n "${PATHTOMASKDETREND}" ] && non_empty_paths+=("${PATHTOMASKDETREND}")
+									
+									# Check if all non-empty values are the same
+									if [ $(printf "%s\n" "${non_empty_paths[@]}" | uniq | wc -l) -eq 1 ]
+										then
+									    	# All non-empty values are the same
+									    	PATHTOMASK=${non_empty_paths[0]}
+									    	EchoTeeYellow "This is not a problem as only one mask is used. Set it as PATHTOMASK."
+											EchoTeeYellow "Following geocoded mask will be used :"
+
+									    	EchoTeeYellow " ${PATHTOMASKGEOC}" 
+										else
+									    	EchoTeeRed "This is not as expected. Let's try by using only the first one and set it as PATHTOMASK"
+									    	EchoTeeRed "Check yourself if it is OK."
+											EchoTeeYellow "Following geocoded mask will be used :"
+									    	PATHTOMASK=${non_empty_paths[0]}
+									    	EchoTeeYellow " ${PATHTOMASKGEOC}" 
+									fi
+								else 
+									EchoTeeRed "This is not as expected. You asked for masking but no PATHTOMASK mask is provided in LaunchMTParam.txt "
+							fi
+					fi
+					ChangeParam "Georeferenced mask file path" ${PATHTOMASK} slantRange.txt
+	
+				else		# No mention of "Georeferenced mask file path" in slantRange.txt, i.e. created with AMSTerEngine > June 2024
+					EchoTeeYellow "${RUNDIR}/slantRange.txt was created using AMSTerEngine V > June 2024" 
+
+					if [ "${PATHTOMASK}" != "" ]
+						then 
+							EchoTeeYellow "but mask was defined in LaunchMTParam.txt as PATHTOMASK (i.e. file version =< 20231026)" 
+							EchoTeeYellow "  instead of PATHTOMASKGEOC and/or PATHTOMASKCOH and/or PATHTOMASKDETREND as expected. " 
+							EchoTeeYellow "This might not be a problem. "
+							EchoTeeRed 	  "I will attempt to assign the masking value(s) in a logical way, that is: "
+							EchoTeeRed 	  "		1 (if any) for Geographical mask (water bodies, ...) " 
+							EchoTeeRed 	  "		2 (if any) for Thresholded coherence mask " 
+							EchoTeeRed 	  "		3 (if any) for Detrend masked areas " 
+							EchoTeeRed 	  "Check yourself if it is OK. " 
+							EchoTee ""
+							# test if contains 1
+							if ${PATHGNU}/grep -qP "\x01" ${PATHTOMASK}
+								then 
+									EchoTeeYellow "The mask ${PATHTOMASK} contains 1. Use it as Geographical mask; set masking value to 1. " 
+									ChangeParam "Mask file path 1: Geographical mask (water bodies, ...)" ${PATHTOMASK} slantRange.txt
+									ChangeParam "Masking value 1" 1 slantRange.txt	# 1 = always masked
+								else 
+									EchoTeeYellow "The mask ${PATHTOMASK} contains no 1." 
+							fi
+	
+							# test if contains 2
+							if ${PATHGNU}/grep -qP "\x02" ${PATHTOMASK}
+								then 
+									EchoTeeYellow "The mask ${PATHTOMASK} contains 2. Use it as Thresholded coherence mask; set masking value to 2. " 
+									ChangeParam "Mask file path 2: Thresholded coherence mask" ${PATHTOMASK} slantRange.txt
+									ChangeParam "Masking value 2" 2 slantRange.txt	# 2 = mask at unwrap if below cohrence threshold
+								else 
+									EchoTeeYellow "The mask ${PATHTOMASK} contains no 2." 
+							fi
+
+							# test if contains 3
+							if ${PATHGNU}/grep -qP "\x03" ${PATHTOMASK}
+								then 
+									EchoTeeYellow "The mask ${PATHTOMASK} contains 3. Use it as mask for Detrend areas; set masking value to 3. " 
+									ChangeParam "Mask file path 3: Detrend masked areas" ${PATHTOMASK} slantRange.txt
+									ChangeParam "Masking value 3" 3 slantRange.txt	# 3 = masked at Detrend step 
+								else 
+									EchoTeeYellow "The mask ${PATHTOMASK} contains no 3." 
+							fi
+						else
+							if [ "${PATHTOMASKGEOC}" != "" ] || [ "${PATHTOMASKCOH}" != "" ] || [ "${PATHTODIREVENTSMASKS}" != "" ]
+								then 
+									EchoTeeYellow "and mask(s) was(were) defined as expected in LaunchMTParam.txt as PATHTOMASKGEOC and/or PATHTOMASKCOH and/or PATHTOMASKDETREND. " 
+									# test if contains 1
+									if [ "${PATHTOMASKGEOC}" != "" ]
+										then 
+											EchoTeeYellow "The following mask will be used as Geographical mask (i.e. always masked, e.g. water bodies): " 
+											EchoTeeYellow "  ${PATHTOMASKGEOC}" 
+											EchoTeeYellow "With the following masking value (usually 1):  " 
+											EchoTeeYellow "  ${DATAMASKGEOC}" 
+
+											ChangeParam "Mask file path 1: Geographical mask (water bodies, ...)" ${PATHTOMASKGEOC} slantRange.txt
+											ChangeParam "Masking value 1" ${DATAMASKGEOC} slantRange.txt	# 1 = always masked
+										else 
+											EchoTeeYellow "No Geographical mask defined." 
+									fi
+
+									if [ "${PATHTOMASKCOH}" != "" ]
+										then 
+											EchoTeeYellow "The following mask will be used as Thresholded coherence mask (at unwrapping): " 
+											EchoTeeYellow "  ${PATHTOMASKCOH}" 
+											EchoTeeYellow "With the following masking value (usually 2):  " 
+											EchoTeeYellow "  ${DATAMASKGEOC}" 
+
+											ChangeParam "Mask file path 2: Thresholded coherence mask" ${PATHTOMASKCOH} slantRange.txt
+											ChangeParam "Masking value 2" ${DATAMASKCOH} slantRange.txt	# 2 = mask at unwrap if below cohrence threshold
+										else 
+											EchoTeeYellow "No Thresholded coherence mask defined." 
+									fi
+
+									if [ "${PATHTODIREVENTSMASKS}" != "" ]
+										then 
+											EchoTeeYellow "All the mask(s) named eventMaskYYYYMMDDThhmmss_YYYYMMDDThhmmss(.hdr) in "
+											EchoTeeYellow "  ${PATHTODIREVENTSMASKS}" 
+											EchoTeeYellow "with dates included in the Primary-Secondary range of dates will be used to mask areas at Detrend."
+
+											EchoTeeYellow "With the following masking value (usually 3):  " 
+											EchoTeeYellow "  ${DATAMASKEVENTS}" 
+
+											ChangeParam "Per date detrend mask files directory" ${PATHTODIREVENTSMASKS} slantRange.txt
+											ChangeParam "Event masks masking value" ${DATAMASKEVENTS} slantRange.txt	# 3 = masked at Detrend step 
+										else 
+											EchoTeeYellow "No mask defined to mask areas at Detrend." 
+									fi
+
+								else 
+									EchoTeeRed "This is not as expected. You asked for masking but no PATHTOMASKGEOC and/or PATHTOMASKCOH and/or PATHTOMASKDETREND is provided in LaunchMTParam.txt "
+							
+							fi
+					fi
+			fi
+			
 		else 
 			EchoTee "No geocoded mask will be used"	
 			# remove possible existing mask
 			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
-			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask.txt				
+#			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask.txt	
+			if [ -f "${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt" ] && [ -f "${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt" ] ; then cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt ; fi			
 	fi
 	EchoTee ""
 
@@ -845,7 +1075,7 @@ function SlantRangeExtDEM()
 			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/externalSlantRangeDEM
 			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt
 			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
-			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask.txt			
+#			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask.txt			
 			if [ ${SIMAMP} == "SIMAMPyes" ]
 				then 
 					slantRangeDEM ${RUNDIR}/slantRange.txt -s | tee -a ${LOGFILE}  # Usually not needed maybe for coreg ERS
@@ -871,9 +1101,10 @@ function SlantRangeExtDEM()
 					mv -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME}
 					ln -sf ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
 					# copy Mask.txt to name with mask name 
-					cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/slantRangeMask_${MASKBASENAME}.txt
+					cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_${MASKBASENAME}.txt
 					;;
 				"APPLYMASKno")
+					cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt
 					# Do nothing 
 					;;
 				*)
@@ -1248,7 +1479,6 @@ function InSARprocess()
 			InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i -C | tee -a ${LOGFILE}
 		else 
 			InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i  | tee -a ${LOGFILE}
-		
 	fi
 
 	# Need to filter residual interf before bias coh estimation otherwise it uses the wrong interf for bias coh estimation
@@ -1871,6 +2101,12 @@ function GeocUTM()
 	# Now reverse for GIS and with .hdr
 	# -f : Force to fill holes as much as possible. This may introduce some unwanted distortions.
 	# -f=x : Allows forcing a hole filling factor, where x a float. 
+
+	# Apply mask with AMSTer Engine V > 20241127	
+	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && grep -q "Masking: Use of slant range mask or zoneMap for measurement geo-projection" "${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt"
+		then 
+			ChangeParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection ([mask] or [zoneMap])" mask geoProjectionParameters.txt
+	fi 
 
    if [ "${UW_METHOD}" == "CIS" ]
         then

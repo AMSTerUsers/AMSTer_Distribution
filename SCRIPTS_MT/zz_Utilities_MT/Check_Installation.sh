@@ -33,13 +33,18 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20231215:	- check .netrc file to access S1 Orbits
 # New in Distro V 4.2 20240610:	- update chech gdal version for mac
+# New in Distro V 4.3 20241010:	- improve python Check
+#								- check EXTERNAL_DEMS_DIR and EXTERNAL_MASKS_DIR
+#								- check netrc to access SRTM from NASA
+#								- networkx
+# New in Distro V 4.4 20241126:	- check python module scikit-gstat
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2020/06/15 - could make better... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on June 10, 2024"
+VER="Distro V4.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Nov 26, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -445,8 +450,7 @@ TestVarBashrc "S1_ORBITS_DIR"
 TestVarBashrc "ENVISAT_PRECISES_ORBITS_DIR"
 TestVarBashrc "EARTH_GRAVITATIONAL_MODELS_DIR"
 TestVarBashrc "EXTERNAL_DEMS_DIR"
-echo "    $(tput setaf 3)EXTERNAL_DEMS_DIR is not mandatrory and actually not used with AMSTer Toolbox $(tput sgr 0)"
-echo ""
+TestVarBashrc "EXTERNAL_MASKS_DIR"
 
 echo "2) AMSTer Software main components" 
 echo "---------------------------------"
@@ -757,7 +761,9 @@ if [ "${TSTMODULES}" == "YES" ]
 		TestPythonModule pip /opt/local/bin/python
 		TestPythonModule networkx /opt/local/bin/python
 		TestPythonModuleQt PyQt6.QtWidgets QApplication /opt/local/bin/python
-		 
+		TestPythonModule shapely /opt/local/bin/python
+		TestPythonModule scikit-gstat /opt/local/bin/python
+		
 		case ${OS} in 
 			"Linux") 
 				TestPythonModule opencv /opt/local/bin/python
@@ -1139,36 +1145,54 @@ if [ "${OS}" == "Linux" ] ; then
 fi	
 
 echo ""
-echo "8) Check the .netrc file for accessing S1 orbits"
-echo "------------------------------------------------"  # For Mac and Linux
-echo "------------------------------------------------" 
+echo "8) Check the .netrc file for accessing S1 orbits and SRTM"
+echo "---------------------------------------------------------"  # For Mac and Linux
+echo "---------------------------------------------------------" 
 
 
 # Ensure that .netrc exist with identity.dataspace.copernicus.eu login
 if [ ! -e ${HOMEDIR}/.netrc ]
 	then 
-		echo "$(tput setaf 1)$(tput setab 7)You do not have a .netrc file in your home directroy yet. It means that your computer is not configured yet to acess S1 orbits from ESA. $(tput sgr 0)"
+		echo "$(tput setaf 1)$(tput setab 7)You do not have a .netrc file in your home directroy yet. It means that your computer is not configured yet to acess S1 orbits from ESA nor SRTM from Nasa. $(tput sgr 0)"
 		echo "$(tput setaf 1)$(tput setab 7)To be able to download the S1 orbits, visit https://dataspace.copernicus.eu and register to get a login and pwd.$(tput sgr 0)"
-		UPDATENETRC="YES"
-	else
+		echo "$(tput setaf 1)$(tput setab 7)To be able to download the SRTM, visit https://urs.earthdata.nasa.gov/users/new/ and register to get a login and pwd to be able to download from https://e4ftl01.cr.usgs.gov/.$(tput sgr 0)"
 
+		UPDATENETRCS1="YES"
+		UPDATENETRCSRTM="YES"
+	else
+		# S1 orbit
 		echo "$(tput setaf 2) You already have a .netrc file in your home directroy  $(tput sgr 0)"
 		if grep -q "identity.dataspace.copernicus.eu" "${HOMEDIR}/.netrc"
 			then 
 				echo "$(tput setaf 2) And it seems to have a line with login and password to dataspace.copernicus.eu $(tput sgr 0)"
 				echo "	Nevertheless it the download of S1 orbits fails, double check your .netrc file contains a line as follow:"
 				echo "		machine identity.dataspace.copernicus.eu login <YourLogin> password <YourPassword>"
-				UPDATENETRC="NO"
+				UPDATENETRCS1="NO"
 			else 
 				echo "$(tput setaf 1)$(tput setab 7)Though it seems that you do not have a line with login and password to dataspace.copernicus.eu$(tput sgr 0)"
 				echo "$(tput setaf 1)$(tput setab 7)To be able to download the S1 orbits, visit https://dataspace.copernicus.eu and register to get a login and pwd.$(tput sgr 0)"
-				UPDATENETRC="YES"
+				UPDATENETRCS1="YES"
 		fi
+		
+		# SRTM 
+		echo "$(tput setaf 2) You already have a .netrc file in your home directroy  $(tput sgr 0)"
+		if grep -q "e4ftl01.cr.usgs.gov" "${HOMEDIR}/.netrc"
+			then 
+				echo "$(tput setaf 2) And it seems to have a line with login and password to e4ftl01.cr.usgs.gov $(tput sgr 0)"
+				echo "	Nevertheless it the download of SRTM fails, double check your .netrc file contains a line as follow:"
+				echo "		machine e4ftl01.cr.usgs.gov login <YourLogin> password <YourPassword>"
+				UPDATENETRCSRTM="NO"
+			else 
+				echo "$(tput setaf 1)$(tput setab 7)Though it seems that you do not have a line with login and password to e4ftl01.cr.usgs.gov$(tput sgr 0)"
+				echo "$(tput setaf 1)$(tput setab 7)To be able to download the SRTM, visit https://urs.earthdata.nasa.gov/users/new/ and register to get a login and pwd.$(tput sgr 0)"
+				UPDATENETRCSRTM="YES"
+		fi
+
 fi
 echo ""
-if [ "${UPDATENETRC}" == "YES" ]
+if [ "${UPDATENETRCS1}" == "YES" ]
 	then 
-		read -p "	Do you want to configure your .netrc now ? [y/n]: "  yn
+		read -p "	Do you want to configure your .netrc for S1 orbits now ? [y/n]: "  yn
 			case $yn in
 			[yY]* ) 				
 					echo " Let's configure your netrc now. Enter your creditentials:"
@@ -1177,17 +1201,33 @@ if [ "${UPDATENETRC}" == "YES" ]
 					echo "machine identity.dataspace.copernicus.eu login ${YourLogin} password ${YourPassword}" >> ${HOMEDIR}/.netrc		
 					;;
 			[nN]* ) 
-					echo " OK... do no tforget to do it later. "
+					echo " OK... do not forget to do it later. "
 					;;
 				* )  
 					echo "Please answer y or n ";;
 			esac		
 fi
 echo ""
+if [ "${UPDATENETRCSRTM}" == "YES" ]
+	then 
+		read -p "	Do you want to configure your .netrc for SRTM now ? [y/n]: "  yn
+			case $yn in
+			[yY]* ) 				
+					echo " Let's configure your netrc now. Enter your creditentials:"
+					read -p "	Enter your NASA e4ftl01.cr.usgs.gov login: "  YourLogin
+					read -p "	Enter your NASA e4ftl01.cr.usgs.gov password: "  YourPassword
+					echo "machine e4ftl01.cr.usgs.gov login ${YourLogin} password ${YourPassword}" >> ${HOMEDIR}/.netrc		
+					;;
+			[nN]* ) 
+					echo " OK... do not forget to do it later. "
+					;;
+				* )  
+					echo "Please answer y or n ";;
+			esac		
+fi
 
 
-
-
+echo ""
 echo ""
 echo "9) Summary of all mounted hard disk (just for your info...):"
 echo "------------------------------------------------------------"  # For Mac and Linux

@@ -28,7 +28,7 @@
 # Dependencies:	- gnu sed and awk for more compatibility. 
 #				- FUNCTIONS_FOR_MT.sh
 #				- bc
-#				- byte2Float.py
+#				- byte2Float.py, Swap_0_1_in_ByteFile.py 
 #
 # New in Distro V 1.0:	- Based on ReGeocode_FromSinglePair.sh and ReUnwrap_SingelPair.sh
 # New in Distro V 1.1:	- get proper hdr for re geocoded defo interpx2 flatten in case of re-geocoding with different options
@@ -43,17 +43,23 @@
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240228:	- Fix rounding pix size when smaller than one by allowing scale 5 before division  
+# New in Distro V 4.0 20241015:	- multi level mask 
+# New in Distro V 4.1 20241112:	- debug PATHTOMASK
+# New in Distro V 4.3 20241202:	- Mask before interpolation after unwrapping ok with the 3 version of masking methods (old 1=keep; intermediate 1,2=mask in one file, latest 1,2,3 are masked in multiple masks)
+#								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
+#								- take mask(s) basename only if exist  
+# New in Distro V 4.4 20241203:	- debug possible crach to fin MASNAME
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 28, 2024"
-
+VER="Distro V4.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 03, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
 
 PARAMFILE=$1	# File with the parameters needed for the run
 
@@ -64,7 +70,7 @@ function GetParam()
 	{
 	unset PARAM 
 	PARAM=$1
-	PARAM=`grep -m 1 ${PARAM} ${PARAMFILE} | cut -f1 -d \# | ${PATHGNU}/gsed "s/	//g" | ${PATHGNU}/gsed "s/ //g"`
+	PARAM=`${PATHGNU}/grep -m 1 ${PARAM} ${PARAMFILE} | cut -f1 -d \# | ${PATHGNU}/gsed "s/	//g" | ${PATHGNU}/gsed "s/ //g"`
 	eval PARAM=${PARAM}
 	echo ${PARAM}
 	}
@@ -88,13 +94,50 @@ IDWEIGHT=`GetParam "IDWEIGHT,"`				# ID weighting exponent
 FWHM=`GetParam "FWHM,"`						# Lorentzian Full Width at Half Maximum
 ZONEINDEX=`GetParam "ZONEINDEX,"`			# Zone index  
 UW_METHOD=`GetParam "UW_METHOD,"`			# UW_METHOD, Select phase unwrapping method (SNAPHU, CIS or DETPHUN)
+
 APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
 if [ ${APPLYMASK} == "APPLYMASKyes" ] 
  then 
-  PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	if [ "${PATHTOMASK}" != "" ]
+		then 
+			# old Version of LaunchParamFiles.txt, i.e. =< 20231026
+			MASKBASENAME=`basename ${PATHTOMASK##*/}`  
+		else 
+			# Version of LaunchParamFiles.txt, i.e. >= 202341015
+			PATHTOMASKGEOC=`GetParam "PATHTOMASKGEOC,"`			# PATHTOMASKGEOC, geocoded "Geographical mask" file name and path (water body etc..)
+			DATAMASKGEOC=`GetParam "DATAMASKGEOC,"`				# DATAMASKGEOC, value for masking in PATHTOMASKGEOC
+
+			PATHTOMASKCOH=`GetParam "PATHTOMASKCOH,"`			# PATHTOMASKCOH, geocoded "Thresholded coherence mask" file name and path (mask at unwrapping below threshold)
+			DATAMASKCOH=`GetParam "DATAMASKCOH,"`				# DATAMASKCOH, value for masking in PATHTOMASKCOH
+
+			PATHTODIREVENTSMASKS=`GetParam "PATHTODIREVENTSMASKS,"` # PATHTODIREVENTSMASKS, path to dir that contains event mask(s) named eventMaskYYYYMMDDThhmmss_YYYYMMDDThhmmss(.hdr) for masking at Detrend with all masks having dates in Primary-Secondary range of dates
+			DATAMASKEVENTS=`GetParam "DATAMASKEVENTS,"`			# DATAMASKEVENTS, value for masking in PATHTODIREVENTSMASKS 
+
+			if [ "${PATHTOMASKGEOC}" != "" ] ; then MASKBASENAMEGEOC=`basename ${PATHTOMASKGEOC##*/}` ; else MASKBASENAMEGEOC=NoGeogMask  ; fi
+			if [ "${PATHTOMASKCOH}" != "" ] ; then MASKBASENAMECOH=`basename ${PATHTOMASKCOH##*/}` ; else MASKBASENAMECOH=NoCohMask  ; fi
+			if [ "${PATHTODIREVENTSMASKS}" != "" ] 
+				then 
+				    if [ "$(find "${PATHTODIREVENTSMASKS}" -type f | head -n 1)" ]
+				    	then 
+				    		MASKBASENAMEDETREND=`basename ${PATHTODIREVENTSMASKS}` 
+				    		MASKBASENAMEDETREND=Detrend${MASKBASENAMEDETREND}
+				    	else 
+				    		echo "${PATHTODIREVENTSMASKS} exist though is empty, hence apply no Detrend mask " 
+				    		MASKBASENAMEDETREND=NoAllDetrend
+				    fi
+				else 
+					MASKBASENAMEDETREND=NoAllDetrend
+			fi
+
+			MASKBASENAME=${MASKBASENAMEGEOC}_${MASKBASENAMECOH}_${MASKBASENAMEDETREND}
+
+	fi
  else 
   PATHTOMASK=`echo "NoMask"`
+  MASKBASENAME=`echo "NoMask"` 
 fi
+
 RADIUSMETHD=`GetParam "RADIUSMETHD,"`		# LetCIS (CIS will compute best radius) or forced to a given radius 
 	
 FORCEGEOPIXSIZE=`GetParam "FORCEGEOPIXSIZE,"` # Pixel size (in m) wanted for your final products. Required for MSBAS
@@ -131,9 +174,9 @@ SAT=DRC_"${BASEDIRNAME2##*/}"
 # get AZSAMP. Attention, needs original az sampling
 	MASDATE=`basename ${RUNDIR} | cut -d _ -f 1`
 	SLVDATE=`basename ${RUNDIR} | cut -d _ -f 2`
-	MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
+	MASNAME=`ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/*/ | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
 	KEY=`echo "Azimuth sampling [m]" | tr ' ' _`
-	parameterFilePath=${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASNAME}.csl/Info/SLCImageInfo.txt
+	parameterFilePath="${MASNAME}.csl/Info/SLCImageInfo.txt"
 	AZSAMP=`updateParameterFile ${parameterFilePath} ${KEY}` # not rounded
 
 # set files to geocode
@@ -317,20 +360,30 @@ echo ""
 					EchoTee "First multiply deformation map with NaN mask."
 					if [ -f "${RUNDIR}/i12/InSARProducts/binarySlantRangeMask" ]
 						then 
-							EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked."
+							EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
 							# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
 							byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
 							ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
 							convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
 						else 
-							if [ ${UW_METHOD} == "CIS" ]
+							if [ -f "${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask" ] 											
 								then 
-									EchoTee "CIS unwrapping performed with mask. However, deformation maps are not shown with masked area because there is no product with teh same size. "
-									EchoTee "However, you can easily do it manually with any GIS software. "
-								else 
-									EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
-									# i.e. use old masking method with single level masks where 0 = masked
-									ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
+									EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
+									# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
+									Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
+									byte2Float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+									ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
+									convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
+								else
+									if [ ${UW_METHOD} == "CIS" ]
+										then 
+											EchoTee "CIS unwrapping performed with mask. However, deformation/Topo maps are not shown with masked area because there is no product with the same size. "
+											EchoTee "However, you can easily do it manually with any GIS software. "
+										else 
+											EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
+											# i.e. use old masking method with single level masks where 0 = masked
+											ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
+									fi
 							fi
 					fi
 			fi

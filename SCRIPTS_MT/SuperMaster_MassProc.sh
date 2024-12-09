@@ -31,7 +31,7 @@
 #    - snaphu
 #    - masterDEM.sh
 #	 - linux trap function
-#	 - byte2Float.py
+#	 - byte2Float.py, Swap_0_1_in_ByteFile.py 
 #
 #
 # New in Distro V 1.0:	- Based on developpement version 15.1 and Beta V4.0.0
@@ -106,18 +106,24 @@
 # New in Distro V 3.11 20240606:	- typo in copying/moving results after mass processing
 # New in Distro V 3.12 20240620:	- avoid copying base dir when copying results to SAR_MASSPROCESS
 #									- remove only processed pairs when comparison with SAR_MASSPROCESS is ok 
+# New in Distro V 4.0 20241015:	- multi level mask 
+# New in Distro V 4.1 20241112:	- debug PATHTOMASK
+# New in Distro V 4.2 20241113:	- if inverted pairs, move them as well to MASSPROCESSPATHLONG 
+# New in Distro V 4.3 20241202:	- Mask before interpolation after unwrapping ok with the 3 version of masking methods (old 1=keep; intermediate 1,2=mask in one file, latest 1,2,3 are masked in multiple masks)
+#								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
+#								- take mask(s) basename only if exist  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.12 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 20, 2024"
-
+VER="Distro V4.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
 
 PAIRFILE=$1					# File with the compatible pairs; named as table_MinBp_MaxBp_MinBt_MaxBt.txt
 PARAMFILE=$2				# File with the parameters needed for the run
@@ -218,9 +224,44 @@ POWSPECSMOOTFACT=`GetParam "POWSPECSMOOTFACT,"`	# POWSPECSMOOTFACT, Power spectr
 APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
 if [ ${APPLYMASK} == "APPLYMASKyes" ] 
  then 
-  PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+	if [ "${PATHTOMASK}" != "" ]
+		then 
+			# old Version of LaunchParamFiles.txt, i.e. =< 20231026
+			MASKBASENAME=`basename ${PATHTOMASK##*/}`  
+		else 
+			# Version of LaunchParamFiles.txt, i.e. >= 202341015
+			PATHTOMASKGEOC=`GetParam "PATHTOMASKGEOC,"`			# PATHTOMASKGEOC, geocoded "Geographical mask" file name and path (water body etc..)
+			DATAMASKGEOC=`GetParam "DATAMASKGEOC,"`				# DATAMASKGEOC, value for masking in PATHTOMASKGEOC
+
+			PATHTOMASKCOH=`GetParam "PATHTOMASKCOH,"`			# PATHTOMASKCOH, geocoded "Thresholded coherence mask" file name and path (mask at unwrapping below threshold)
+			DATAMASKCOH=`GetParam "DATAMASKCOH,"`				# DATAMASKCOH, value for masking in PATHTOMASKCOH
+
+			PATHTODIREVENTSMASKS=`GetParam "PATHTODIREVENTSMASKS,"` # PATHTODIREVENTSMASKS, path to dir that contains event mask(s) named eventMaskYYYYMMDDThhmmss_YYYYMMDDThhmmss(.hdr) for masking at Detrend with all masks having dates in Primary-Secondary range of dates
+			DATAMASKEVENTS=`GetParam "DATAMASKEVENTS,"`			# DATAMASKEVENTS, value for masking in PATHTODIREVENTSMASKS 
+
+			if [ "${PATHTOMASKGEOC}" != "" ] ; then MASKBASENAMEGEOC=`basename ${PATHTOMASKGEOC##*/}` ; else MASKBASENAMEGEOC=NoGeogMask  ; fi
+			if [ "${PATHTOMASKCOH}" != "" ] ; then MASKBASENAMECOH=`basename ${PATHTOMASKCOH##*/}` ; else MASKBASENAMECOH=NoCohMask  ; fi
+			if [ "${PATHTODIREVENTSMASKS}" != "" ] 
+				then 
+				    if [ "$(find "${PATHTODIREVENTSMASKS}" -type f | head -n 1)" ]
+				    	then 
+				    		MASKBASENAMEDETREND=`basename ${PATHTODIREVENTSMASKS}` 
+				    		MASKBASENAMEDETREND=Detrend${MASKBASENAMEDETREND}
+				    	else 
+				    		echo "${PATHTODIREVENTSMASKS} exist though is empty, hence apply no Detrend mask " 
+				    		MASKBASENAMEDETREND=NoAllDetrend
+				    fi
+				else 
+					MASKBASENAMEDETREND=NoAllDetrend
+			fi
+
+			MASKBASENAME=${MASKBASENAMEGEOC}_${MASKBASENAMECOH}_${MASKBASENAMEDETREND}
+
+	fi
  else 
   PATHTOMASK=`echo "NoMask"`
+  MASKBASENAME=`echo "NoMask"` 
 fi
 
 SKIPUW=`GetParam "SKIPUW,"`					# SKIPUW, SKIPyes skips unwrapping and geocode all available products
@@ -729,20 +770,35 @@ then
 
 	if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
 		then 
+# Not tested below till 784
 			# CHECK THAT MASK IS SIMILAR TO POSSIBLE FORMER RUN
-			FORMERMASK=`ls -d ${MASSPROCESSPATHLONG}/* | head -1`
-			if [ -f "${FORMERMASK}/slantRange.txt" ] && [ -s "${FORMERMASK}/slantRange.txt" ] ; then 
-				FORMERMASK=`updateParameterFile ${FORMERMASK}/slantRange.txt "Georeferenced mask file path"`
-				if  [ "${FORMERMASK}" != "${PATHTOMASK}" ] 
-					then 
-					EchoTeeRed " Mask request is not the same as former processingg. Please check"
-					SpeakOut " Mask request is not the same as former processing. Please check."
-				fi 
-			fi
+			FORMERMASKDIR=`ls -d ${MASSPROCESSPATHLONG}/* | head -1`
+			if [ -f "${FORMERMASKDIR}/slantRange.txt" ] && [ -s "${FORMERMASKDIR}/slantRange.txt" ]
+				then 
+					# Search for mask in V <20241015
+					if [ "${PATHTOMASK}" != "" ]
+						then 
+							FORMERMASK=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Georeferenced mask file path"`
+							if  [ "${FORMERMASK}" != "${PATHTOMASK}" ] 
+								then 
+									EchoTeeRed " Mask request is not the same as former processing. Please check"
+									SpeakOut " Mask request is not the same as former processing. Please check."
+							fi 
+					fi
 
-			MASKBASENAME=`basename ${PATHTOMASK##*/}`
-		else 
-			MASKBASENAME=`echo "NoMask"` # not sure I need it
+					# Search for mask in V >20241015
+					if [ "${PATHTOMASKGEOC}" != "" ] || [ "${PATHTOMASKCOH}" != "" ] || [ "${PATHTOMASKDETREND}" != "" ] 
+						then 
+							FORMERMASKGEOC=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 1: Geographical mask (water bodies, ...)"`
+							FORMERMASKCOH=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 2: Thresholded coherence mask"`
+							FORMERMASKDETREND=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 3: Detrend masked areas"`
+							if  [ "${FORMERMASKGEOC}" != "${PATHTOMASKGEOC}" ] || [ "${FORMERMASKCOH}" !=  "${PATHTOMASKCOH}" ] || [ "${FORMERMASKDETREND}" != "${PATHTOMASKDETREND}" ] 
+								then 
+									EchoTeeRed " Masks request are not the same as former processing. Please check"
+									SpeakOut " Masks request are not the same as former processing. Please check."
+							fi 
+					fi
+			fi
 	fi 	# i.e. "NoMask" or "mask file name without ext" from Param file
 
 
@@ -773,13 +829,6 @@ else
 		# check if DEM and filter exist	
 		MASONLYNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${MASONLY} | cut -d . -f 1 `  				# Must get here the whole S1 name as in ${INPUTDATA}/${IMGWITHDEM}.csl but csl extension is added in MangeDEM
 		IMGWITHDEM=${MASONLYNAME} 	# When computed during SinglePair with SuperMaster (or during mass processing)
-
-		if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
-			then 
-				MASKBASENAME=`basename ${PATHTOMASK##*/}`
-			else 
-				MASKBASENAME=`echo "NoMask"` # not sure I need it
-		fi 	# i.e. "NoMask" or "mask file name without ext" from Param file
 
 		# Need this for ManageDEM
 		PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
@@ -1103,26 +1152,36 @@ do
 								if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
 									then 
 										EchoTee "First multiply deformation map with NaN mask."
-
 										if [ -f "${RUNDIR}/i12/InSARProducts/binarySlantRangeMask" ]
 											then 
-												EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked."
+												EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
 												# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
 												byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
 												ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
 												convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
 											else 
-												if [ ${UW_METHOD} == "CIS" ]
+												if [ -f "${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask" ] 											
 													then 
-														EchoTee "CIS unwrapping performed with mask. However, deformation maps are not shown with masked area because there is no product with teh same size. "
-														EchoTee "However, you can easily do it manually with any GIS software. "
-													else 
-														EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
-														# i.e. use old masking method with single level masks where 0 = masked
-														ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
+														EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
+														# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
+														Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
+														byte2Float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+														ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
+														convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
+													else
+														if [ ${UW_METHOD} == "CIS" ]
+															then 
+																EchoTee "CIS unwrapping performed with mask. However, deformation/Topo maps are not shown with masked area because there is no product with the same size. "
+																EchoTee "However, you can easily do it manually with any GIS software. "
+															else 
+																EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
+																# i.e. use old masking method with single level masks where 0 = masked
+																ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
+														fi
 												fi
 										fi
 								fi
+
 								fillGapsInImage ${RUNDIR}/i12/InSARProducts/deformationMap ${DEFORG} ${DEFOAZ} 
 								# make raster
 								MakeFig ${DEFORG} 1.0 1.2 normal jet 1/1 r4 ${PATHDEFOMAP}.interpolated 
@@ -1270,7 +1329,17 @@ if [ "${execdir}" == "${storedir}" ]
 
 		done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
 
-
+		if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
+			then
+				while IFS=_ read -r MASDATE SLVDATE
+				do	
+					mv -f *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"/
+					mv -f LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt "${MASSPROCESSPATHLONG}"/
+		
+				done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
+		fi
+		
+		
 		# From now on, log file is in ${MASSPROCESSPATHLONG}
 		LOGFILE=${MASSPROCESSPATHLONG}/LogFile_MassProcess_Super${SUPERMASTER}_${RUNDATE}_${RNDM1}.txt
 	else 
@@ -1285,6 +1354,16 @@ if [ "${execdir}" == "${storedir}" ]
 			cp -R *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"
 		
 		done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+
+		if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
+			then
+				while IFS=_ read -r MASDATE SLVDATE
+				do	
+					cp -R *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"
+						
+				done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
+		fi
+
 	
 		# not faster than cp ?
  		#rsync -a --inplace -W --no-compress ${MAINRUNDIR} ${MASSPROCESSPATHLONG}
@@ -1340,7 +1419,17 @@ if [ "${execdir}" == "${storedir}" ]
 								do	
 									rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
 								done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+
+								if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
+									then
+										while IFS=_ read -r MASDATE SLVDATE
+										do	
+											rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
+										done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
+								fi
+
 								rm -f ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
+
 						fi
 					else 
 						EchoTee "REMOVE PROCESSED PAIR DIRS"
@@ -1349,8 +1438,17 @@ if [ "${execdir}" == "${storedir}" ]
 						do	
 							rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
 						done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
-						
+
+						if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
+							then
+								while IFS=_ read -r MASDATE SLVDATE
+								do	
+									rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
+								done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
+						fi
+
 						rm -f ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
+
 				fi
 				echo
 		fi	

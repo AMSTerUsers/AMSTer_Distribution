@@ -32,13 +32,20 @@
 # New in Distro V 3.2 20240129:	- move also some hdr file from newly created MSBAS bin files when compute NS comp. 
 # New in Distro V 3.3 20240704:	- Stop if LOS and EW/UD .bin files are present in the main directory. 
 #								  This is not supposed to happen, hence it must result from a crash. Manual sorting is advised. 
+# New in Distro V 3.4 20240924:	- Debug creating pdf files for simple TS with error bar 
+# New in Distro V 3.5 20240925:	- typo in line to mv MSBAS_*.txt to zz_${ALLCOMP}_TS${PARAMNAME}
+#								- search for files in *_UD.bin instead of *UD.bin 
+# New in Distro V 3.6 20241008:	- When processing 3D data, because it takes time to close listdir.tmp when performing  
+#									ls *_EW.bin *_UD.bin > listdir.tmp and 
+#								  do not ls *_NS.bin >> listdir.tmp just after or it will miss several files !!
+#								  Instead, list the 3 comp in the listdir.tmp file at the same time 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 04, 2024"
+VER="Distro V3.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 08, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 
@@ -102,7 +109,8 @@ if [ ${countMSBASV1} -gt 1 ] ; then lname="MSBASV1" ; echo "You probably process
 case ${lname} in 
  	MSBASV4)
 		# Test if process 3D inversion 
-		if ls *_NS.bin 1> /dev/null 2>&1 
+		# do not add [] in line below 
+		if ls MSBAS*_NS.bin 1> /dev/null 2>&1 
 			then 
 				ENU="YES" 
 				ALLCOMP="UD_EW_NS"
@@ -111,8 +119,12 @@ case ${lname} in
 				ALLCOMP="UD_EW" 
 		fi 
 
- 		ls *_EW.bin *UD.bin > listdir.tmp
- 		if [ "${ENU}" == "YES" ] ; then ls *_NS.bin >> listdir.tmp ; fi
+ 		if [ "${ENU}" == "YES" ] 
+ 			then 
+ 				ls MSBAS*_EW.bin MSBAS*_UD.bin MSBAS*_NS.bin > listdir.tmp 
+ 			else
+ 				ls MSBAS*_EW.bin MSBAS*_UD.bin > listdir.tmp
+ 		fi
  		ls MSBAS_NORM_AXY.bin >> listdir.tmp
  		ls MSBAS_NORM_X.bin >> listdir.tmp	
  		ls MSBAS_COND_NUM.bin >> listdir.tmp
@@ -125,7 +137,7 @@ case ${lname} in
  		;;
 	MSBASV2)
 		ALLCOMP="UD_EW"
-		ls *_EW.bin *UD.bin > listdir.tmp
+		ls MSBAS*_EW.bin MSBAS*_UD.bin > listdir.tmp
 		ls MSBAS_NORM_AXY.bin >> listdir.tmp
 		ls MSBAS_NORM_X.bin >> listdir.tmp	
 		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
@@ -134,7 +146,7 @@ case ${lname} in
 		mkdir -p "zz_${ALLCOMP}_TS${PARAMNAME}"
 		;;
  	SBASV4)
- 		ls *_LOS.bin > listdir.tmp
+ 		ls MSBAS*_LOS.bin > listdir.tmp
  		ls MSBAS_NORM_AXY.bin >> listdir.tmp
  		ls MSBAS_NORM_X.bin >> listdir.tmp
  		ls MSBAS_COND_NUM.bin >> listdir.tmp
@@ -175,11 +187,11 @@ case ${lname} in
 		rm -f zz_EW${PARAMNAME}/*_EW.bin*
 		rm -f zz_UD${PARAMNAME}/*_UD.bin*
 		# add new ones
-		mv *_EW.bin* zz_EW${PARAMNAME}/
-		mv *_UD.bin* zz_UD${PARAMNAME}/ 
+		mv MSBAS*_EW.bin* zz_EW${PARAMNAME}/
+		mv MSBAS*_UD.bin* zz_UD${PARAMNAME}/ 
 		if [ "${ENU}" == "YES" ] ; then 
-			rm -f zz_NS${PARAMNAME}/*_NS.bin*
-			mv *_NS.bin* zz_NS${PARAMNAME}/
+			rm -f zz_NS${PARAMNAME}/MSBAS*_NS.bin*
+			mv MSBAS*_NS.bin* zz_NS${PARAMNAME}/
 		fi
 
 		echo "Move norms and log and dateTime file in EW${PARAMNAME}"	
@@ -199,7 +211,7 @@ case ${lname} in
 		mv datesTime.txt zz_UD${PARAMNAME}/
 		cp header.txt zz_UD${PARAMNAME}/
 
-		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_${ALLCOM}_TS${PARAMNAME}/ ; fi	
+		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_${ALLCOMP}_TS${PARAMNAME}/ ; fi	
 			
 		# Create ratsers 
 		if [ -d zz_EW${PARAMNAME} ] ; then 
@@ -259,8 +271,10 @@ case ${lname} in
 			# make kmz of linear rate
 			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_UD.bin
 			cd ..
-			if [ `ls -1 zz_${ALLCOMP}_TS${PARAMNAME}/MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
-				cd zz_${ALLCOMP}_TS${PARAMNAME} 
+			#if [ `ls -1 zz_${ALLCOMP}_TS${PARAMNAME}/MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
+			#	cd zz_${ALLCOMP}_TS${PARAMNAME} 
+			if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
+				#cd zz_${ALLCOMP}_TS${PARAMNAME} 
 				Plot_All_EW_UP_ts_inDir.sh
 			fi
 		fi	;;
@@ -313,7 +327,7 @@ case ${lname} in
 			# make kmz of linear rate
 			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_LOS.bin
 			cd ..
-			if [ `ls -1 zz_LOS_TS${PARAMNAME}/*.ts 2>/dev/null | wc -l` -gt 1 ] ; then 
+			if [ `ls -1 zz_LOS_TS${PARAMNAME}/*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
 				cd zz_LOS_TS${PARAMNAME} 
 				Plot_All_LOS_ts_inDir.sh
 			fi
@@ -341,6 +355,8 @@ case ${lname} in
 esac
 
 rm listdir.tmp
+#RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm%Ss" | ${PATHGNU}/gsed "s/ //g"`
+#mv listdir.tmp listdir.tmp.${RUNDATE}.txt
 
 echo +++++++++++++++++++++++++++++++++++++++++++++++
 echo "ALL HDR ADDED AND FILES MOVED- HOPE IT WORKED"

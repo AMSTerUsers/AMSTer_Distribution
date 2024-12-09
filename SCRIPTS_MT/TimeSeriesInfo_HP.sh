@@ -54,13 +54,14 @@
 # New in Distro V 5.1 20231120:	- Add logo to timestamp  (l392)
 # New in Distro V 5.2 20240603:	- Extract "LOS" from speed deformation filename instead of complete path (since ALOS2)
 # New in Distro V 5.3 20240620:	- from VD_5.2, come back in complete path with replacing the extraction of "LOS" to "_LOS" to filter "ALOS" stuff 
+# New in Distro V 5.4 20241104:	- Adapt legend picture if deformation NS available
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 20, 2024"
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 04, 2024"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -90,8 +91,7 @@ echo "WorkDir = ${WorkDir}"
 echo "Rate between pixel number on eps file and image to crop = ${Rate}"
 ParamFile=${WorkDir}/TS_parameters.txt
 bn=$(basename ${TimeLine})
-echo "test max"
-echo "cp ${TimeLine} ${WorkDir}/${bn}"
+
 #cp ${TimeLine} ${WorkDir}/${bn}
 cp ${TimeLine} ${WorkDir}
 TimeLine=${WorkDir}/${bn}
@@ -410,18 +410,34 @@ convert ${Legend} -resize 400x60 Temp
 convert $combi Temp -gravity northwest -geometry +10+520 -composite $combi
 
 
-if [ $(basename ${Legend}) = 'Legend_EW.jpg' ]
+if [ $(basename ${Legend}) = 'Legend_EW.jpg' ]	# 'EW" because the last loop in previous script 'TS_AddLegend_EW_UD.sh'
 then
 	convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'East-West deformation'" $combi
 	
-		
- 	Legend2=${WorkDir}/TS_Displ_Pos.png #Image to explain the sens of displacement between cross
+	REMARKDIR=$(echo ${TimeLine} | sed -E 's/^.*timeLines?_([0-9]{2,4}_){4}//' | sed -E 's/.eps//')	# extract REMARKDIR string from eps filename
+	echo "!!!!!!!!!! pwd =  $(pwd)"
+	echo "TimeLine =  ${TimeLine} "
+	echo "REMARKDIR = ${REMARKDIR}"
+	
+	if [ -d  zz_NS_${REMARKDIR} ] && [ -n "$(ls -A "zz_NS_${REMARKDIR}")" ]
+		then
+			echo "yes  --> zz_NS_${REMARKDIR}"
+			Legend2=${WorkDir}/TS_Displ_Pos_NS.png #Image to explain the sens of displacement between cross
+		else
+			echo "no  --> zz_NS_${REMARKDIR}"
+			Legend2=${WorkDir}/TS_Displ_Pos.png #Image to explain the sens of displacement between cross
+	fi
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
 	convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
 		
 	
-	Legend2=${WorkDir}/TS_Displ_Neg.png
+	if [ -d  zz_NS_${REMARKDIR} ] && [ -n "$(ls -A "zz_NS_${REMARKDIR}")" ]
+		then
+			Legend2=${WorkDir}/TS_Displ_Neg_NS.png #Image to explain the sens of displacement between cross
+		else
+			Legend2=${WorkDir}/TS_Displ_Neg.png #Image to explain the sens of displacement between cross
+	fi
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
 	convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi

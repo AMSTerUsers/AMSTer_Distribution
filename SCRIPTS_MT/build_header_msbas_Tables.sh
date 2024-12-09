@@ -70,13 +70,17 @@
 # New in Distro V 2.3 20240423:	- add usage if launched without parameters 
 # New in Distro V 2.4 20240704:	- change sign of incidence angle if satellite is Right looking
 # New in Distro V 2.5 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
+# New in Distro V 2.6 20240919:	- remove first empty line (if any) in files before comparing 
+#								  with grep -Fvf in order to avoid resulting empty file
+#								- make grep -Fvf with fct LinesInFile2NotInFile1, where FILE 1 si sort and uniq for safety
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2024"
+VER="Distro V2.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 19, 2024"
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -99,6 +103,30 @@ echo ""
 
 # Some functions 
 ################
+
+# Function to take all lines in FILETOSEARCH that are not in LINESTOSKIP and save in FLITERED
+LinesInFile2NotInFile1()
+{
+	local LINESTOSKIP
+	local FILETOSEARCH
+	local FLITERED
+
+	LINESTOSKIP=$1
+	FILETOSEARCH=$2
+	FLITERED=$3
+
+	# just in case...
+	sort ${LINESTOSKIP} | uniq > temp.txt
+	mv temp.txt ${LINESTOSKIP}
+
+	# remove possible first empty line to avoid prblm with grep -Fvf
+	${PATHGNU}/sed -i '1{/^$/d}' ${LINESTOSKIP}
+	${PATHGNU}/sed -i '1{/^$/d}' ${FILETOSEARCH}
+	# take all lines in FILETOSEARCH that are not in LINESTOSKIP and save in FLITERED
+	${PATHGNU}/grep -Fvf ${LINESTOSKIP} ${FILETOSEARCH}  > ${FLITERED}
+
+}
+
 # Function to search the last version of msbas 
 	LastMsbasV()
 		{
@@ -292,15 +320,21 @@ PrepareModeI()
 					sort  _files_in_${MODE}${i}_NoPath.txt | uniq >  _files_in_${MODE}${i}_NoPath_sorted.txt 	# i.e. info from existing MODEi dir
 	
 					rm _files_in_${MODE}${i}_NoPath.txt
-					${PATHGNU}/grep -Fvf _files_in_${MODE}${i}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt  > _Files_Not_In_Dir_but_in_${MODE}${i}.txt
+					# take all lines in FILE2 that are not in FILE1 and save in FILE3
+					#${PATHGNU}/grep -Fvf _files_in_${MODE}${i}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt  > _Files_Not_In_Dir_but_in_${MODE}${i}.txt
+					LinesInFile2NotInFile1 "_files_in_${MODE}${i}_NoPath_sorted.txt" "_tmps_Processes_pairs_sorted.txt" "_Files_Not_In_Dir_but_in_${MODE}${i}.txt"
+					
 					${PATHGNU}/gsed -i "s%^%${PATHMODE}\/%g"  _Files_Not_In_Dir_but_in_${MODE}${i}.txt # add again the path at beginning of each line
 					#diff _files_in_${MODE}${i}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt | ${PATHGNU}/grep "deg" | ${PATHGNU}/gsed s/\>//g | ${PATHGNU}/gsed s/\<//g
 					rm  _tmps_Processes_pairs.txt _files_in_${MODE}${i}_NoPath_sorted.txt
 	
 				sort ${MODETOCP}_NoPath.txt | uniq > ${MODETOCP}_NoPath_sorted.txt
 				rm 	${MODETOCP}_NoPath.txt 		
+
+				# take all lines in FILE2 that are not in FILE1 and save in FILE3
+				#${PATHGNU}/grep -Fvf _tmps_Processes_pairs_sorted.txt ${MODETOCP}_NoPath_sorted.txt > ${MODETOCP}_NoPath_only_new.txt
+				LinesInFile2NotInFile1 "_tmps_Processes_pairs_sorted.txt" "${MODETOCP}_NoPath_sorted.txt" "${MODETOCP}_NoPath_only_new.txt"
 				
-				${PATHGNU}/grep -Fvf _tmps_Processes_pairs_sorted.txt ${MODETOCP}_NoPath_sorted.txt > ${MODETOCP}_NoPath_only_new.txt
 				rm  ${MODETOCP}_NoPath_sorted.txt _tmps_Processes_pairs_sorted.txt 
 				
 				${PATHGNU}/gsed -i "s%^%${PATHMODE}\/%g"  ${MODETOCP}_NoPath_only_new.txt # add again the path at beginning of each line
@@ -345,7 +379,11 @@ PrepareModeI()
 						done < ${ADDPAIRSFILE} 
 	
 				fi 		
-				${PATHGNU}/grep -Fv -f Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ${MODETOCP}_NoChoRestrict.txt > ${MODETOCP}.txt 
+				
+				# take all lines in FILE2 that are not in FILE1 and save in FILE3
+				#${PATHGNU}/grep -Fv -f Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt ${MODETOCP}_NoChoRestrict.txt > ${MODETOCP}.txt 
+				LinesInFile2NotInFile1 "Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt" "${MODETOCP}_NoChoRestrict.txt" "${MODETOCP}.txt"
+				
 				# do not remove ${MODETOCP}_NoChoRestrict.txt
 		fi	
 

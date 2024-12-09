@@ -57,18 +57,21 @@
 #								  be done without mask otherwise everything will be masked...  
 #								- fix detrend x 2 when no mask is required 
 #								- offer to change the list of products to geocode if not satisfied with suggested list
-#
+# New in Distro V 5.0 20241015:	- multi level mask 
+# New in Distro V 5.1 20241202:	- debug PATHTOMASK
+# New in Distro V 5.2 20241203:	- debug possible crach to fin MASNAME
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 27, 2024"
-
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 03, 2024"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
 
 LISTTOGEOC=$1		# a list of dir where to re-run the geocoding either in the form of S1A_174_20141017_A_S1A_174_20141110_A or 20141017_20141110
 INTERPOL=$2 		# Must be AFTER, BEFORE, BOTH or NONE to let the script know what type of inyterpolation you want (before/after geocoding)
@@ -129,13 +132,51 @@ if [ $# -eq 3 ] ; then
 	FWHM=`GetParam "FWHM,"`						# Lorentzian Full Width at Half Maximum
 	ZONEINDEX=`GetParam "ZONEINDEX,"`			# Zone index  
 	UW_METHOD=`GetParam "UW_METHOD,"`			# UW_METHOD, Select phase unwrapping method (SNAPHU, CIS or DETPHUN)
+
 	APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
 	if [ ${APPLYMASK} == "APPLYMASKyes" ] 
 	 then 
-	  PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+		PATHTOMASK=`GetParam "PATHTOMASK,"`			# PATHTOMASK, geocoded mask file name and path
+		if [ "${PATHTOMASK}" != "" ]
+			then 
+				# old Version of LaunchParamFiles.txt, i.e. =< 20231026
+				MASKBASENAME=`basename ${PATHTOMASK##*/}`  
+			else 
+				# Version of LaunchParamFiles.txt, i.e. >= 202341015
+				PATHTOMASKGEOC=`GetParam "PATHTOMASKGEOC,"`			# PATHTOMASKGEOC, geocoded "Geographical mask" file name and path (water body etc..)
+				DATAMASKGEOC=`GetParam "DATAMASKGEOC,"`				# DATAMASKGEOC, value for masking in PATHTOMASKGEOC
+	
+				PATHTOMASKCOH=`GetParam "PATHTOMASKCOH,"`			# PATHTOMASKCOH, geocoded "Thresholded coherence mask" file name and path (mask at unwrapping below threshold)
+				DATAMASKCOH=`GetParam "DATAMASKCOH,"`				# DATAMASKCOH, value for masking in PATHTOMASKCOH
+	
+				PATHTODIREVENTSMASKS=`GetParam "PATHTODIREVENTSMASKS,"` # PATHTODIREVENTSMASKS, path to dir that contains event mask(s) named eventMaskYYYYMMDDThhmmss_YYYYMMDDThhmmss(.hdr) for masking at Detrend with all masks having dates in Primary-Secondary range of dates
+				DATAMASKEVENTS=`GetParam "DATAMASKEVENTS,"`			# DATAMASKEVENTS, value for masking in PATHTODIREVENTSMASKS 
+	
+				if [ "${PATHTOMASKGEOC}" != "" ] ; then MASKBASENAMEGEOC=`basename ${PATHTOMASKGEOC##*/}` ; else MASKBASENAMEGEOC=NoGeogMask  ; fi
+				if [ "${PATHTOMASKCOH}" != "" ] ; then MASKBASENAMECOH=`basename ${PATHTOMASKCOH##*/}` ; else MASKBASENAMECOH=NoCohMask  ; fi
+				if [ "${PATHTODIREVENTSMASKS}" != "" ] 
+					then 
+					    if [ "$(find "${PATHTODIREVENTSMASKS}" -type f | head -n 1)" ]
+					    	then 
+				    			MASKBASENAMEDETREND=`basename ${PATHTODIREVENTSMASKS}` 
+				    			MASKBASENAMEDETREND=Detrend${MASKBASENAMEDETREND}
+					    	else 
+					    		echo "${PATHTODIREVENTSMASKS} exist though is empty, hence apply no Detrend mask " 
+					    		MASKBASENAMEDETREND=NoAllDetrend
+					    fi
+					else 
+						MASKBASENAMEDETREND=NoAllDetrend
+				fi
+	
+				MASKBASENAME=${MASKBASENAMEGEOC}_${MASKBASENAMECOH}_${MASKBASENAMEDETREND}
+	
+		fi
 	 else 
 	  PATHTOMASK=`echo "NoMask"`
+	  MASKBASENAME=`echo "NoMask"` 
 	fi
+
+
 	RADIUSMETHD=`GetParam "RADIUSMETHD,"`		# LetCIS (CIS will compute best radius) or forced to a given radius 
 	
 	FORCEGEOPIXSIZE=`GetParam "FORCEGEOPIXSIZE,"` # Pixel size (in m) wanted for your final products. Required for MSBAS
@@ -492,10 +533,10 @@ do
 			# get AZSAMP. Attention, needs original az sampling
 			MASDATE=`basename ${RUNDIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
 			SLVDATE=`basename ${RUNDIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
-			MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
-			KEY=`echo "Azimuth sampling [m]" | tr ' ' _`
-			parameterFilePath="${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASNAME}.csl/Info/SLCImageInfo.txt"
 
+			MASNAME=`ls -d ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/*/ | ${PATHGNU}/grep ${MASDATE} | cut -d . -f 1` 	
+			KEY=`echo "Azimuth sampling [m]" | tr ' ' _`
+			parameterFilePath="${MASNAME}.csl/Info/SLCImageInfo.txt"
 			AZSAMP=`updateParameterFile ${parameterFilePath} ${KEY}` # not rounded
 
 			# Update which products to geocode
@@ -583,7 +624,7 @@ do
 			ChangeGeocParam "ID weighting exponent" ${IDWEIGHT} geoProjectionParameters.txt
 			ChangeGeocParam "FWHM : Lorentzian Full Width at Half Maximum" ${FWHM} geoProjectionParameters.txt
 			# Since 2020 01 21 AMSTer Engine masking method is defined by either "mask" (all method but CIS) or "zoneMap" (for CIS in topo mode); no more path to mask
-			# In cas eof Snaphu or DetPhun, no need to change here below
+			# In case of Snaphu or DetPhun, no need to change here below
 			# ChangeParam "Mask " ${PATHTOMASK} geoProjectionParameters.txt
 			if [ ${APPLYMASK} == "APPLYMASKyes" ] 
 				then 
