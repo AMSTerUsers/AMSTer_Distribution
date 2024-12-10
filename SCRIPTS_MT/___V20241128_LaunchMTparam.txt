@@ -147,7 +147,7 @@ LORENTZ		# WEIGHTMETHD, Weighting method : ID = inverse distance; LORENTZ = lore
 225000		# XMIN, minimum X UTM coord of final geocoded product
 426000		# XMAX, maximum X UTM coord of final geocoded product
 5417000		# YMIN, minimum Y UTM coord of final geocoded product
-5593000		# YMAX, maximum Y coord of final geocoded product
+5593000		# YMAX, maximum Y UTM coord of final geocoded product
 /$PATH_1650/kml/	# GEOCKML, a kml file to define final geocoded product. If not found, it will use the coordinates above
 
 #########

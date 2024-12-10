@@ -1,3 +1,57 @@
+/* AMSTerEngine20241210 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: .flip (or .flop) products are not projected anymore. 
+
+/* AMSTerEngine20241203 (© DD & SAREOS) */
+/* ************************************ */
+initInSAR: Correction of an allocation bug in InSARParameters. 
+
+/* AMSTerEngine20241129 (© DD & SAREOS) */
+/* ************************************ */
+SAOCOMDataReader: Addition of a polarization scheme sub directory when asking for data ordering. 
+
+/* AMSTerEngine20241129 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: mask handling corrected in geoProj libraries. Non referenced pixels are now used as mask indicator. 
+getSRTMDEM: Bug correction. Now, DEM area of interest is recomputed from available tiles. 
+SAOCOMDataReader: Addition of unzip error handling to skip reading and avoid crash. 
+
+/* AMSTerEngine20241127 (© DD & SAREOS) */
+/* ************************************ */
+slantRangeDEM: Addition of a border to enlarge the extracted DEM corresponding to the image frame. This because this latter one is computed considering an average height which is not necessarily representative of the whole area. 
+initInSAR: Suppresion of the mention of used mask in parameter file.
+
+/* AMSTerEngine20241125 (© DD & SAREOS) */
+/* ************************************ */
+getSRTM: water body mask is not taken into account anymore in the SRTM tile assembly in order to keep sea height to zero. 
+initInSAR: In geoProjectionParameters.txt, masking is set to "none" by default. 
+geoProjection: Mask management corrected. 
+	If masking parameter is set to "mask" within parameter file, water bodies are avoided in measurement georeferencing and geoprojection. 		Others product will be geoprojected without masking water bodies. This requires a second referencing. 
+	In any case, if a kml is given, the projection frame will be the rectangle circumscribed to the kml.
+	If no kml is given, it is the given frame that prevails. 
+	If no kml is given and all given frame values are set to zero, the frame will be computed from the first georeferencing.
+
+/* AMSTerEngine20241108 (© DD & SAREOS) */
+/* ************************************ */
+bestPlaneRemoval: Bug correction: masked was working reverse way. Now masked values are correctly masked...
+
+
+/* AMSTerEngine20241107 (© DD & SAREOS) */
+/* ************************************ */
+bestPlaneRemoval: Now takes masking into account. If geographical mask bit or detrend mask bit are set, value is excluded from best plane calculation. 
+
+/* AMSTerEngine20241106 (© DD & SAREOS) */
+/* ************************************ */
+phaseUnwrapping: Mask management adaptation: In case no mask is provided or if willing to overcome the threshold mask, option -t will generate a thresholded mask as if the threshold mask was set everywhere (see help). 
+
+/* AMSTerEngine20241104 (© DD & SAREOS) */
+/* ************************************ */
+ALOSDataReader: Now, spotlight data acquired before march 2021 are corrected for the half spectrum shift in azimuth introduced when JAXA updated its spotlight focusing software. 
+
+/* AMSTerEngine20241027 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductsGeneration: Implementation of mask management. If event masks are present within reference image (master or super master image), the ones corresponding to the processed pair are combined within slantRangeMask output.  
+
 /* AMSTerEngine20241015 (© DD & SAREOS) */
 /* ************************************ */
 slantRangeDEM: Correction of a bug in external georeferenced file management leading to freeing a non allocated pointer. 

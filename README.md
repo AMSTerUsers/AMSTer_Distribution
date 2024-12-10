@@ -132,7 +132,7 @@ The development of the AMSTer Software commenced in the early 2010s and leverage
 - New in V 20241203:
   1. AMSTer Engine 20241203: 
   	- getSRTMDEM now replaces agregateSRTMfiles. It allows downloading SRTM tiles and stitch them in a DEM formatted for AMSTer (including referencing to ellipsoid) and creates water bodies mask. 
-    - New masking strategy: 0 means keep; 1 means always masked (in a geographical mask); 2 means masked at unwrapping unless coherence is above a given threshold; 3 means masked to compute the phase ramp to remove at detrending step. 
+    - New masking strategy and convention: 0 means keep; 1 means always masked (in a geographical mask); 2 means masked at unwrapping unless coherence is above a given threshold; 3 means masked to compute the phase ramp to remove at detrending step. 
   2. MSBAS version for full 3D inversion (only valid when enough LOS diversity is available, e.g. when right and left looking sensor - for test and development use only)  
   3. AMSTer Toolbox scripts: 
     - multi-level masking
