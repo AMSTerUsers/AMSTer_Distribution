@@ -29,7 +29,7 @@ echo "Processing launched on $(date) "
 echo " " 
 
 COLX=$1
-COLY=$2
+LINY=$2
 
 PWDIR=$(pwd)
 

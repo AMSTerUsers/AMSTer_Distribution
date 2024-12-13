@@ -113,12 +113,13 @@
 #									- no slantRangeMask.txt anymore
 # New in Distro V 8.1.1 20241202:	- ManageDEM: Check that Detrend masks from ${PATHTODIREVENTSMASKS} are all projected in Slant Range in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/
 # New in Distro V 8.1.2 20241203:	- externalSlantRangeDEM.txt saved with mask version in fct ManageDEM and SlantRangeExtDEM
+# New in Distro V 8.1.3 20241213:	- rebulid link slantRangeMask also when the all masks in PATHTODIREVENTSMASKS are OK, just in case porcessing is performed on a computer with another OS
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V8.1.2 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 03, 2024"
+FCTVER="Distro V8.1.3 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 13, 2024"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -748,6 +749,12 @@ function ManageDEM()
 													MasterDEM.sh ${IMGWITHDEM} ${PARAMFILE}
 												else
 													EchoTee " All detrend masks in ${PATHTODIREVENTSMASKS} are in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/. No need to recompute here"
+
+ 													EchoTee " I will update the link to appropriate existing slantRangeMask, just in case.   \n"
+													rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
+													ln -sf ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
+													cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_${MASKBASENAME}.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt
+
 											fi
 									fi
 								else 
