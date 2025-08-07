@@ -129,6 +129,21 @@ The development of the AMSTer Software commenced in the early 2010s and leverage
 
 **________**
 
+- New in V 20250807:
+   1. AMSTer Engine 20250806:
+      - Allows processing NISAR data
+      - imporved/corrected S1, ENVISAT and ERS readers
+      - new/imporved S1, S2 and ETAD data downloader
+   3. AMSTer Toolbox scripts:
+      - Automated processing for NISAR data
+      - Cope with S1C (and ready for S1D) processing
+      - New "diagtoolbox"
+      - Allows asymetric zoom and geocoding (for single pair processing)
+      - Several new tools for small maintenance/check/repair tasks
+      - Some additional examples of cron scripts for automated processing, e.g. splitting the msbas inversion (freeze the unchanged beginning of the time series to speed processing time), coping with several acquisition modes etc... These new cron scripts are not documented in the manual. See scripts for info.   
+   5. Manual updated accordingly
+ 
+      
 - New in V 20241203:
   1. AMSTer Engine 20241203: 
   	- getSRTMDEM now replaces agregateSRTMfiles. It allows downloading SRTM tiles and stitch them in a DEM formatted for AMSTer (including referencing to ellipsoid) and creates water bodies mask. 
