@@ -29,6 +29,8 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 7.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 7.1 20250417:	- Get date where to store source from file name instead of 2nd param if source is named AMSTerEngineYYYYMMDDi.tar.xz where i may be a letter
+#								  If not named like taht a second parameter remains mandatory for archiving the source 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -50,9 +52,32 @@ source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
 
 
 NEWAMSTERENGINE=$1		# eg /Users/doris/SAR/AMSTer/AMSTerEngine/_Sources_AE/Older/V20231018_AMSTerEngine
-DATEAMSTERENGINE=$2		# eg YYYYMMDD
+filename="$(basename "${NEWAMSTERENGINE}")"
 
-if [ $# -lt 2 ] ; then echo  "Usage $0 PATH_TO_TAR DATE_OF_VERSION " ; exit; fi
+if [ $# -lt 1 ] ; then echo  "Usage $0 PATH_TO_TAR [DATE_OF_VERSION]" ; exit; fi
+
+if [ $# -eq 1 ] 
+	then 
+		if [[ "$filename" =~ ^AMSTerEngine([0-9]{8}[a-zA-Z]?)\.tar\.xz$ ]]
+			then
+				echo " // AMSTer Engine source is provdied with usual format, that is AMSTerEngineYYYYMMDDi.tar.xz," 
+				echo " //               where i is an optional letter if there is more than one version in that day"
+				DATEAMSTERENGINE="${BASH_REMATCH[1]}"
+				echo " // Hence source will be archived in dir named V${DATEAMSTERENGINE}_AMSTerEngine"
+			else 
+				echo " // AMSTer Engine source not provdied with usual format, that is AMSTerEngineYYYYMMDDi.tar.xz,"
+				echo " //                where i is an optional letter if there is more than one version in that day"
+				echo " // Hence the script needs to be provided with a second parameter as the date of the version :"
+				echo				
+				echo  "Usage $0 PATH_TO_TAR DATE_OF_VERSION " ; exit
+		fi
+fi
+
+if [ $# -eq 2 ] ; then 
+	DATEAMSTERENGINE=$2		# eg YYYYMMDD 
+fi
+
+echo 
 
 # Ask if want to install with parallelistaion
 while true; do

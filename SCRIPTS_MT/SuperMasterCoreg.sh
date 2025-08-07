@@ -73,13 +73,17 @@
 #								  swaths/bursts or size was not as expected during some cron job step 1
 # New in Distro V 4.0 20241015:	- multi level mask 
 # New in Distro V 4.1 20241202:	- debug PATHTOMASK
+# New in Distro V 4.2 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
+#								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
+# New in Distro V 4.3 20250805:	- Cope with NISAR data (not tested yet)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
+VER="Distro V4.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -132,6 +136,22 @@ FIRSTL=`GetParam "FIRSTL,"`					# Crop limits: first line to use
 LASTL=`GetParam "LASTL,"`					# Crop limits: last line to use
 FIRSTP=`GetParam "FIRSTP,"`					# Crop limits: first point (row) to use
 LASTP=`GetParam "LASTP,"`					# Crop limits: last point (row) to use
+COORDSYST=`GetParam "COORDSYST,"`			# COORDSYST, type of coordinates used to define crop: SRA (lines and pixels) or GEO
+
+	if [ "${CROP}" == "CROPyes" ] && [ "${COORDSYST}" == "" ]
+		then 
+			echo " COORDSYST not defined. I try to see if there is a dot in your coordinates for crop region. "
+			if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
+				then
+					echo "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
+					COORDSYST="GEO"
+				else
+					echo "None of the crop coordinates has a dot. Must hence be SRA coord system"
+					COORDSYST="SRA"
+			fi
+	fi
+
+REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 
 MLAMPLI=`GetParam "MLAMPLI,"`				# MLAMPLI, Multilooking factor for amplitude images reduction (used for coregistration - 4-6 is appropriate). If rectangular pixel, it will be multiplied by corresponding ratio.
 ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -238,7 +258,6 @@ XMAX=`GetParam "XMAX,"`						# XMAX, maximum X UTM coord of final Forced geocode
 YMIN=`GetParam "YMIN,"`						# YMIN, minimum Y UTM coord of final Forced geocoded product
 YMAX=`GetParam "YMAX,"`						# YMAX, maximum Y UTM coord of final Forced geocoded product
 
-REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 DEMNAME=`GetParam "DEMNAME,"`				# DEMNAME, name of DEM inverted by lines and columns
 
 MASSPROCESSPATH=`GetParam MASSPROCESSPATH`	# MASSPROCESSPATH, path to dir where all processed pairs will be stored in sub dir named by the sat/trk name (SATDIR/TRKDIR)
@@ -256,6 +275,14 @@ if [ `echo "${PROROOTPATH}" | grep "_Part_" 2>/dev/null | wc -w` -gt 0 ]
 fi
 
 source ${FCTFILE}
+
+# Test asymetric zoom - not allowed for mass processing 
+CheckZOOMasymetry
+if [ "${ZOOMONEVAL}" == "Two" ] 
+	then 
+		echo " Performing mass processing with asymetric zoom is not allowed yet. Exiting..." 
+		exit 
+fi
 
 # Get date of last AMSTer Engine source dir (require FCT file sourced above)
 GetAMSTerEngineVersion
@@ -276,6 +303,24 @@ eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
 eval RNDM1=`echo $(( $RANDOM % 10000 ))`
 
 case ${SATDIR} in 
+	"NISAR") 
+		# need this definition here for usage in GetParamFromFile
+		MASDIR=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SUPERMASTER}` 		 # i.e. if NISAR is given in the form of date, MASNAME is now the full name.csl of the image anyway
+
+   		# Check if the variable is empty
+   		if [ -z "${MASDIR}" ]; then
+   		    echo ""
+   		    EchoTee "! I cannot find the Global Primary (SuperMaster) ${SUPERMASTER} in folder ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop. Check the date of your Global Primary (SuperMaster) given in LaunchMTparam_. The script will exit."
+   		    echo ""
+   		    exit 1  # Exit the script with an error code
+   		fi
+   		echo ""
+   		EchoTee "Working with Global Primary (SuperMaster) with date ${SUPERMASTER}"
+   		EchoTee ""
+
+		S1MODE="DUMMY"  #Just un case... 
+
+		;;
 	"S1") 
 		# need this definition here for usage in GetParamFromFile
 		MASDIR=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SUPERMASTER}` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name.csl of the image anyway

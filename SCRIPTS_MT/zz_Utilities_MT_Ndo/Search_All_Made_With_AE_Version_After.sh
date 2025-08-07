@@ -8,6 +8,7 @@
 #			 	- type of products to search for:	CSL will search for image reading and DEM projection
 #													COREG will search for coregistration on SM
 #													PAIRS will search for processed pairs 
+#													AMPLI will search for processed pairs used for SAR_SM/AMPLITUDES
 #
 # Dependencies:	- gawk, gfind, ggrep
 #
@@ -17,14 +18,16 @@
 #
 #
 # New in Distro V 1.0 20240821:	- set up
+# New in Distro V 1.1 20250530:	- add option to check AMPLITUDES
+#								- correct typo in file naming: Processing_Pair[s]_w_AMSTerEngine_V.txt 
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 21, 2024"
+VER="Distro V1.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 30, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -161,13 +164,51 @@ case "${TYPE}" in
 	"PAIRS")
 			echo 
 			echo "// Search for mass processing pairs:"
-			echo "----------------------------"
+			echo "------------------------------------"
 
 			# ${PATHGNU}/gfind . -type f -name "Processing_Pairs_w_*.txt" -exec ${PATHGNU}/ggrep -H "Last created AMSTer Engine source dir suggest " {} \; | ${PATHGNU}/gawk -v given_date="${MASTERDATE}" '
 
 			${PATHGNU}/gfind . \
 			    -type d \( -name "Geocoded" -o -name "GeocodedRasters" -o -name "i12" \) -prune -o \
-			    -type f -name "Processing_Pairs_w_*.txt" -exec ${PATHGNU}/ggrep -H "Last created AMSTer Engine source dir suggest " {} \; | \
+			    -type f -name "Processing_Pair_w_*.txt" -exec ${PATHGNU}/ggrep -H "Last created AMSTer Engine source dir suggest " {} \; | \
+			    ${PATHGNU}/gawk -v given_date="${MASTERDATE}" '
+			{
+			    # Extract the filename and the matched line separately
+			    split($0, parts, ":")
+			    filepath = parts[1]
+			    line = parts[3]
+			   # print filepath
+			   # print line 
+			   # print
+			
+			   # Extract the directory path without the filename
+			    n = split(filepath, path_parts, "/")
+			    dirpath = ""
+			    for (i = 1; i < n; i++) {
+			        dirpath = dirpath path_parts[i] "/"
+			    }
+			
+			
+			    # Extract the date from the line
+			    match(line, /[0-9]{8}/, arr)
+			    file_date = arr[0]
+			
+			    # Compare the extracted date with the given date
+			    if (file_date > given_date) {
+			        #print filepath
+			        printf(dirpath "	processed with version:	" file_date "\n")
+			
+			    }
+			}'	
+		;;
+	"AMPLI")
+			echo 
+			echo "// Search for pairs used for AMPLITUES:"
+			echo "---------------------------------------"
+
+			${PATHGNU}/gfind . \
+			    -type d \( -name "i12" -o -name "_AMPLI"  \) -prune -o \
+			    -type f -name "Processing_Pair_w_*.txt" -exec ${PATHGNU}/ggrep -H "Last created AMSTer Engine source dir suggest " {} \; | \
 			    ${PATHGNU}/gawk -v given_date="${MASTERDATE}" '
 			{
 			    # Extract the filename and the matched line separately

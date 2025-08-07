@@ -40,13 +40,17 @@
 # New in Distro V 3.1 20241202:	- Mask before interpolation after unwrapping ok with the 3 version of masking methods (old 1=keep; intermediate 1,2=mask in one file, latest 1,2,3 are masked in multiple masks)
 #								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
 #								- take mask(s) basename only if exist  
+# New in Distro V 3.2 20250224:	- typo in byte2float.py 
+# New in Distro V 3.3 20250523:	- state that it allows asymetric zoom  
+#								- echo "n" instead of "y" when launching SinglePair.sh because we do not want by default to get the results coregistered on the supermatser 
+#								- mv masked coh only if APPLYMASKyes... 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
+VER="Distro V3.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 23, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -106,7 +110,7 @@ SUPERMASTER=`GetParam "SUPERMASTER,"`		# date of the Global Primary (supermaster
 
 FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are stored
 
-ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
 INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
 
 APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
@@ -286,7 +290,7 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 							else
 								EchoTeeYellow "First run, will run first pair to get the crop"
 								#   If SinglePair.sh ask if one want to benefit from former processing, answer no automatically
-								echo "y" | ${SOFT} ${MAS} ${SLV} ${PARAM}
+								echo "n" | ${SOFT} ${MAS} ${SLV} ${PARAM}
 
 								URRGC=`updateParameterFile ${PROROOTPATH}/${SATDIR}/${TRKDIR}/${MAS}_${SLV}_${REGION}_Zoom${ZOOM}_ML${INTERFML}/i12/TextFiles/InSARParameters.txt "Upper right range coordinate"`
 								URAZC=`updateParameterFile ${PROROOTPATH}/${SATDIR}/${TRKDIR}/${MAS}_${SLV}_${REGION}_Zoom${ZOOM}_ML${INTERFML}/i12/TextFiles/InSARParameters.txt "Upper right azimuth coordinate"`
@@ -308,7 +312,7 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 						fi 	
 
 						#   If SinglePair.sh ask if one want to benefit from former processing, answer no automatically
-						echo "y" | ${SOFT} ${MAS} ${SLV} ${PARAM}
+						echo "n" | ${SOFT} ${MAS} ${SLV} ${PARAM}
 
 						# Some specific things for Alex
 						# get header file opening slant range coherence with GIS software
@@ -327,7 +331,7 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 										EchoTee "  hence we must inverse the binarySlantRangeMask before multiply it with the coherence/"
 										# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
 										Swap_0_1_in_ByteFile.py ${TMPDIR}/i12/InSARProducts/binarySlantRangeMask
-										byte2Float.py ${TMPDIR}/i12/InSARProducts/binarySlantRangeMask_Swap01
+										byte2float.py ${TMPDIR}/i12/InSARProducts/binarySlantRangeMask_Swap01
 										mv -f ${TMPDIR}/i12/InSARProducts/slantRangeMask ${TMPDIR}/i12/InSARProducts/slantRangeMask_original
 										mv -f ${TMPDIR}/i12/InSARProducts/binarySlantRangeMask_Swap01 ${TMPDIR}/i12/InSARProducts/slantRangeMask
 										ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
@@ -340,7 +344,7 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 
 												# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
 												Swap_0_1_in_ByteFile.py ${TMPDIR}/i12/InSARProducts/thresholdedSlantRangeMask
-												byte2Float.py ${TMPDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+												byte2float.py ${TMPDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
 												mv -f ${TMPDIR}/i12/InSARProducts/slantRangeMask ${TMPDIR}/i12/InSARProducts/slantRangeMask_original
 												mv -f ${TMPDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${TMPDIR}/i12/InSARProducts/slantRangeMask
 												ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
@@ -350,14 +354,15 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 												ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
 										fi
 								fi
+								mv ${TMPDIR}/InSARProducts/${COHFILE}_X_slantRangeMask ${TMPDIR}/InSARProducts/${COHFILE}.masked
+
+								POL=`ls ${TMPDIR}/InSARProducts/interfero.??-?? | cut -d . -f 2`
+								cp ${TMPDIR}/InSARProducts/coherence.${POL}.ras.sh ${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh
+								${PATHGNU}/gsed -i "s/coherence.${POL}/${COHFILE}.masked/g" ${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh
+								cd ${TMPDIR}/InSARProducts/
+								${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh
 						fi
-						mv ${TMPDIR}/InSARProducts/${COHFILE}_X_slantRangeMask ${TMPDIR}/InSARProducts/${COHFILE}.masked
 	
-						POL=`ls ${TMPDIR}/InSARProducts/interfero.??-?? | cut -d . -f 2`
-						cp ${TMPDIR}/InSARProducts/coherence.${POL}.ras.sh ${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh
-						${PATHGNU}/gsed -i "s/coherence.${POL}/${COHFILE}.masked/g" ${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh
-						cd ${TMPDIR}/InSARProducts/
-						${TMPDIR}/InSARProducts/coherence.${POL}.ras_masked.sh
 						cd ${PROROOTPATH}/${SATDIR}/${TRKDIR}
 					
 						# store products in corresponding dir
@@ -366,7 +371,7 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 
 						mv -f ${TMPDIR}/InSARProducts/coherence*days ${OUTPUTDATA}/_ALL_COH_SLANTRG
 						mv -f ${TMPDIR}/InSARProducts/coherence*days.hdr ${OUTPUTDATA}/_ALL_COH_SLANTRG
-						mv -f ${TMPDIR}/InSARProducts/coherence*days.masked ${OUTPUTDATA}/_ALL_COH_SLANTRG
+						mv -f ${TMPDIR}/InSARProducts/coherence*days.masked ${OUTPUTDATA}/_ALL_COH_SLANTRG 2>/dev/null
 						if [ "${CALIBSIGMA}" == "SIGMAYES" ]
 							then
 								mv -f ${TMPDIR}/GeoProjection/*sigma0.UTM*deg ${OUTPUTAMPLIGEOC}

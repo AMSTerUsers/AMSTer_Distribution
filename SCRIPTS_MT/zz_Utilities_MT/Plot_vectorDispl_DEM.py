@@ -11,12 +11,13 @@
 #								(to crop and keep from 50 to 115 col and from 100 to 240 lines)
 #						or: - number of first Lines that where removed from DEM at processing 
 #							  as follow: --x_min 100 (to remove the 100 first lines to the north)
-#
-# Hardcoded:  - a threshold (in mm/yr) for small absolute values of displacement. 
+# 			  - a threshold (in mm/yr) for small absolute values of displacement. 
 # 				Pixels where magnitude of displ is below that threshold will be masked in vector plot.
-# 					
-#			  - the scale of the vector in the definition of plt.quiver (e.g. scale=2); larger makes vector smaller 
+# 				  	e.g.:	--threshold 0.003  	(default is 0.002)
+#			  - the scale of the vector in the definition of plt.quiver; larger makes vector smaller 
+#					e.g.:   --scalevalue 0.3	(default is 0.2)
 #			  - the downsampling rate (e.g. dwsple=3 will display one vector every 3 pixel)
+#					e.g.:   --dwsple 5			(default is 3)
 # 
 # Dependencies:	- python3.10 and modules below (see import)
 #
@@ -25,25 +26,27 @@
 # New in Distro V 1.1 20240625:	- comment show plot to allow continuing in cron script
 # 								- allows downsampling the plot (hardcoded)
 #								- correctly adjust the length of vector scale with fig
+# New in Distro V 1.2 20250103:	- set threshold, scale and downsampling as parameters 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024/01/16 - could make better with more functions... when time.
 ######################################################################################
 
-# vvvvvvvvv hard coded vvvvvvvvvvvvvv
-
-# Set a threshold for small absolute values of displacement. 
-#    Pixels where magnitude of displ is below that threshold will be masked in vector plot. 
-threshold = 0.002	# in m/yr
-
-# larger scale values make vectors smaller
-scalevalue=0.2
-
-# downsampling rate to plot vector plot with a vector for every 1/dwsple pixel (e.g. EW_NS_Vector_Displ_Downsampled_3.jpg)
-# Note that a full vector plot is also displayed (EW_NS_Vector_Displ.jpg)
-dwsple=3
-
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Now as parameters
+## vvvvvvvvv hard coded vvvvvvvvvvvvvv
+#
+## Set a threshold for small absolute values of displacement. 
+##    Pixels where magnitude of displ is below that threshold will be masked in vector plot. 
+#threshold = 0.002	# in m/yr
+#
+## larger scale values make vectors smaller
+#scalevalue=0.2
+#
+## downsampling rate to plot vector plot with a vector for every 1/dwsple pixel (e.g. EW_NS_Vector_Displ_Downsampled_3.jpg)
+## Note that a full vector plot is also displayed (EW_NS_Vector_Displ.jpg)
+#dwsple=3
+#
+## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 import numpy as np
 import sys
@@ -62,12 +65,17 @@ def main():
 	parser.add_argument('input_dem', type=str, help='Mandatory DEM')
 	parser.add_argument('input_ns_displ', type=str, help='Mandatory NS_displ')
 	parser.add_argument('input_ew_displ', type=str, help='Mandatory EW_displ')
-	
+
 	# Optional parameters
 	parser.add_argument('--x_min', type=int, nargs=1, help='Optional parameter 1: nr of first lines (i.e. to the North) to cut or x_min to crop ')
 	parser.add_argument('--x_max', type=int, nargs=1, help='Optional parameter 2:  x_max to crop ')
 	parser.add_argument('--y_min', type=int, nargs=1, help='Optional parameter 3: y_min to crop ')
 	parser.add_argument('--y_max', type=int, nargs=1, help='Optional parameter 4: y_max to crop ')
+
+	# New optional parameters
+	parser.add_argument('--threshold', type=float, default=0.002, help='Threshold for displacement magnitude (default: 0.002):  Pixels where magnitude of displ is below that threshold will be masked in vector plot. ')
+	parser.add_argument('--scalevalue', type=float, default=0.2, help='Scale value for the quiver plot (default: 0.2): larger scale values make vectors smaller')
+	parser.add_argument('--dwsple', type=int, default=3, help='Downsampling factor to plot vector plot with a vector for every 1/dwsple pixel (e.g. EW_NS_Vector_Displ_Downsampled_3.jpg) (default: 3)')
 
 	args = parser.parse_args()
 	print(' ')
@@ -75,6 +83,16 @@ def main():
 	print(f'input_dem: {args.input_dem}')
 	print(f'input_ns_displ: {args.input_ns_displ}')
 	print(f'input_ew_displ: {args.input_ew_displ} \n')
+
+	print('Optional Parameters:')
+	print(f'x_min: {args.x_min}')
+	print(f'x_max: {args.x_max}')
+	print(f'y_min: {args.y_min}')
+	print(f'y_max: {args.y_max}')
+	print(f'threshold: {args.threshold}')
+	print(f'scalevalue: {args.scalevalue}')
+	print(f'dwsple: {args.dwsple}\n')
+
 
 	# Initialize first_lines_to_discard and x_max to 0 by default
 	first_lines_to_discard = 0
@@ -266,7 +284,7 @@ def main():
 	#mask based on magnitude of displ (i.e. in ew and ns)
 	# Calculate the magnitude of the displacement vectors
 	magnitude = np.sqrt(ewdispl**2 + nsdispl**2)
-	mask = magnitude < threshold
+	mask = magnitude < args.threshold
 	
 	# Set vectors to NaN where ewdispl is smaller than the threshold
 	ewdispl[mask] = np.nan
@@ -284,6 +302,7 @@ def main():
 	
 	# Create a vector plot
 	#plt.quiver(range(columns_clip), range(lines_clip), ewdispl, nsdispl, color='red', scale=2)
+	scalevalue = args.scalevalue
 	q = plt.quiver(range(columns), range(lines), ewdispl, nsdispl, color='red', scale=scalevalue)
 	plt.quiverkey(q,0.3,0.9,0.01 / scalevalue,"0.01 m/yr",coordinates='figure',color='red')
 
@@ -325,8 +344,11 @@ def main():
 	y = np.arange(0, lines)
 
 	# Use slicing to select every dwspleth element
+	dwsple = args.dwsple
+	
 	x_subsampled = x[::dwsple]
 	y_subsampled = y[::dwsple]
+	
 	ewdispl_subsampled = ewdispl[::dwsple, ::dwsple]
 	nsdispl_subsampled = nsdispl[::dwsple, ::dwsple]
 	

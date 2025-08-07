@@ -1,3 +1,257 @@
+/* AMSTerEngine20250730 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReaderLib: Correction of a bug recently introduced that might lead to crash in burst concatenation when range shift of interpolated slave image was negative. Shift variable was erroneously declared as unsigned. 
+
+/* AMSTerEngine20250722 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Adding blahblah when reading in burst fail in order to better understand reason of failure. 
+SentinelDataDownloader: bug correction at closure (non allocated pointer was erroneously freed)
+
+/* AMSTerEngine20250718 (© DD & SAREOS) */
+/* ************************************ */
+SentinelDataDownloader: Apparently, some images ancillary data do not contain correct data length on COPERNICUS server.
+    Now re-reading is only activated if read data has a size smaller than expected one. 
+    Bug correction in credential reading. 
+    
+baselinPlot: Correction of an erroneous determination of the super master image in case this one is by chance the oldest of the time serie. 
+
+/* AMSTerEngine20250709 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductsGeneration: Numerous corrections of mismatches in the computing of range - azimuth position in the master image when dealing with a super master. 
+
+/* AMSTerEngine20250708 (© DD & SAREOS) */
+/* ************************************ */
+updateS1Orbit: Memorizing credentials to avoid having to re-select user and password when several are available in netrc file for the same server. 
+initInSAR: double free correction.
+
+/* AMSTerEngine20250612 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: Some clarification in help message. 
+	Big correction in resampling by averaging. There was an error lasting since years making it totally wrong. 
+	
+/* AMSTerEngine20250611 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: Some ETAD corrections and verifications. 
+InSARProductsGeneration: Now, in case asking for S1 image calibration, out of range sigma0 values (below -30db) are set to NaN to avoid being projected. 
+
+/* AMSTerEngine20250606 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: ETAD integration. 
+makefile: Some modifications to cope with ETAD integration and additional netcdf lib use. 
+
+/* AMSTerEngine20250605 (© DD & SAREOS) */
+/* ************************************ */
+AMSTerEngine project synchronized on Framagit.
+
+/* AMSTerEngine20250604 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductGeneration: Correction in ETAD burst superposition. Burst affine transform wasn't correctly taken into account.
+S1DataReaderLib: Bug correction in burst concatenation that occured when reading/coregistering partial images not starting at first swath. 
+
+
+/* AMSTerEngine20250602 (© DD & SAREOS) */
+/* ************************************ */
+S1InSARLib.c: Burst alignment correction to cope with recent modifications. 
+	Correction of InSAR parameter saving in case interpolated save image is smaler than initial one due to burst selection.
+updateS1Orbits: Correction of COPERNICUS credential management in case more than a single account is mentionned in .netrc file.
+getSRTMDEM: Still a correction in destination path when specifying only an output name for the DEM. 
+S1Coregistration: Correction in master image copy in case InSAR burst selection requires it.
+
+/* AMSTerEngine20250528 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReaderLib.c: Big bug correction in burst alignment. Bug present in all versions from 20250424. 
+	Correction of an older bug when saving infoImage.txt. Strangely, this bug should have induced a systematic crash. Revealed only through WSL (Windows Subsystem for Linux). 
+getSRTMDEM: Bug correction in destination path when specifying an output name for the DEM. 
+
+/* AMSTerEngine20250521 (© DD & SAREOS) */
+/* ************************************ */
+updateS1Orbit: Adaptation to cope with COPERNICUS credential management change. 
+InSARProductsGeneration: Bug correction in positioning within ETAD burst layers.
+	Bug correction oin sigma0 calibration. Incidence angle was wrongly calculated or even not calculated. 
+
+/* AMSTerEngine20250520 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductGeneration: Full ETAD integration.
+	Remark: Option allowing to compute interferogram without orbital phase removal was changed from -E to -N to avoid confusion with ETAD flag. 
+S1DataDownloader: COPERNICUS credential management change to avoid re-asking them and so waiting for user's input.
+	Bug correction (wrong free) at end of routine. 
+	If already present, ETAD data is re-downloaded in case its size is not correct. 
+ETADDataReader: Bug correction: wrong free. 
+
+/* AMSTerEngine20250429 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Correction of bug recently introduced in burst alignment when assembling SLC data. 
+
+
+/* AMSTerEngine20250425 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Modification of master image burst management when it needs to be copied within working directory. 
+	Now, master and slave images may differ in number of swath in addition to differ in number of burst within each swath. 
+
+/* AMSTerEngine20250424 (© DD & SAREOS) */
+/* ************************************ */
+Inclusion of netcdf libraries.
+Makefile modifications.
+ETADDataReader: New tool to read downloaded and uncompressed ETAD files and save ETAD data in corresponding burst of .csl Sentinel1 images.
+
+/* AMSTerEngine20250423 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Removal of BurstId reading since this latter one is not present in older S1 annotations. Using other trick to identify ETAD data corresponding to each read burst. 
+
+/* AMSTerEngine20250417 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductGeneration: Bug correction in mask management. When a slant range Mask was not available but event masks were well available, combined slant range mask was wrongly initialized. 
+
+/* AMSTerEngine20250415 (© DD & SAREOS) */
+/* ************************************ */
+SentinelDataDownloader: renaming of S1DataDownloader into SentinelDataDownloader.
+	Now, S2MSI1C and S2MSI1A data download is also available. 
+	Bug correction leading to a crash at end of process (non allocated pointer freed). 
+
+/* AMSTerEngine20250414 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: 
+	Valgrind memory check of burst stitching ---> OK. 
+	No error detected. 
+	==30961== HEAP SUMMARY:
+	==30961==     in use at exit: 0 bytes in 0 blocks
+	==30961==   total heap usage: 1,390,268 allocs, 1,390,268 frees, 2,040,258,586 bytes allocated
+	==30961== 
+	==30961== All heap blocks were freed -- no leaks are possible
+	==30961== 
+	==30961== For lists of detected and suppressed errors, rerun with: -s
+	==30961== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+
+	Adding some space in sub swath azimuth line storage to tackle possible global range shifts between stitched frames (10 additionnal pixels). 
+	
+S1DataDownloader: 
+	Bug correction: pointer wrongly freed when not using option -r. 
+	Correction in end date management. 
+	
+/* AMSTerEngine20250408 (© DD & SAREOS) */
+/* ************************************ */
+cutAndZoom: Correction in case aoi is all zero and GEO is set. In which case, it is simply considered as SRA.
+S1DataReader: Correction of number of valid pixel to copy from a given line in a burst. 
+
+/* AMSTerEngine20250401 (© DD & SAREOS) */
+/* ************************************ */
+EnviSATDataReader: Bulk reading or parameter file-based reading gathered in a single routine like for other readers. 
+
+/* AMSTerEngine20250401 (© DD & SAREOS) */
+/* ************************************ */
+EnviSATBulkDataReader: Removal of disgraceful (dixit NdO) message concerning not found orbit in case of ERS data reading.
+		Addition of kml generation. 
+
+/* AMSTerEngine20250328 (© DD & SAREOS) */
+/* ************************************ */
+cutAndZoom: Correction in slant range area management. 
+
+/* AMSTerEngine20250327 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Bug correction in destination directory management. 
+		Bug correction in read frame listing management. 
+
+/* AMSTerEngine20250320 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Allocation bug correction. 
+		Uncommenting dowload makes things works better.
+		Another time management correction.
+
+/* AMSTerEngine20250320 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Addition of ETAD data download. Option -ETAD allows downloading ETAD products alone. Option +ETAD allows downloading available ETAD products corresponding to downloaded SAR data. 
+Stripmap data download is back, but option -S must be followed by the beam number.
+
+/* AMSTerEngine20250303 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: EW productType correction in request. Old definition lead unsuccesfull data search. Same problem with SM that should now be search by sub-beam in place of being global. Will be corrected later. Meanwhile option SM is deactivated. 
+
+interferogramFiltering: Bug correction recently introduced in tileToolLib also used for NISAR data reader. 
+
+/* AMSTerEngine20250228 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Stupid bug correction. Unitilized variable might lead to skipping reading uncompressed data. 
+
+/* AMSTerEngine20250227 (© DD & SAREOS) */
+/* ************************************ */
+Addition of HDF5 version management in the new hdf5DataReaderLib currently in development for NISAR data to avoid compilation error on some systems. 
+
+/* AMSTerEngine20250225 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Adding forgotten management of slantRangeMask in case of master image copy within InSAR processing directory. 
+
+/* AMSTerEngine20250222 (© DD & SAREOS) */
+/* ************************************ */
+S1BurstCounter: Bug correction in link naming when not using option -d.
+
+/* AMSTerEngine20250214 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductsGeneration: Minimal calibration value set to -30dB in place of 25. Apparently, Sentinel1C stripmap images have lower noise than S1A justifying lower sigma0 limit.
+
+/* AMSTerEngine20250212 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Bug correction in date time interval handling leading to infinite loop.
+
+
+/* AMSTerEngine20250209 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Bug correction in date time interval handling.
+
+/* AMSTerEngine20250203 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader:   - It may appear in the COPERNICUS data base that an S1 image is not a slice of a data take but a specific refocusing. If such an image is present, the frame it represents was previously considered and add in the image while it shouldn't. A switch was added to only consider effective slices (frames).
+                - Logging cleaning. 
+
+S1BurstCounter: Bug correction in burst structure comparision with reference image. 
+
+/* AMSTerEngine20250127 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Correction of a bug leading to a crash if no images were to be read. 
+S1DataReader: Correction of a bug recently introduced in the per burst kml and SLCInfoImage management. 
+	Correction of a bug in handling -s option to read and concatenate burst into image. 
+
+/* AMSTerEngine20250127 (© DD & SAREOS) */
+/* ************************************ */
+S1BurstCounter: Selection was previously base on common polarization schemes. Now, one can use a preferred polarization scheme to select images through option P=XX. In this way, if the reference image has polarization scheme (VV, VH), images having solely the VV polarization scheme will not be rejected using P=VV. 
+
+/* AMSTerEngine20250123 (© DD & SAREOS) */
+/* ************************************ */
+New tool development: S1BurstCounter.
+S1BurstCounter -h: 
+Usage: 
+-1- S1BurstCounter ./inputDir [outputDir]
+-2- S1BurstCounter /pathToRefImage [outputDir]
+
+As its name states it S1BurstCounter counts bursts in all S1 images found in given directoy.
+First S1 image found in input directory will be used as reference.
+It then save links to all S1 images having corresponding bursts with reference one in destination directory.
+If output directory is not given, it is created with name ./BurstChecked in input directory. 
+It also accepts a reference .csl image as input in which case the directory containing this reference image will be considered as input directory. 
+If destination directory already containes links to S1 images, the first linked image will be considered as reference.
+
+
+/* AMSTerEngine20250120 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: Correction in saving kml's and SLCImageInfo's text files when merging frames. 
+		Now, listing of already read frames is saved and updated to speed up subsequent reading.  
+
+/* AMSTerEngine20250117 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader: If several logins exists for the COPERNICUS server, it is proposed to chose the one to be used. 
+
+/* AMSTerEngine20250115 (© DD & SAREOS) */
+/* ************************************ */
+S1DataDownloader & S1DataReader: Modification in common handling for correct option transfer from one to the other routine ant for correct logging. 
+
+/* AMSTerEngine20250113 (© DD & SAREOS) */
+/* ************************************ */
+cutAndZoom: Correction of slant range azimuth crop.
+initInSAR: Double free bug correction. 
+
+/* AMSTerEngine20241212 (© DD & SAREOS) */
+/* ************************************ */
+coarseCoregistration: Low pass filter re-activated. Option -f slightly modified: Search is done on a full window but on a border of a height of window width to exclude false positive anchor points. 
+
 /* AMSTerEngine20241210 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: .flip (or .flop) products are not projected anymore. 

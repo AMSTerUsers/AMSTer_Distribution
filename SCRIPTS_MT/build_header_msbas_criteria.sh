@@ -84,13 +84,17 @@
 # New in Distro V 9.4 20240919:	- remove first empty line (if any) in files before comparing 
 #								  with grep -Fvf in order to avoid resulting empty file
 #								- make grep -Fvf with fct LinesInFile2NotInFile1, where FILE 1 si sort and uniq for safety
+# New in Distro V 9.5 20250114:	- avoid error message when incidence files etc from a mode do not exist 
+# New in Distro V 9.6 20250401:	- make grep search case insensitive for Samples and lines 
+#								- check if raster exist before creating link 
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 19, 2024"
+VER="Distro V9.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 01, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -503,12 +507,12 @@ PrepareModeI()
  				#NAN=`checkNaN.py ${ORIGINALTARGET}`
  				if [ "${NAN}" == "nan" ]
  					then 
-  						ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
+   						if [ -f ${PATHRAS}/${FILEONLY}.ras ]  ; then ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras ; fi
   						ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
   						echo "  // Do not copy ${LINE}"
   						echo "  //   because full of NaN - reprocess if possible."
   					else 
- 						if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
+ 						if [ ! -f Rasters/${FILEONLY}.ras ] && [ -f ${PATHRAS}/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
  						if [ ! -f ${FILEONLY} ] 
  							then 
  								ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
@@ -561,13 +565,13 @@ PrepareModeI()
  								NAN=`checkNaN.py  ${PATHMODE}/${FILEONLY} float32`
  								if [ "${NAN}" == "nan" ]
  									then 
- 										ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
+  										if [ -f ${PATHRAS}/${FILEONLY}.ras ]  ; then ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras ; fi
  										ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
  
  										echo "  // Do not copy ${LINE}"
  										echo "  //   because full of NaN - reprocess if possible."
  									else 
- 										if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
+ 										if [ ! -f Rasters/${FILEONLY}.ras ] && [ -f ${PATHRAS}/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
  										if [ ! -f ${FILEONLY} ] 
  											then 
  												ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
@@ -623,8 +627,8 @@ wait
 
 # Header.txt 
 rm -f header.txt
-NRLINES=`${PATHGNU}/grep "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
-NRCOLMSS=`${PATHGNU}/grep "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
+NRLINES=`${PATHGNU}/grep -i "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
+NRCOLMSS=`${PATHGNU}/grep -i "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
 WINLINES=`expr "$NRLINES" - 1`
 WINCOLMS=`expr "$NRCOLMSS" - 1`
 echo 	"FORMAT = 0" 	> header.txt 			# Small/Big endian
@@ -641,36 +645,57 @@ echo	"I_FLAG = 0"  >> header.txt  		# 0= auto run; 1= ask for coord of pix for t
 for ((i=1;i<=${NRMODES};i++));
 do 
 	# Remove white lines before computing average
-	${PATHGNU}/gsed -i ' /^$/d' IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
-	${PATHGNU}/gsed -i ' /^$/d' LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
+	${PATHGNU}/gsed -i ' /^$/d' LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt 2>/dev/null
 
-	${PATHGNU}/gsed -i ' /^$/d' Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
-	${PATHGNU}/gsed -i ' /^$/d' AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt
-	
-	AVGINCID[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt`
-	AVGHEAD[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt `
-
-	# Change time in sec for average computation
-	cat AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt | ${PATHGNU}/gawk '{gsub(/../, "& ",$1); split($1, a, FS); print (a[1] * 3600) + (a[2] *60) + a[3]}' > AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
-	# Get average time in sec
-	ACQTIMESEC[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt`
-	# back in hhmmss
-	ACQTIME[${i}]=`echo "${ACQTIMESEC[${i}]}" | awk  '{ h = int($1 / 3600) ; m = int((($1 / 3600)-h ) * 60) ; sec = int($1 - ((3600 * h ) + ( 60 * m))) ; printf("%02d%02d%02d\n", h, m, sec) }'`  # ensure that all a integer and 2 digits long
-
-	rm -f AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
-
-
-	# Check if Right or Left looking
-	# get one image in mode 
-	sort -u LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt -o LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt	# sort and remove duplicate lines in LookDirection file.
-	# I suppose that all acquisition are taken in the same looking geom, hence one can take the first line of the supposed one line LookDirection_... file 
-	LOOKDIR=`head -1 LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt` 
-	
-	if [ "${LOOKDIR}" == "Left looking" ] 
-		then 
-			AVGINCID[${i}]="-${AVGINCID[${i}]}"
+	if [ -f "IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] && [ -s "IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] 
+		then
+			# Remove white lines before computing average
+			${PATHGNU}/gsed -i ' /^$/d' IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt 
+			AVGINCID[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt`
+		else 
+			echo "  No IncidenceAngles_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt; mode may have no data (yet)"
 	fi
 
+	if [ -f "Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] && [ -s "Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] 
+		then
+			# Remove white lines before computing average
+			${PATHGNU}/gsed -i ' /^$/d' Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt 
+			AVGHEAD[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt `
+		else 
+			echo "  No Heading_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt; mode may have no data (yet)"
+	fi
+
+	if [ -f "AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] && [ -s "AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] 
+		then
+			# Remove white lines before computing average
+			${PATHGNU}/gsed -i ' /^$/d' AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt 2>/dev/null
+			# Change time in sec for average computation
+			cat AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt | ${PATHGNU}/gawk '{gsub(/../, "& ",$1); split($1, a, FS); print (a[1] * 3600) + (a[2] *60) + a[3]}' > AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
+			# Get average time in sec
+			ACQTIMESEC[${i}]=`${PATHGNU}/gawk '{ total += $1 } END { print total/NR }' AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt`
+			# back in hhmmss
+			ACQTIME[${i}]=`echo "${ACQTIMESEC[${i}]}" | awk  '{ h = int($1 / 3600) ; m = int((($1 / 3600)-h ) * 60) ; sec = int($1 - ((3600 * h ) + ( 60 * m))) ; printf("%02d%02d%02d\n", h, m, sec) }'`  # ensure that all a integer and 2 digits long
+		
+			rm -f AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days_InSec.txt
+		else 
+			echo "  No AcquisitionTime_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt; mode may have no data (yet)"
+	fi
+
+	if [ -f "LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] && [ -s "LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt" ] 
+		then
+			# Check if Right or Left looking
+			# get one image in mode 
+			sort -u LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt -o LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt	# sort and remove duplicate lines in LookDirection file.
+			# I suppose that all acquisition are taken in the same looking geom, hence one can take the first line of the supposed one line LookDirection_... file 
+			LOOKDIR=`head -1 LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt` 
+			
+			if [ "${LOOKDIR}" == "Left looking" ] 
+				then 
+					AVGINCID[${i}]="-${AVGINCID[${i}]}"
+			fi
+		else 
+			echo "  No LookDirection_$MODE${i}_Max${MAXBP}m_Max${MAXBT}days.txt; mode may have no data (yet)"
+	fi
 
 	case ${MSBAS} in 
 		msbasv4)
@@ -679,6 +704,13 @@ do
 			#   SET=1, ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt - for insar azimuth measurements
 			echo "SET = 0, ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt"  >> header.txt 
 			;;
+		msbasv10)
+			#msbasv10 needs	
+			# ... check
+			echo "BEWARE:  msbasv10 header.txt creation not tested yet. Check manually"
+			echo "SET = 0, ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt"  >> header.txt 
+			;;
+
 		*)
 			echo "SET = ${ACQTIME[${i}]}, ${AVGHEAD[${i}]}, ${AVGINCID[${i}]}, ${MODE}${i}.txt"  >> header.txt
 			;;

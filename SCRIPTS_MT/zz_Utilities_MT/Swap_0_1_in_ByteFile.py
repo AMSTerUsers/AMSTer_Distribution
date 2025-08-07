@@ -10,6 +10,7 @@
 # launch command : python thisscript.py param1 
 #
 # New in Distro V 1.0 20241128:	- setup
+# New in Distro V 1.1 20241223:	- remove backslash in printf to avoid error message
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -41,7 +42,7 @@ try:
     # Save the modified data to the output file
     output_data.tofile(output_file)
 
-    print(f"\Swap 0 and 1 completed. Modified file saved as '{output_file}'.")
+    print(f"Swap 0 and 1 completed. Modified file saved as '{output_file}'.")
 
 
 except FileNotFoundError as e:

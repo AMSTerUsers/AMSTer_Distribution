@@ -38,13 +38,18 @@
 #								- check netrc to access SRTM from NASA
 #								- networkx
 # New in Distro V 4.4 20241126:	- check python module scikit-gstat
+# New in Distro V 4.5 20250227:	- check python module geopandas 
+#								- correct test module scikit-gstat
+# New in Distro V 4.6 20250303:	- add module diagtoolbox
+#								- add python3 rasterio
+# New in Distro V 4.7 20250325:		- add python3 modules for diagtoolbox: pandas, argparse, glob2, pickle, statistics
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# NdO (c) 2020/06/15 - could make better... when time.
-# -----------------------------------------------------------------------------------------
+# N.d'Oreye, v Beta 1.0 2022/08/31 -                         
+######################################################################################
 PRG=`basename "$0"`
-VER="Distro V4.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2020, Last modified on Nov 26, 2024"
+VER="version 4.7 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Mar 25, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -523,6 +528,16 @@ echo "Directories in \$PATH in bashrc:"
 					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software optimtoolbox SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
 			fi
 
+			# test if diagtoolbox  ok as well 
+			WHICHSCRIPTSUTIL=diagtoolbox
+			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
+			if [ $TMP -ge 1 ] 
+				then 
+					printf "%-60s%-20s\n" "--> AMSTer Software diagtoolbox SCRIPTS in \$PATH:" "$(tput setaf 2)passed	($WHICHSCRIPTS/$WHICHSCRIPTSUTIL)$(tput sgr 0)"
+				else 
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> AMSTer Software diagtoolbox SCRIPTS in \$PATH:" "failed $(tput sgr 0)"
+			fi
+
 			# test if TemplatesForPlots  ok as well 
 			WHICHSCRIPTSUTIL=TemplatesForPlots
 			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHSCRIPTS | wc -l)
@@ -568,6 +583,15 @@ echo "Directories in \$PATH in bashrc:"
 				printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> $(basename ${VERMSBAS})  in \$PATH:" "failed $(tput sgr 0)"
 		fi
 	done  
+
+	WHICHMSBAS3D=$(dirname $(which msbasv4_3D)  2>/dev/null)
+	TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHMSBAS3D  2>/dev/null | wc -l)
+	if [ $TMP -ge 1 ] 
+		then 
+			printf "%-60s%-20s\n" "--> msbasv4_3D in \$PATH:" "$(tput setaf 2)passed	($WHICHMSBAS3D)$(tput sgr 0)"
+		else 
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> msbasv4_3D  in \$PATH:" "not installed, which is normal unless you have high diversity of looking geometries to invert $(tput sgr 0)"
+	fi
 
 	TMP=$(echo $PATH | ${PATHGNU}/grep "/SAR/EXEC"| wc -l)
 	if [ $TMP -ge 1 ]
@@ -762,8 +786,13 @@ if [ "${TSTMODULES}" == "YES" ]
 		TestPythonModule networkx /opt/local/bin/python
 		TestPythonModuleQt PyQt6.QtWidgets QApplication /opt/local/bin/python
 		TestPythonModule shapely /opt/local/bin/python
-		TestPythonModule scikit-gstat /opt/local/bin/python
-		
+		TestPythonModule skgstat /opt/local/bin/python
+		TestPythonModule geopandas /opt/local/bin/python
+		TestPythonModule rasterio /opt/local/bin/python
+		TestPythonModule pandas /opt/local/bin/python
+		TestPythonModule argparse /opt/local/bin/python
+		TestPythonModule glob2 /opt/local/bin/python
+	
 		case ${OS} in 
 			"Linux") 
 				TestPythonModule opencv /opt/local/bin/python

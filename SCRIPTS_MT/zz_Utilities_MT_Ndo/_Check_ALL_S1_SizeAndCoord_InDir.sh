@@ -9,7 +9,9 @@
 #
 # Parameters:	- PATH to DIR where image in CSL format are stored (e.g. /${PATH_1650}/SAR_CSL/S1/TRK/NoCrop/)
 #				- either expected nr of bursts OR "Dummy" to simply read the nr of bursts and coordinates of an image
-#				And if test against expected kml footprint (within hardcoded TOLERANCE):
+#				- And if test against a kml file (no TOLERANCE needed):
+#					- path to kml 
+#				  Or if test against expected kml footprint coordinates (within hardcoded TOLERANCE):
 #					- expected (0;0) longitude 
 #					- expected (0;0) latitude 
 #					- expected (maxRange;0) longitude 
@@ -18,7 +20,7 @@
 #					- expected (0;maxAzimuth) latitude 
 #					- expected (maxRange;maxAzimuth) longitude 
 #					- expected (maxRange;maxAzimuth) latitude 
-#				Or if test against expected area of interest (no TOLERANCE needed):
+#				  Or if test against expected area of interest (no TOLERANCE needed):
 #					- expected min long
 #					- expected max long 
 #					- expected min lat 
@@ -30,6 +32,7 @@
 #
 # Dependencies:	- bc
 #				- gsed
+#				- Check_burst_coverage_kml.py
 # 
 # New in V 1.1:	- typo in __Good and __Wrong images files to remove when older than 15 days
 # New in V 1.2:	- yet another typo in __Wrong images files to remove when older than 15 days
@@ -38,103 +41,179 @@
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 2.1 2024022:	- If image is good and was in TMP_QUARANTINE, remove it from that dir
+# New in Distro V 3.0 20250226:	- can also be compared against a kml  
+#								- some cosmetic and correction of messages displayed when incorrect input provided
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 22, 2024"
+VER="Distro V3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 26, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
-TOLERANCEDISPLAY=`${PATHGNU}/ggrep "TOLERANCE=" ${PATH_SCRIPTS}/SCRIPTS_MT/zz_Utilities_MT_Ndo/_Check_S1_SizeAndCoord.sh`
+TOLERANCEDISPLAY=$(${PATHGNU}/ggrep "TOLERANCE=" "${PATH_SCRIPTS}/SCRIPTS_MT/zz_Utilities_MT_Ndo/_Check_S1_SizeAndCoord.sh")
+
+IMGPATH=${1}	   			# PATH to image in CSL format (e.g. /${PATH_1650}/SAR_CSL/S1/TRK/NoCrop/)
+EXPECTEDNRBURSTS=${2}	   # expected nr of bursts (OR Dummy to simply read the coordinates of the corners)
 
 # Check parameters
-	case $# in
-		6) 
-			echo " // Probably searching image footprint against AOI coordinates; no TOLERANCE needed"	
-			;;
-		10)
-			echo " // Probably searching image footprint against expected bursts, within TORELANCE from _Check_S1_SizeAndCoord.sh, that is ${TOLERANCEDISPLAY}"
-			;;
-		*) 
-			if [ "$2" != "Dummy" ] ; then 
-				echo "Usage $0 PATH N MinRgMinAzLong MinRgMinAzLat MaxRgMinAzLong MaxRgMinAzLat MinRgMaxAzLong MinRgMaxAzLat MaxRgMaxAzLong MaxRgMaxAzLat (coordinates from kml) " 
+case $# in
+	3)
+		echo " // Probably searching image footprint against kml; no TOLERANCE needed"	
+		EXPECTEDMINRGMINAZLONG=${3}	# expected kml to area to averlap
+		CHECKTYPE="KML"				# i.e. use Check_burst_coverage_kml.py
+		;;
+	6) 
+		echo " // Probably searching image footprint against AOI coordinates; no TOLERANCE needed"	
+		EXPECTEDMINRGMINAZLONG=${3}	# expected (0;0) longitude 
+		EXPECTEDMINRGMINAZLAT=${4}	# expected (0;0) latitude 
+		EXPECTEDMAXRGMINAZLONG=${5}	# expected (maxRange;0) longitude 
+		EXPECTEDMAXRGMINAZLAT=${6}	# expected (maxRange;0) latitude 
+		CHECKTYPE="COORD"			# i.e. use _Check_S1_SizeAndCoord.sh
+		;;
+	10)
+		echo " // Probably searching image footprint against expected bursts, within TORELANCE from _Check_S1_SizeAndCoord.sh, that is ${TOLERANCEDISPLAY}"
+		EXPECTEDMINRGMINAZLONG=${3}	# expected (0;0) longitude 
+		EXPECTEDMINRGMINAZLAT=${4}	# expected (0;0) latitude 
+		EXPECTEDMAXRGMINAZLONG=${5}	# expected (maxRange;0) longitude 
+		EXPECTEDMAXRGMINAZLAT=${6}	# expected (maxRange;0) latitude 
+		EXPECTEDMINRGMAXAZLONG=${7}	# expected (0;maxAzimuth) longitude 
+		EXPECTEDMINRGMAXAZLAT=${8}	# expected (0;maxAzimuth) latitude 
+		EXPECTEDMAXRGMAXAZLONG=${9}	# expected (maxRange;maxAzimuth) longitude 
+		EXPECTEDMAXRGMAXAZLAT=${10}	# expected (maxRange;maxAzimuth) latitude 
+		CHECKTYPE="COORD"			# i.e. use _Check_S1_SizeAndCoord.sh
+		;;
+	*) 
+		if [ "$2" != "Dummy" ] 
+			then 
+				echo "Usage :"
+				echo "    $0 PATH N MinRgMinAzLong MinRgMinAzLat MaxRgMinAzLong MaxRgMinAzLat MinRgMaxAzLong MinRgMaxAzLat MaxRgMaxAzLong MaxRgMaxAzLat (coordinates from kml) " 
 				echo " or $0 PATH N ExpectedMinLong ExpectedMaxLong ExpectedMinLat ExpectedMaxLat (coordinates of Area Of Interest) "
+				echo " or $0 PATH N PathToKML "
 				echo " Where:"
 				echo "	N = expected number of bursts "
-				echo "	PATH = Path to image in CSL format (e.g. /${PATH_1650}/SAR_CSL/S1/TRK/NoCrop/S1i_ORB_DATE_x.csl)"	
+				echo "	PATH = Path to where images are stored in CSL format (e.g. /${PATH_1650}/SAR_CSL/S1/TRK/NoCrop/)"	
 				echo ""
 				exit
-			fi
-				;;
-	
-	esac
-
-
-IMGPATH=${1}	   # PATH to image in CSL format (e.g. /${PATH_1650}/SAR_CSL/S1/TRK/NoCrop/)
-EXPECTEDNRBURSTS=${2}	   # expected nr of bursts (OR Dummy to simply read the coordinates of the corners)
-EXPECTEDMINRGMINAZLONG=${3}	# expected (0;0) longitude 
-EXPECTEDMINRGMINAZLAT=${4}	# expected (0;0) latitude 
-EXPECTEDMAXRGMINAZLONG=${5}	# expected (maxRange;0) longitude 
-EXPECTEDMAXRGMINAZLAT=${6}	# expected (maxRange;0) latitude 
-EXPECTEDMINRGMAXAZLONG=${7}	# expected (0;maxAzimuth) longitude 
-EXPECTEDMINRGMAXAZLAT=${8}	# expected (0;maxAzimuth) latitude 
-EXPECTEDMAXRGMAXAZLONG=${9}	# expected (maxRange;maxAzimuth) longitude 
-EXPECTEDMAXRGMAXAZLAT=${10}	# expected (maxRange;maxAzimuth) latitude 
-
+			else 
+				echo " Probably only reading coordinates of corners of all S1 images in dir."
+				CHECKTYPE="VERIF"
+		fi
+			;;
+esac
 
 eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
 eval RNDM1=`echo $(( $RANDOM % 10000 ))`
 
 # Go to appropriate dir
 cd ${IMGPATH}
-
 # make log files
 echo "Images with UNKNOWN status (see _Check_S1_SizeAndCoord.sh), i.e. read with old version of AMSTerEngine (or wrong image?)" > __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt
-echo "Images with FAIL status (see _Check_S1_SizeAndCoord.sh), i.e. wrong nr of bursts and/or corner coordinates" > __Wrong_Images_${RUNDATE}_${RNDM1}.txt
-echo "Images with OK status (see _Check_S1_SizeAndCoord.sh), i.e. good nr of bursts and corner coordinates" > __Good_Images_${RUNDATE}_${RNDM1}.txt
+echo "Images with FAIL status (see _Check_S1_SizeAndCoord.sh or Check_burst_coverage_kml.py), i.e. wrong nr of bursts and/or corner coordinates" > __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+echo "Images with OK status (see _Check_S1_SizeAndCoord.sh or Check_burst_coverage_kml.py), i.e. good nr of bursts (${EXPECTEDNRBURSTS}) and corner coordinates" > __Good_Images_${RUNDATE}_${RNDM1}.txt
 
-find ${IMGPATH} -maxdepth 1 -type d -name "*.csl" | while read IMGNAME 
-do 
-	# get status
-	STATUS=`_Check_S1_SizeAndCoord.sh ${IMGNAME} ${EXPECTEDNRBURSTS} ${EXPECTEDMINRGMINAZLONG} ${EXPECTEDMINRGMINAZLAT} ${EXPECTEDMAXRGMINAZLONG} ${EXPECTEDMAXRGMINAZLAT} ${EXPECTEDMINRGMAXAZLONG} ${EXPECTEDMINRGMAXAZLAT} ${EXPECTEDMAXRGMAXAZLONG} ${EXPECTEDMAXRGMAXAZLAT} | tail -1 | cut -d : -f 2  | ${PATHGNU}/gsed "s/ //g" `
-	case ${STATUS} in 
-		"UNKNOWN") 
-			echo "Can't check image because  ${IMGNAME}/Info/burstSelection.txt is missing (may be read with old version of AMSTerEngine and fine, or be wrong image...)" 
-			echo "${IMGNAME} status is UNKNOWN" >> __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt
+case ${CHECKTYPE} in
+	"COORD")
+			for IMGNAME in $(find ${IMGPATH} -maxdepth 1 -type d -name "*.csl")
+				do 
+					# get status
+					STATUS=`_Check_S1_SizeAndCoord.sh ${IMGNAME} ${EXPECTEDNRBURSTS} ${EXPECTEDMINRGMINAZLONG} ${EXPECTEDMINRGMINAZLAT} ${EXPECTEDMAXRGMINAZLONG} ${EXPECTEDMAXRGMINAZLAT} ${EXPECTEDMINRGMAXAZLONG} ${EXPECTEDMINRGMAXAZLAT} ${EXPECTEDMAXRGMAXAZLONG} ${EXPECTEDMAXRGMAXAZLAT} | tail -1 | cut -d : -f 2  | ${PATHGNU}/gsed "s/ //g" `
+					case ${STATUS} in 
+						"UNKNOWN") 
+							echo "Can't check image because  ${IMGNAME}/Info/burstSelection.txt is missing (may be read with old version of AMSTerEngine and fine, or be wrong image...)" 
+							echo "${IMGNAME} status is UNKNOWN" >> __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt
+							;;
+						"FAIL") 
+							echo "${IMGNAME} has wrong nr of bursts or corners are not in expected range. Image is moved in __TMP_QUARANTINE and logged in __Wrong_Images.txt; please check if persist after few days" 
+							echo "${IMGNAME} status is FAIL" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+							_Check_S1_SizeAndCoord.sh ${IMGNAME} ${EXPECTEDNRBURSTS} ${EXPECTEDMINRGMINAZLONG} ${EXPECTEDMINRGMINAZLAT} ${EXPECTEDMAXRGMINAZLONG} ${EXPECTEDMAXRGMINAZLAT} ${EXPECTEDMINRGMAXAZLONG} ${EXPECTEDMINRGMAXAZLAT} ${EXPECTEDMAXRGMAXAZLONG} ${EXPECTEDMAXRGMAXAZLAT} >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+							IMG=`basename ${IMGNAME}`
+							mkdir -p __TMP_QUARANTINE
+							mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG}
+							 ;;
+						"OK")
+							echo "${IMGNAME} has good nr of bursts and corners are in expected range. Image is logged in __Good_Images.txt" 
+							echo "${IMGNAME} status is OK" >> __Good_Images_${RUNDATE}_${RNDM1}.txt
+							# remove it from __TMP_QUARANTINE if it was there from a former read
+							IMG=`basename ${IMGNAME}`
+							if [ -d "__TMP_QUARANTINE/${IMG}" ]
+								then
+									echo "  ==> ${IMG} can be removed from __TMP_QUARANTINE"
+									rm -rf __TMP_QUARANTINE/${IMG}
+								#else
+								#	echo "${IMG} was not in __TMP_QUARANTINE"
+							fi
+							
+							;;
+						*)
+							echo "Can't check image because  ${STATUS} is none of the expedted form. Please check " 
+							echo "${IMGNAME} status is none of the expedted form. Please check" >> __Unverifiable_Images.txt
+							;;
+					esac			
+				done
 			;;
-		"FAIL") 
-			echo "${IMGNAME} has wrong nr of bursts or corners are not in expected range. Image is moved in __TMP_QUARANTINE and logged in __Wrong_Images.txt; please check if persist after few days" 
-			echo "${IMGNAME} status is FAIL" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
-			_Check_S1_SizeAndCoord.sh ${IMGNAME} ${EXPECTEDNRBURSTS} ${EXPECTEDMINRGMINAZLONG} ${EXPECTEDMINRGMINAZLAT} ${EXPECTEDMAXRGMINAZLONG} ${EXPECTEDMAXRGMINAZLAT} ${EXPECTEDMINRGMAXAZLONG} ${EXPECTEDMINRGMAXAZLAT} ${EXPECTEDMAXRGMAXAZLONG} ${EXPECTEDMAXRGMAXAZLAT} >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
-			IMG=`basename ${IMGNAME}`
-			mkdir -p __TMP_QUARANTINE
-			mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG}
-			 ;;
-		"OK")
-			echo "${IMGNAME} has good nr of bursts and corners are in expected range. Image is logged in __Good_Images.txt" 
-			echo "${IMGNAME} status is OK" >> __Good_Images_${RUNDATE}_${RNDM1}.txt
-			# remove it from __TMP_QUARANTINE if it was there from a former read
-			IMG=`basename ${IMGNAME}`
-			if [ -d "__TMP_QUARANTINE/${IMG}" ]
-				then
-					echo "  ==> ${IMG} can be removed from __TMP_QUARANTINE"
-					rm -rf __TMP_QUARANTINE/${IMG}
-				#else
-				#	echo "${IMG} was not in __TMP_QUARANTINE"
-			fi
-			
+	"KML")
+			for IMGNAME in $(find ${IMGPATH} -maxdepth 1 -type d -name "*.csl")
+				do 
+					# get status
+					echo ""
+					echo "check ${IMGPATH}"  
+					STATUS=$(Check_burst_coverage_kml.py "${EXPECTEDMINRGMINAZLONG}" "${IMGNAME}/Info/PerBurstInfo" | grep "NOT fully covered" | wc -l)			# if zero, kml is fully covered. 
+					NRBURSTS=$(Check_burst_coverage_kml.py "${EXPECTEDMINRGMINAZLONG}" "${IMGNAME}/Info/PerBurstInfo" | head -1 | ${PATHGNU}/grep -oE '[0-9]+$') 		# answers the nr of bursts
+					
+					if [ ${NRBURSTS} -ne ${EXPECTEDNRBURSTS} ]
+						then 
+							echo "${IMGNAME} has wrong nr of bursts. Image is moved in __TMP_QUARANTINE and logged in __Wrong_Images.txt; please check if persist after few days" 
+							echo "" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+							echo "${IMGNAME} status is FAIL because of nr of bursts" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+							Check_burst_coverage_kml.py "${EXPECTEDMINRGMINAZLONG}" "${IMGNAME}/Info/PerBurstInfo" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+							IMG=`basename ${IMGNAME}`
+							mkdir -p __TMP_QUARANTINE
+							mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG}
+						else 
+							echo "${IMGNAME} has the expected nr of bursts: ${EXPECTEDNRBURSTS}. " 
+							if [ ${STATUS} -eq 0 ]
+								then 
+									echo "and corners are in expected kml range. Image is logged in __Good_Images.txt" 
+									echo "" >> __Good_Images_${RUNDATE}_${RNDM1}.txt
+									echo "${IMGNAME} status is OK" >> __Good_Images_${RUNDATE}_${RNDM1}.txt
+									# remove it from __TMP_QUARANTINE if it was there from a former read
+									IMG=`basename ${IMGNAME}`
+									if [ -d "__TMP_QUARANTINE/${IMG}" ]
+										then
+											echo "  ==> ${IMG} can be removed from __TMP_QUARANTINE"
+											rm -rf __TMP_QUARANTINE/${IMG}
+										#else
+										#	echo "${IMG} was not in __TMP_QUARANTINE"
+									fi
+								else 
+									echo "but corners are not in expected kml range. Image is moved in __TMP_QUARANTINE and logged in __Wrong_Images.txt; please check if persist after few days" 
+									echo "" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+									echo "${IMGNAME} status is FAIL because of coverage" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+									Check_burst_coverage_kml.py "${EXPECTEDMINRGMINAZLONG}" "${IMGNAME}/Info/PerBurstInfo" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
+									IMG=`basename ${IMGNAME}`
+									mkdir -p __TMP_QUARANTINE
+									mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG}
+							fi
+					fi
+				done
 			;;
-		*)
-			echo "Can't check image because  ${STATUS} is none of the expedted form. Please check " 
-			echo "${IMGNAME} status is none of the expedted form. Please check" >> __Unverifiable_Images.txt
+		"VERIF")
+			echo "Coordinates of corners of S1 images are:" 
+			for IMGNAME in $(find ${IMGPATH} -maxdepth 1 -type d -name "*.csl")
+				do 
+					_Check_S1_SizeAndCoord.sh ${IMGNAME} ${EXPECTEDNRBURSTS}
+				done
 			;;
-	esac			
-done
+		"*")
+			echo "Something is wrong; I can't figure out the type of search you tried. Check script. Exiting...'"
+			;;
+esac			
+
 
 # delete emplty lof files, i.e. that contains only one header file
 if [ `cat __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt | wc -l` -eq 1 ] ; then rm -f __Unverifiable_Images_${RUNDATE}_${RNDM1}.txt ; fi

@@ -184,13 +184,21 @@
 # New in Distro V 5.11 20241126:	- Debug check path to Distribution directory and if not empty
 #									- add lib mpi for Linux
 # New in Distro V 5.12 20241203:	- if EXTERNAL_DEMS_DIR or EXTERNAL_MASKS_DIR exist, offers to keep or change
+# New in Distro V 5.13 20250226:	- install linux python modules utm, pyqt6 and networkx system wide instead of pip 
+#									- install geopandas for Check_burst_coverage_kml.py
+#New in Distro V 5.14 20250303:		- add module diagtoolbox
+# 									- add python3 rasterio 
+#New in Distro V 5.15 20250325:		- add python3 modules for diagtoolbox: pandas, argparse, glob2, pickle, statistics
+#									- option to install full 3D msbasv4_3D
+#New in Distro V 5.16 20250704:		- update install geopandas for linux with correct package name
+#New in Distro V 5.17 20250805:		- use clang 20 for new AE (NISAR reader)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 5.12 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Dec 02 2024"
+VER="version 5.17 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 05, 2025"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -1440,6 +1448,7 @@ DoInstallMSBAS()
 		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip runs msbasv4 (2D) in parallel on ALL the available cores for a maximum of efficiency. "
 		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip runs msbasv4 (2D) on only one core. "
 		echo "  //      msbas_20201009_wExtract_Unified_20220818-Gilles.zip runs msbasv4 (2D) on a LIMITED number of cores (max 12 threads). "
+		echo "  // 		msbas_20201009_wExtract_Unified_20220919_Optimized_v1.3_Full3D.zip runs msbasv4 for full 3D decomposition (only possible when enough diversity of looking geometry is available. DO NOT USE UNLESS YOU KNOW WHAT YOU DO - See AMSTer manual)"
 		echo "  //      msbas_v10_20230601_Gilles.zip runs msbasv10 (3/4D)... Not ready for the AMSTer software yet, i.e. for manual usage only . "
 		echo "  //   If you want another version, please install it manually. "
 		echo "  //   You can contact directely the autor (sergey.samsonov@NRCan-RNCan.gc.ca) for other version or for more info. In that case, you will have to compile it manually "
@@ -1519,7 +1528,7 @@ CompileMSBAS()
 					FORMERVERSION=`ls ${PATHMSBAS}/msbasv* 2>/dev/null | grep -v "zip"`
 					if [ "${FORMERVERSION}" != "" ] ; then
 						echo "  // Save former version in ${PATHFORMERSOURCESMSBAS}. "
-						mv -f ${FORMERVERSION} ${PATHFORMERSOURCESMSBAS}
+						cp -f ${FORMERVERSION} ${PATHFORMERSOURCESMSBAS}
 					fi
 
 					cp ${RAWFILE} ${PATHFORMERSOURCESMSBAS}
@@ -2083,7 +2092,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I install mandatory libraries"
-							AptInsatll "clang"
+							AptInsatll "clang-20"
 							AptInsatll "libfftw3-dev"
 							AptInsatll "libfftw3-long3" 
 							AptInsatll "libfftw3-single3"
@@ -2330,20 +2339,39 @@ if [ "${TYPERUN}" == "I" ] ; then
 
 
 							# UTM package
-							echo "  // Install also utm packege for python v3. "
-							pip install --upgrade pip
-							AptInsatll "python3-pip"
-							pip install utm
+							echo "  // Install also utm package for python v3. "
+							#pip install --upgrade pip
+							#AptInsatll "python3-pip"
+							#pip install utm
+							# For most recent version of python, install system wide with 
+							AptInsatll "python3-utm"
 							
 							# AMSTer Software Organizer
-							/opt/local/bin/python -m pip install pyqt6
+							#/opt/local/bin/python -m pip install pyqt6
+							# For most recent version of python, install system wide with  
+							AptInsatll "python3-pyqt6"
 							
 							# AMSTer Software Optimisation 
-							/opt/local/bin/python -m pip install networkx
+							#/opt/local/bin/python -m pip install networkx
+							# For most recent version of python, install system wide with 
+							AptInsatll "python3-networkx"
 
-							# for computing Variogram 
-							/opt/local/bin/python -m pip install scikit-gstat
+							# for computing Variogram
+							/opt/local/bin/python -m pip install scikit-gstat # MAY BE A PROBLEM ON MOST RECENT VERSION
+							
+							# for Check_burst_coverage_kml.py 
+							#/opt/local/bin/python -m pip install geopandas
+							AptInsatll "python3-geopandas"
 
+							# for Check_burst_coverage_kml.py 
+							#/opt/local/bin/python -m pip install rasterio
+							AptInsatll "rasterio"
+
+							# for diagtoolbox 
+							AptInsatll "python3-pandas"
+							AptInsatll "statistics"	# MAY BE A PROBLEM ON MOST RECENT VERSION
+							AptInsatll "argparse"		# MAY BE A PROBLEM ON MOST RECENT VERSION
+							AptInsatll "python3-glob2"
 							
 							break ;;
 					[Nn]* ) 
@@ -2766,10 +2794,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 				fi
 				
 				while true; do
-					read -p "Requires clang v14 (mandataory to allows parallel processing). Do you want to install/update clang v14 compiler ? [y/n] "  yn
+					read -p "Requires clang v20 (mandataory to allows parallel processing). Do you want to install/update clang v20 compiler ? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							PortInstall "clang-14"
+							PortInstall "clang-20"
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -3043,7 +3071,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PortInstall "py310-opencv4"
 							PortInstall "py310-numpy"
 							PortInstall "py310-scipy"
-							PortInstall "py310-matplotlib"
+							#PortInstall "py310-matplotlib"
+							/opt/local/bin/python3.10 -m pip install matplotlib
+							
 							PortInstall "py310-gdal"
 							PortInstall "py310-shapely"
 							
@@ -3078,6 +3108,19 @@ if [ "${TYPERUN}" == "I" ] ; then
 
 							# for computing Variogram 
 							/opt/local/bin/python3.10 -m pip install scikit-gstat
+
+							# for Check_burst_coverage_kml.py 
+							/opt/local/bin/python3.10 -m pip install geopandas
+
+							# for Check_burst_coverage_kml.py 
+							/opt/local/bin/python3.10 -m pip install rasterio
+
+							# for diagtoolbox 
+							/opt/local/bin/python3.10 -m pip install pandas
+							/opt/local/bin/python3.10 -m pip install statistics
+							/opt/local/bin/python3.10 -m pip install argparse
+							/opt/local/bin/python3.10 -m pip install glob2
+							
 
 							break ;;
 					[Nn]* ) 
@@ -3515,6 +3558,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/zz_Utilities_MT"
 		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/zz_Utilities_MT_Ndo"	
 		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/optimtoolbox"
+		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/diagtoolbox"
 		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/AMSTerOrganizer"	
 		UpdatePATHBashrcAFTER "${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/_cron_scripts"	
 			

@@ -7,10 +7,8 @@
 #
 # You can then run a _ReGeoc_FromSinglePair.sh if required. 
 #
-# Note that this request to run in the same dir and with teh sme computer as the one where SinglePair.sh was performed to avoid path problems
+# Note that this request to run in the same dir and with the same (type of) computer as the one where SinglePair.sh was performed to avoid path problems
 # 
-#  !!!!! WARNING: only tested for S1 so far and not in STRIPMAP !!!!!
-#
 # Need to be run in PAIR DIR
 #
 # Parameters:	 - File with the parameters needed for the run
@@ -18,7 +16,7 @@
 # HARD CODED: 	- 
 #
 # Dependencies:	- gnu sed and awk for more compatibility. 
-#				- byte2Float.py, Swap_0_1_in_ByteFile.py 
+#				- byte2float.py, Swap_0_1_in_ByteFile.py 
 #
 # New in Distro V 1.0:	- Based on developpement version for MASSPRROVCESS
 # New in Distro V 1.1:	- debugged for file naming. ATTENTION, files are not renamed after completion of re-unwrapping. 
@@ -34,13 +32,17 @@
 # New in Distro V 3.3 20241202:	- Mask before interpolation after unwrapping ok with the 3 version of masking methods (old 1=keep; intermediate 1,2=mask in one file, latest 1,2,3 are masked in multiple masks)
 #								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
 #								- take mask(s) basename only if exist  
+# New in Distro V 3.4 20250224:	- typo in byte2float.py 
+# New in Distro V 3.5 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
+#							 	- state that it allows asymetric zoom
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
+VER="Distro V3.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 20, 2025"
+
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -83,9 +85,25 @@ FIRSTL=`GetParam "FIRSTL,"`					# Crop limits: first line to use
 LASTL=`GetParam "LASTL,"`					# Crop limits: last line to use
 FIRSTP=`GetParam "FIRSTP,"`					# Crop limits: first point (row) to use
 LASTP=`GetParam "LASTP,"`					# Crop limits: last point (row) to use
+COORDSYST=`GetParam "COORDSYST,"`			# COORDSYST, type of coordinates used to define crop: SRA (lines and pixels) or GEO
+
+	if [ "${CROP}" == "CROPyes" ] && [ "${COORDSYST}" == "" ]
+		then 
+			echo " COORDSYST not defined. I try to see if there is a dot in your coordinates for crop region. "
+			if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
+				then
+					echo "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
+					COORDSYST="GEO"
+				else
+					echo "None of the crop coordinates has a dot. Must hence be SRA coord system"
+					COORDSYST="SRA"
+			fi
+	fi
+
+REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 
 MLAMPLI=`GetParam "MLAMPLI,"`				# MLAMPLI, Multilooking factor for amplitude images reduction (used for coregistration - 4-6 is appropriate). If rectangular pixel, it will be multiplied by corresponding ratio.
-ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
 PIXSHAPE=`GetParam "PIXSHAPE,"`				# PIXSHAPE, pix shape for products : SQUARE or ORIGINALFORM   
 CALIBSIGMA=`GetParam "CALIBSIGMA,"`			# CALIBSIGMA, if SIGMAYES it will output sigma nought calibrated amplitude file at the insar product generation step  
 
@@ -197,8 +215,6 @@ YMIN=`GetParam "YMIN,"`						# YMIN, minimum Y UTM coord of final Forced geocode
 YMAX=`GetParam "YMAX,"`						# YMAX, maximum Y UTM coord of final Forced geocoded product
 GEOCKML=`GetParam "GEOCKML,"`				# GEOCKML, a kml file to define final geocoded product. If not found, it will use the coordinates above
 
-
-REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 DEMNAME=`GetParam "DEMNAME,"`				# DEMNAME, name of DEM inverted by lines and columns
 
 RESAMPDATPATH=`GetParam RESAMPDATPATH`		# RESAMPDATPATH, path to dir where resampled data will be stored 
@@ -314,7 +330,7 @@ if [ ${INTERPOL} == "BEFORE" ] || [ ${INTERPOL} == "BOTH" ]
 					then 
 						EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
 						# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
-						byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
+						byte2float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
 						ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
 						convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
 					else 
@@ -323,7 +339,7 @@ if [ ${INTERPOL} == "BEFORE" ] || [ ${INTERPOL} == "BOTH" ]
 								EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
 								# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
 								Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
-								byte2Float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+								byte2float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
 								ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
 								convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
 							else

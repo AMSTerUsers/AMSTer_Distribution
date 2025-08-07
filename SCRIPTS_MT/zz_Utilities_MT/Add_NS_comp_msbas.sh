@@ -46,13 +46,14 @@
 #								- update path in image before re-geocode DEM
 # New in Distro V 1.4 20240924:	- more robust to change all path in Parameters.txt files with 
 #								  global variables for disk names
+# New in Distro V 1.5 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 24, 2024"
+VER="Distro V1.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 27, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -213,9 +214,10 @@ if test -e ${GEOCDEMDIR}/externalSlantRangeDEM.UTM*.hdr
 		cd ./${PAIRDIR}/i12/TextFiles
 	
 		# Update path in param files
-		cp -n InSARParameters.txt InSARParameters_original.txt 					# do not copy if exist already
-		cp -n geoProjectionParameters.txt geoProjectionParameters_original.txt 	# do not copy if exist already
-		
+		#cp -n InSARParameters.txt InSARParameters_original.txt 					# do not copy if exist already
+		#cp -n geoProjectionParameters.txt geoProjectionParameters_original.txt 	# do not copy if exist already
+		if [ ! -e InSARParameters_original.txt ] ; then cp InSARParameters.txt InSARParameters_original.txt ; fi 
+		if [ ! -e geoProjectionParameters_original.txt ] ; then cp geoProjectionParameters.txt geoProjectionParameters_original.txt ; fi
 		
 		MASPATH=`GetParamFromFile "Master image file path" InSARParameters.txt`
 	
@@ -225,7 +227,8 @@ if test -e ${GEOCDEMDIR}/externalSlantRangeDEM.UTM*.hdr
 				echo "Updating path to the Primary image in ${GEOCDEMDIR}/${PAIRDIR}/i12/TextFiles/InSARParameters.txt" 
 
 				source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
-				cp -n InSARParameters.txt InSARParameters_original.txt # do not copy if exist already
+				#cp -n InSARParameters.txt InSARParameters_original.txt # do not copy if exist already
+				if [ ! -e InSARParameters_original.txt ] ; then cp InSARParameters.txt InSARParameters_original.txt ; fi 
 				RenameVolNameToVariable InSARParameters_original.txt InSARParameters.txt
 
 				eval MASPATH=`GetParamFromFile "Master image file path" InSARParameters.txt`
@@ -369,7 +372,8 @@ cp -f DEM_grad_north_${FG}.hdr ../DEM_grad_east.hdr
 # Add DD_NSEW_FILES=topo_grad_north.tif,topo_grad_east.tif flag in header.txt below line V_FLAG=0
 cd ${PWDDIR}
 
-cp -n header.txt header_original_no_TopoDeriv.txt
+#cp -n header.txt header_original_no_TopoDeriv.txt
+if [ ! -e header_original_no_TopoDeriv.txt ] ; then cp header.txt header_original_no_TopoDeriv.txt ; fi 
 
 #${PATHGNU}/gsed -i '/V_FLAG=0/a\DD_NSEW_FILES=topo_grad_north.tif,topo_grad_east.tif' header.txt
 # not sure it works with path 

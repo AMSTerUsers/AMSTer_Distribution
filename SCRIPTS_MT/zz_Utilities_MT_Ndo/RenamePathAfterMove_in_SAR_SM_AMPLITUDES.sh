@@ -19,13 +19,15 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 27, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -47,9 +49,11 @@ do
 	DIRSHORT=`echo ${DIR} | cut -d_ -f1-2`
 	
 	cd ${DIR}/i12/TextFiles
-	cp -n InSARParameters.txt InSARParameters_original.txt # do not copy if exist already
-	cp -n geoProjectionParameters.txt geoProjectionParameters_original.txt # do not copy if exist already
-
+	#cp -n InSARParameters.txt InSARParameters_original.txt # do not copy if exist already
+	#cp -n geoProjectionParameters.txt geoProjectionParameters_original.txt # do not copy if exist already
+	if [ ! -e InSARParameters_original.txt ] ; then cp InSARParameters.txt InSARParameters_original.txt ; fi 
+	if [ ! -e geoProjectionParameters_original.txt ] ; then cp geoProjectionParameters.txt geoProjectionParameters_original.txt ; fi 
+	
 	${PATHGNU}/gsed "s%^.*i12%${NEWDIR}\/${DIR}\/i12%g" InSARParameters_original.txt > InSARParameters.txt
 	${PATHGNU}/gsed "s%^.*i12%${NEWDIR}\/${DIR}\/i12%g" geoProjectionParameters_original.txt > geoProjectionParameters.txt
 	cp InSARParameters.txt InSARParameters_original_ExtHDpath.txt # do not copy if exist already

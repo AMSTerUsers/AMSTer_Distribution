@@ -33,13 +33,14 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 2.0 20241030:	- typo: $ was missing in lines mv ($){RUNDIR}/${MODETOCLEAN}/Coh_Table_${MODETOCLEAN}.txt...
 #								- mute error message for rm files if they do not exist when performing restrict coh on pair selection from table rather than criteria
+# New in Distro V 2.1 20250508:	- add notice that the script can handle a change of coherence threshold higher than the possible former one, but not smaller.
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 08, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -56,14 +57,60 @@ echo ""
 
 RNDM1=`echo $(( $RANDOM % 10000 ))`
 RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
-# Dump Command line used in CommandLine.txt
-echo "$(dirname $0)/${PRG} run with following arguments : " > CommandLine_${PRG}_${RUNDATE}_${RNDM1}.txt
-echo $@ >> CommandLine_${PRG}_${RUNDATE}_${RNDM1}.txt
 
 RUNDIR=$(pwd)
 
 if [ ! -d ${RUNDIR}/${MODETOCLEAN} ] ; then echo " You seems to be in the wrong dir or there is no mode to clean as claimed" ; exit ; fi
 if [ $# -lt 4 ] ; then echo “Usage $0 ModeToClean CohThreshold Kml PathToCoh”; exit; fi
+
+# Check if former run was done, then check the last one, then check if it used a Coh Threshold smaller than current one, in which case it can't work. 
+# i.e. Search for the last file "CommandLine_restrict_msbas_to_Coh.sh_03_19_2025_13h53m_978.txt" 
+# If it contains a Coh Threshold higher that the current one, exit... and suggest to create a new run from scratch in another dir 
+
+if ls ${RUNDIR}/CommandLine_restrict_msbas_to_Coh.sh_*.txt 1>/dev/null 2>&1; then		# if any CommandLine_restrict_msbas_to_Coh.sh_*.txt exist
+    # search for most recent one 
+    LASTRUN=$(ls -t CommandLine_restrict_msbas_to_Coh.sh_*.txt 2>/dev/null | head -n 1)		# take the last one
+	FORMERCOHTHRESH=$(${PATHGNU}/gawk 'NR==2 {print $2}' "${LASTRUN}")
+	#if [ ${COHTHRESHOLD} -lt ${FORMERCOHTHRESH} ]
+	if (( $(echo "${COHTHRESHOLD} < ${FORMERCOHTHRESH}" | bc -l) ))
+		then 
+			echo "You performed another Coherence Threshold restriction with a larger threshold (last used coh. thresh.: ${FORMERCOHTHRESH} ;  actual: ${COHTHRESHOLD}). "
+			echo "I can't make a coh restriction with a smaller threshold in the same MSBAS dir. "
+			echo "Please make another MSBAS from scratch in another directory"
+			echo 
+			echo "exiting"...
+			exit
+		else 
+			#if [ ${COHTHRESHOLD} -gt ${FORMERCOHTHRESH} ] 
+			if (( $(echo "${COHTHRESHOLD} > ${FORMERCOHTHRESH}" | bc -l) ))
+				then
+					echo "You performed another Coherence Threshold restriction with a smaller threshold (last used coh. thresh.: ${FORMERCOHTHRESH} ;  actual: ${COHTHRESHOLD}). "
+					echo "I can operate such a new restriction in the same MSBAS dir with a larder coh threshold, though beware of possible confusion. "
+					echo "A cleaner solution would be to make another MSBAS from scratch in another directory."
+		
+					SpeakOut "Do you want to continue ?" 
+					while true; do
+						read -p "Do you want to continue ?"  yn
+						case $yn in
+							[Yy]* ) 
+								echo "OK, you know..."
+								break ;;
+							[Nn]* ) 
+	   							exit 1	
+								break ;;
+							* ) echo "Please answer yes or no.";;
+						esac
+					done
+				else 
+					echo "Same Coh Thresold as former run. OK... "
+			fi
+	fi
+fi
+
+# Dump Command line used in CommandLine.txt
+echo "$(dirname $0)/${PRG} run with following arguments : " > CommandLine_${PRG}_${RUNDATE}_${RNDM1}.txt
+echo $@ >> CommandLine_${PRG}_${RUNDATE}_${RNDM1}.txt
+
 
 echo "// backup ${MODETOCLEAN}"
 mkdir -p ${RUNDIR}/${MODETOCLEAN}_Full

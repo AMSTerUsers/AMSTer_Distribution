@@ -47,14 +47,14 @@
 # New in Distro V 6.0.0 20240805:	- split in two parts
 # 									- simplify some fcts
 # New in Distro V 6.1.0 20240805:	- Crop empty lines to speed up the process
-
+# New in Distro V 6.1.1 20250306:	- rename recomputed R2 files and create rasters   
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V6.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 4, 2024"
+VER="Distro V6.1.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 06, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -222,8 +222,10 @@ YYYY=$(date +%Y)
 
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 
 	# in Coh threshold restriction
 	if [ ${IFCOH} == "YES" ] ; then 
@@ -286,9 +288,17 @@ YYYY=$(date +%Y)
 		# mv maps for usage with PlotTS(_all_comp).sh
 		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_${COMPOCODE}_recomputed.bin" "${COMMONDIR}/MSBAS_LINEAR_RATE_${COMPOCODE}.bin"
 		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}_recomputed.bin" "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}.bin"
+		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}_recomputed.bin" "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}.bin"
 
 		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_${COMPOCODE}_recomputed.bin.hdr" "${COMMONDIR}/MSBAS_LINEAR_RATE_${COMPOCODE}.bin.hdr"
 		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}_recomputed.bin.hdr" "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}.bin.hdr"
+		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}_recomputed.bin.hdr" "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}.bin.hdr"
+
+		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_${COMPOCODE}_recomputed.bin.ras" "${COMMONDIR}/MSBAS_LINEAR_RATE_${COMPOCODE}.bin.ras"
+		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}_recomputed.bin.ras" "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}.bin.ras"
+		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}_recomputed.bin.ras" "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}.bin.ras"
+		
+		# Keep corresponding recomputed.bin.ras.sh ro remember that it comes from recomputed   
 		
 		}
 				

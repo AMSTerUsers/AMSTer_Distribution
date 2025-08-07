@@ -21,13 +21,15 @@
 # V1.0: 20200804
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20250603:	- skip possible multiple empty lines ending _EXCLUDE_PAIRS_ALTHOUGH_CRITERIA_OK.txt that would make the DefoModei.txt empty
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
 VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"echo " "
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
@@ -42,5 +44,7 @@ if [ -f _EXCLUDE_PAIRS_ALTHOUGH_CRITERIA_OK.txt ]
 	then 
 		echo "// Exclude pairs that are in _EXCLUDE_PAIRS_ALTHOUGH_CRITERIA_OK.txt even if they satisfy the Bt, Bp and Coh criteria "
 		mv ../${MODE}.txt ${MODE}_WithoutForceExclude.txt
-		${PATHGNU}/grep  -Fv -f _EXCLUDE_PAIRS_ALTHOUGH_CRITERIA_OK.txt ${MODE}_WithoutForceExclude.txt > ../${MODE}.txt 
+		#${PATHGNU}/grep  -Fv -f _EXCLUDE_PAIRS_ALTHOUGH_CRITERIA_OK.txt ${MODE}_WithoutForceExclude.txt > ../${MODE}.txt 
+		${PATHGNU}/grep -Fv -f <(${PATHGNU}/grep . _EXCLUDE_PAIRS_ALTHOUGH_CRITERIA_OK.txt) "${MODE}_WithoutForceExclude.txt" > "../${MODE}.txt"
+
 fi

@@ -137,13 +137,17 @@
 #								- Start log earlier
 # New in Distro V 5.10 20240814:	- Read S1 data with -k option to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle)
 # New in Distro V 5.11 20240826:	- set option to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle) as additional parameter named EXACTKML
+# New in Distro V 5.12 20250228:	- debug test if first link points toward valid file in S1 NoCrop dir
+# New in Distro V 5.13 20250304:	- harmless typo in reading option EXACTKML 
+# New in Distro V 5.14 20250401:	- Reads ERS file format that is like ENVISAT now 
+# New in Distro V 5.15 20250805:	- Reads NISAR data
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.11 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 26, 2024"
+VER="Distro V5.15 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -209,7 +213,7 @@ if [ $# -gt 3 ]
 		        "EXACTKML")
 		        	# for S1 IW: EXACTKML force to read images with option -k, that is 
 		        	#   to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle)
-		        	EXACTKML=$1
+		        	#EXACTKML=$1
 		        	EXACTKML="-k"
 		        	shift 1 ;;
 		        *)
@@ -410,7 +414,16 @@ function GetDateERS()
 	unset DIRNAME
 	local DIRNAME=$1
 	#cd ${DIRNAME}/SCENE1
-	${PATHGNU}/grep -aEo "[0-9]{17}" ${RAW}/${DIRNAME}/SCENE1/LEA_01.001 | head -1 | cut -c 1-8
+	if [ -f ${RAW}/${DIRNAME}/SCENE1/LEA_01.001 ]
+		then 
+			# Old ERS format
+			${PATHGNU}/grep -aEo "[0-9]{17}" ${RAW}/${DIRNAME}/SCENE1/LEA_01.001 | head -1 | cut -c 1-8
+		else 
+			#New ERS format
+			cd ${RAW}/${DIRNAME}
+			ls *.E* | cut -d _ -f3 | cut -c 7-14
+			
+	fi
 	}
 
 function GetDateRS1()
@@ -544,6 +557,63 @@ cd ${CSL}
 GetAMSTerEngineVersion
 
 case ${SAT} in
+	"NISAR")
+		# Use the bulk reader
+		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
+		REGION=`basename ${PARENTCSL}`
+		
+		# Check if there are any subfolders ending with ".csl"
+	    if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
+	      echo "Subfolders with '.csl' found in ${CSL}"
+	      echo "Check if the links are OK, eg. not from the wrong OS"
+          	FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
+	     	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
+	    else
+	      echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
+	    fi
+  
+		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/)
+		# if not, remove broken link
+		EchoTee "Remove possible broken links"
+		for LINKS in `ls -d *.csl 2>/dev/null`
+			do
+				find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken 
+		done
+			
+		if [ "${FAY}" == "ForceAllYears" ]
+			then 
+				EchoTeeYellow "Read all images in ${RAW}"
+				NISARDataReader ${RAW} ${CSL} -r
+			else 
+				EchoTeeYellow "Read only new images in ${RAW} not yet in ${PARENTCSL}"
+				NISARDataReader ${RAW} ${CSL} 
+		fi
+		EchoTee ""
+		EchoTee "All NISAR img read; now sorting them by mode, track and incidence "
+		EchoTee ""
+		cd ${CSL}
+		for NISIMGPATH in `find ${CSL} -name "*.csl" -print`  # list actually the former links and the new dir if new images were read
+			do
+				NISIMG=`echo ${NISIMGPATH##*/}` 				# Trick to get only name without path
+				NISDATE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Acquisition date"` 					# Get date
+				NISMODE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Heading direction" | cut -c 1` 		# Get the orbit mode (Asc or Des)
+				#NISTYPE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Product ID"` 						# Stripmap or SpotlightHigh
+				NISLOOK=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Look direction" | cut -c 1` 		# L(eft) or R(ight)
+				NISINCID=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Incidence angle at median slant range" | $PATHGNU/gawk '{print int($1+0.5)}' ` 		# incidence angle (rounded)
+				#NISTRK=${NISTYPE}_${NISLOOK}L
+				NISTRK=${NISLOOK}L
+				mkdir -p ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop
+				if [ ! -d ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl ]
+					then
+						# There is no  ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl DIR yet, hence it is a new img; move new img there
+							mv ${NISIMG} ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl 
+							#and create a link
+							ln -s ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl ${CSL}/${NISIMG} 
+							echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl/Read_w_AMSTerEngine_V.txt
+				fi  
+		done
+		echo 		
+		;; 	
 	"SAOCOM")
 		# Use the bulk reader
 		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
@@ -554,8 +624,8 @@ case ${SAT} in
 	      EchoTee "Subfolder links with '.csl' found in ${CSL}"
 	      if [ -n "$(find ${CSL} -type l)" ]  ; then
 	      	EchoTee "Check if these links are OK, that is pointing toward a valid directory (proving that these links were not made with another OS)"
-          	FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
-	     	 TestLink ${FIRSTLINK}
+          	FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
+	     	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	     	fi
 	    else
 	      EchoTee "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
@@ -998,8 +1068,8 @@ case ${SAT} in
 	    if find "${CSL}" -name "*.csl" -print -quit | grep -q .; then
 	      EchoTee "Subfolders with '.csl' found in ${CSL}"
 	      EchoTee "Check if the links are OK, eg. not from the wrong OS"
-	      FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
-	      TestLink ${FIRSTLINK}
+          FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
+	      if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	    else
 	      EchoTee "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
 	    fi
@@ -1655,8 +1725,8 @@ case ${SAT} in
 	    	if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
 	    	  echo "Subfolders with '.csl' found in $CSL}"
 	    	  echo "Check if the links are OK, eg. not from the wrong OS"
-    		  FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
-	    	  TestLink ${FIRSTLINK}
+          	  FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
+	     	  if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	    	else
 	    	  echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
 	    	fi
@@ -1807,8 +1877,8 @@ case ${SAT} in
 	    if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
 	      echo "Subfolders with '.csl' found in ${CSL}"
 	      echo "Check if the links are OK, eg. not from the wrong OS"
-	      FIRSTLINK=`find * -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		# what if not link exist yet ??
-        TestLink ${FIRSTLINK}
+          	FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
+	     	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	    else
 	      echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
 	    fi
@@ -1897,11 +1967,22 @@ case ${SAT} in
 				ls ${CSL} | ${PATHGNU}/grep -v ".txt" > List_csl_dates.txt
 				for DATECSL in `cat -s List_csl_dates.txt`
 					do	
-						DATE=`echo ${DATECSL} | cut -d . -f 1`
-						echo "// Searching for dates in LEA files for ${DATE}... May take time..."
-						PATHTOFILE=`${PATHGNU}/grep -rl "${DATE}" ${RAW} | ${PATHGNU}/grep -i "LEA"`
-						DIRNAMERAW=$(basename $(dirname $(dirname ${PATHTOFILE})))
-						echo "${DIRNAMERAW}" >> List_csl.txt # Now List_csl.txt contains orbits names as dirs in CSL 
+						if find ${RAW} -mindepth 2 -maxdepth 2 -type f \( -name "*.E1" -o -name "*.E2" \) -print -quit | grep -q .
+							then
+								echo "New ERS file format (file.E1 or .E2)"
+								for DATECSL in `cat -s List_csl_dates.txt`
+									do	
+										DATE=`echo ${DATECSL} | cut -d . -f 1`
+										ls -R ${RAW} | ${PATHGNU}/grep ".E*" | ${PATHGNU}/grep ${DATE} | cut -d _ -f7 >> List_csl.txt # Now List_csl.txt contains orbits names as dirs in CSL 
+									done
+							else
+								echo "Old ERS file format"
+								DATE=`echo ${DATECSL} | cut -d . -f 1`
+								echo "// Searching for dates in LEA files for ${DATE}... May take time..."
+								PATHTOFILE=`${PATHGNU}/grep -rl "${DATE}" ${RAW} | ${PATHGNU}/grep -i "LEA"`
+								DIRNAMERAW=$(basename $(dirname $(dirname ${PATHTOFILE})))
+								echo "${DIRNAMERAW}" >> List_csl.txt # Now List_csl.txt contains orbits names as dirs in CSL 
+						fi
 					done
 					;;
 			"ALOS") 
@@ -2239,13 +2320,27 @@ case ${SAT} in
 								;;
 					"ERS") 
 								# ERS date is read from LEA file
+
 								IMG=`GetDateERS ${IMGDIR}`
-								ERSDataReader ${CSL}/Read_${IMG}.txt -create
-								#EchoTee "${RAW}/${IMGDIR}/*.N1"
-								ChangeInPlace PathToDirectory ${RAW}/${IMGDIR}/SCENE1 ${CSL}/Read_${IMG}.txt
-								ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
-								#ChangeInPlace DORIS_DirectoryPath ${ENVORB} ${CSL}/Read_${IMG}.txt
-								ERSDataReader ${CSL}/Read_${IMG}.txt
+								if [ -f ${RAW}/${DIRNAME}/SCENE1/LEA_01.001 ]
+									then 
+										# old format
+										ERSDataReader ${CSL}/Read_${IMG}.txt -create
+										#EchoTee "${RAW}/${IMGDIR}/*.N1"
+										ChangeInPlace PathToDirectory ${RAW}/${IMGDIR}/SCENE1 ${CSL}/Read_${IMG}.txt
+										ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
+										#ChangeInPlace DORIS_DirectoryPath ${ENVORB} ${CSL}/Read_${IMG}.txt
+										ERSDataReader ${CSL}/Read_${IMG}.txt
+									else 
+										# old format, like ENVISAT
+										EnviSATDataReader ${CSL}/Read_${IMG}.txt -create
+										EchoTee "${RAW}/${IMGDIR}/*.E*"
+										ChangeInPlace PathToEnviSATDataFile ${RAW}/${IMGDIR}/*.E* ${CSL}/Read_${IMG}.txt
+										ChangeInPlace outputFilePath ${CSL}/${IMG} ${CSL}/Read_${IMG}.txt
+										echo
+										EnviSATDataReader ${CSL}/Read_${IMG}.txt
+								fi
+
 								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/${IMG}.csl/Read_w_AMSTerEngine_V.txt
 								EchoTee "Image ${IMG} red"
 								;;

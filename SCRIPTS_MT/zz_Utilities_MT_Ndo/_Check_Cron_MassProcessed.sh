@@ -44,21 +44,45 @@
 #								- check VVP CSK at the end 
 # New in Distro V 4.7 20241003:	- split Funu in 2D and 3D
 # New in Distro V 4.8 20241009:	- discard searching for processes not automatic anymore
+# New in Distro V 4.9 20250520:	- add NEPAL and Galeras
+# New in Distro V 4.10 20250702: - check if data is in RAW_FORMER/_yyyy
+#								- corr path RAW for NEPAL 
+# New in Distro V 4.11 20250703: - if provided with a target name as second param, it performs only the check of that target
+# 								   It must be exactly either: Domuyo, PF, LUX, Karthala, Guadeloupe, Funu2D, Funu3D, Galeras, NEPAL.
+#									Optional, i.e. works only as single target:	Laguna, VVP, VVPCSK
+#								 - skip check image if its date is before first image of data set (cfr hardcoded FIRSTIMG for each dataset) or after sat death (cfr hardcoded satDEATH params)
+# New in Distro V 4.12 20250710: - if data not read in CSL format, check if RAW data overlaps the area of interest defined as a TARGET_KML variable in script
+# New in Distro V 4.13 20250805: - if not dirs in .UNZIP nor .UNZIP_FORMER, checks files in .ZIP and .ZIP_FORMER (providing that a corresponding dir is defined in params) - eg see Galeras
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.8 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 09, 2024"
+VER="Distro V4.13 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
+TARGET=$1		# must be exactly either: Domuyo, PF, LUX, Karthala, Guadeloupe, Funu2D, Funu3D, Galeras, NEPAL
+				#	Optional, i.e. works only as single target:	Laguna, VVP, VVPCSK
+
+clear 
+
+if [ $# -eq 0 ] 
+	then 
+		echo " Process all targets "
+		TARGET="NONE"
+	else
+		echo "Attempt single target: must be among these names: Domuyo, PF, Lux, Karthala, Guadeloupe, Funu2D, Funu3D, Galeras, Nepal, Laguna, VVP or VVPCSK"
+		echo " Process only ${TARGET} "	
+fi
+
 
 # How many iumages to check from now 
-OLD=5		#  X last expected S1 images
+OLD=35		#  X last expected S1 images
 OLDCSK=5 	#  X last existing raw CSK images
 OLDSAOCOM=2 #  X last existing raw Saocom images
 
@@ -66,6 +90,9 @@ OLDSAOCOM=2 #  X last existing raw Saocom images
 DELTAS1=12 		# Nr of days expected between 2 S1 images acquired in that mode (e.g. 12 daysfor S1)
 DELTACSK=1 		# Nr of days expected between 2 CSK images acquired in that mode (for a constellation)
 DELTASAOCOM=8 	# Nr of days expected between 2 SAOCOM images acquired in that mode (for a constellation)
+
+# End of operation of some satellites
+S1BDEATH=20211203
 
 # See more hard coded before checking each mode
 
@@ -359,10 +386,50 @@ esac
 		{
 			# Provide date of expected ith last imag as LASTSIMG
 			GetXthFormerImg ${DELTAS1} ${FIRSTIMG} $i 
+			
+			# skip if img is before first img
+			if [ ${FIRSTIMG} -gt ${LASTSIMG} ] 
+				then
+					continue  # Skip this iteration if date of image is before first image
+			fi
+
+			# skip if img is after death of sensor
+			if [ ${S1BDEATH} -le ${LASTSIMG} ] && [ "${SENSOR}" == "B" ]
+				then
+					continue  # Skip this iteration if date of image is before after death of S1B
+			fi
+
 
 			# check raw:
 			LAST1=`find ${PATHRAW}/ -maxdepth 1 -type d -name "S1${SENSOR}*${LASTSIMG}T*" 2>/dev/null  | wc -l  | ${PATHGNU}/gsed "s/ //g"`
-			if [ ${LAST1} -eq 0 ] ; then LASTRAW="${reverse} missing       ${normal}" ; else LASTRAW="OK, ${LAST1} dirs "	; fi
+			if [ ${LAST1} -eq 0 ] 
+				then 
+					LASTYEAR=`echo ${LASTSIMG} | cut -c 1-4 `
+					LAST1=`find ${PATHRAW}_FORMER/_${LASTYEAR}/ -maxdepth 1 -type d -name "S1${SENSOR}*${LASTSIMG}T*" 2>/dev/null  | wc -l  | ${PATHGNU}/gsed "s/ //g"`
+					if [ ${LAST1} -eq 0 ] 
+						then 
+							LAST1=`find ${PATHRAWZIP}/ -maxdepth 1 -type f -name "S1${SENSOR}*${LASTSIMG}T*" 2>/dev/null  | wc -l  | ${PATHGNU}/gsed "s/ //g"`
+							if [ ${LAST1} -eq 0 ] 
+								then 
+									LAST1=`find ${PATHRAWZIP}_FORMER/_${LASTYEAR}/ -maxdepth 1 -type f -name "S1${SENSOR}*${LASTSIMG}T*" 2>/dev/null  | wc -l  | ${PATHGNU}/gsed "s/ //g"`
+									if [ ${LAST1} -eq 0 ] 
+										then 
+											LASTRAW="${reverse} missing       ${normal}" 
+										else
+											LASTRAW="${LAST1} ZIP_FORMER f "
+											LASTRAW="${LAST1} f .ZIP_FORMER"
+									fi
+									
+								else 	
+									LASTRAW="OK, ${LAST1} f in .ZIP"
+							fi
+							
+						else 
+							LASTRAW="FORMER, ${LAST1} dirs "
+ 					fi
+				else 
+					LASTRAW="OK, ${LAST1} dirs "
+ 			fi
 
 			# check CSL:
 			LAST2=`find ${PATHCSL}/*${LASTSIMG}*/Data/ -maxdepth 1 -type f -name "SLCData*" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
@@ -439,7 +506,35 @@ esac
 					CONSISTENCY="${red}Data read but with abnormal size and hence stored in __TMP_QUARANTINE; check raw zip files${normal}"
 					CONSISTENCY2=""
 				elif [ ${LAST2} -eq 0 ] && [ ${LAST3} -eq 0 ] && [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] ; then 
-					CONSISTENCY="${red}Data not read ; check raw zip files${normal}"
+					#CONSISTENCY="${red}Data not read ; check raw zip files${normal}"
+					# Check if full cover
+					if [ -f "${TARGET_KML}" ] && [ -s "${TARGET_KML}" ]
+						then
+							TMP_DIR=$(mktemp -d)
+							count=1
+		
+							# Loop through subdirs in ROOT_DIR
+							for dir in "${PATHRAW}"/*; do
+							  if [[ -d "$dir" && "$dir" == *"$LASTSIMG"* ]]; then
+							    KML="$dir/preview/map-overlay.kml"
+							    if [[ -f "$KML" ]]; then
+							      cp "$KML" "${TMP_DIR}/map-overlay${count}.kml"
+							      ((count++))
+							    fi
+							  fi
+							done
+							cd ${TMP_DIR}
+							Check_kml_coverage_kml.py "${TARGET_KML}" "${TMP_DIR}" > /dev/null 2>&1
+							if [ -f "${TMP_DIR}/coverage_plot.png" ] &&  [ -s "${TMP_DIR}/coverage_plot.png" ] 
+								then 
+									CONSISTENCY="${red}Data not read because no full cover ; only ${LAST1} dirs ; check raw zip files${normal}"
+								else 
+									CONSISTENCY="${red}Data not read ; check raw zip files${normal}"
+							fi
+							rm -rf "${TMP_DIR}"
+						else 
+							CONSISTENCY="${red}Data not read ; No TARGET_KML provided in script to check overlap ; check raw zip files${normal}"
+					fi
 					CONSISTENCY2=""
 				elif [ ${LAST3} -eq 0 ] && [ ${LAST4} -eq 0 ] && [ ${LAST5} -eq 0 ] && [ ${LAST6} -eq 0 ] ; then 
 					CONSISTENCY="${green}Data not resampled yet (may need to wait tomorrow ?)${normal}"
@@ -495,6 +590,12 @@ function CheckCSK()
 		{
 			# Provide date of expected ith last imag as LASTSIMG
 			GetXthFormerImgCSK ${DELTACSK} ${FIRSTIMG} ${EXPECTEDTIME}
+
+			# skip if img is before first img
+			if [ ${FIRSTIMG} -gt ${LASTSIMG} ]
+				then
+					continue  # Skip this iteration if date of image is before first image
+			fi
 
 			# check raw:
 			LAST1=`find ${PATHRAW}/ -maxdepth 1 -type f -name "C*${LASTSIMG}*.zip" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
@@ -599,6 +700,12 @@ function CheckSAOCOM()
 		{
 			# Provide date of expected ith last imag as LASTSIMG
 			GetXthFormerImgSAOCOM ${DELTASAOCOM} ${FIRSTIMG} ${EXPECTEDTIME}
+
+			# skip if img is before first img
+			if [ ${FIRSTIMG} -gt ${LASTSIMG} ]
+				then
+					continue  # Skip this iteration if date of image is before first image
+			fi
 
 			# check raw:
 			LAST1=`find ${PATHRAW}/ -maxdepth 2 -mindepth 1 -type f -name "*.xemt" -exec grep -m 1 startTime {} \; | sed -n '/<startTime>'${EXPECTEDYYYY}'-'${EXPECTEDMM}'-'${EXPECTEDDD}'T'${EXPECTEDTIME}'/p' 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g"`
@@ -763,668 +870,1002 @@ function PrintHeaderCSK()
 	}	
 	
 # Let's go...
-clear 
-
-echo
-echo "############################"
-echo "# Domuyo"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DOMUYO-SLC.UNZIP
-	MSBASMODE=DefoInterpolx2Detrend1_Full
-
-echo "${bold}Domuyo Sentinel-1 Asc 18; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_20180512
-	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_20180512_Zoom1_ML4
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450_Till_20220501_0_80_0_450_After.txt
-	PATHMSBAS=$PATH_3602/MSBAS/_Domuyo_S1_Auto_80m_450days/
-	FIRSTIMG=20141030  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}Domuyo Sentinel-1 Asc 18; satellite B${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_A_18/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_A_18/SMNoCrop_SM_20180512
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_A_18/SMNoCrop_SM_20180512_Zoom1_ML4
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend1_Full
-# 	FIRSTIMG=20170505  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-PrintHeader
-echo "${bold}Domuyo Sentinel-1 Desc 83; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCrop_SM_20180222
-	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCrop_SM_20180222_Zoom1_ML4
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set2/table_0_20_0_450_Till_20220501_0_80_0_450_After.txt
-	MSBASMODE=DefoInterpolx2Detrend2_Full
-	FIRSTIMG=20141023  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}Domuyo Sentinel-1 Desc 83; satellite B${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_D_83/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_D_83/SMNoCrop_SM_20180222
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_D_83/SMNoCrop_SM_20180222_Zoom1_ML4
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set2/table_0_20_0_450.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend2_Full
-# 	FIRSTIMG=20161006  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
 
 
-echo
-echo "############################"
-echo "# PF"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_PF_S1_Auto_90m_70_50days/
-
-# echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite A${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_IW_A_144/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_IW_A_144/SMNoCrop_SM_20180831
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_IW_A_144/SMNoCrop_SM_20180831_Zoom1_ML2
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set3/table_0_70_0_70.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend3
-# 	FIRSTIMG=20161004  # YYYYMMDD
-# 	SENSOR=A
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-# echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite B${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_IW_A_144/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_IW_A_144/SMNoCrop_SM_20180831
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_IW_A_144/SMNoCrop_SM_20180831_Zoom1_ML2
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set3/table_0_70_0_70.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend3
-# 	FIRSTIMG=20161004  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-PrintHeader
-echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 IW; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/PF_IW_D_151/NoCrop
-	PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_IW_D_151/SMNoCrop_SM_20200622
-	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_IW_D_151/SMNoCrop_SM_20200622_Zoom1_ML2
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set4/table_0_70_0_70_Till_20220501_0_90_0_70_After.txt 
-	MSBASMODE=DefoInterpolx2Detrend4
-	FIRSTIMG=20161005  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}Piton de la Fournaise  Sentinel-1  Desc 151 SM; satellite B${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_SM_D_151/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85_Zoom1_ML8
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set4/table_0_70_0_70.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend4
-# 	FIRSTIMG=20161011  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-
-PrintHeader
-	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION_SM-SLC.UNZIP
-echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 SM; satellite A ${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/PF_SM_A_144/NoCrop
-	PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85
-	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85_Zoom1_ML8
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set1/table_0_50_0_50_Till_20220501_0_90_0_50_After.txt
-	MSBASMODE=DefoInterpolx2Detrend1
-	FIRSTIMG=20220518  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 SM; satellite B ${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_SM_A_144/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85_Zoom1_ML8
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set1/table_0_50_0_50.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend1
-# 	FIRSTIMG=20161010  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-#PrintHeader
-#	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION_SM-SLC.UNZIP
-# echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 SM; satellite A ${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_SM_D_151/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set2/table_0_50_0_50.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend2
-# 	FIRSTIMG=20161017  # YYYYMMDD
-# 	SENSOR=A
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-# echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 SM; satellite B ${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/PF_SM_D_151/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set2/table_0_50_0_50.txt 
-# 	MSBASMODE=DefoInterpolx2Detrend2
-# 	FIRSTIMG=20161011  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images 
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-
-echo
-echo "############################"
-echo "# LUX"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-LUXEMBOURG-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_LUX_S1_Auto_70m_400days/
-
-echo "${bold}LUXEMBOURG Sentinel-1 Asc 88; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_A_88/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_A_88/SMNoCrop_SM_20190406
-	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_A_88/SMNoCrop_SM_20190406_Zoom1_ML2
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set2/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
-	MSBASMODE=DefoInterpolx2Detrend1
-	FIRSTIMG=20141104  # YYYYMMDD ancien 20160203
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}LUXEMBOURG Sentinel-1 Asc 88; satellite B${normal}"
-# 	PATHCSL=$PATH_3602/SAR_CSL_Other_Zones_2/S1/LUX_A_88/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/LUX_A_88/SMNoCrop_SM_20170627
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/LUX_A_88/SMNoCrop_SM_20170627_Zoom1_ML4
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LUX/set2/table_0_20_0_400.txt  
-# 	MSBASMODE=DefoInterpolx2Detrend1
-# 	FIRSTIMG=20161006  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-PrintHeader
-echo "${bold}LUXEMBOURG Sentinel-1 Desc 139; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_D_139/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_D_139/SMNoCrop_SM_20210920
-	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_D_139/SMNoCrop_SM_20210920_Zoom1_ML2
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set6/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt 
-	MSBASMODE=DefoInterpolx2Detrend2
-	FIRSTIMG=20141015  # YYYYMMDD ancien 20160326
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}LUXEMBOURG Sentinel-1 Desc 139; satellite B${normal}"
-# 	PATHCSL=$PATH_3602/SAR_CSL_Other_Zones_2/S1/LUX_D_139/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/LUX_D_139/SMNoCrop_SM_20161109
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/LUX_D_139/SMNoCrop_SM_20161109_Zoom1_ML4
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LUX/set6/table_0_20_0_400.txt  
-# 	MSBASMODE=DefoInterpolx2Detrend2
-# 	FIRSTIMG=20160928  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-
-echo
-echo "############################"
-echo "# Karthala"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-KARTHALA_SM-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_Karthala_S1_Auto_150m_150days/
-
-echo "${bold}KARTHALA Sentinel-1 Asc 86; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/KARTHALA_SM_A_86/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_A_86/SMCrop_SM_20220713_ComoresIsland_-11.94--11.34_43.22-43.53
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_A_86/SMCrop_SM_20220713_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set1/table_0_50_0_150_Till_20220501_0_150_0_150_After.txt
-	MSBASMODE=DefoInterpolx2Detrend1
-	FIRSTIMG=20170504  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-
-	PrintHeader
-echo "${bold}KARTHALA Sentinel-1 Desc 35; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/KARTHALA_SM_D_35/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_D_35/SMCrop_SM_20241027_ComoresIsland_-11.94--11.34_43.22-43.53
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_D_35/SMCrop_SM_20241027_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set2/table_0_50_0_150_Till_20220501_0_150_0_150_After.txt
-	MSBASMODE=DefoInterpolx2Detrend2
-	FIRSTIMG=20241003  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-	
-	echo	
-
-	
-echo
-echo "############################"
-echo "# Guadeloupe"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-GUADELOUPE-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_Guadeloupe_S1_Auto_90m_150days/
-
-echo "${bold}GUADELOUPE Sentinel-1 Asc 164; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_A_164/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622_Zoom1_ML2
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set1/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
-	MSBASMODE=DefoInterpolx2Detrend1
-	FIRSTIMG=20141203  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-	
-	PrintHeader
-echo "${bold}GUADELOUPE Sentinel-1 Desc 54; satellite A${normal}"
-	PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_D_54/NoCrop
-	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410
-	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410_Zoom1_ML2
-	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set2/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
-	MSBASMODE=DefoInterpolx2Detrend2
-	FIRSTIMG=20150206  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-	
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Domuyo" ] ; then 
 	echo
-	
-	
-echo
-echo "############################"
-echo "# Funu 2D"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
-	PATHMSBAS=${PATH_3602}/MSBAS/_Funu2D_S1_Auto_Max3Shortests
+	echo "############################"
+	echo "# Domuyo"
+	echo "############################"
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DOMUYO-SLC.UNZIP
+		PATHMSBAS=$PATH_3602/MSBAS/_Domuyo_S1_Auto_80m_450days/
+		TARGET_KML="$PATH_1650/kml/ARGENTINA/Argentina_download_Polygon.kml"
 
-echo "${bold}Funu2D Sentinel-1 Asc 174; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608
-	PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608_Zoom1_ML2
-	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set1/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol1
-	FIRSTIMG=20141017  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
+	PrintHeader	# For Asc Domuyo
+		PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_20180512
+		PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_20180512_Zoom1_ML4
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set1/table_0_20_0_450_Till_20220501_0_80_0_450_After.txt
+		MSBASMODE=DefoInterpolx2Detrend1_Full
+
+			echo "${bold}Domuyo Sentinel-1 Asc 18; satellite A${normal}"
+				FIRSTIMG=20141030  # YYYYMMDD
+				SENSOR=A
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+			 echo "${bold}Domuyo Sentinel-1 Asc 18; satellite B${normal}"
+			 	FIRSTIMG=20170505  # YYYYMMDD
+			 	SENSOR=B
+			 	# Check the last images 
+			 	for i in $(seq 1 ${OLD})			
+			 		do 
+			 			CheckS1
+			 	done
+			echo "${bold}Domuyo Sentinel-1 Asc 18; satellite C${normal}"
+				FIRSTIMG=20250405  # YYYYMMDD
+				SENSOR=C
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
 	
-	PrintHeader
-echo "${bold}Funu2D Sentinel-1 Desc 21; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517
-	PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517_Zoom1_ML2
-	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set2/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol2
-	FIRSTIMG=20141007  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-	
+	PrintHeader # For Desc Domuyo
+		PATHCSL=$PATH_1650/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCrop_SM_20180222
+		PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCrop_SM_20180222_Zoom1_ML4
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/ARGENTINE/set2/table_0_20_0_450_Till_20220501_0_80_0_450_After.txt
+		MSBASMODE=DefoInterpolx2Detrend2_Full
+
+			echo "${bold}Domuyo Sentinel-1 Desc 83; satellite A${normal}"
+				FIRSTIMG=20141023  # YYYYMMDD
+				SENSOR=A
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+			 echo "${bold}Domuyo Sentinel-1 Desc 83; satellite B${normal}"
+			 	FIRSTIMG=20161006  # YYYYMMDD
+			 	SENSOR=B
+			 	# Check the last images 
+			 	for i in $(seq 1 ${OLD})			
+			 		do 
+			 			CheckS1
+			 	done
+			echo "${bold}Domuyo Sentinel-1 Desc 83; satellite C${normal}"
+				FIRSTIMG=20250329  # YYYYMMDD
+				SENSOR=C
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+fi
+
+
+
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "PF" ] ; then 
 	echo
-
-	
-echo "############################"
-echo "# Funu 3D"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
-	PATHMSBAS=${PATH_3602}/MSBAS/_Funu3D_S1_Auto_Max3Shortests
-
-echo "${bold}Funu3D Sentinel-1 Asc 174; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608
-	PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608_Zoom1_ML2
-	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set1/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol1
-	FIRSTIMG=20141017  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-	
-	PrintHeader
-echo "${bold}Funu3D Sentinel-1 Desc 21; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517
-	PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517_Zoom1_ML2
-	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set2/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol2
-	FIRSTIMG=20141007  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-	
-	echo
-
-
-
-
-
-
-
- exit 
- 
- 
- 
- 
- 
- 
- 
- 
-echo "############################"
-echo "# NEPAL"
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3610/SAR_DATA/S1/S1-DATA-NEPAL-SLC.UNZIP
-					PATHMSBAS=${PATH_3602}/MSBAS/_Nepal_S1_Auto_
-
-echo "${bold}Nepal Sentinel-1 Asc 85; satellite A${normal}"
-	PATHCSL=$PATH_1610/SAR_CSL/S1/Nepal_A_85/NoCrop
-		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/Nepal_A_85/SMNoCrop_SM_20160608
-		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608_Zoom1_ML2
-		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set1/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol1
-	FIRSTIMG=20141011  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-
-echo "${bold}Nepal Sentinel-1 Asc 158; satellite A${normal}"
-	PATHCSL=$PATH_1610/SAR_CSL/S1/Nepal_A_158/NoCrop
-		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/Nepal_A_158/SMNoCrop_SM_20160608
-		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608_Zoom1_ML2
-		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set2/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol2
-	FIRSTIMG=20141016  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
+	echo "############################"
+	echo "# PF"
+	echo "############################"
+		PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION-SLC.UNZIP
+		PATHMSBAS=$PATH_3602/MSBAS/_PF_S1_Auto_90m_70_50days/
+		TARGET_KML=$PATH_1650/kml/Reunion/Reunion_Download_Polygon.kml
 		
+	# PF IW
+	PrintHeader # For Asc PF IW
+	 	PATHCSL=$PATH_1660/SAR_CSL/S1/PF_IW_A_144/NoCrop
+	 	PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_IW_A_144/SMNoCrop_SM_20180831
+	 	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_IW_A_144/SMNoCrop_SM_20180831_Zoom1_ML2
+	 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set3/table_0_70_0_70.txt 
+	 	MSBASMODE=DefoInterpolx2Detrend3
 
-	PrintHeader
-echo "${bold}Nepal Sentinel-1 Desc 19; satellite A${normal}"
-	PATHCSL=$PATH_1610/SAR_CSL/S1/Nepal_D_19/NoCrop
-		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/Nepal_D_19/SMNoCrop_SM_20160608
-		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/Nepal_D_19/SMNoCrop_SM_20160608_Zoom1_ML2
-		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set3/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol3
-	FIRSTIMG=20141019  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
+			#echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite A${normal}"
+				FIRSTIMG=20161004  # YYYYMMDD
+				SENSOR=A
+			echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite A${normal} - NO ACQUISITION" ; i=1 ; CheckS1
+			#	# Check the last images 
+			#	for i in $(seq 1 ${OLD})			
+			#		do 
+			#			CheckS1
+			#	done
+			
+			echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite B${normal}"
+				FIRSTIMG=20161004  # YYYYMMDD
+				SENSOR=B
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
 
-echo "${bold}Nepal Sentinel-1 Desc 92; satellite A${normal}"
-	PATHCSL=$PATH_1610/SAR_CSL/S1/Nepal_D_92/NoCrop
-		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/Nepal_D_92/SMNoCrop_SM_20160608
-		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/Nepal_D_19/SMNoCrop_SM_20160608_Zoom1_ML2
-		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set4/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol4
-	FIRSTIMG=20141012  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-	
+			#echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite C${normal}"
+			#	FIRSTIMG=  # YYYYMMDD
+			#	SENSOR=C
+			##echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 IW; satellite C${normal} - NO ACQUISITION" ; i=1 ; CheckS1
+			#	# Check the last images 
+			#	for i in $(seq 1 ${OLD})			
+			#		do 
+			#			CheckS1
+			#	done
 
-echo "${bold}Nepal Sentinel-1 Desc 121; satellite A${normal}"
-	PATHCSL=$PATH_1610/SAR_CSL/S1/Nepal_D_121/NoCrop
-		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/Nepal_D_121/SMNoCrop_SM_20160608
-		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/Nepal_D_121/SMNoCrop_SM_20160608_Zoom1_ML2
-		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set5/table_0_0_MaxShortest_3.txt
-	MSBASMODE=DefoInterpol5
-	FIRSTIMG=20141014  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
 	
+	PrintHeader # For Desc PF IW
+		PATHCSL=$PATH_1660/SAR_CSL/S1/PF_IW_D_151/NoCrop
+		PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_IW_D_151/SMNoCrop_SM_20200622
+		PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_IW_D_151/SMNoCrop_SM_20200622_Zoom1_ML2
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set4/table_0_70_0_70_Till_20220501_0_90_0_70_After.txt 
+
+			echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 IW; satellite A${normal}"
+				MSBASMODE=DefoInterpolx2Detrend4
+				FIRSTIMG=20161005  # YYYYMMDD
+				SENSOR=A
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+
+			echo "${bold}Piton de la Fournaise  Sentinel-1  Desc 151 SM; satellite B${normal}"
+				FIRSTIMG=20161011  # YYYYMMDD
+				SENSOR=B
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+
+			#echo "${bold}Piton de la Fournaise  Sentinel-1  Desc 151 SM; satellite C${normal}"
+			#	FIRSTIMG=  # YYYYMMDD
+			#	SENSOR=C
+			##echo "${bold}Piton de la Fournaise  Sentinel-1  Desc 151 SM; satellite C${normal} - NO ACQUISITION" ; i=1 ; CheckS1
+			#	# Check the last images 
+			#	for i in $(seq 1 ${OLD})			
+			#		do 
+			#			CheckS1
+			#	done
+
+
+	# SM PF
+		PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/S1/S1-DATA-REUNION_SM-SLC.UNZIP
+		TARGET_KML=$PATH_1650/kml/Reunion/Reunion_SM_Polygon.kml
+
+	PrintHeader # For Asc SM PF
+		PATHCSL=$PATH_1660/SAR_CSL/S1/PF_SM_A_144/NoCrop
+		PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85
+		PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_SM_A_144/SMCrop_SM_20190808_Reunion_-21.41--20.85_55.2-55.85_Zoom1_ML8
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set1/table_0_50_0_50_Till_20220501_0_90_0_50_After.txt
+
+			echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 SM; satellite A ${normal}"
+				MSBASMODE=DefoInterpolx2Detrend1
+				FIRSTIMG=20220518  # YYYYMMDD
+				SENSOR=A
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+
+			echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 SM; satellite B ${normal}"
+				FIRSTIMG=20161010  # YYYYMMDD
+				SENSOR=B
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+
+			echo "${bold}Piton de la Fournaise Sentinel-1 Asc 144 SM; satellite C ${normal}"
+				FIRSTIMG=20250508  # YYYYMMDD
+				SENSOR=C
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
 	
+	PrintHeader # For Desc SM PF
+	 	PATHCSL=$PATH_1660/SAR_CSL/S1/PF_SM_D_151/NoCrop
+	 	PATHRESAMP=$PATH_1660/SAR_SM/RESAMPLED/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85
+	 	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/PF_SM_D_151/SMCrop_SM_20181013_Reunion_-21.41--20.85_55.2-55.85_Zoom1_ML8
+	 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/PF/set2/table_0_50_0_50.txt 
+	 	MSBASMODE=DefoInterpolx2Detrend2
+
+			#echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 SM; satellite A ${normal}"
+				FIRSTIMG=20161017  # YYYYMMDD
+				SENSOR=A
+			echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 SM; satellite A ${normal} - NO ACQUISITION" ; i=1 ; CheckS1
+			#	# Check the last images 
+			#	for i in $(seq 1 ${OLD})			
+			#		do 
+			#			CheckS1
+			#	done
+
+			echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 SM; satellite B ${normal}"
+				FIRSTIMG=20161011  # YYYYMMDD
+				SENSOR=B
+				# Check the last images 
+				for i in $(seq 1 ${OLD})			
+					do 
+						CheckS1
+				done
+
+			 echo "${bold}Piton de la Fournaise Sentinel-1 Desc 151 SM; satellite C ${normal}"
+			 	FIRSTIMG=20250509  # YYYYMMDD
+			 	SENSOR=C
+			 	# Check the last images 
+			 	for i in $(seq 1 ${OLD})			
+			 		do 
+			 			CheckS1
+			 	done
+fi
+
+
+
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Lux" ] ; then 
 	echo
+	echo "############################"
+	echo "# LUX"
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-LUXEMBOURG-SLC.UNZIP
+		PATHMSBAS=$PATH_3602/MSBAS/_LUX_S1_Auto_70m_400days/
+		TARGET_KML=$PATH_1650/kml/Luxembourg/Lux_Download_polygon.kml
+	
+	echo "${bold}LUXEMBOURG Sentinel-1 Asc 88; satellite A${normal}"
+		PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_A_88/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_A_88/SMNoCrop_SM_20190406
+		PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_A_88/SMNoCrop_SM_20190406_Zoom1_ML2
+		PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set2/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
+		MSBASMODE=DefoInterpolx2Detrend1
+		FIRSTIMG=20141104  # YYYYMMDD ancien 20160203
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	# echo "${bold}LUXEMBOURG Sentinel-1 Asc 88; satellite B${normal}"
+	# 	PATHCSL=$PATH_3602/SAR_CSL_Other_Zones_2/S1/LUX_A_88/NoCrop
+	# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/LUX_A_88/SMNoCrop_SM_20170627
+	# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/LUX_A_88/SMNoCrop_SM_20170627_Zoom1_ML4
+	# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LUX/set2/table_0_20_0_400.txt  
+	# 	MSBASMODE=DefoInterpolx2Detrend1
+	# 	FIRSTIMG=20161006  # YYYYMMDD
+	# 	SENSOR=B
+	# 	# Check the last images
+	# 	for i in $(seq 1 ${OLD})			
+	# 		do 
+	# 			CheckS1
+	# 	done
+	#echo "${bold}LUXEMBOURG Sentinel-1 Asc 88; satellite C${normal}"
+	#	PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_A_88/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_A_88/SMNoCrop_SM_20190406
+	#	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_A_88/SMNoCrop_SM_20190406_Zoom1_ML2
+	#	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set2/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
+	#	MSBASMODE=DefoInterpolx2Detrend1
+	#		FIRSTIMG=  # YYYYMMDD ancien 20160203
+	#	SENSOR=C
+	#	# Check the last images
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done
+	
+	
+	PrintHeader
+	echo "${bold}LUXEMBOURG Sentinel-1 Desc 139; satellite A${normal}"
+		PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_D_139/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_D_139/SMNoCrop_SM_20210920
+		PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_D_139/SMNoCrop_SM_20210920_Zoom1_ML2
+		PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set6/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt 
+		MSBASMODE=DefoInterpolx2Detrend2
+		FIRSTIMG=20141015  # YYYYMMDD ancien 20160326
+		SENSOR=A
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	# echo "${bold}LUXEMBOURG Sentinel-1 Desc 139; satellite B${normal}"
+	# 	PATHCSL=$PATH_3602/SAR_CSL_Other_Zones_2/S1/LUX_D_139/NoCrop
+	# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/LUX_D_139/SMNoCrop_SM_20161109
+	# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/LUX_D_139/SMNoCrop_SM_20161109_Zoom1_ML4
+	# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LUX/set6/table_0_20_0_400.txt  
+	# 	MSBASMODE=DefoInterpolx2Detrend2
+	# 	FIRSTIMG=20160928  # YYYYMMDD
+	# 	SENSOR=B
+	# 	# Check the last images
+	# 	for i in $(seq 1 ${OLD})			
+	# 		do 
+	# 			CheckS1
+	# 	done
+	#echo "${bold}LUXEMBOURG Sentinel-1 Desc 139; satellite C${normal}"
+	#	PATHCSL=$PATH_1660/SAR_CSL/S1/LUX_D_139/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/LUX_D_139/SMNoCrop_SM_20210920
+	#	PATHMASSPROCESS=$PATH_3610/SAR_MASSPROCESS/S1/LUX_D_139/SMNoCrop_SM_20210920_Zoom1_ML2
+	#	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/LUX/set6/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt 
+	#	MSBASMODE=DefoInterpolx2Detrend2
+	#		FIRSTIMG=  # YYYYMMDD ancien 20160326
+	#	SENSOR=C
+	#	# Check the last images 
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done
+fi
+
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Karthala" ] ; then 
+	echo
+	echo "############################"
+	echo "# Karthala"
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-KARTHALA_SM-SLC.UNZIP
+		PATHMSBAS=$PATH_3602/MSBAS/_Karthala_S1_Auto_150m_150days/
+		TARGET_KML=$PATH_1650/kml/Karthala/Karthala_Download_Polygon.kml
+	
+	echo "${bold}KARTHALA Sentinel-1 Asc 86; satellite A${normal}"
+		PATHCSL=$PATH_1650/SAR_CSL/S1/KARTHALA_SM_A_86/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_A_86/SMCrop_SM_20220713_ComoresIsland_-11.94--11.34_43.22-43.53
+		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_A_86/SMCrop_SM_20220713_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set1/table_0_50_0_150_Till_20220501_0_150_0_150_After.txt
+		MSBASMODE=DefoInterpolx2Detrend1
+		FIRSTIMG=20170504  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	
+		PrintHeader
+	echo "${bold}KARTHALA Sentinel-1 Desc 35; satellite A${normal}"
+		PATHCSL=$PATH_1650/SAR_CSL/S1/KARTHALA_SM_D_35/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_D_35/SMCrop_SM_20241027_ComoresIsland_-11.94--11.34_43.22-43.53
+		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_D_35/SMCrop_SM_20241027_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set2/table_0_150_0_150.txt
+		MSBASMODE=DefoInterpolx2Detrend2
+		FIRSTIMG=20241003  # YYYYMMDD
+		SENSOR=A
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+		
+		echo	
+fi
+
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Guadeloupe" ] ; then 
+	echo
+	echo "############################"
+	echo "# Guadeloupe"
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-GUADELOUPE-SLC.UNZIP
+		PATHMSBAS=$PATH_3602/MSBAS/_Guadeloupe_S1_Auto_90m_150days/
+		TARGET_KML=$PATH_1650/kml/Guadeloupe/Guadeloupe_Asc_Download.kml
+	
+	echo "${bold}GUADELOUPE Sentinel-1 Asc 164; satellite A${normal}"
+		PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_A_164/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622
+		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622_Zoom1_ML2
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set1/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
+		MSBASMODE=DefoInterpolx2Detrend1
+		FIRSTIMG=20141203  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	echo "${bold}GUADELOUPE Sentinel-1 Asc 164; satellite C${normal}"
+		PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_A_164/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622
+		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_A_164/SMNoCrop_SM_20190622_Zoom1_ML2
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set1/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
+		MSBASMODE=DefoInterpolx2Detrend1
+		FIRSTIMG=20250403  # YYYYMMDD
+		SENSOR=C
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+		
+		PrintHeader
+	echo "${bold}GUADELOUPE Sentinel-1 Desc 54; satellite A${normal}"
+		PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_D_54/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410
+		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410_Zoom1_ML2
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set2/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
+		MSBASMODE=DefoInterpolx2Detrend2
+		FIRSTIMG=20150206  # YYYYMMDD
+		SENSOR=A
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+		
+		echo
+	echo "${bold}GUADELOUPE Sentinel-1 Desc 54; satellite C${normal}"
+		PATHCSL=$PATH_1650/SAR_CSL/S1/GUADELOUPE_D_54/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410
+		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/GUADELOUPE_D_54/SMNoCrop_SM_20200410_Zoom1_ML2
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set2/table_0_50_0_150_Till_20240201_0_90_0_150_After_WITHHEADER.txt
+		MSBASMODE=DefoInterpolx2Detrend2
+		FIRSTIMG=20250327  # YYYYMMDD
+		SENSOR=C
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+		
+		echo	
+fi 
+
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Funu2D" ] ; then 
+	echo
+	echo "############################"
+	echo "# Funu 2D"
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
+		PATHMSBAS=${PATH_3602}/MSBAS/_Funu2D_S1_Auto_Max3Shortests
+		TARGET_KML=$PATH_1650/kml/VVP/Buk_tmp.kml
+
+		PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608
+		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set1/table_0_0_MaxShortest_3.txt
+		MSBASMODE=DefoInterpol1
+	
+	echo "${bold}Funu2D Sentinel-1 Asc 174; satellite A${normal}"
+		FIRSTIMG=20141017  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+
+	echo "${bold}Funu2D Sentinel-1 Asc 174; satellite B${normal}"
+		FIRSTIMG=20180616  # YYYYMMDD
+		SENSOR=B
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+
+	echo "${bold}Funu2D Sentinel-1 Asc 174; satellite C${normal} - NO ACQUISITION YET"
+#		FIRSTIMG=  # YYYYMMDD
+#		SENSOR=C
+#		# Check the last images
+#		for i in $(seq 1 ${OLD})			
+#			do 
+#				CheckS1
+#		done
+		
+		PrintHeader
+
+		PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517
+		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set2/table_0_0_MaxShortest_3.txt
+		MSBASMODE=DefoInterpol2
+
+	echo "${bold}Funu2D Sentinel-1 Desc 21; satellite A${normal}"
+		FIRSTIMG=20141007  # YYYYMMDD
+		SENSOR=A
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	echo "${bold}Funu2D Sentinel-1 Desc 21; satellite B${normal}"
+		FIRSTIMG=20170307  # YYYYMMDD
+		SENSOR=B
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	echo "${bold}Funu2D Sentinel-1 Desc 21; satellite C${normal}"
+		FIRSTIMG=20250406  # YYYYMMDD
+		SENSOR=C
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+		
+		echo
+fi	
+	
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Funu3D" ] ; then 
+	echo "############################"
+	echo "# Funu 3D"
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
+		PATHMSBAS=${PATH_3602}/MSBAS/_Funu3D_S1_Auto_Max3Shortests
+		TARGET_KML=$PATH_1650/kml/VVP/Buk_tmp.kml
+
+		PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608
+		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_A_174/SMNoCrop_SM_20160608_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set1/table_0_0_MaxShortest_3.txt
+		MSBASMODE=DefoInterpol1
+
+	echo "${bold}Funu3D Sentinel-1 Asc 174; satellite A${normal}"
+		FIRSTIMG=20141017  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	echo "${bold}Funu3D Sentinel-1 Asc 174; satellite B${normal}"
+		FIRSTIMG=20180616  # YYYYMMDD
+		SENSOR=B
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+
+	echo "${bold}Funu3D Sentinel-1 Asc 174; satellite C${normal} - NO ACQUISITION YET"
+#		FIRSTIMG=  # YYYYMMDD
+#		SENSOR=C
+#		# Check the last images
+#		for i in $(seq 1 ${OLD})			
+#			do 
+#				CheckS1
+#		done
+
+		
+		PrintHeader
+
+		PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_Funu/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517
+		PATHMASSPROCESS=${PATH_1660}/SAR_MASSPROCESS/S1/DRC_Funu_D_21/SMNoCrop_SM_20160517_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/Funu/set2/table_0_0_MaxShortest_3.txt
+		MSBASMODE=DefoInterpol2
+
+	echo "${bold}Funu3D Sentinel-1 Desc 21; satellite A${normal}"
+		FIRSTIMG=20141007  # YYYYMMDD
+		SENSOR=A
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	echo "${bold}Funu3D Sentinel-1 Desc 21; satellite B${normal}"
+		FIRSTIMG=20170307  # YYYYMMDD
+		SENSOR=B
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	echo "${bold}Funu3D Sentinel-1 Desc 21; satellite C${normal}"
+		FIRSTIMG=20250406  # YYYYMMDD
+		SENSOR=C
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+		
+		echo
+fi
+
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Galeras" ] ; then 
+	echo "############################"
+	echo "# GALERAS"
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3611/SAR_DATA/S1/S1-DATA-GALERAS-SLC.UNZIP
+		PATHRAWZIP=$PATH_3611/SAR_DATA/S1/S1-DATA-GALERAS-SLC.ZIP
+		PATHMSBAS=${PATH_3601}/MSBAS/_Galeras_S1_Auto_50m_150days
+		TARGET_KML=$PATH_1650/kml/Colombia/Galeras_Download_Polygon.kml
+		
+	echo "${bold}Galeras Sentinel-1 Asc 120; satellite A${normal}"
+		PATHCSL=$PATH_3610/SAR_CSL/S1/GALERAS_A_120/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/GALERAS_A_120/SMNoCrop_SM_20190126
+		PATHMASSPROCESS=${PATH_3601}/SAR_MASSPROCESS/S1/GALERAS_A_120/SMNoCrop_SM_20190126_Zoom1_ML2
+		PATHBASELINE=${PATH_1650}/SAR_SM/MSBAS/GALERAS/set1/table_0_40_0_150_Till_20240201_0_50_0_150_After.txt
+		MSBASMODE=DefoInterpolx2Detrend1
+		FIRSTIMG=20160112  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	
+	#echo "${bold}Galeras Sentinel-1 Asc 120; satellite C${normal}"
+	#	PATHCSL=$PATH_3610/SAR_CSL/S1/GALERAS_A_120/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/GALERAS_A_120/SMNoCrop_SM_20190126
+	#	PATHMASSPROCESS=${PATH_3601}/SAR_MASSPROCESS/S1/GALERAS_A_120/SMNoCrop_SM_20190126_Zoom1_ML2
+	#	PATHBASELINE=${PATH_1650}/SAR_SM/MSBAS/GALERAS/set1/table_0_40_0_150_Till_20240201_0_50_0_150_After.txt
+	#	MSBASMODE=DefoInterpol1
+	#		FIRSTIMG=  # YYYYMMDD
+	#	SENSOR=C
+	#	# Check the last images
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done
+	
+		PrintHeader
+	echo "${bold}Galeras Sentinel-1 Desc 19; satellite A${normal}"
+		PATHCSL=$PATH_3610/SAR_CSL/S1/GALERAS_D_142/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/GALERAS_D_142/SMNoCrop_SM_20180906
+		PATHMASSPROCESS=${PATH_3601}/SAR_MASSPROCESS/S1/GALERAS_D_142/SMNoCrop_SM_20180906_Zoom1_ML2
+		PATHBASELINE=${PATH_1650}/SAR_SM/MSBAS/GALERAS/set2/table_0_40_0_150_Till_20240201_0_50_0_150_After.txt
+		MSBASMODE=DefoInterpolx2Detrend2
+		FIRSTIMG=20160126  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	
+	echo "${bold}Galeras Sentinel-1 Desc 19; satellite C${normal}"
+		PATHCSL=$PATH_3610/SAR_CSL/S1/GALERAS_D_142/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/GALERAS_D_142/SMNoCrop_SM_20180906
+		PATHMASSPROCESS=${PATH_3601}/SAR_MASSPROCESS/S1/GALERAS_D_142/SMNoCrop_SM_20180906_Zoom1_ML2
+		PATHBASELINE=${PATH_1650}/SAR_SM/MSBAS/GALERAS/set2/table_0_40_0_150_Till_20240201_0_50_0_150_After.txt
+		MSBASMODE=DefoInterpol2
+		FIRSTIMG=20250508  # YYYYMMDD
+		SENSOR=C
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+fi
+
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Nepal" ] ; then 
+	echo
+	echo "############################"
+	echo "# NEPAL"
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3610/SAR_DATA/S1/S1-DATA-NEPAL-SLC_A85.UNZIP
+		PATHMSBAS=${PATH_3610}/MSBAS/_NEPAL_S1_Auto_Max3Shortests
+
+	echo "${bold}Nepal Sentinel-1 Asc 85; satellite A${normal}"
+		MSBASMODE=DefoInterpolx2Detrend1
+		TARGET_KML=${PATH_1650}/kml/Nepal/Download_CentralNepalBursts_A85.kml
+		PATHCSL=$PATH_3611/SAR_CSL/S1/NEPAL_A_85/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_A_85/SMNoCrop_SM_20240328
+		PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_A_85/SMNoCrop_SM_20240328_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set1/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+
+		FIRSTIMG=20141011  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	
+	#echo "${bold}Nepal Sentinel-1 Asc 85; satellite C${normal}"
+	#	PATHCSL=$PATH_3611/SAR_CSL/S1/NEPAL_A_85/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_A_85/SMNoCrop_SM_20240328
+	#	PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_A_85/SMNoCrop_SM_20240328_Zoom1_ML2
+	#	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set1/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+	#	MSBASMODE=DefoInterpol1
+	#		FIRSTIMG=  # YYYYMMDD
+	#	SENSOR=C
+	#	# Check the last images
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done
+		PATHRAW=$PATH_3610/SAR_DATA/S1/S1-DATA-NEPAL-SLC_A158.UNZIP
+		TARGET_KML=${PATH_1650}/kml/Nepal/Download_CentralNepalBursts_A158.kml
+
+	echo "${bold}Nepal Sentinel-1 Asc 158; satellite A${normal}"
+		PATHCSL=$PATH_3611/SAR_CSL/S1/NEPAL_A_158/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_A_158/SMNoCrop_SM_20180410
+		PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_A_158/SMNoCrop_SM_20180410_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set2/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+		MSBASMODE=DefoInterpolx2Detrend2
+		FIRSTIMG=20141028  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+			
+	#echo "${bold}Nepal Sentinel-1 Asc 158; satellite C${normal}"
+	#	PATHCSL=$PATH_3611/SAR_CSL/S1/NEPAL_A_158/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_A_158/SMNoCrop_SM_20180410
+	#	PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_A_158/SMNoCrop_SM_20180410_Zoom1_ML2
+	#	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set2/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+	#	MSBASMODE=DefoInterpol2
+	#		FIRSTIMG=  # YYYYMMDD
+	#	SENSOR=C
+	#	# Check the last images
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done
+	
+		PrintHeader
+		PATHRAW=$PATH_3610/SAR_DATA/S1/S1-DATA-NEPAL-SLC_D19.UNZIP
+		TARGET_KML=${PATH_1650}/kml/Nepal/Download_CentralNepalBursts_D19.kml
+
+	echo "${bold}Nepal Sentinel-1 Desc 19; satellite A${normal}"
+		PATHCSL=$PATH_3611/SAR_CSL/S1/Nepal_D_19/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_D_19/SMNoCrop_SM_20180928
+		PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_19/SMNoCrop_SM_20180928_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set3/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+		MSBASMODE=DefoInterpolx2Detrend3
+		FIRSTIMG=20141031  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	
+	#echo "${bold}Nepal Sentinel-1 Desc 19; satellite C${normal}"
+	#	PATHCSL=$PATH_3611/SAR_CSL/S1/Nepal_D_19/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_D_19/SMNoCrop_SM_20180928
+	#	PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_19/SMNoCrop_SM_20180928_Zoom1_ML2
+	#	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set3/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+	#	MSBASMODE=DefoInterpol3
+	#		FIRSTIMG=  # YYYYMMDD
+	#	SENSOR=C
+	#	# Check the last images
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done
+	#
+	
+		PATHRAW=$PATH_3610/SAR_DATA/S1/S1-DATA-NEPAL-SLC_D92.UNZIP
+		TARGET_KML=${PATH_1650}/kml/Nepal/Download_CentralNepalBursts_D92.kml
+
+	echo "${bold}Nepal Sentinel-1 Desc 92; satellite A${normal}"
+		PATHCSL=$PATH_3611/SAR_CSL/S1/Nepal_D_92/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_D_92/SMNoCrop_SM_20220714
+		PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_19/SMNoCrop_SM_20220714_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set4/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+		MSBASMODE=DefoInterpolx2Detrend4
+		FIRSTIMG=20141024  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	#echo "${bold}Nepal Sentinel-1 Desc 92; satellite C${normal}"
+	#	PATHCSL=$PATH_3611/SAR_CSL/S1/Nepal_D_92/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_D_92/SMNoCrop_SM_20220714
+	#	PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_19/SMNoCrop_SM_20220714_Zoom1_ML2
+	#	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set4/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+	#	MSBASMODE=DefoInterpol4
+	#		FIRSTIMG=  # YYYYMMDD
+	#	SENSOR=C
+	#	# Check the last images
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done	
+	
+		PATHRAW=$PATH_3610/SAR_DATA/S1/S1-DATA-NEPAL-SLC_D121.UNZIP
+		TARGET_KML=${PATH_1650}/kml/Nepal/Download_CentralNepalBursts_D121.kml
+
+	echo "${bold}Nepal Sentinel-1 Desc 121; satellite A${normal}"
+		PATHCSL=$PATH_3611/SAR_CSL/S1/Nepal_D_121/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_D_121/SMNoCrop_SM_20170904
+		PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_121/SMNoCrop_SM_20170904_Zoom1_ML2
+		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set5/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+		MSBASMODE=DefoInterpolx2Detrend5
+		FIRSTIMG=20141026  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+		
+		
+		echo
+	#echo "${bold}Nepal Sentinel-1 Desc 121; satellite C${normal}"
+	#	PATHCSL=$PATH_3611/SAR_CSL/S1/Nepal_D_121/NoCrop
+	#	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_D_121/SMNoCrop_SM_20170904
+	#	PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_121/SMNoCrop_SM_20170904_Zoom1_ML2
+	#	PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set5/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+	#	MSBASMODE=DefoInterpolx2Detrend5
+	#		FIRSTIMG=  # YYYYMMDD
+	#	SENSOR=C
+	#	# Check the last images
+	#	for i in $(seq 1 ${OLD})			
+	#		do 
+	#			CheckS1
+	#	done
+	#	
+	#	
+	#	echo
+	#
+fi
+
+if [ "${TARGET}" == "NONE" ]  ; then 
+	exit
+fi
 
 
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Laguna" ] ; then 
+	echo "#####################################"
+	echo "# LagunaFea SAOCOM - Delaunay Ratio30"
+	echo "#####################################"
+	 PrintHeader
+	 	PATHRAW=$PATH_3610/SAR_DATA/SAOCOM/LagunaFea-UNZIP
+	 	MSBASMODE=DefoInterpolx2Detrend1
+	 
+	 echo "${bold}LagunaFea SAOCOM Asc 42; satellite A${normal}"
+	 	PATHCSL=$PATH_1650/SAR_CSL/SAOCOM/LagunaFea_042_A/NoCrop
+	 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/SAOCOM/LagunaFea_042_A/SMNoCrop_SM_20231010
+	 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/SAOCOM/LagunaFea_042_A/SMNoCrop_SM_20231010_Zoom1_ML8
+	 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LagunaFea/set1/table_0_0_DelaunayRatio30.0_0.txt
+	 	PATHMSBAS=$PATH_3602/MSBAS/_LagunaFea_SAOCOM_Auto_DelaunayRatio30
+	 	FIRSTIMG=20230401  # YYYYMMDD
+	  	EXPECTEDTIME=11		# hh time of acquisition (written in file name); required to assess if asc or desc
+	 
+	 	j=0
+	 	# Check the last images 
+	 	for i in $(seq 1 ${OLDSAOCOM})			
+	 		do 
+	  			TST="OFF"
+	  			CheckSAOCOM
+	 	done
+	 
+	 PrintHeader
+	 echo "${bold}LagunaFea SAOCOM Desc 152; satellite A${normal}"
+	 	PATHCSL=$PATH_1650/SAR_CSL/SAOCOM/LagunaFea_152_D/NoCrop
+	 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/SAOCOM/LagunaFea_152_D/SMNoCrop_SM_20231105
+	 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/SAOCOM/LagunaFea_152_D/SMNoCrop_SM_20231105_Zoom1_ML8
+	 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LagunaFea/set2/table_0_0_DelaunayRatio30.0_0.txt
+	 	MSBASMODE=DefoInterpolx2Detrend2
+	 	FIRSTIMG=20230716  # YYYYMMDD
+	  	EXPECTEDTIME=21		# hh time of acquisition (written in file name); required to assess if asc or desc
+	 
+	 	j=0
+	 	# Check the last images 
+	 	for i in $(seq 1 ${OLDSAOCOM})			
+	 		do 
+	  			TST="OFF"
+	  			CheckSAOCOM
+	 	done
+fi
 
 
-
-echo "#####################################"
-echo "# LagunaFea SAOCOM - Delaunay Ratio30"
-echo "#####################################"
- PrintHeader
- 	PATHRAW=$PATH_3610/SAR_DATA/SAOCOM/LagunaFea-UNZIP
- 	MSBASMODE=DefoInterpolx2Detrend1
- 
- echo "${bold}LagunaFea SAOCOM Asc 42; satellite A${normal}"
- 	PATHCSL=$PATH_1650/SAR_CSL/SAOCOM/LagunaFea_042_A/NoCrop
- 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/SAOCOM/LagunaFea_042_A/SMNoCrop_SM_20231010
- 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/SAOCOM/LagunaFea_042_A/SMNoCrop_SM_20231010_Zoom1_ML8
- 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LagunaFea/set1/table_0_0_DelaunayRatio30.0_0.txt
- 	PATHMSBAS=$PATH_3602/MSBAS/_LagunaFea_SAOCOM_Auto_DelaunayRatio30
- 	FIRSTIMG=20230401  # YYYYMMDD
-  	EXPECTEDTIME=11		# hh time of acquisition (written in file name); required to assess if asc or desc
- 
- 	j=0
- 	# Check the last images 
- 	for i in $(seq 1 ${OLDSAOCOM})			
- 		do 
-  			TST="OFF"
-  			CheckSAOCOM
- 	done
- 
- PrintHeader
- echo "${bold}LagunaFea SAOCOM Desc 152; satellite A${normal}"
- 	PATHCSL=$PATH_1650/SAR_CSL/SAOCOM/LagunaFea_152_D/NoCrop
- 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/SAOCOM/LagunaFea_152_D/SMNoCrop_SM_20231105
- 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/SAOCOM/LagunaFea_152_D/SMNoCrop_SM_20231105_Zoom1_ML8
- 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/LagunaFea/set2/table_0_0_DelaunayRatio30.0_0.txt
- 	MSBASMODE=DefoInterpolx2Detrend2
- 	FIRSTIMG=20230716  # YYYYMMDD
-  	EXPECTEDTIME=21		# hh time of acquisition (written in file name); required to assess if asc or desc
- 
- 	j=0
- 	# Check the last images 
- 	for i in $(seq 1 ${OLDSAOCOM})			
- 		do 
-  			TST="OFF"
-  			CheckSAOCOM
- 	done
+#echo "# TERMINATED PROCESSES"
+#echo "######################"
+#echo "######################"
 
 
-echo "# TERMINATED PROCESSES"
-echo "######################"
-echo "######################"
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "VVP" ] ; then 
+	echo
+	echo "############################"
+	echo "# VVP"
+	echo "# Sentinel-1 "
+	echo "############################"
+	PrintHeader
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
+		PATHMSBAS=$PATH_3602/MSBAS/_VVP_S1_Auto_70m_400days/
+	
+	echo "${bold}DRC VVP Sentinel-1 Asc 174; satellite A${normal}"
+		PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_A_174/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310
+		PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310_Zoom1_ML4
+		PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set6/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
+		MSBASMODE=DefoInterpolx2Detrend1
+		FIRSTIMG=20141017  # YYYYMMDD
+		SENSOR=A
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	# echo "${bold}DRC VVP Sentinel-1 Asc 174; satellite B${normal}"
+	# 	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_A_174/NoCrop
+	# 	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310
+	# 	PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310_Zoom1_ML4
+	# 	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set6/table_0_20_0_400.txt  
+	# 	MSBASMODE=DefoInterpolx2Detrend1
+	# 	FIRSTIMG=20180616  # YYYYMMDD
+	# 	SENSOR=B
+	# 	# Check the last images
+	# 	for i in $(seq 1 ${OLD})			
+	# 		do 
+	# 			CheckS1
+	# 	done
+	
+	PrintHeader
+	echo "${bold}DRC VVP Sentinel-1 Desc 21; satellite A${normal}"
+		PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_D_21/NoCrop
+		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014
+		PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014_Zoom1_ML4
+		PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set7/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
+		MSBASMODE=DefoInterpolx2Detrend2
+		FIRSTIMG=20141007  # YYYYMMDD
+		SENSOR=A
+		# Check the last images 
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	# echo "${bold}DRC VVP Sentinel-1 Desc 21; satellite B${normal}"
+	# 	PATHCSL=$PATH_1650/SAR_CSL/S1/DRC_VVP_D_21/NoCrop
+	# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014
+	# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014_Zoom1_ML8
+	# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set7/table_0_20_0_400.txt  
+	# 	MSBASMODE=DefoInterpolx2Detrend2
+	# 	FIRSTIMG=20170307  # YYYYMMDD
+	# 	SENSOR=B
+	# 	# Check the last images
+	# 	for i in $(seq 1 ${OLD})			
+	# 		do 
+	# 			CheckS1
+	# 	done
+fi
 
-echo
-echo "############################"
-echo "# VVP"
-echo "# Sentinel-1 "
-echo "############################"
-PrintHeader
-	PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-DRCONGO-SLC.UNZIP
-	PATHMSBAS=$PATH_3602/MSBAS/_VVP_S1_Auto_70m_400days/
-
-echo "${bold}DRC VVP Sentinel-1 Asc 174; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_A_174/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310
-	PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310_Zoom1_ML4
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set6/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
-	MSBASMODE=DefoInterpolx2Detrend1
-	FIRSTIMG=20141017  # YYYYMMDD
-	SENSOR=A
-	# Check the last images
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}DRC VVP Sentinel-1 Asc 174; satellite B${normal}"
-# 	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_A_174/NoCrop
-# 	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310
-# 	PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_A_174/SMNoCrop_SM_20150310_Zoom1_ML4
-# 	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set6/table_0_20_0_400.txt  
-# 	MSBASMODE=DefoInterpolx2Detrend1
-# 	FIRSTIMG=20180616  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-PrintHeader
-echo "${bold}DRC VVP Sentinel-1 Desc 21; satellite A${normal}"
-	PATHCSL=$PATH_1660/SAR_CSL/S1/DRC_VVP_D_21/NoCrop
-	PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014
-	PATHMASSPROCESS=$MOUNTPT/dell3raid5/SAR_MASSPROCESS/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014_Zoom1_ML4
-	PATHBASELINE=$PATH_1660/SAR_SM/MSBAS/VVP/set7/table_0_20_0_400_Till_20220501_0_70_0_400_After.txt
-	MSBASMODE=DefoInterpolx2Detrend2
-	FIRSTIMG=20141007  # YYYYMMDD
-	SENSOR=A
-	# Check the last images 
-	for i in $(seq 1 ${OLD})			
-		do 
-			CheckS1
-	done
-# echo "${bold}DRC VVP Sentinel-1 Desc 21; satellite B${normal}"
-# 	PATHCSL=$PATH_1650/SAR_CSL/S1/DRC_VVP_D_21/NoCrop
-# 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014
-# 	PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/DRC_VVP_D_21/SMNoCrop_SM_20151014_Zoom1_ML8
-# 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set7/table_0_20_0_400.txt  
-# 	MSBASMODE=DefoInterpolx2Detrend2
-# 	FIRSTIMG=20170307  # YYYYMMDD
-# 	SENSOR=B
-# 	# Check the last images
-# 	for i in $(seq 1 ${OLD})			
-# 		do 
-# 			CheckS1
-# 	done
-
-
- echo ""
- echo "############################"
- echo "# VVP"
- echo "# CSK "
- echo "############################"
- PrintHeaderCSK
- 	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/CSK/SuperSite/Auto_Curl
- 	PATHMSBAS=$PATH_3602/MSBAS/_VVP_CSK_Auto_151m_200days/
- echo "${bold}DRC VVP CSK Asc ${normal}"
- 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Asc/NoCrop
- 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Asc/SMNoCrop_SM_20160627
- 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Asc/SMNoCrop_SM_20160627_Zoom1_ML23
- 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set1/table_0_150_0_200.txt
- 	MSBASMODE=DefoInterpolx2Detrend1
- 	FIRSTIMG=20230105  	# YYYYMMDD
- 	EXPECTEDTIME=04		# hh time of acquisition (written in file name); required to assess if asc or desc
- 
- 	j=0
- 	# Check the last images
- 	for i in $(seq 1 ${OLDCSK})			
- 		do 
- 			TST="OFF"
- 			CheckCSK
- 	done
- echo "${bold}DRC VVP CSK Desc ${normal}"
- 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Desc/NoCrop
- 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Desc/SMNoCrop_SM_20160105
- 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Desc/SMNoCrop_SM_20160105_Zoom1_ML23
- 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set2/table_0_150_0_200.txt
- 	MSBASMODE=DefoInterpolx2Detrend2
- 	FIRSTIMG=20230128  	# YYYYMMDD
- 	EXPECTEDTIME=15		# hh time of acquisition (written in file name); required to assess if asc or desc
- 	j=0
- 	# Check the last images
- 	for i in $(seq 1 ${OLDCSK})			
- 		do 
- 			TST="OFF"
- 			CheckCSK
- 	done
-
+if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "VVPCSK" ] ; then 
+	 echo ""
+	 echo "############################"
+	 echo "# VVP"
+	 echo "# CSK "
+	 echo "############################"
+	 PrintHeaderCSK
+	 	PATHRAW=$PATH_3601/SAR_DATA_Other_Zones/CSK/SuperSite/Auto_Curl
+	 	PATHMSBAS=$PATH_3602/MSBAS/_VVP_CSK_Auto_151m_200days/
+	 echo "${bold}DRC VVP CSK Asc ${normal}"
+	 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Asc/NoCrop
+	 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Asc/SMNoCrop_SM_20160627
+	 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Asc/SMNoCrop_SM_20160627_Zoom1_ML23
+	 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set1/table_0_150_0_200.txt
+	 	MSBASMODE=DefoInterpolx2Detrend1
+	 	FIRSTIMG=20230105  	# YYYYMMDD
+	 	EXPECTEDTIME=04		# hh time of acquisition (written in file name); required to assess if asc or desc
+	 
+	 	j=0
+	 	# Check the last images
+	 	for i in $(seq 1 ${OLDCSK})			
+	 		do 
+	 			TST="OFF"
+	 			CheckCSK
+	 	done
+	 echo "${bold}DRC VVP CSK Desc ${normal}"
+	 	PATHCSL=$PATH_1650/SAR_CSL/CSK/Virunga_Desc/NoCrop
+	 	PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/CSK/Virunga_Desc/SMNoCrop_SM_20160105
+	 	PATHMASSPROCESS=$PATH_3602/SAR_MASSPROCESS_2/CSK/Virunga_Desc/SMNoCrop_SM_20160105_Zoom1_ML23
+	 	PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/VVP/set2/table_0_150_0_200.txt
+	 	MSBASMODE=DefoInterpolx2Detrend2
+	 	FIRSTIMG=20230128  	# YYYYMMDD
+	 	EXPECTEDTIME=15		# hh time of acquisition (written in file name); required to assess if asc or desc
+	 	j=0
+	 	# Check the last images
+	 	for i in $(seq 1 ${OLDCSK})			
+	 		do 
+	 			TST="OFF"
+	 			CheckCSK
+	 	done
+fi

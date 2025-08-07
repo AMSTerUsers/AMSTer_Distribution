@@ -39,13 +39,17 @@
 #									ls *_EW.bin *_UD.bin > listdir.tmp and 
 #								  do not ls *_NS.bin >> listdir.tmp just after or it will miss several files !!
 #								  Instead, list the 3 comp in the listdir.tmp file at the same time 
+# New in Distro V 3.7 20250317:	- debug testing 3D while using msbasV4
+# New in Distro V 3.8 20250317:	- improve yesterday's modification
+# New in Distro V 3.9 20250402:	- make grep case insensitive while searching for Samples
+# New in Distro V 3.10 20250424:	- mv log in zz_EW${PARAMNAME}
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.6 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 08, 2024"
+VER="Distro V3.10 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 24, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 
@@ -109,8 +113,17 @@ if [ ${countMSBASV1} -gt 1 ] ; then lname="MSBASV1" ; echo "You probably process
 case ${lname} in 
  	MSBASV4)
 		# Test if process 3D inversion 
-		# do not add [] in line below 
-		if ls MSBAS*_NS.bin 1> /dev/null 2>&1 
+		# do not add [] in line below  - MAY CRASH 
+		#if ls MSBAS*_NS.bin 1> /dev/null 2>&1 
+		#	then 
+		#		ENU="YES" 
+		#		ALLCOMP="UD_EW_NS"
+		#	else 
+		#		ENU="NO"
+		#		ALLCOMP="UD_EW" 
+		#fi 
+
+		if find . -maxdepth 1 -name "MSBAS*NS.bin" | grep -q .
 			then 
 				ENU="YES" 
 				ALLCOMP="UD_EW_NS"
@@ -202,6 +215,7 @@ case ${lname} in
 		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_EW${PARAMNAME}/ ; fi
 		mv -f MSBAS_TSOUT.txt zz_EW${PARAMNAME}/
 		mv -f MSBAS_TIME_MATRIX.txt zz_EW${PARAMNAME}/
+		mv -f MSBAS_LOG.txt zz_EW${PARAMNAME}/
 
 		cd zz_UD${PARAMNAME}
 		ls *.hdr | ${PATHGNU}/grep -v "RATE" > ../datesTime.txt
@@ -217,7 +231,7 @@ case ${lname} in
 		if [ -d zz_EW${PARAMNAME} ] ; then 
 			cp header.txt zz_EW${PARAMNAME}/
 			cd zz_EW${PARAMNAME}
-			WIDTH=`${PATHGNU}/grep Samples MSBAS_LINEAR_RATE_EW.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
+			WIDTH=`${PATHGNU}/grep -i Samples MSBAS_LINEAR_RATE_EW.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
 
 			# Make a script for creating rasters if needed.
 			echo "ANYFILE=\$1" > _make_ras.sh
@@ -238,7 +252,7 @@ case ${lname} in
 		if [ -d zz_NS${PARAMNAME} ] ; then 
 			cp header.txt zz_NS${PARAMNAME}/
 			cd zz_NS${PARAMNAME}
-			WIDTH=`${PATHGNU}/grep Samples MSBAS_LINEAR_RATE_NS.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
+			WIDTH=`${PATHGNU}/grep -i Samples MSBAS_LINEAR_RATE_NS.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
 
 			# Make a script for creating rasters if needed.
 			echo "ANYFILE=\$1" > _make_ras.sh
@@ -311,7 +325,7 @@ case ${lname} in
 		if [ -d zz_LOS${PARAMNAME} ] ; then 
 			#cp header.txt zz_LOS${PARAMNAME}/
 			cd zz_LOS${PARAMNAME}
-			WIDTH=`${PATHGNU}/grep Samples MSBAS_LINEAR_RATE_LOS.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
+			WIDTH=`${PATHGNU}/grep -i Samples MSBAS_LINEAR_RATE_LOS.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
 
 			# Make a script for creating rasters if needed.
 			echo "ANYFILE=\$1" > _make_ras.sh

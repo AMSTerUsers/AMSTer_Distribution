@@ -10,8 +10,8 @@
 # OUTPUT PIX SHAPE AND SIZE
 ###########################
 3						# ML, multilooking factor 
-2						# ZOOM, zoom factor
-ORIGINAL				# PIXFORM, shape of output pixel (SQUARE or ORIGINAL)
+2						# ZOOM, zoom factor (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
+ORIGINAL				# PIXFORM, shape of output pixel in radar geometry (SQUARE or ORIGINAL)
 
 # WINDOWING
 ###########

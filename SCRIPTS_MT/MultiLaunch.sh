@@ -36,13 +36,15 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.1 20250523:	- state that it accepts asymetric zoom (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
+# New in Distro V 3.2 20250626:	- remove MULTIPLEIMG
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 26, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -118,10 +120,10 @@ LLAZCO=`GetParam "LLAZCO,"`					# LLAZCO, Lower Left Azimuth coord offset for fi
 
 FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are stored
 
-MULTIPLEIMG=`GetParam MULTIPLEIMG`			# MULTIPLEIMG, as long as the stitching of S1 img is not ready, keep NOMULTIPLE to process only the first img (ie _A.csl or _D.csl) in mass processing. 
-											#            Other occurences (ie _A.1.csl or _D.1.csl etc) will be ignored. However, for manual single processing, one may want to process both images. 
-											#            In such a case, run the first processing with MASBURSTSET (and/or SLVBURSTSET) set to 1 then rerun with set to 2. Not tested... 
-ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+#MULTIPLEIMG=`GetParam MULTIPLEIMG`			# MULTIPLEIMG, as long as the stitching of S1 img is not ready, keep NOMULTIPLE to process only the first img (ie _A.csl or _D.csl) in mass processing. 
+#											#            Other occurences (ie _A.1.csl or _D.1.csl etc) will be ignored. However, for manual single processing, one may want to process both images. 
+#											#            In such a case, run the first processing with MASBURSTSET (and/or SLVBURSTSET) set to 1 then rerun with set to 2. Not tested... 
+ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
 INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
 
 source ${FCTFILE}

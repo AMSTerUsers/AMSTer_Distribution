@@ -67,13 +67,14 @@
 # New in Distro V 5.1 20240423:	- display max and mean Bp, Bt and nr of pairs
 # New in Distro V 5.2 20240617:	- try to make it faster
 # New in Distro V 5.3 20240701:	- discard some changes introduced in V5.2 that prevented proper use with additional tables etc..
+# New in Distro V 5.4 20250706:	- speed up creation of old version files span.txt and span1.txt using awk
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on July 1, 2024"
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on July 3, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -1335,44 +1336,92 @@ if [ "${VERTOOL}" == "OLD" ]
 
 		rm -f span.txt span1.txt 
 
-		#while read n m s bp t t1 t2 b1 b2
-		while read n m s t bp t1 t2 b1 b2
-		do
+		##while read n m s bp t t1 t2 b1 b2
+		
+		#
+		#while read n m s t bp t1 t2 b1 b2
+		#do
+		#
+		#	yyyy=`echo $m | cut -b 1-4`
+		#	mm=`echo $m | cut -b 5-6`
+		#	dd=`echo $m | cut -b 7-8`
+		#
+		#	# date in decimal year : depends on leap year or not. DOY is decreased by 0.5 to mimick noon and avoid prblm at first or last day
+		#	leapm=`${PATHGNU}/gdate --date="${yyyy}1231" +%j`
+		#	mastertemp=`${PATHGNU}/gdate --date="${yyyy}${mm}${dd}" +%j`
+		#	master=`echo ${mastertemp} ${leapm} ${yyyy} | ${PATHGNU}/gawk '{printf("%f",(($1-0.5)/$2) + $3);}'` 
+		#	#master=`echo $yyyy $mm $dm | ${PATHGNU}/gawk '{printf("%.17g\n",$1+(($2-1)*30.25+$3)/365);}'` 
+		#
+		#	yyyy=`echo $s | cut -b 1-4`
+		#	mm=`echo $s | cut -b 5-6`
+		#	dd=`echo $s | cut -b 7-8`
+		#
+		#	leaps=`${PATHGNU}/gdate --date="${yyyy}1231" +%j`
+		#	slavetemp=`${PATHGNU}/gdate --date="${yyyy}${mm}${dd}" +%j`
+		#	slave=`echo ${slavetemp} ${leaps} ${yyyy} | ${PATHGNU}/gawk '{printf("%f",(($1-0.5)/$2) + $3);}'` 
+		#	#slave=`echo $yyyy $mm $dm | ${PATHGNU}/gawk '{printf("%.17g\n",$1+(($2-1)*30.25+$3)/365);}'` 
+		#
+		#	delta=`echo $master, $slave | ${PATHGNU}/gawk '{printf("%f",$2-$1)}'` 
+		#
+		#	bpdelta=`echo $b1, $b2 | ${PATHGNU}/gawk '{printf("%f",$2-$1)}'`
+		#
+		#	echo $master $b1 $delta $bpdelta >> span.txt
+		#
+		#	md=`echo $master $delta | ${PATHGNU}/gawk '{printf("%f",$1+$2)}'`
+		#	bpd=`echo $b1 $bpdelta | ${PATHGNU}/gawk '{printf("%f",$1+$2)}'`
+		#
+		#	echo $master $b1 >> span1.txt
+		#	echo $md $bpd >> span1.txt
+		#
+		#	let "i=i+1"
+		#
+		#done < bperp_file_${SUFFIX}.txt
 
-			yyyy=`echo $m | cut -b 1-4`
-			mm=`echo $m | cut -b 5-6`
-			dd=`echo $m | cut -b 7-8`
-
-			# date in decimal year : depends on leap year or not. DOY is decreased by 0.5 to mimick noon and avoid prblm at first or last day
-			leapm=`${PATHGNU}/gdate --date="${yyyy}1231" +%j`
-			mastertemp=`${PATHGNU}/gdate --date="${yyyy}${mm}${dd}" +%j`
-			master=`echo ${mastertemp} ${leapm} ${yyyy} | ${PATHGNU}/gawk '{printf("%f",(($1-0.5)/$2) + $3);}'` 
-			#master=`echo $yyyy $mm $dm | ${PATHGNU}/gawk '{printf("%.17g\n",$1+(($2-1)*30.25+$3)/365);}'` 
-
-			yyyy=`echo $s | cut -b 1-4`
-			mm=`echo $s | cut -b 5-6`
-			dd=`echo $s | cut -b 7-8`
-
-			leaps=`${PATHGNU}/gdate --date="${yyyy}1231" +%j`
-			slavetemp=`${PATHGNU}/gdate --date="${yyyy}${mm}${dd}" +%j`
-			slave=`echo ${slavetemp} ${leaps} ${yyyy} | ${PATHGNU}/gawk '{printf("%f",(($1-0.5)/$2) + $3);}'` 
-			#slave=`echo $yyyy $mm $dm | ${PATHGNU}/gawk '{printf("%.17g\n",$1+(($2-1)*30.25+$3)/365);}'` 
-
-			delta=`echo $master, $slave | ${PATHGNU}/gawk '{printf("%f",$2-$1)}'` 
-
-			bpdelta=`echo $b1, $b2 | ${PATHGNU}/gawk '{printf("%f",$2-$1)}'`
-
-			echo $master $b1 $delta $bpdelta >> span.txt
-
-			md=`echo $master $delta | ${PATHGNU}/gawk '{printf("%f",$1+$2)}'`
-			bpd=`echo $b1 $bpdelta | ${PATHGNU}/gawk '{printf("%f",$1+$2)}'`
-
-			echo $master $b1 >> span1.txt
-			echo $md $bpd >> span1.txt
-
-			let "i=i+1"
-
-		done < bperp_file_${SUFFIX}.txt
+		# FASTER VERSION BASED ON AWK onlyawk -v gdate="${PATHGNU}/gdate" '
+		${PATHGNU}/gawk -v gdate="${PATHGNU}/gdate" '
+		{
+		    m = $2
+		    s = $3
+		    b1 = $8
+		    b2 = $9
+		
+		    # Extract yyyymmdd components
+		    yyyy_m = substr(m, 1, 4)
+		    mm_m   = substr(m, 5, 2)
+		    dd_m   = substr(m, 7, 2)
+		
+		    yyyy_s = substr(s, 1, 4)
+		    mm_s   = substr(s, 5, 2)
+		    dd_s   = substr(s, 7, 2)
+		
+		    # Call gdate to get DOY and leap info
+		    cmd_m = gdate " --date=" yyyy_m mm_m dd_m " +%j"
+		    cmd_lym = gdate " --date=" yyyy_m "1231 +%j"
+		    cmd_s = gdate " --date=" yyyy_s mm_s dd_s " +%j"
+		    cmd_lys = gdate " --date=" yyyy_s "1231 +%j"
+		
+		    cmd_m | getline master_doy
+		    close(cmd_m)
+		    cmd_lym | getline master_leap
+		    close(cmd_lym)
+		
+		    cmd_s | getline slave_doy
+		    close(cmd_s)
+		    cmd_lys | getline slave_leap
+		    close(cmd_lys)
+		
+		    # Compute decimal dates
+		    master = ((master_doy - 0.5) / master_leap) + yyyy_m
+		    slave  = ((slave_doy  - 0.5) / slave_leap)  + yyyy_s
+		
+		    delta = slave - master
+		    bpdelta = b2 - b1
+		
+		    printf "%.10f %.3f %.10f %.3f\n", master, b1, delta, bpdelta >> "span.txt"
+		    printf "%.10f %.3f\n", master, b1 >> "span1.txt"
+		    printf "%.10f %.3f\n", master + delta, b1 + bpdelta >> "span1.txt"
+		}
+		' bperp_file_${SUFFIX}.txt
 
 		mv span.txt span_${SUFFIX}.txt 
 		mv span1.txt span1_${SUFFIX}.txt 

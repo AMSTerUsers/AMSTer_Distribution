@@ -25,7 +25,8 @@
 # ex: build_header_msbas.sh DefoInterpolx2Detrend 2 150 50 /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Asc/Resampled_20160223_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML4 /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Desc/Resampled_20160111_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML4 
 #       
 # Dependencies:	- python 
-#				- checkOnlyNaN.py script
+#				- checkNaN.py
+#				- checkOnlyNaN.py
 #				- gnu sed and awk for more compatibility. 
 #               - espeak or say if Linux or Mac
 #
@@ -82,13 +83,17 @@
 #								  with grep -Fvf in order to avoid resulting empty file
 #								- make grep -Fvf with fct LinesInFile2NotInFile1, where FILE 1 si sort and uniq for safety
 #								- can't guess right or left looking from naming. Hence warn user at the end to change sign of incidence angle in header file if sensor is left looking
+# New in Distro V 9.3 20250401:	- make grep search case insensitive for Samples and lines 
+#								- check if raster exist before creating link 
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 19, 2024"
+VER="Distro V9.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 01, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -506,12 +511,12 @@ PrepareModeI()
  				#NAN=`checkNaN.py ${ORIGINALTARGET}`
  				if [ "${NAN}" == "nan" ]
  					then 
-  						ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
+  						if [ -f ${PATHRAS}/${FILEONLY}.ras ]  ; then ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras ; fi
   						ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
   						echo "  // Do not copy ${LINE}"
   						echo "  //   because full of NaN - reprocess if possible."
   					else 
- 						if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
+ 						if [ ! -f Rasters/${FILEONLY}.ras ] && [ -f ${PATHRAS}/${FILEONLY}.ras ]  ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
  						if [ ! -f ${FILEONLY} ] 
  							then 
  								ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
@@ -563,13 +568,13 @@ PrepareModeI()
  								NAN=`checkNaN.py  ${PATHMODE}/${FILEONLY} float32`
  								if [ "${NAN}" == "nan" ]
  									then 
- 										ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
+				  						if [ -f ${PATHRAS}/${FILEONLY}.ras ]  ; then ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras ; fi
  										ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
  
  										echo "  // Do not copy ${LINE}"
  										echo "  //   because full of NaN - reprocess if possible."
  									else 
- 										if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
+ 										if [ ! -f Rasters/${FILEONLY}.ras ] && [ -f ${PATHRAS}/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
  										if [ ! -f ${FILEONLY} ] 
  											then 
  												ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
@@ -625,8 +630,8 @@ wait
 
 # Header.txt 
 rm -f header.txt
-NRLINES=`${PATHGNU}/grep "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
-NRCOLMSS=`${PATHGNU}/grep "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
+NRLINES=`${PATHGNU}/grep -i "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
+NRCOLMSS=`${PATHGNU}/grep -i "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
 WINLINES=`expr "$NRLINES" - 1`
 WINCOLMS=`expr "$NRCOLMSS" - 1`
 echo 	"FORMAT = 0" 	> header.txt 			# Small/Big endian

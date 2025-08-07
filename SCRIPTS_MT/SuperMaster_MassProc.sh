@@ -31,7 +31,7 @@
 #    - snaphu
 #    - masterDEM.sh
 #	 - linux trap function
-#	 - byte2Float.py, Swap_0_1_in_ByteFile.py 
+#	 - byte2float.py, Swap_0_1_in_ByteFile.py 
 #
 #
 # New in Distro V 1.0:	- Based on developpement version 15.1 and Beta V4.0.0
@@ -112,13 +112,19 @@
 # New in Distro V 4.3 20241202:	- Mask before interpolation after unwrapping ok with the 3 version of masking methods (old 1=keep; intermediate 1,2=mask in one file, latest 1,2,3 are masked in multiple masks)
 #								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
 #								- take mask(s) basename only if exist  
+# New in Distro V 4.4 20250224:	- typo in byte2float.py 
+# New in Distro V 4.5 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
+#								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
+# New in Distro V 4.6 20250805:	- Cope with NISAR data (not tested yet)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
+VER="Distro V4.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -197,6 +203,22 @@ FIRSTL=`GetParam "FIRSTL,"`					# Crop limits: first line to use
 LASTL=`GetParam "LASTL,"`					# Crop limits: last line to use
 FIRSTP=`GetParam "FIRSTP,"`					# Crop limits: first point (row) to use
 LASTP=`GetParam "LASTP,"`					# Crop limits: last point (row) to use
+COORDSYST=`GetParam "COORDSYST,"`			# COORDSYST, type of coordinates used to define crop: SRA (lines and pixels) or GEO
+
+	if [ "${CROP}" == "CROPyes" ] && [ "${COORDSYST}" == "" ]
+		then 
+			echo " COORDSYST not defined. I try to see if there is a dot in your coordinates for crop region. "
+			if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
+				then
+					echo "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
+					COORDSYST="GEO"
+				else
+					echo "None of the crop coordinates has a dot. Must hence be SRA coord system"
+					COORDSYST="SRA"
+			fi
+	fi
+
+REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 
 MLAMPLI=`GetParam "MLAMPLI,"`				# MLAMPLI, Multilooking factor for amplitude images reduction (used for coregistration - 4-6 is appropriate). If rectangular pixel, it will be multiplied by corresponding ratio.
 ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -311,7 +333,6 @@ YMIN=`GetParam "YMIN,"`						# YMIN, minimum Y UTM coord of final Forced geocode
 YMAX=`GetParam "YMAX,"`						# YMAX, maximum Y UTM coord of final Forced geocoded product
 GEOCKML=`GetParam "GEOCKML,"`				# GEOCKML, a kml file to define final geocoded product. If not found, it will use the coordinates above
 
-REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 DEMNAME=`GetParam "DEMNAME,"`				# DEMNAME, name of DEM inverted by lines and columns
 
 MASSPROCESSPATH=`GetParam MASSPROCESSPATH`	# MASSPROCESSPATH, path to dir where all processed pairs will be stored in sub dir named by the sat/trk name (SATDIR/TRKDIR)
@@ -321,6 +342,14 @@ mkdir -p ${PROROOTPATH}
 eval PROPATH=${PROROOTPATH}/${SATDIR}/${TRKDIR}	# Path to dir where data will be processed.
 
 source ${FCTFILE}
+
+# Test asymetric zoom - not allowed for mass processing 
+CheckZOOMasymetry
+if [ "${ZOOMONEVAL}" == "Two" ] 
+	then 
+		echo " Performing mass processing with asymetric zoom is not allowed yet. Exiting..." 
+		exit 
+fi
 
 # Check OS
 OS=`uname -a | cut -d " " -f 1 `
@@ -371,6 +400,9 @@ mkdir -p ${INPUTDATA}
 
 # Test if S1 is strip map, because it would then require normal processing
 case ${SATDIR} in 
+	"NISAR") 
+		SUPERMASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SUPERMASTER} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, MASNAME is now the full name of the image anyway
+		;;
 	"S1") 
 		# need this definition here for usage in GetParamFromFile
 		MASDIR=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SUPERMASTER}` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
@@ -1156,7 +1188,7 @@ do
 											then 
 												EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
 												# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
-												byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
+												byte2float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
 												ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
 												convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
 											else 
@@ -1165,7 +1197,7 @@ do
 														EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
 														# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
 														Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
-														byte2Float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+														byte2float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
 														ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
 														convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
 													else

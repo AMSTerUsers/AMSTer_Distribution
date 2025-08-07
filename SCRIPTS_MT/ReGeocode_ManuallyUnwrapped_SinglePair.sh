@@ -18,7 +18,8 @@
 #
 # Note : only verified for interpolation BOTH and with detrend !
 #
-#  !!!!! WARNING: only tested for S1 so far and not in STRIPMAP !!!!!
+#  !!!!! WARNING: only tested for snaphu unwrapped S1 so far, and not in STRIPMAP !!!!!
+#  !!!!! Not appropriate for asymetric zoom !!!!!
 #
 # Need to be run in dir where SinglePair.sh was run
 #
@@ -28,7 +29,7 @@
 # Dependencies:	- gnu sed and awk for more compatibility. 
 #				- FUNCTIONS_FOR_MT.sh
 #				- bc
-#				- byte2Float.py, Swap_0_1_in_ByteFile.py 
+#				- byte2float.py, Swap_0_1_in_ByteFile.py 
 #
 # New in Distro V 1.0:	- Based on ReGeocode_FromSinglePair.sh and ReUnwrap_SingelPair.sh
 # New in Distro V 1.1:	- get proper hdr for re geocoded defo interpx2 flatten in case of re-geocoding with different options
@@ -49,13 +50,21 @@
 #								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
 #								- take mask(s) basename only if exist  
 # New in Distro V 4.4 20241203:	- debug possible crach to fin MASNAME
+# New in Distro V 4.4 20250224:	- typo in byte2float.py 
+# New in Distro V 4.5 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
+# New in Distro V 4.6 20250604:	- warns in header that it is not appropriate for asymetric zoom and stop ifasymetric
+#								- remove possible path to kml for re-geocoding when performing non Forced geocoding
+# New in Distro V 4.7 20250627:	- Erroneous ChangeGeocParam instead of ChangeParam in removing kml just in case in Closest and Auto 
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 03, 2024"
+VER="Distro V4.7 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 27, 2025"
+
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -78,6 +87,15 @@ function GetParam()
 FIG=`GetParam "FIG,"`
 
 ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+	# Check if asymetric zoom
+	CheckZOOMasymetry
+	if [ "${ZOOMONEVAL}" == "Two" ]
+		then
+			EchoTee "${PRG} is not designed (yet) to operate with asymetric zoom; exiting"
+			exit 1
+	fi
+
+
 INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
 
 POP=`GetParam "POP,"`						# POP, option to pop up figs or not (POPno or POPyes)
@@ -170,6 +188,7 @@ BASEDIRNAME2=`dirname ${BASEDIRNAME}`
 
 MODE="${BASEDIRNAME##*/}"
 SAT=DRC_"${BASEDIRNAME2##*/}"
+#SAT="${BASEDIRNAME2##*/}"
 
 # get AZSAMP. Attention, needs original az sampling
 	MASDATE=`basename ${RUNDIR} | cut -d _ -f 1`
@@ -312,7 +331,8 @@ function RenameAllProducts()
 echo ""
 
 # Update InSARParameters.txt TextFile
-	cp -n ${RUNDIR}/i12/TextFiles/InSARParameters.txt ${RUNDIR}/i12/TextFiles/InSARParameters_ORIGINAL.txt
+	#cp -n ${RUNDIR}/i12/TextFiles/InSARParameters.txt ${RUNDIR}/i12/TextFiles/InSARParameters_ORIGINAL.txt
+	if [ ! -e "${RUNDIR}/i12/TextFiles/InSARParameters_ORIGINAL.txt" ] ; then cp "${RUNDIR}/i12/TextFiles/InSARParameters.txt" "${RUNDIR}/i12/TextFiles/InSARParameters_ORIGINAL.txt" ; fi 
 	ChangeParam "Unwrapped phase file path" ${RUNDIR}/i12/InSARProducts/unwrappedPhase InSARParameters.txt
 	# check even lines and columns
 	NLINES=`GetParamFromFile "Unwrapped phase range dimension [pix]" InSARParameters.txt`
@@ -362,7 +382,7 @@ echo ""
 						then 
 							EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
 							# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
-							byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
+							byte2float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
 							ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
 							convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
 						else 
@@ -371,7 +391,7 @@ echo ""
 									EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
 									# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
 									Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
-									byte2Float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+									byte2float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
 									ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
 									convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
 								else
@@ -408,8 +428,8 @@ echo ""
 	cd  ${RUNDIR}/i12/TextFiles
 
 	# Update geoProjectionParameters.txt TextFile
-	cp -n ${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt ${RUNDIR}/i12/TextFiles/geoProjectionParameters_ORIGINAL.txt
-
+	#cp -n ${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt ${RUNDIR}/i12/TextFiles/geoProjectionParameters_ORIGINAL.txt
+	if [ ! -e "${RUNDIR}/i12/TextFiles/geoProjectionParameters_ORIGINAL.txt" ] ; then cp "${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt" "${RUNDIR}/i12/TextFiles/geoProjectionParameters_ORIGINAL.txt" ; fi 
 	# Update which products to geocode
 
 	PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
@@ -442,6 +462,9 @@ echo ""
 		GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
 		if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
 
+		# just in case 
+		ChangeParam "Path to a kml file defining the geoProjection area" "None" geoProjectionParameters.txt
+
 		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 		;;
 		"Auto") 
@@ -449,6 +472,10 @@ echo ""
 		EchoTeeYellow "          Will get the closest (upper) multiple of 10 of multilooked original pixel size. " 
 		EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
 		GEOPIXSIZE=${GEOPIXSIZE10}
+
+		# just in case 
+		ChangeParam "Path to a kml file defining the geoProjection area" "None" geoProjectionParameters.txt
+
 		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 		;;
 		"Forced") 

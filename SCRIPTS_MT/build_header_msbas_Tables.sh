@@ -73,14 +73,16 @@
 # New in Distro V 2.6 20240919:	- remove first empty line (if any) in files before comparing 
 #								  with grep -Fvf in order to avoid resulting empty file
 #								- make grep -Fvf with fct LinesInFile2NotInFile1, where FILE 1 si sort and uniq for safety
+# New in Distro V 2.7 20250401:	- make grep search case insensitive for Samples and lines 
+#								- check if raster exist before creating link 
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.6 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 19, 2024"
+VER="Distro V2.7 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 01, 2025"
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -451,12 +453,12 @@ PrepareModeI()
 	 				NAN=`checkOnlyNaN.py ${PATHMODE}/${FILEONLY} float32`
 	 				if [ "${NAN}" == "nan" ]
 	 					then 
-	  						ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras 
+	  						if [ -f ${PATHRAS}/${FILEONLY}.ras ]  ; then ln -s ${PATHRAS}/${FILEONLY}.ras PrblmRasters/${FILEONLY}.ras ; fi
 	  						ln -s ${PATHMODE}/${FILEONLY} PrblmRasters/${FILEONLY}
 	  						echo "  // Do not copy ${LINE}"
 	  						echo "  //   because full of NaN - reprocess if possible."
 	  					else 
-	 						if [ ! -f Rasters/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
+	 						if [ ! -f Rasters/${FILEONLY}.ras ] && [ -f ${PATHRAS}/${FILEONLY}.ras ] ; then ln -s ${PATHRAS}/${FILEONLY}.ras Rasters/${FILEONLY}.ras ; fi
 	 						if [ ! -f ${FILEONLY} ] 
 	 							then 
 	 								ln -s ${PATHMODE}/${FILEONLY} ${FILEONLY} 
@@ -658,8 +660,8 @@ wait
 
 # Header.txt 
 rm -f header.txt
-NRLINES=`${PATHGNU}/grep "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
-NRCOLMSS=`${PATHGNU}/grep "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
+NRLINES=`${PATHGNU}/grep -i "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
+NRCOLMSS=`${PATHGNU}/grep -i "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
 WINLINES=`expr "$NRLINES" - 1`
 WINCOLMS=`expr "$NRCOLMSS" - 1`
 echo 	"FORMAT = 0" 	> header.txt 			# Small/Big endian

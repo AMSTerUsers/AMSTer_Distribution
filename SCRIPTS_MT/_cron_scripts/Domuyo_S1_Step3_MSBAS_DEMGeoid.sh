@@ -39,14 +39,16 @@
 #								- double criteria to compute baseline plot in order to account for the loss of S1B
 # New in Distro V 5.0.0 20240530:	- reprocessing with DEM corrected from Geoidal height 
 # New in Distro V 5.1.0 20240624:	- enlarge BP2 (from back to 20220501) to cope with new S1 orbital tube from 05 2024
+# New in Distro V 5.1.1 20250424 :	- check if correct termination in MSBAS_LOG.txt at right place
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 24, 2024"
+VER="Distro V5.1.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 24, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -196,8 +198,10 @@ TODAY=`date`
 
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 
 	# in Coh threshold restriction
 	if [ ${IFCOH} == "YES" ] ; then 
@@ -652,7 +656,7 @@ cd ${MSBASDIR}
 		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
 
 		# test if MSBAS_log.txt contains "completed 100%" ; if not log error 
-#		if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/MSBAS_LOG.txt 
+#		if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt 
 #	 		then 
 # 				echo "MSBAS ok" 
 # 			else 
@@ -662,7 +666,7 @@ cd ${MSBASDIR}
 # 				wait 
 # 				
 # 				${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
-# 				if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/MSBAS_LOG.txt ; then echo "Solved after cleaning DefoInterpolx2Detrend's txt"; else  echo "!! MSBAS crashed on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt ; fi
+# 				if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt ; then echo "Solved after cleaning DefoInterpolx2Detrend's txt"; else  echo "!! MSBAS crashed on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt ; fi
 # 		fi
 
 		# Make baseline plot 

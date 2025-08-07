@@ -16,10 +16,14 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 27, 2025"
 
 echo "not finished - do not use..."
 exit 0
@@ -110,9 +114,13 @@ function GetParamFromFile()
 # 	}
 	
 	
-cp -n ${SOURCEDIR}/i12/TextFiles/InSARParameters.txt ${SOURCEDIR}/i12/TextFiles/InSARParameters_original.txt
-cp -n ${SOURCEDIR}/i12/TextFiles/geoProjectionParameters.txt ${SOURCEDIR}/i12/TextFiles/geoProjectionParameters_original.txt
-cp -n ${SOURCEDIR}/i12/InSARProducts/bestPlaneRemoval.txt ${SOURCEDIR}/i12/InSARProducts/bestPlaneRemoval_original.txt
+#cp -n ${SOURCEDIR}/i12/TextFiles/InSARParameters.txt ${SOURCEDIR}/i12/TextFiles/InSARParameters_original.txt
+#cp -n ${SOURCEDIR}/i12/TextFiles/geoProjectionParameters.txt ${SOURCEDIR}/i12/TextFiles/geoProjectionParameters_original.txt
+#cp -n ${SOURCEDIR}/i12/InSARProducts/bestPlaneRemoval.txt ${SOURCEDIR}/i12/InSARProducts/bestPlaneRemoval_original.txt
+if [ ! -e "${SOURCEDIR}/i12/TextFiles/InSARParameters_original.txt" ] ; then cp "${SOURCEDIR}/i12/TextFiles/InSARParameters.txt" "${SOURCEDIR}/i12/TextFiles/InSARParameters_original.txt" ; fi 
+if [ ! -e "${SOURCEDIR}/i12/TextFiles/geoProjectionParameters_original.txt" ] ; then cp "${SOURCEDIR}/i12/TextFiles/geoProjectionParameters.txt" "${SOURCEDIR}/i12/TextFiles/geoProjectionParameters_original.txt" ; fi 
+if [ ! -e "${SOURCEDIR}/i12/InSARProducts/bestPlaneRemoval_original.txt" ] ; then cp "${SOURCEDIR}/i12/InSARProducts/bestPlaneRemoval.txt" "${SOURCEDIR}/i12/InSARProducts/bestPlaneRemoval_original.txt" ; fi 
+
 
 # get MAS and SLV
 PATHMAS=`GetParamFromFile "Master image file path [CSL image format]" InSARParameters.txt`	# should be in SAR_CSL dir, which has not been moved

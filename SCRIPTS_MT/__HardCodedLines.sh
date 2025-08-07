@@ -23,6 +23,11 @@
 # 								displacement is expected to occur along the steepest slope of the topography (e.g. in 
 # 								case of land slide). That is why it is sometimes referred as 3D SPF (Surface Parallel Flow)
 # New in Distro V 3.2 20240308:	- Split Session in AS sub dirs instead of MT
+# New in Distro V 3.3 20241220:	- add disk 3611 at ECGS
+#								- update address to terra4 
+# New in Distro V 3.4 20250321:	- allows HOMEDATA for Mac as well 
+# New in Distro V 3.5 20250707:	- 3610 was wrongly named as 3611 in line 73; one 3611 not defined in RenameVolNameToVariable
+#								- add ENVISAT Nepal
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -66,7 +71,8 @@
 		# More disks at ECGS
 		PATH1660=${PATH_1660} 
 		PATH3610=${PATH_3610}				
-		
+		PATH3611=${PATH_3611}
+				
 		PATHSYNODATA=${PATH_SynoData}
 		
 		case ${OS} in 
@@ -78,6 +84,7 @@
 			"Darwin")
 				PATHSYNOCONGO="/Volumes/DataRDC"
 				PATHSYNOSAR="/Volumes/DataSAR" 
+				PATHHOMEDATA=${PATH_HOMEDATA}
 				;;
 		esac			
 		}
@@ -101,6 +108,7 @@
 		echo "  11) = HOME"
 		echo "  12) = hp-1660"
 		echo "  13) = hp-D3610"
+		echo "  14) = hp-D3611"		
 		}
 	
 	# Selection of disk where sessions of Splitxxx will be run. 
@@ -153,6 +161,9 @@
 				 ;;
 			"13") 
 				DISKPATH=/${PATH3610}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
+				 ;;
+			"14") 
+				DISKPATH=/${PATH3611}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 
 
@@ -228,6 +239,17 @@
 				convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 2500x1600+1800+1400 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_PDF.gif  
 				rm -f  _movie_${SAT}_${TRK}_${REGION}.gif ;;
 
+#			"ENVISAT_A427_CentralNepal")  
+#				convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 2500x1600+1800+1400 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_PDF.gif  
+#				rm -f  _movie_${SAT}_${TRK}_${REGION}.gif ;;
+#			"ENVISAT_D33_CentralNepal")  
+#				convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 2500x1600+1800+1400 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_PDF.gif  
+#				rm -f  _movie_${SAT}_${TRK}_${REGION}.gif ;;
+#			"ENVISAT_D305_CentralNepal")  
+#				convert _movie_${SAT}_${TRK}_${REGION}.gif -coalesce -crop 2500x1600+1800+1400 +repage _movie_${SAT}_${TRK}_${REGION}_Crop_PDF.gif  
+#				rm -f  _movie_${SAT}_${TRK}_${REGION}.gif ;;
+
+
 			*)
 				echo "No predefined crop for gif. Please do manually if required." ;;
 		esac
@@ -256,11 +278,13 @@
 							 s%\/Volumes\/hp-D3602-Data_RAID5%\/\$PATH_3602%g
 							 s%\/Volumes\/hp1660%\/\$PATH_1660%g 
 							 s%\/Volumes\/D3610%\/\$PATH_3610%g 
+							 s%\/Volumes\/D3611%\/\$PATH_3611%g 
 							 s%\/mnt\/1650%\/\$PATH_1650%g 
 							 s%\/mnt\/3600%\/\$PATH_3600%g 
 							 s%\/mnt\/3601%\/\$PATH_3601%g 
 							 s%\/mnt\/3602%\/\$PATH_3602%g
 							 s%\/mnt\/1660%\/\$PATH_1660%g 
+							 s%\/mnt\/3611%\/\$PATH_3611%g
 							 s%\/mnt\/3610%\/\$PATH_3610%g " ${ORIGINAL} > ${CHANGED}
 		}
 
@@ -300,6 +324,7 @@
 							 s%\/mnt\/3601%\/Volumes\/hp-D3601-Data_RAID6%g  
 							 s%\/mnt\/3602%\/Volumes\/hp-D3602-Data_RAID5%g
 							 s%\/mnt\/1660%\/Volumes\/hp1660%g  
+							 s%\/mnt\/3611%\/Volumes\/D3611%g
 							 s%\/mnt\/3610%\/Volumes\/D3610%g" ${ORIGINAL} > ${CHANGED}
 		}
 
@@ -316,6 +341,7 @@
 							 s%\/\$PATH_3601%\/mnt\/3601%g  
 							 s%\/\$PATH_3602%\/mnt\/3602%g
 							 s%\/\$PATH_1660%\/mnt\/1660%g  
+							 s%\/\$PATH_3611%\/mnt\/3611%g
 							 s%\/\$PATH_3610%\/mnt\/3610%g" ${ORIGINAL} > ${CHANGED}
 		}
 		
@@ -332,6 +358,7 @@
 							 s%\/\$PATH_3601%\/Volumes\/hp-D3601-Data_RAID6%g  
 							 s%\/\$PATH_3602%\/Volumes\/hp-D3602-Data_RAID5%g
 							 s%\/\$PATH_1660%\/Volumes\/hp1660%g  
+							 s%\/\$PATH_3611%\/Volumes\/D3611%g
 							 s%\/\$PATH_3610%\/Volumes\/D3610%g" ${ORIGINAL} > ${CHANGED}
 		}
 
@@ -347,6 +374,7 @@
 						 		s%\/Volumes\/hp-D3601-Data_RAID6%\/mnt\/3601%g  
 						 		s%\/Volumes\/hp-D3602-Data_RAID5%\/mnt\/3602%g
 						 		s%\/Volumes\/hp1660%\/mnt\/1660%g  
+								s%\/Volumes\/D3611%\/mnt\/3611%g
 								s%\/Volumes\/D3610%\/mnt\/3610%g" ${INPUTFILE}
 		}
 	
@@ -359,7 +387,7 @@
 		   case ${TRKDIR} in
 		       "RS2_UF_Asc") 
 		    		DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 30 -fill black -annotate" ;;
-		        "RS2_F2F_Desc") 
+		       "RS2_F2F_Desc") 
 		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 30 -fill black -annotate" ;;
 		       "Virunga_Asc")  # for CSK
 		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 30 -fill black -annotate" ;;
@@ -379,7 +407,7 @@
 	# Tag for web page 
 	function TimeSeriesInfoHPWebTag()
 		{
-		convert $combi -fill grey -pointsize 60 -font ${font} -draw "text 670,250 'WebSite: http://terra3.ecgs.lu/${WebPage}" $combi
+		convert $combi -fill grey -pointsize 60 -font ${font} -draw "text 670,250 'WebSite: http://terra4.ecgs.lu/${WebPage}" $combi
 		}
 
 # UpdateAMSTerEngine.sh

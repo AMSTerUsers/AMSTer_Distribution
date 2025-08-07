@@ -114,12 +114,25 @@
 # New in Distro V 8.1.1 20241202:	- ManageDEM: Check that Detrend masks from ${PATHTODIREVENTSMASKS} are all projected in Slant Range in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/
 # New in Distro V 8.1.2 20241203:	- externalSlantRangeDEM.txt saved with mask version in fct ManageDEM and SlantRangeExtDEM
 # New in Distro V 8.1.3 20241213:	- rebulid link slantRangeMask also when the all masks in PATHTODIREVENTSMASKS are OK, just in case porcessing is performed on a computer with another OS
-#
+# New in Distro V 8.1.4 20250225:	- cosmetic: for security, indicate in SlantRangeExtDEM that since new multi level masks, there is no more slantRangeMask.txt. Instead, everything is in externalSlantRangeDEM.txt
+# New in Distro V 8.2.0 20250515:	- Allows zoom factor to differ in range and azimuth. For that to happen, ZOOM factor in LaunchParameters must be provided as a string made of two numbers followed by Rg and Az, MRgNAz (M and N being Real or Integer) 
+#									- corr bug that was shaping non-forced pixel shape to ML in wrong direction for Envisat (i.e. when longest side of pixel was in Rg instead of Az)
+#									- new fct to check Zoom asymetry (CheckZOOMasymetry)
+#									- replace i12.No.Zoom with i12.NoZoom
+# New in Distro V 8.2.1 20250522:	- add \ in grep -v of ".something" and a trailing $, e.g. grep -v "\.ras$" to avoid interpreting dot 
+# New in Distro V 8.2.2 20250526:	- do not attempt to move unwrapped phase if SKIPUW=yes to avoid possible error message when performing Skip unwrap
+# New in Distro V 9.0.0 20250605:	- Revise asymetric ML 
+#									- add RatioPixUnzoomed fct needed for ReGeocoding
+# New in Distro V 9.1.0 20250617:	- cope with ETAD topo phase plots (AMSTerEngine > V20250612): either plot "First phase component" or 
+#									  "Topographic phase component", "Model-based phase component file path" and "Correction phase component file path" if any
+#									- avoid error message in atempt to cp externalSlantRangeDEM_NoMask.txt when used with new managment of dems and masks 
+# New in Distro V 9.2.0 20250626:	- corr bug in RatioPix and RatioPixUnzoomed (was missing -l in bc command, leading to underestimate ML 1 for ENVISAT for instance)
+
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V8.1.3 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 13, 2024"
+FCTVER="Distro V9.2.0 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 26, 2025"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -225,12 +238,12 @@ function ChangeParam()
 	case ${FILETOCHANGE} in
 		"SM_MAS_InSARParameters.txt") parameterFilePath=${OUTPUTDATA}/${SUPERMASTER}_${MASNAME}/i12/TextFiles/InSARParameters.txt;;
 		"InSARParameters.txt") parameterFilePath=${RUNDIR}/i12/TextFiles/InSARParameters.txt;;
-		"InSARParametersZoom.txt") parameterFilePath=${RUNDIR}/i12.No.Zoom/TextFiles/InSARParameters.txt;;
+		"InSARParametersZoom.txt") parameterFilePath=${RUNDIR}/i12.NoZoom/TextFiles/InSARParameters.txt;;
 		"SM_SLV_InSARParameters.txt") parameterFilePath=${MAINRUNDIR}/${SUPERMASTER}_${SLV}/i12/TextFiles/InSARParameters.txt;;
 		"slantRange.txt") parameterFilePath=${RUNDIR}/slantRange.txt;;
 		"geoProjectionParameters.txt") parameterFilePath=${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt;;
 		"Crop.txt") parameterFilePath=${RUNDIR}/Crop.txt;;
-		"CropZoom.txt") parameterFilePath=${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt;;
+		"CropZoom.txt") parameterFilePath=${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt;;
 		"initInSAR.txt") parameterFilePath=${WHERETORUN}/initInSAR.txt;;
 		"Read_MAS.txt") parameterFilePath=${RUNDIR}/Read_${MAS}.txt;;
 		"Read_SLV.txt") parameterFilePath=${RUNDIR}/Read_${SLV}.txt;;
@@ -287,6 +300,7 @@ function GetParamFromFile()
 		"externalSlantRangeDEM.txt") parameterFilePath=${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Info/externalSlantRangeDEM.txt;;
 		"externalDEM.txt") parameterFilePath=${DEMDIR}/${DEMNAME}.txt;;
 		"SAR_CSL_SLCImageInfo.txt") parameterFilePath=${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASDIR}/Info/SLCImageInfo.txt;;			
+		"SinglePair_SLCImageInfo_ZoomS1.txt") parameterFilePath=${RUNDIR}/i12/TextFiles/masterSLCImageInfo.txt;;
 
 	esac
 	updateParameterFile ${parameterFilePath} ${KEY}
@@ -600,14 +614,121 @@ function ChangeCropZoomCSLImage()
 	unset CRITERIA NEW ORIGINAL M
 	local CRITERIA=$1
 	local NEW=$2
-	local ORIGINAL=`grep "${CRITERIA}" ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt | cut -c 1-15 | tr -dc '[0-9].'`
+	local ORIGINAL=`grep "${CRITERIA}" ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt | cut -c 1-15 | tr -dc '[0-9].'`
 	EchoTee "=> Change ${CRITERIA} wich was ${ORIGINAL}"
 	EchoTee "   in ${NEW} "
-	mv ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt.tmp
+	mv ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt.tmp
 	#change at first occurence only 
- 	${PATHGNU}/gawk '/'"${CRITERIA}"'/{if (M==""){sub(/'"${ORIGINAL}"'/, '"${NEW}"');M=1}};{print}' ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt.tmp > ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt
-	rm ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt.tmp
+ 	${PATHGNU}/gawk '/'"${CRITERIA}"'/{if (M==""){sub(/'"${ORIGINAL}"'/, '"${NEW}"');M=1}};{print}' ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt.tmp > ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt
+	rm ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt.tmp
 	}
+
+function CheckZOOMasymetry()
+	{
+ 	# Test ZOOM factor format
+ 	# Regular expression to match a single number (integer or real)
+ 		single_number_regex='^[0-9]+(\.[0-9]+)?$'
+ 	# Regular expression to match the format NAzMRg or MRgNAz
+ 		complex_format_regex='^([0-9]+(\.[0-9]+)?)(Az|Rg)([0-9]+(\.[0-9]+)?)(Az|Rg)$'
+ 	
+ 	if [[ ${ZOOM} =~ $single_number_regex ]]
+ 		then
+			EchoTee "ZOOM is a single number: ${ZOOM}, hence Zoom will be the same in Range and Azimuth."
+			ZOOMONEVAL="One"	# i.e. ZOOM is made of a single value 	
+
+			ZOOMAZ="${ZOOM}"	# Used e.g. in ReGeocode_SinglePair.sh to test unchanged zoom factor 
+	   		ZOOMRG="${ZOOM}"    # Used e.g. in ReGeocode_SinglePair.sh to test unchanged zoom factor
+
+		elif [[ ${ZOOM} =~ $complex_format_regex ]]; then
+	 	    EchoTee "ZOOM is made of two numbers, i.e. in Rg and Az."
+	
+			# Extract number before first marker (Az or Rg), e.g. 1Az2Rg
+			FIRST_PART="${ZOOM%%[AR][zg]*}"  	# up to first Az or Rg, e.g. 1
+			REMAINDER="${ZOOM#"$FIRST_PART"}"	# from Az or Rg up to Rg or Az, e.g. Az2Rg
+			
+			# Get which one comes first
+			if [[ "$REMAINDER" == Az* ]]
+				then
+					ZOOMAZ="${FIRST_PART}"				# e.g. 1
+				    SECOND_PART="${REMAINDER#Az}"       # e.g. 2Rg
+	   				ZOOMRG="${SECOND_PART%Rg}"          # Remove trailing "Rg"
+				elif [[ "$REMAINDER" == Rg* ]]; then
+	   				ZOOMRG="$FIRST_PART"
+	   				SECOND_PART="${REMAINDER#Rg}"       
+	   				ZOOMAZ="${SECOND_PART%Az}"
+			fi
+	    	EchoTee "ZOOM factor in Azimuth direction: $ZOOMAZ"
+    		EchoTee "ZOOM factor in Range direction: $ZOOMRG"
+			ZOOMONEVAL="Two"	# i.e. ZOOM is made of two values 	
+		else
+			EchoTee "WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+			EchoTee "	ZOOM does not match any expected format: $ZOOM"
+			EchoTee "WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    fi	
+	}
+
+function CheckFORCEGEOPIXSIZEasymetry()
+	{
+	# Test FORCEGEOPIXSIZE factor format
+	# Regular expression to match a single number (integer or real)
+		single_number_regex='^[0-9]+(\.[0-9]+)?$'
+	# Regular expression to match the format NAzMRg or MRgNAz
+		complex_format_regex='^([0-9]+(\.[0-9]+)?)(Az|Rg)([0-9]+(\.[0-9]+)?)(Az|Rg)$'
+	
+	if [[ ${FORCEGEOPIXSIZE} =~ $single_number_regex ]]
+		then
+			EchoTee "FORCEGEOPIXSIZE is a single number: ${FORCEGEOPIXSIZE}, hence the same in Range and Azimuth."
+			FORCEGEOPIXSIZEVAL="One"							# i.e. made of only one value
+			GEOPIXSIZE=${FORCEGEOPIXSIZE}
+
+			# Dummy; Needed for naming 
+			FORCEGEOPIXSIZEAZ=${GEOPIXSIZE}
+			FORCEGEOPIXSIZERG=${GEOPIXSIZE}
+			GEOPIXSIZEAZ=${GEOPIXSIZE}
+			GEOPIXSIZERG=${GEOPIXSIZE}
+
+			EchoTeeYellow "Forced geocoded (squared) pixel size determination. " 
+			EchoTeeYellow "Assigned ${GEOPIXSIZE} m. Will also force the limits of the geocoded files."
+			EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
+	
+
+		elif [[ ${FORCEGEOPIXSIZE} =~ $complex_format_regex ]]; then
+	 	    EchoTee "FORCEGEOPIXSIZE is made of two numbers, i.e. in Rg and Az."
+	
+			# Extract number before first marker (Az or Rg), e.g. 1Az2Rg
+			FIRST_PART="${FORCEGEOPIXSIZE%%[AR][zg]*}"  	# up to first Az or Rg, e.g. 1
+			REMAINDER="${FORCEGEOPIXSIZE#"$FIRST_PART"}"	# from Az or Rg up to Rg or Az, e.g. Az2Rg
+			
+			# Get which one comes first
+			if [[ "$REMAINDER" == Az* ]]
+				then
+					FORCEGEOPIXSIZEAZ="${FIRST_PART}"				# e.g. 1
+				    SECOND_PART="${REMAINDER#Az}"       # e.g. 2Rg
+	   				FORCEGEOPIXSIZERG="${SECOND_PART%Rg}"          # Remove trailing "Rg"
+				elif [[ "$REMAINDER" == Rg* ]]; then
+	   				FORCEGEOPIXSIZERG="$FIRST_PART"
+	   				SECOND_PART="${REMAINDER#Rg}"       
+	   				FORCEGEOPIXSIZEAZ="${SECOND_PART%Az}"
+			fi
+			FORCEGEOPIXSIZEVAL="Two"							# i.e. not made of only one value
+	
+			EchoTeeYellow "Forced geocoded (not squared) pixel size determination. " 
+			EchoTeeYellow "Assigned ${FORCEGEOPIXSIZEAZ} m in Az and ${FORCEGEOPIXSIZERG} m in Rg . Will also force the limits of the geocoded files."
+			EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
+
+			# Dummy; Needed for naming ?
+			GEOPIXSIZEAZ=${FORCEGEOPIXSIZEAZ}
+			GEOPIXSIZERG=${FORCEGEOPIXSIZERG}
+
+		else
+			EchoTee "WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+			EchoTee "	FORCEGEOPIXSIZE does not match any expected format: $FORCEGEOPIXSIZE"
+	 		EchoTee "	... "
+	 		exit 1
+			EchoTee "WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	fi	
+	}
+
 
 # Crop and zoom ; parameter = MAS or SLV
 function Crop()
@@ -617,13 +738,25 @@ function Crop()
 	cutAndZoomCSLImage ${RUNDIR}/Crop.txt -create
 	ChangeParam "Input file path in CSL format" ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${IMG}.csl Crop.txt
 	ChangeParam "Output file path" ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${IMG}.csl Crop.txt
-	ChangeParam "Coordinate system [SRA / GEO]" GEO Crop.txt
+	#ChangeParam "Coordinate system [SRA / GEO]" GEO Crop.txt
+	#ChangeParam "Coordinate system [SRA / GEO]" SRA Crop.txt
+	ChangeParam "Coordinate system [SRA / GEO]" ${COORDSYST} Crop.txt
 	ChangeCropCSLImage "lower left corner X coordinate" ${FIRSTP}
 	ChangeCropCSLImage "lower left corner Y coordinate" ${FIRSTL}
 	ChangeCropCSLImage "upper right corner X coordinate" ${LASTP}
 	ChangeCropCSLImage "upper right corner Y coordinate" ${LASTL}
-	ChangeCropCSLImage "X zoom factor" ${ZOOM}
-	ChangeCropCSLImage "Y zoom factor" ${ZOOM}
+
+	CheckZOOMasymetry
+	
+	if [ "${ZOOMONEVAL}" == "One" ]
+		then
+			ChangeCropCSLImage "X zoom factor" ${ZOOM}
+			ChangeCropCSLImage "Y zoom factor" ${ZOOM}
+		else 
+			ChangeCropCSLImage "X zoom factor" ${ZOOMRG}
+			ChangeCropCSLImage "Y zoom factor" ${ZOOMAZ}
+	fi 	
+
 	cutAndZoomCSLImage ${RUNDIR}/Crop.txt
 	mv ${RUNDIR}/Crop.txt ${RUNDIR}/Crop_${IMG}.txt	
 	}
@@ -636,13 +769,23 @@ function CropAtZeroAlt()
 	cutAndZoomCSLImage ${RUNDIR}/Crop.txt -create
 	ChangeParam "Input file path in CSL format" ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${IMG}.csl Crop.txt
 	ChangeParam "Output file path" ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${IMG}.csl Crop.txt
-	ChangeParam "Coordinate system [SRA / GEO]" GEO Crop.txt
+	ChangeParam "Coordinate system [SRA / GEO]" ${COORDSYST} Crop.txt
 	ChangeCropCSLImage "lower left corner X coordinate" ${FIRSTP}
 	ChangeCropCSLImage "lower left corner Y coordinate" ${FIRSTL}
 	ChangeCropCSLImage "upper right corner X coordinate" ${LASTP}
 	ChangeCropCSLImage "upper right corner Y coordinate" ${LASTL}
-	ChangeCropCSLImage "X zoom factor" ${ZOOM}
-	ChangeCropCSLImage "Y zoom factor" ${ZOOM}
+
+	CheckZOOMasymetry
+	
+	if [ "${ZOOMONEVAL}" == "One" ]
+		then
+			ChangeCropCSLImage "X zoom factor" ${ZOOM}
+			ChangeCropCSLImage "Y zoom factor" ${ZOOM}
+		else 
+			ChangeCropCSLImage "X zoom factor" ${ZOOMRG}
+			ChangeCropCSLImage "Y zoom factor" ${ZOOMAZ}
+	fi
+
 	cutAndZoomCSLImage ${RUNDIR}/Crop.txt -e
 	mv ${RUNDIR}/Crop.txt ${RUNDIR}/Crop_${IMG}.txt	
 	}
@@ -667,8 +810,28 @@ function MakeInitInSAR()
 # Depending on the choice, it will recompute the DEM and/or the mask for IMGWITHDEM 
 function ManageDEM()
 	{
+ 
+	CheckZOOMasymetry
+	
+	if [ "${ZOOMONEVAL}" == "One" ]
+		then
+			if [ "${ZOOM}" == "1"  ]
+				then 
+					ZOOMONE="Yes"
+				else 
+					ZOOMONE="No"
+			fi
+		else 
+			if [ "${ZOOMAZ}" == "1"  ] && [ "${ZOOMRG}" == "1"  ] 
+				then 
+					ZOOMONE="Yes"
+				else 
+					ZOOMONE="No"
+			fi
+	fi
+ 
 
-	if [ "${SATDIR}" == "S1" ]  && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1"  ] ; then 
+	if [ "${SATDIR}" == "S1" ]  && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOMONE}" == "No"  ] ; then 
 		IMGWITHDEM=${MASNAME}
 	fi
 	case ${RECOMPDEM} in
@@ -768,9 +931,12 @@ function ManageDEM()
 							fi
 						else 
 							EchoTee " externalSlantRangeDEM exist for ${IMGWITHDEM}, and you do not want a mask. Clean possible mask links."
-							rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
+							rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask		
 							# and rename externalSlantRangeDEM.txt
-							cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt
+							if [ -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt ] 		# not necessary with new dem/mask managment  
+								then 
+									cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt
+							fi
 					fi
 			fi	;;   	
 		*) 
@@ -809,7 +975,8 @@ function UpdateSlantRangeTXT()
 				echo " SAMPLDEM is ${SAMPLDEM}"
 			else
 	####### New here			
-				if ${PATHGNU}/grep -q "Georeferenced mask file path" slantRange.txt
+				#if ${PATHGNU}/grep -q "Georeferenced mask file path" slantRange.txt
+				if ${PATHGNU}/grep -q "Georeferenced mask file path" ${RUNDIR}/slantRange.txt
 					then
 						# if ${RUNDIR}/slantRange.txt contains line with "Georeferenced mask file path"
 						#    it is the old version of AMSTer Engine slantRangeDEM fonction 
@@ -1079,6 +1246,7 @@ function SlantRangeExtDEM()
 			EchoTee "  ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask "
 			EchoTee "  and their Info txt file"
 			EchoTee ""
+
 			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/externalSlantRangeDEM
 			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt
 			rm -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
@@ -1089,7 +1257,7 @@ function SlantRangeExtDEM()
 
 					SLTRGDEMX=`GetParamFromFile "X size of projected products [pix]" externalSlantRangeDEM.txt`
 					SLTRGDEMY=`GetParamFromFile "Y size of projected products [pix]" externalSlantRangeDEM.txt`
-					# Reduce resolution of External Slant Range DEM raster fig by factor 5 to spare disk space"
+					# Reduce resolution of External Slant Range DEM raster fig by factor 5 to spare disk space
 					case ${CSLDATALOC} in
 						"PAIR")
 							MakeFigR ${SLTRGDEMX} 0,1000 2 5 normal gray ${PIXFORMY}/${PIXFORMX} r4 ${INPUTDATA}/${MASDIR}/Data/simulatedAmplitude 
@@ -1104,14 +1272,28 @@ function SlantRangeExtDEM()
 
  			case ${APPLYMASK} in
 				"APPLYMASKyes")
-					# rename Mask with mask name and create link with default mask file 
-					mv -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME}
-					ln -sf ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
-					# copy Mask.txt to name with mask name 
-					cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_${MASKBASENAME}.txt
+					if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
+						then 
+							# rename Mask with mask name and create link with default mask file 
+							mv -f ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Data/slantRangeMask ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Data/slantRangeMask_${MASKBASENAME}
+							ln -sf ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Data/slantRangeMask_${MASKBASENAME} ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Data/slantRangeMask
+							# copy Mask.txt to name with mask name - since new multi level masks, there is no more slantRangeMask.txt. Instead, everything is in externalSlantRangeDEM.txt
+							cp -f ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Info/externalSlantRangeDEM.txt ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Info/externalSlantRangeDEM_${MASKBASENAME}.txt
+						else 
+							# rename Mask with mask name and create link with default mask file 
+							mv -f ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME}
+							ln -sf ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask_${MASKBASENAME} ${INPUTDATA}/${IMGWITHDEM}.csl/Data/slantRangeMask
+							# copy Mask.txt to name with mask name - since new multi level masks, there is no more slantRangeMask.txt. Instead, everything is in externalSlantRangeDEM.txt
+							cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_${MASKBASENAME}.txt
+					fi
 					;;
 				"APPLYMASKno")
-					cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt
+					if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
+						then 
+							cp -f ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Info/externalSlantRangeDEM.txt ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Info/externalSlantRangeDEM_NoMask.txt
+						else 
+							cp -f ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM.txt ${INPUTDATA}/${IMGWITHDEM}.csl/Info/externalSlantRangeDEM_NoMask.txt
+					fi
 					# Do nothing 
 					;;
 				*)
@@ -1147,19 +1329,79 @@ function RatioPix()
 					EchoTee "Uses following Azimuth and Range factors: ${MLTEMP} and ${MLTEMP2}"
 					RGML=${MLTEMP2}
 					AZML=${MLTEMP}
+					if [ "${PIXSHAPE}" == "ORIGINALFORM" ] ; then 
+						RGML=${MLTEMP}
+						AZML=${MLTEMP}
+						EchoTee "However, your requested to keep ORIGINALFORM pixel size, hence using ${MLTEMP} for both Azimuth and Range"
+					fi
 				else
-					MLTEMP2=`echo "(${MLTEMP}/${RATIOREAL})" | bc` # Integer
+					MLTEMP2=`echo "(${MLTEMP}/${RATIOREAL})" | bc -l` # Real
 					EchoTee "Az sampling (${AZSAMP}m) is smaller than Range sampling (${RGSAMP}m)." 
 					EchoTee "   Probably processing ERS or Envisat data." 
-					EchoTee "Uses following Azimuth and Range factors: ${MLTEMP2} and ${MLTEMP}"
+					EchoTee "Uses following Azimuth and Range factors: ${MLTEMP2} and ${MLTEMP} (to be rounded)"
 					RGML=${MLTEMP}
 					AZML=${MLTEMP2}	
+					if [ "${PIXSHAPE}" == "ORIGINALFORM" ] ; then 
+						RGML=${MLTEMP}
+						AZML=${MLTEMP}
+						EchoTee "However, your requested to keep ORIGINALFORM pixel size, hence using ${MLTEMP} for both Azimuth and Range"
+					fi
 			fi	
 			unset RET	
 	fi
 	# round ratio
 	RGML=`echo ${RGML} | xargs printf "%.*f\n" 0`  # rounded
 	AZML=`echo ${AZML} | xargs printf "%.*f\n" 0`  # rounded
+
+	EchoTee "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+	}
+
+function RatioPixUnzoomed()
+	{
+	unset MLTEMP 
+	local MLTEMP=$1 # ML factor to adapt
+	EchoTee "- - - Compute ratio and transform input parameters in Range and Azimuth to get square pix, evaluated from UNZOOMED pixel size - - -" 
+	# Ratio is not the same for ERS/ENVISAT than S1
+	if [ "${UNZOOMEDRATIO}" -eq 1 ] 
+		then 
+			EchoTee "Az sampling (${UNZOOMEDAZSAMP}m) is similar to Range sampling (${UNZOOMEDRGSAMP}m)." 
+			EchoTee "   Probably processing square pixel data such as RS, CSK or TSX." 
+			EchoTee "Uses following Azimuth and Range factors: ${MLTEMP} and ${MLTEMP}"
+			UNZOOMEDRGML=${MLTEMP}
+			UNZOOMEDAZML=${MLTEMP}	
+		else
+			RET=$(echo "$UNZOOMEDRGSAMP < $UNZOOMEDAZSAMP" | bc )  # Trick needed for if to compare integer nrs
+			if [ ${RET} -ne 0 ] 
+				then
+					MLTEMP2=`echo "(${MLTEMP}*${UNZOOMEDRATIOREAL})" | bc` # Integer
+					EchoTee "Az sampling (${UNZOOMEDAZSAMP}m) is larger than Range sampling (${UNZOOMEDRGSAMP}m)." 
+					EchoTee "   Probably processing Sentinel data." 
+					EchoTee "Uses following Azimuth and Range factors: ${MLTEMP} and ${MLTEMP2}"
+					UNZOOMEDRGML=${MLTEMP2}
+					UNZOOMEDAZML=${MLTEMP}
+					if [ "${PIXSHAPE}" == "ORIGINALFORM" ] ; then 
+						UNZOOMEDRGML=${MLTEMP}
+						UNZOOMEDAZML=${MLTEMP}
+						EchoTee "However, your requested to keep ORIGINALFORM pixel size, hence using ${MLTEMP} for both Azimuth and Range"
+					fi
+				else
+					MLTEMP2=`echo "(${MLTEMP}/${UNZOOMEDRATIOREAL})" | bc -l` # Real
+					EchoTee "Az sampling (${UNZOOMEDAZSAMP}m) is smaller than Range sampling (${UNZOOMEDRGSAMP}m)." 
+					EchoTee "   Probably processing ERS or Envisat data." 
+					EchoTee "Uses following Azimuth and Range factors: ${MLTEMP2} and ${MLTEMP} (to be rounded)"
+					UNZOOMEDRGML=${MLTEMP}
+					UNZOOMEDAZML=${MLTEMP2}	
+					if [ "${PIXSHAPE}" == "ORIGINALFORM" ] ; then 
+						UNZOOMEDRGML=${MLTEMP}
+						UNZOOMEDAZML=${MLTEMP}
+						EchoTee "However, your requested to keep ORIGINALFORM pixel size, hence using ${MLTEMP} for both Azimuth and Range"
+					fi
+			fi	
+			unset RET	
+	fi
+	# round ratio
+	UNZOOMEDRGML=`echo ${UNZOOMEDRGML} | xargs printf "%.*f\n" 0`  # rounded
+	UNZOOMEDAZML=`echo ${UNZOOMEDAZML} | xargs printf "%.*f\n" 0`  # rounded
 
 	EchoTee "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	}
@@ -1178,7 +1420,7 @@ function GetImgMod()
 	RGMODIMG=`ls ${OUTPUTDATA}/ModulesForCoreg/${IMG}* | ${PATHGNU}/gawk -F '/' '{print $NF}' |  cut -d . -f4 | cut -d _ -f4 | tr -dc '[0-9]'`
 	AZMODIMG=`ls ${OUTPUTDATA}/ModulesForCoreg/${IMG}* | ${PATHGNU}/gawk -F '/' '{print $NF}' |  cut -d . -f4 | cut -d _ -f5 |   tr -dc '[0-9]'` 	
 
-	# Copy muodule that was computed during SuperMasterCoreg.sh as {IMG}.VV.mod.OriginalCoreg_Z{ZOOM}_ML{MLAMPLI}_W{range}_L{azimuth}
+	# Copy module that was computed during SuperMasterCoreg.sh as {IMG}.VV.mod.OriginalCoreg_Z{ZOOM}_ML{MLAMPLI}_W{range}_L{azimuth}
 	cp ${OUTPUTDATA}/ModulesForCoreg/${IMG}* ${RUNDIR}/i12/InSARProducts/${IMG}.${POLIMG}.mod
 
 	ChangeParam "Reduced ${TOBEUSEDAS} amplitude image file path" "${RUNDIR}/i12/InSARProducts/${IMG}.${POLIMG}.mod" InSARParameters.txt
@@ -1469,8 +1711,25 @@ function InSARprocess()
 				unset AZML
 			else 
 				RatioPix ${COHESTIMFACT}
-				ChangeParam "Coherence estimator range window size" ${RGML} InSARParameters.txt
-				ChangeParam "Coherence estimator azimuth window size" ${AZML} InSARParameters.txt
+				if [ ${RGML} -lt 2 ] 
+					then 
+						# May happen with asymetric Zoom
+						EchoTeeYellow " The computed Coherence estimator window size is less than 2 in Range, which is not appropriate "
+						EchoTeeYellow " Hence I force it to 2. "
+						ChangeParam "Coherence estimator range window size" 2 InSARParameters.txt
+					else 
+						ChangeParam "Coherence estimator range window size" ${RGML} InSARParameters.txt
+				fi
+				if [ ${AZML} -lt 2 ] 
+					then 
+						# May happen with asymetric Zoom
+						EchoTeeYellow " The computed Coherence estimator window size is less than 2 in Azimuth, which is not appropriate "
+						EchoTeeYellow " Hence I force it to 2. "
+						ChangeParam "Coherence estimator azimuth window size" 2 InSARParameters.txt
+					else 
+						ChangeParam "Coherence estimator azimuth window size" ${AZML} InSARParameters.txt
+				fi
+
 				unset RGML
 				unset AZML
 			fi
@@ -1532,13 +1791,47 @@ function InSARprocess()
  
 	# topo phase (first phase)
 	# IF IMAGE APPEARS UNIFORM COLOR, REMOVE -r OPTION OR CHANGE MIN/MAX LIMITS IN -r OPTION 
+
+	# for AE V < June 2025
 	FIRSTPHASEFILE=`GetParamFromFile " First phase component file path " InSARParameters.txt`
+	# for AE V >= June 2025
+	TOPOPHASEFILE=`GetParamFromFile " Topographic phase component file path " InSARParameters.txt`
+	MODELPHASEFILE=`GetParamFromFile " Model-based phase component file path " InSARParameters.txt`
+	CORRPHASEFILE=`GetParamFromFile " Correction phase component file path " InSARParameters.txt`
+
 	if [ "${FIG}" == "FIGyes"  ] ; then
-		MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${FIRSTPHASEFILE} 
-		mv ${FIRSTPHASEFILE}.ras ${FIRSTPHASEFILE}_wrapped.ras
-		mv ${FIRSTPHASEFILE}.ras.sh ${FIRSTPHASEFILE}_wrapped.ras.sh
-		${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${FIRSTPHASEFILE}_wrapped.ras.sh
-		MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${FIRSTPHASEFILE} 
+		
+		if [ -f "${FIRSTPHASEFILE}" ] && [ -s "${FIRSTPHASEFILE}" ] ; then
+			MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${FIRSTPHASEFILE} 
+			mv ${FIRSTPHASEFILE}.ras ${FIRSTPHASEFILE}_wrapped.ras
+			mv ${FIRSTPHASEFILE}.ras.sh ${FIRSTPHASEFILE}_wrapped.ras.sh
+			${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${FIRSTPHASEFILE}_wrapped.ras.sh
+			MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${FIRSTPHASEFILE} 
+		fi
+	
+		if [ -f "${TOPOPHASEFILE}" ] && [ -s "${TOPOPHASEFILE}" ] ; then
+			MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${TOPOPHASEFILE} 
+			mv ${TOPOPHASEFILE}.ras ${TOPOPHASEFILE}_wrapped.ras
+			mv ${TOPOPHASEFILE}.ras.sh ${TOPOPHASEFILE}_wrapped.ras.sh
+			${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${TOPOPHASEFILE}_wrapped.ras.sh
+			MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${TOPOPHASEFILE} 
+		fi
+		if [ -f "${MODELPHASEFILE}" ] && [ -s "${MODELPHASEFILE}" ] ; then
+			MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${MODELPHASEFILE} 
+			mv ${MODELPHASEFILE}.ras ${MODELPHASEFILE}_wrapped.ras
+			mv ${MODELPHASEFILE}.ras.sh ${MODELPHASEFILE}_wrapped.ras.sh
+			${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${MODELPHASEFILE}_wrapped.ras.sh
+			MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${MODELPHASEFILE} 
+		fi
+		if [ -f "${CORRPHASEFILE}" ] && [ -s "${CORRPHASEFILE}" ] ; then
+			MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${CORRPHASEFILE} 
+			mv ${CORRPHASEFILE}.ras ${CORRPHASEFILE}_wrapped.ras
+			mv ${CORRPHASEFILE}.ras.sh ${CORRPHASEFILE}_wrapped.ras.sh
+			${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${CORRPHASEFILE}_wrapped.ras.sh
+			MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${CORRPHASEFILE} 
+		fi
+	
+		
 	fi
 	#MakeFig ${ISARRG} 1.0 20 normal jet 4/4 r4 ${FIRSTPHASEFILE}
 	}
@@ -1975,17 +2268,53 @@ function GeocUTM()
 	
 	# Need to asses here the size in ground resolution, hence one must take into account the incidence angle
 	# Following bug correction was applied on July 7th 2021
-	# 	PIXSIZEAZ should be	PIXSIZEAZ=`echo " ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-	PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
-	EchoTee " PIXSIZEAZ is ${PIXSIZEAZ} from AZSAMP${AZSAMP} / ZOOM${ZOOM} ) * INTERFML${INTERFML} "
+	#	PIXSIZEAZ should be	PIXSIZEAZ=`echo " ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+	### Below applies twice the zoom AND ML because pix size in masterSLCImageInfo.txt or slaveSLCImageInfo.txt are already zoomed and ML		 !!
+	#PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
+	#EchoTee " PIXSIZEAZ is ${PIXSIZEAZ} from AZSAMP${AZSAMP} / ZOOM${ZOOM} ) * INTERFML${INTERFML} "
+	#PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
+	#EchoTee " (Zoomed) PIXSIZEAZ is ${PIXSIZEAZ} from AZSAMP${AZSAMP} ) * INTERFML${INTERFML} "
+
+	# Check ZOOM factor (one or two values) and compute ZOOM in Az and Rg if needed (ZOOMAZ and ZOOMRG in case of two values) becasue needed below
+	CheckZOOMasymetry
+	
+	EchoTee "Check pixel shape and ratio"
+	RatioPix ${INTERFML}
+	# To be certain, re-check wich one is the largest
+	ROUNDEDAZSAMP=`echo ${AZSAMP} | xargs printf "%.*f\n" 0`  # (AzPixSize) rounded to 0th digits precision
+	ROUNDEDRGSAMP=`echo ${RGSAMP} | xargs printf "%.*f\n" 0`  # (RgPixSize) rounded to 0th digits precision
+		if [ ${ROUNDEDAZSAMP} -ge ${ROUNDEDRGSAMP} ]
+			then 
+				# zoom factor already taken into account in AZSAMP and RGSAMP
+				PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP}) * ${AZML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
+				PIXSIZERG=`echo "scale=5; ( ${RGSAMP} ) * ${RGML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
+
+				eval PIXSIZEAZORIGINAL=${PIXSIZEAZ} # needed in the specific case of asymetric zoom making square pix despite ORIGINALFORM 
+
+				EchoTee " PIXSIZEAZ is ${PIXSIZEAZ}  "
+			else 
+				# zoom factor already taken into account in AZSAMP and RGSAMP
+				PIXSIZEAZ=`echo "scale=5; ( ${AZSAMP}) * ${AZML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
+				PIXSIZERG=`echo "scale=5; ( ${RGSAMP} ) * ${RGML}" | bc`  # size of ML pixel in az (in m) - allow 5 digits precision
+
+				EchoTee " PIXSIZERG is ${PIXSIZERG} from RGSAMP${RGSAMP} ) * INTERFML${RGML} "
+				eval PIXSIZEAZORIGINAL=${PIXSIZEAZ}
+				EchoTee " PIXSIZEAZ is ${PIXSIZEAZORIGINAL} "
+				# from now on, the largest pixel is named AZ... even if it is RG - Yes it is uggly but changing the name could have too much impact in other scripts
+				if [ "${PIXSHAPE}" != "ORIGINALFORM" ] ; then 
+					PIXSIZEAZ=${PIXSIZERG}
+				fi
+		fi
+
+	# Unless PIXSHAPE=ORIGINALFORM, PIXSIZEAZ below is the pixel with respect to the largest side (i.e. AZ or RG) - Yes it is uggly but changing the name could have too much impact in other scripts
 	
 	GEOPIXSIZERND=`echo ${PIXSIZEAZ} | cut -d . -f1`	
 	if [ ${GEOPIXSIZERND} -eq "0" ] 
 		then 
 			GEOPIXSIZERND="1" 
-			EchoTee "Truncated PIXSIZEAZ is 0, hence increased to ${GEOPIXSIZERND}"
+			EchoTee "Truncated PIXSIZE is 0, hence increased to ${GEOPIXSIZERND}"
 		else
-			EchoTee "Truncated PIXSIZEAZ is ${GEOPIXSIZERND}"
+			EchoTee "Truncated PIXSIZE is ${GEOPIXSIZERND}"
 	fi 	
 	
 
@@ -2001,86 +2330,132 @@ function GeocUTM()
 
 	case ${GEOCMETHD} in
 		"Closest") 
-		EchoTeeYellow "Automatic geocoded pixel size determination."
-		EchoTeeYellow "          Will get the closest multilooked original pixel size." 
-		EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 		
-		GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
-		if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
-	
-		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
+			EchoTeeYellow "Automatic geocoded pixel size determination."
+			EchoTeeYellow "          Will get the closest multilooked original pixel size." 
+			EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 		
+
+			GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+			if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
+		
+
+			if [ "${PIXSHAPE}" == "ORIGINALFORM" ]
+				then 
+					GEOPIXSIZEAZ=`echo ${PIXSIZEAZORIGINAL} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+					if [ ${GEOPIXSIZEAZ} -eq "0" ] ; then GEOPIXSIZEAZ="1" ; fi 	# just in case...
+					GEOPIXSIZERG=`echo ${PIXSIZERG} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+					if [ ${GEOPIXSIZERG} -eq "0" ] ; then GEOPIXSIZERG="1" ; fi 	# just in case...
+					ChangeParam "Easting sampling" ${GEOPIXSIZERG} geoProjectionParameters.txt 
+					ChangeParam "Northing sampling" ${GEOPIXSIZEAZ} geoProjectionParameters.txt
+					GEOPIXSIZENAME=${GEOPIXSIZERG}x${GEOPIXSIZEAZ}
+
+					EchoTeeYellow "Using ${GEOPIXSIZENAME} meters geocoded Rg x Az pixel size."
+				else 
+					ChangeParam "Easting sampling" ${GEOPIXSIZE} geoProjectionParameters.txt 
+					ChangeParam "Northing sampling" ${GEOPIXSIZE} geoProjectionParameters.txt
+					GEOPIXSIZENAME=${GEOPIXSIZE}x${GEOPIXSIZE}
+
+					EchoTeeYellow "Using ${GEOPIXSIZENAME} meters geocoded pixel size."
+					
+					# Dummy; Needed for naming 
+					GEOPIXSIZEAZ=${GEOPIXSIZE}
+					GEOPIXSIZERG=${GEOPIXSIZE}
+			fi
 		;;
 		"Auto") 
-		EchoTeeYellow "Automatic geocoded pixel size determination."
-		EchoTeeYellow "          Will get the closest (upper) multiple of 10 of multilooked original pixel size. " 
-		EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
-		GEOPIXSIZE=${GEOPIXSIZE10}
-		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
+			EchoTeeYellow "Automatic geocoded (squared) pixel size determination."
+			EchoTeeYellow "          Will get the closest (upper) multiple of 10 of multilooked original pixel size. " 
+			EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
+			GEOPIXSIZE=${GEOPIXSIZE10}
+	
+			ChangeParam "Easting sampling" ${GEOPIXSIZE} geoProjectionParameters.txt 
+			ChangeParam "Northing sampling" ${GEOPIXSIZE} geoProjectionParameters.txt
+			GEOPIXSIZENAME=${GEOPIXSIZE}x${GEOPIXSIZE}
+	
+			EchoTeeYellow "Using ${GEOPIXSIZENAME} meters geocoded pixel size."
+			
+			# Dummy; Needed for naming 
+			GEOPIXSIZEAZ=${GEOPIXSIZE}
+			GEOPIXSIZERG=${GEOPIXSIZE}
 		;;
 		"Forced") 
-		# Possibly force UTM coordinates of geocoded products (convenient for further MSBAS)
-		GEOPIXSIZE=${FORCEGEOPIXSIZE}    					# Give the sampling rate here of what you want for your final MSBAS database
-		EchoTeeYellow "Forced geocoded pixel size determination. " 
-		EchoTeeYellow "Assigned ${GEOPIXSIZE} m. Will also force the limits of the geocoded files."
-		EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
-		if [ -f "${GEOCKML}" ] 
-			then
-				# Seems you want to define the geocoded zone using a kml file
-				if [ -f "${GEOCKML}" ] && [ -s "${GEOCKML}" ]
-					then 
-						# OK file exists 
-						ChangeParam "Path to a kml file defining the geoProjection area" ${GEOCKML} geoProjectionParameters.txt	
-					else 
-						EchoTeeYellow "Can't find the kml for defining geocoding area in ${GEOCKML} " 
-						EchoTeeYellow "Try using xMin, xMax, yMin and yMax instead..." 
+			# Possibly force UTM coordinates of geocoded products (convenient for further MSBAS)
+					
+			CheckFORCEGEOPIXSIZEasymetry		# this fct also define GEOPIXSIZE, GEOPIXSIZERG and GEOPIXSIZEAZ based on FORCEGEOPIXSIZE, FORCEGEOPIXSIZEAZ and FORCEGEOPIXSIZERG
 
-						if [ "${UTMZONE}" == "" ]
-							then 
-								EchoTeeYellow "No UTM zone defined (empty or not in LaunchParam.txt file). Will compute it from the center of the image."
-								EchoTeeYellow "  It may not be a problem unless the center of the AoI is in another zone and you need to compare different modes which can have different central UTM zone."
-							else
-								EchoTeeYellow "Shall use UTM zone defined in LaunchParam.txt, that is: ${UTMZONE}"
-								ChangeParam "UTM zone " ${UTMZONE} geoProjectionParameters.txt
-						fi
-							
-						ChangeParam "xMin" ${XMIN} geoProjectionParameters.txt
-						ChangeParam "xMax" ${XMAX} geoProjectionParameters.txt
-						ChangeParam "yMin" ${YMIN} geoProjectionParameters.txt
-						ChangeParam "yMax" ${YMAX} geoProjectionParameters.txt
-				fi
-			else 
-				if [ "${UTMZONE}" == "" ]
-					then 
-						EchoTeeYellow "No UTM zone defined (empty or not in LaunchParam.txt file). Will compute it from the center of the image."
-						EchoTeeYellow "  It may not be a problem unless the center of the AoI is in another zone and you need to compare different modes which can have different central UTM zone."
-					else
-						EchoTeeYellow "Shall use UTM zone defined in LaunchParam.txt, that is: ${UTMZONE}"
-						ChangeParam "UTM zone " ${UTMZONE} geoProjectionParameters.txt
-				fi
+			# Change default parameters : Geoprojected products generic extension (OK also if only one value of FORCEDGEOPIXSIZE ; see fct CheckFORCEGEOPIXSIZEasymetry)
+			ChangeParam "Geoprojected products generic extension" ".UTM.${FORCEGEOPIXSIZERG}x${FORCEGEOPIXSIZEAZ}" geoProjectionParameters.txt
 
-				ChangeParam "xMin" ${XMIN} geoProjectionParameters.txt
-				ChangeParam "xMax" ${XMAX} geoProjectionParameters.txt
-				ChangeParam "yMin" ${YMIN} geoProjectionParameters.txt
-				ChangeParam "yMax" ${YMAX} geoProjectionParameters.txt
-		fi
+			#GEOPIXSIZE=${FORCEGEOPIXSIZE}    					# Give the sampling rate here of what you want for your final MSBAS database
+			#EchoTeeYellow "Forced geocoded (squared) pixel size determination. " 
+			#EchoTeeYellow "Assigned ${GEOPIXSIZE} m. Will also force the limits of the geocoded files."
+			#EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
+			if [ -f "${GEOCKML}" ] 
+				then
+					# Seems you want to define the geocoded zone using a kml file
+					if [ -f "${GEOCKML}" ] && [ -s "${GEOCKML}" ]
+						then 
+							# OK file exists 
+							ChangeParam "Path to a kml file defining the geoProjection area" ${GEOCKML} geoProjectionParameters.txt	
+						else 
+							EchoTeeYellow "Can't find the kml for defining geocoding area in ${GEOCKML} " 
+							EchoTeeYellow "Try using xMin, xMax, yMin and yMax instead..." 
+	
+							if [ "${UTMZONE}" == "" ]
+								then 
+									EchoTeeYellow "No UTM zone defined (empty or not in LaunchParam.txt file). Will compute it from the center of the image."
+									EchoTeeYellow "  It may not be a problem unless the center of the AoI is in another zone and you need to compare different modes which can have different central UTM zone."
+								else
+									EchoTeeYellow "Shall use UTM zone defined in LaunchParam.txt, that is: ${UTMZONE}"
+									ChangeParam "UTM zone " ${UTMZONE} geoProjectionParameters.txt
+							fi
+								
+							ChangeParam "xMin" ${XMIN} geoProjectionParameters.txt
+							ChangeParam "xMax" ${XMAX} geoProjectionParameters.txt
+							ChangeParam "yMin" ${YMIN} geoProjectionParameters.txt
+							ChangeParam "yMax" ${YMAX} geoProjectionParameters.txt
+					fi
+				else 
+					if [ "${UTMZONE}" == "" ]
+						then 
+							EchoTeeYellow "No UTM zone defined (empty or not in LaunchParam.txt file). Will compute it from the center of the image."
+							EchoTeeYellow "  It may not be a problem unless the center of the AoI is in another zone and you need to compare different modes which can have different central UTM zone."
+						else
+							EchoTeeYellow "Shall use UTM zone defined in LaunchParam.txt, that is: ${UTMZONE}"
+							ChangeParam "UTM zone " ${UTMZONE} geoProjectionParameters.txt
+					fi
+	
+					ChangeParam "xMin" ${XMIN} geoProjectionParameters.txt
+					ChangeParam "xMax" ${XMAX} geoProjectionParameters.txt
+					ChangeParam "yMin" ${YMIN} geoProjectionParameters.txt
+					ChangeParam "yMax" ${YMAX} geoProjectionParameters.txt
+			fi
+
+			# Could avoid this test and keep only the else part I think... Not harmful though
+			if [ "${FORCEGEOPIXSIZEVAL}" == "One" ]
+				then 
+					ChangeParam "Easting sampling" ${GEOPIXSIZE} geoProjectionParameters.txt 
+					ChangeParam "Northing sampling" ${GEOPIXSIZE} geoProjectionParameters.txt
+					GEOPIXSIZENAME=${GEOPIXSIZE}x${GEOPIXSIZE}
+				else 
+					ChangeParam "Easting sampling" ${FORCEGEOPIXSIZERG} geoProjectionParameters.txt 
+					ChangeParam "Northing sampling" ${FORCEGEOPIXSIZEAZ} geoProjectionParameters.txt		
+					GEOPIXSIZENAME=${FORCEGEOPIXSIZERG}x${FORCEGEOPIXSIZEAZ}
+			fi
+
 		;;
 		*) 
-		EchoTeeYellow "Not sure what you wanted => used Closest..." 
-		GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
-		if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
-		EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
+			EchoTeeYellow "Not sure what you wanted => used Closest..." 
+			GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
+			if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
+			GEOPIXSIZENAME=${GEOPIXSIZE}x${GEOPIXSIZE}
+			EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 		;;
 	esac
-
-	# Change default parameters : Geoprojected products generic extension
-	ChangeParam "Geoprojected products generic extension" ".UTM.${GEOPIXSIZE}x${GEOPIXSIZE}" geoProjectionParameters.txt
 
 	# Change default parameters : interpolation radius (2-3 times resolution might be good; the largest radius the slowest)  
 	#GEOPIXRADIUS=`echo "${GEOPIXSIZE} * 2" | bc`
 	#ChangeParam "Easting interpolation radius" ${GEOPIXRADIUS} geoProjectionParameters.txt
 	#ChangeParam "Northing interpolation radius" ${GEOPIXRADIUS} geoProjectionParameters.txt 
-
-	ChangeParam "Easting sampling" ${GEOPIXSIZE} geoProjectionParameters.txt 
-	ChangeParam "Northing sampling" ${GEOPIXSIZE} geoProjectionParameters.txt
 
 	# Define which products to geocode
 	ChangeParam "Geoproject measurement" ${DEFOMAP} geoProjectionParameters.txt
@@ -2168,43 +2543,43 @@ function PlotGeoc()
 			if [ "${PROCESSMODE}" == "TOPO" ] 
 				then 
 					# plot geocoded unwrapped DEM (instead of defomap) 
-					PATHDEM=`ls slantRangeDEM.*-*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+					PATHDEM=`ls slantRangeDEM.*-*.${PROJ}.${GEOPIXSIZENAME}.bil`
 					MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 ${PATHDEM}
 				else
 					# plot geocoded unwrapped defo 
-					MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
-					if [ -e deformationMap.flatttened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.flatttened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil ; fi
-					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil ; fi
-					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil ; fi
-					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated ; fi
-					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated ; fi
+					MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil
+					if [ -e deformationMap.flatttened.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.flatttened.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
+					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
+					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
+					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ; fi
+					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ; fi
 			fi
 	fi
 	if [ "${MASAMPL}" == "YES" ]
 		then
 		# plot geocoded Primary
-		PATHGEOMAS=`basename *${MASNAME}*.*.mod.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		PATHGEOMAS=`basename *${MASNAME}*.*.mod.${PROJ}.${GEOPIXSIZENAME}.bil`
 		#if [ -f "${PATHGEOMAS}" ] && [ -s "${PATHGEOMAS}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOMAS} ; fi
 		if [ -f "${PATHGEOMAS}" ] && [ -s "${PATHGEOMAS}" ] ; then MakeFigRAuto ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOMAS} ; fi
 	fi
 	if [ "${SLVAMPL}" == "YES" ]
 		then
 		# plot geocoded Secondary
-		PATHGEOSLV=`basename *${SLVNAME}*.*.mod.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		PATHGEOSLV=`basename *${SLVNAME}*.*.mod.${PROJ}.${GEOPIXSIZENAME}.bil`
 		#if [ -f "${PATHGEOSLV}" ] && [ -s "${PATHGEOSLV}" ] ; then MakeFigR ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOSLV} ; fi
 		if [ -f "${PATHGEOSLV}" ] && [ -s "${PATHGEOSLV}" ] ; then MakeFigRAuto ${GEOPIXW} 0,100 0.8 1.0 normal gray 1/1 r4 ${PATHGEOSLV} ; fi
 	fi
 	if [ "${COHFILE}" == "YES" ]
 		then
 		# plot geocoded coherence
-		PATHGEOCOH=`basename coherence.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		PATHGEOCOH=`basename coherence.*.${PROJ}.${GEOPIXSIZENAME}.bil`
 		MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOCOH}	
 
 	fi
 	if [ "${INTERF}" == "YES" ]
 		then
 		# plot interferogram
-		PATHGEOINTERF=`basename interfero.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		PATHGEOINTERF=`basename interfero.*.${PROJ}.${GEOPIXSIZENAME}.bil`
 		MakeFigR ${GEOPIXW} 0,3.15 1.1 1.1 normal jet 4/4 r4 ${PATHGEOINTERF} 
 	fi
 	if [ "${FILTINTERF}" == "YES" ]
@@ -2212,34 +2587,34 @@ function PlotGeoc()
 		# plot filtered interferogram
 		# for interfero.f.${POL} or residualInterferogram.${POL}.f
  		PATHGEOFILTINTERF1=`GetParamFromFile "Filtered interferogram file path" InSARParameters.txt | ${PATHGNU}/gawk -F '/' '{print $NF}' `
- 		PATHGEOFILTINTERF=`echo ${PATHGEOFILTINTERF1}.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+ 		PATHGEOFILTINTERF=`echo ${PATHGEOFILTINTERF1}.${PROJ}.${GEOPIXSIZENAME}.bil`
  		# On linux computer, for unknown reason it denies renaming geocoded resid interfero with .bil.. 
- 		if [ ! -s ${PATHGEOFILTINTERF} ] ; then PATHGEOFILTINTERFNOBIL=`echo ${PATHGEOFILTINTERF1}.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}` ; mv ${PATHGEOFILTINTERFNOBIL} ${PATHGEOFILTINTERF} ; fi 
+ 		if [ ! -s ${PATHGEOFILTINTERF} ] ; then PATHGEOFILTINTERFNOBIL=`echo ${PATHGEOFILTINTERF1}.${PROJ}.${GEOPIXSIZENAME}` ; mv ${PATHGEOFILTINTERFNOBIL} ${PATHGEOFILTINTERF} ; fi 
  		#MakeFigR ${GEOPIXW} 0,3.1415926535897 1 0.85 normal jet 1/1 r4 ${PATHGEOFILTINTERF} 
  		MakeFig ${GEOPIXW} 1 1.2 normal jet 1/1 r4 ${PATHGEOFILTINTERF} 
 	fi
 	if [ "${RESINTERF}" == "YES" ]
 		then
 		# plot residual interferogram
-#		PATHGEORESINTERF=`basename residualInterferogram.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+#		PATHGEORESINTERF=`basename residualInterferogram.*.${PROJ}.${GEOPIXSIZENAME}.bil`
 		PATHGEORESINTERF1=`GetParamFromFile "Residual interferogram file path" InSARParameters.txt | ${PATHGNU}/gawk -F '/' '{print $NF}' `
-		PATHGEORESINTERF=`echo ${PATHGEORESINTERF1}.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		PATHGEORESINTERF=`echo ${PATHGEORESINTERF1}.${PROJ}.${GEOPIXSIZENAME}.bil`
  		# On linux computer, for unknown reason it denies renaming geocoded filt resid interfero with .bil.. 
- 		if [ ! -s ${PATHGEORESINTERF} ] ; then PATHGEORESINTERFNOBIL=`echo ${PATHGEORESINTERF1}.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}` ; mv ${PATHGEORESINTERFNOBIL} ${PATHGEORESINTERF} ; fi 
+ 		if [ ! -s ${PATHGEORESINTERF} ] ; then PATHGEORESINTERFNOBIL=`echo ${PATHGEORESINTERF1}.${PROJ}.${GEOPIXSIZENAME}` ; mv ${PATHGEORESINTERFNOBIL} ${PATHGEORESINTERF} ; fi 
 		#MakeFigR ${GEOPIXW} 0,3.15 1.0 1.0 normal jet 1/1 r4 ${PATHGEORESINTERF} 	
 		MakeFig ${GEOPIXW} 1.0 1.2 normal jet 1/1 r4 ${PATHGEORESINTERF} 
 	fi
 	if [ "${UNWPHASE}" == "YES" ]
 		then
 		# plot unwrapped phase
-		PATHGEOUNWRAPINTERF=`basename unwrappedPhase.*.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		PATHGEOUNWRAPINTERF=`basename unwrappedPhase.*.${PROJ}.${GEOPIXSIZENAME}.bil`
 		MakeFigNoNorm ${GEOPIXW} normal jet 4/4 r4 ${PATHGEOUNWRAPINTERF} 
 	fi
 
 	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && [ "${UW_METHOD}" == "SNAPHU" ]
 		then
 		# plot maskedCoherence
-		PATHGEOMASKCOH=`basename maskedCoherence.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil`
+		PATHGEOMASKCOH=`basename maskedCoherence.${PROJ}.${GEOPIXSIZENAME}.bil`
 		if [ -f ${PATHGEOMASKCOH} ] ; then MakeFigR ${GEOPIXW} 0,1 1.5 1.5 normal gray 1/1 r4 ${PATHGEOMASKCOH} ; fi
 	fi
 
@@ -2279,7 +2654,7 @@ function CreateHDR()
 					EchoTee "Automatic setting of UTM zone must be implemented (e.g. using utm python utm.from_latlon()); see https://pypi.org/project/utm/#files"
 					EchoTee "In the mean time, set it manually in FUNCTIONS_FOR_MT.sh in function CreateHDR()."
 					# IF YOUR OS IS mac, YOU MUST DEFINE THE UTM ZONE IN LINE BELOW 
-					echo -e "map info = {UTM, 1.000, 1.000, ${UTMXmin}, ${UTMYmin}, ${GEOPIXSIZE}, ${GEOPIXSIZE}, 35, South, WGS-84, units=Meters}\r" >> ${FILE}.hdr ;;
+					echo -e "map info = {UTM, 1.000, 1.000, ${UTMXmin}, ${UTMYmin}, ${GEOPIXSIZERG}, ${GEOPIXSIZEAZ}, 35, South, WGS-84, units=Meters}\r" >> ${FILE}.hdr ;;
 				"Linux")
 					EchoTee "Linux : get UTM zone from DEM"
 					EASTDEM=`GetParamFromFile "Lower left corner longitude" externalSlantRangeDEM.txt`
@@ -2297,7 +2672,7 @@ function CreateHDR()
 					if [[ ${NORTHDEG} -gt 0 ]]; then NS="North" ; else NS="South" ; fi
 				
 					EchoTee "UTM zone is ${UTMZONE} ${NS}"
-					echo -e "map info = {UTM, 1.000, 1.000, ${UTMXmin}, ${UTMYmin}, ${GEOPIXSIZE}, ${GEOPIXSIZE}, ${UTMZONE}, ${NS}, WGS-84, units=Meters}\r" >> ${FILE}.hdr	;;
+					echo -e "map info = {UTM, 1.000, 1.000, ${UTMXmin}, ${UTMYmin}, ${GEOPIXSIZERG}, ${GEOPIXSIZEAZ}, ${UTMZONE}, ${NS}, WGS-84, units=Meters}\r" >> ${FILE}.hdr	;;
 				*)
 					EchoTee "I can't figure out your Operatingh System : set you UTM zone manually in FUNCTIONS_FOR_MT.sh in function CreateHDR()."
 					# IF YOUR OS IS NOT RECOGNIZED, YOU MUST DEFINE THE UTM ZONE IN LINE BELOW 
@@ -2306,7 +2681,7 @@ function CreateHDR()
 			;;
 		"LatLong")  
 			# not used anymore - fct only with Dummy projection for Amplitude image in radar geometry
-			echo -e "map info = {Geographic Lat/Lon, 1.000, 1.000, ${UTMXmin}, ${UTMYmin}, ${GEOPIXSIZE}, ${GEOPIXSIZE}, WGS-84, units=Degrees}\r" >> ${FILE}.hdr
+			echo -e "map info = {Geographic Lat/Lon, 1.000, 1.000, ${UTMXmin}, ${UTMYmin}, ${GEOPIXSIZERG}, ${GEOPIXSIZEAZ}, WGS-84, units=Degrees}\r" >> ${FILE}.hdr
 			;;
 		"Dummy")
 			# attention, the format was tricked in order to get the UTMXmin and Ymin parameters to be used as first pixel coordinates
@@ -2420,8 +2795,7 @@ function ManageGeocoded()
 			EchoTee " not opperational yet. Please use UTM"
 			GeocUTM ${FILESTOGEOC}
 	fi
-
-	if [ ${SKIPUW} == "SKIPyes" ] ; then
+	if [ ${SKIPUW} == "SKIPyes" ] && [ ${SKIPUW} == "Mask" ]  ; then
 		EchoTee "Skip geocoding as requested, hence obviously skip interpolation and Detrending..."
 	else
 		# Interpolation
@@ -2430,31 +2804,31 @@ function ManageGeocoded()
 				if [ ${REMOVEPLANE} == "DETREND" ] 
 						then 
 							EchoTee "Request interpolation after geocoding."
-							PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+							PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
-							#PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated	
+							#PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated	
 						else 
 							EchoTee "Request interpolation after geocoding."
-							PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+							PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
-							#PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated	
+							#PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated	
 				fi ;;
 			"BOTH")  
 				if [ ${REMOVEPLANE} == "DETREND" ] 
 						then 
 							EchoTee "Request interpolation before and after geocoding."
-							PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+							PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
-							#PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated   
+							#PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated   
 						else 
 							EchoTee "Request interpolation before and after geocoding."
-							PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+							PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
-							#PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated   
+							#PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated   
 				fi ;;
 			"BEFORE") 
 				EchoTee "Do not request interpolation after geocoding" 
-				#PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+				#PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil
 				;;		
 		esac
 	fi
@@ -2468,8 +2842,8 @@ function ManageGeocoded()
 	
 # rename here Primary S1 STRIPMAP from MASDATE to MASNAME
  	if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "STRIPMAP" ] ; then 		
- 		mv ${MAS}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg ${MASNAME}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg 2>/dev/null
-  		mv ${MAS}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr ${MASNAME}.${POLMAS}.mod.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr 2>/dev/null
+ 		mv ${MAS}.${POLMAS}.mod.UTM.${GEOPIXSIZENAME}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg ${MASNAME}.${POLMAS}.mod.UTM.${GEOPIXSIZENAME}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg 2>/dev/null
+  		mv ${MAS}.${POLMAS}.mod.UTM.${GEOPIXSIZENAME}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr ${MASNAME}.${POLMAS}.mod.UTM.${GEOPIXSIZENAME}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr 2>/dev/null
  	fi	
  
 
@@ -2495,9 +2869,9 @@ function ManageGeocoded()
 	cd ${RUNDIR}/i12/GeoProjection
 
 	# postfix for geocoded images
-	POSTFIX=".UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil"
-	POLPOSTFIX=".${POLMAS}-${POLSLV}.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil"
-	POLPOSTFIXFILT=".${POLMAS}-${POLSLV}.f.UTM.${GEOPIXSIZE}x${GEOPIXSIZE}.bil"
+	POSTFIX=".UTM.${GEOPIXSIZENAME}.bil"
+	POLPOSTFIX=".${POLMAS}-${POLSLV}.UTM.${GEOPIXSIZENAME}.bil"
+	POLPOSTFIXFILT=".${POLMAS}-${POLSLV}.f.UTM.${GEOPIXSIZENAME}.bil"
 
 	if [ ! -f ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${MASNAME}.${POLMAS}.mod${POSTFIX}*.hdr ]
 		then 
@@ -2517,7 +2891,9 @@ function ManageGeocoded()
 		EchoTee "NO deformation nor unwrapped files to process"
 	else 
 		MoveGeocRename deformationMap${POSTFIX} Defo
-		MoveGeocRename unwrappedPhase${POLPOSTFIX} UnwrapPhase
+		if [ "${SKIPUW}" != "Mask" ]  ; then 
+			MoveGeocRename unwrappedPhase${POLPOSTFIX} UnwrapPhase
+		fi
 
 		if [ -f ${RUNDIR}/i12/GeoProjection/deformationMap.flattened${POSTFIX}_*deg ] && [ -s ${RUNDIR}/i12/GeoProjection/deformationMap.flattened${POSTFIX}_*deg ]    # DefoDetrend
 			then 
@@ -2593,7 +2969,7 @@ function RenameAllProducts()
 	local FILE
 	#for FILE in `ls | ${PATHGNU}/grep -v ".hdr" | ${PATHGNU}/grep -v ".ras" | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".rev" | ${PATHGNU}/grep -v "xRef" | ${PATHGNU}/grep -v "yRef" | ${PATHGNU}/grep -v "xRadius" | ${PATHGNU}/grep -v "yRadius" | ${PATHGNU}/grep -v "projMat"`
 	#for FILE in `ls | ${PATHGNU}/grep -v ".ras" | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".rev" | ${PATHGNU}/grep -v "xRef" | ${PATHGNU}/grep -v "yRef" | ${PATHGNU}/grep -v "xRadius" | ${PATHGNU}/grep -v "yRadius" | ${PATHGNU}/grep -v "projMat"`
-	for FILE in `ls | ${PATHGNU}/grep -v ".sh" | ${PATHGNU}/grep -v ".rev" | ${PATHGNU}/grep -v "xRef" | ${PATHGNU}/grep -v "yRef" | ${PATHGNU}/grep -v "xRadius" | ${PATHGNU}/grep -v "yRadius" | ${PATHGNU}/grep -v "projMat"`
+	for FILE in `ls | ${PATHGNU}/grep -v "\.sh$" | ${PATHGNU}/grep -v "\.rev$" | ${PATHGNU}/grep -v "xRef" | ${PATHGNU}/grep -v "yRef" | ${PATHGNU}/grep -v "xRadius" | ${PATHGNU}/grep -v "yRadius" | ${PATHGNU}/grep -v "projMat"`
 	do
 		FILENOEXT=`echo "${FILE}" |  ${PATHGNU}/gawk '{gsub(/.*[/]|[.]{1}[^.]+$/, "", $0)} 1'`
 		FILEEXT=`echo "${FILE}" |  ${PATHGNU}/gawk -F'[.]' '{print $NF}'`
@@ -2647,9 +3023,11 @@ function RenameAllSlantRangeProducts()
 	if [ -f snaphuZoneMap  ] ; then 
 		mv snaphuZoneMap snaphuZoneMap.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
 	fi
-
-	mv unwrappedPhase.${MASPOL}-${SLVPOL} unwrappedPhase.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
-	if [ "${FIG}" == "FIGyes"  ] ; then mv unwrappedPhase.${MASPOL}-${SLVPOL}.ras unwrappedPhase.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
 	
+	if [ "${SKIPUW}" != "Mask" ] && [ "${SKIPUW}" != "SKIPyes" ]  
+		then 
+			mv unwrappedPhase.${MASPOL}-${SLVPOL} unwrappedPhase.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days
+			if [ "${FIG}" == "FIGyes"  ] ; then mv unwrappedPhase.${MASPOL}-${SLVPOL}.ras unwrappedPhase.${MASPOL}-${SLVPOL}.${MAS}_${SLV}_Bp${Bp}m_BT${BT}days.ras ; fi
+	fi
 	}
 

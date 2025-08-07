@@ -57,13 +57,17 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 8.0 20241015:	- multi level mask 
 # New in Distro V 8.1 20241202:	- debug PATHTOMASK
+# New in Distro V 8.2 20250204:	- zap hidden Gremlins making wc to crash
+# New in Distro V 8.3 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
+#								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
+VER="Distro V8.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 20, 2025"
+
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " "
@@ -90,7 +94,7 @@ fi
 
 if [ $# -lt 3 ] 
 	then 
-		echo “Usage $0 LIST_OF_IMGNAME.csl_TO_COREG PARAM_FILEPATH NUMBER_OF_PARALLEL_PROCESSES [FORCE]” 
+		echo "Usage $0 LIST_OF_IMGNAME.csl_TO_COREG PARAM_FILEPATH NUMBER_OF_PARALLEL_PROCESSES [FORCE]" 
 		echo "That is if you have 100 pairs to coreg and chose 5 parallel processes, "
 		echo "     it will compute 5 sets of 20 pairs in 5 terminal windows."
 		exit
@@ -137,17 +141,32 @@ DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored
 RESAMPDATPATH=`GetParam RESAMPDATPATH`		# RESAMPDATPATH, path to dir where resampled data will be stored 
 
 CROP=`GetParam "CROP,"`						# CROP, CROPyes or CROPno 
-SATDIR=`GetParam "SATDIR,"`					# Satellite system. E.g. RADARSAT (must be the same as dirname structure)
-TRKDIR=`GetParam "TRKDIR,"`					# Processing directory and dir where data are stored E.g. RS2_UF (must be the same as dirname structure)
-ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
-INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
-
 FIRSTL=`GetParam "FIRSTL,"`					# Crop limits: first line to use
 LASTL=`GetParam "LASTL,"`					# Crop limits: last line to use
 FIRSTP=`GetParam "FIRSTP,"`					# Crop limits: first point (row) to use
 LASTP=`GetParam "LASTP,"`					# Crop limits: last point (row) to use
-REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
+COORDSYST=`GetParam "COORDSYST,"`			# COORDSYST, type of coordinates used to define crop: SRA (lines and pixels) or GEO
 
+	if [ "${CROP}" == "CROPyes" ] && [ "${COORDSYST}" == "" ]
+		then 
+			echo " COORDSYST not defined. I try to see if there is a dot in your coordinates for crop region. "
+			if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
+				then
+					echo "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
+					COORDSYST="GEO"
+				else
+					echo "None of the crop coordinates has a dot. Must hence be SRA coord system"
+					COORDSYST="SRA"
+			fi
+	fi
+
+SATDIR=`GetParam "SATDIR,"`					# Satellite system. E.g. RADARSAT (must be the same as dirname structure)
+TRKDIR=`GetParam "TRKDIR,"`					# Processing directory and dir where data are stored E.g. RS2_UF (must be the same as dirname structure)
+ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+
+INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
+
+REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 
 # More Param to be sure... 
 DEMDIR=`GetParam DEMDIR`					# DEMDIR, path to dir where DEM is stored
@@ -240,6 +259,13 @@ TABLEPATH=`dirname ${LISTTOCOREG}`
 TABLEFILE=`basename ${LISTTOCOREG}`
 TABLEEXT="${LISTTOCOREG##*.}"
 
+# Test asymetric zoom - not allowed for mass processing 
+CheckZOOMasymetry
+if [ "${ZOOMONEVAL}" == "Two" ] 
+	then 
+		echo " Performing mass processing with asymetric zoom is not allowed yet. Exiting..." 
+		exit 
+fi
 
 # Update some infos
 	if [ ${CROP} == "CROPyes" ]
@@ -324,7 +350,7 @@ if [ "${OS}" == "Linux" ] ; then
 				;;
 			0) 
 				# no DISPLAY; try with who without -m
-				NRMYDISPLAYWHO=`who | grep -v tty | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l`
+				NRMYDISPLAYWHO=`who | grep -v tty | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l`
 				if [ ${NRMYDISPLAYWHO} -eq 1 ]
 					then 
 						# only one DISPLAY; I guess it is the good one

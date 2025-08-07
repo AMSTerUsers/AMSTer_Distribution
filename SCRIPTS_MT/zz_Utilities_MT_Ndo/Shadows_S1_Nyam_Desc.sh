@@ -11,13 +11,14 @@
 #        V1.0.4 Bbeta (Jan 17, 2019): 	- use state variable for external disk path and remove OS check
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 27, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -51,7 +52,8 @@ done
 echo "Copy jpg files from SOURCEDIR to TARGETDIR..." 
 for JPG in `ls *.jpg`
 do 
-	cp -n ${SOURCEDIR}/${JPG} ${TARGETDIR}/${JPG}
+	#cp -n ${SOURCEDIR}/${JPG} ${TARGETDIR}/${JPG}
+	if [ ! -e "${TARGETDIR}/${JPG}" ] ; then cp "${SOURCEDIR}/${JPG}" "${TARGETDIR}/${JPG}" ; fi 
 done
 
 DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 12 -fill black -annotate"

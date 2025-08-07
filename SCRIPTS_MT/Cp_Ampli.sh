@@ -20,13 +20,16 @@
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
+# New in Distro V 3.2 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
+# New in Distro V 3.3 20250530:	- OK with S1C and S1D
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2024"
+VER="Distro V3.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 30, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 
@@ -97,7 +100,7 @@ do
 						PREFIXFIG=`basename ${file} | cut -c 1-2`
 						if [ ${PREFIXFIG} == "S1" ] # For S1, remove info about S1A or S1B in naming to avoid unsorted images in gif			
 							then
-								IMAGE=`echo ${file} | sed "s/S1A_//" | sed "s/S1B_//"`
+								IMAGE=`echo ${file} | sed "s/S1A_//" | sed "s/S1B_//" | sed "s/S1C_//" | sed "s/S1D_//"`
 								#cp -n ${file} ${DESTINATION}/${IMAGE} 
 								mv -nf ${file} ${DESTINATION}/${IMAGE}
 								test -e ${ORIGIN}/${DIR}/i12/InSARProducts/${file} || ln -s ${DESTINATION}/${IMAGE} ${ORIGIN}/${DIR}/i12/InSARProducts/${file}
@@ -136,8 +139,16 @@ do
 			
 				if [ `find * -maxdepth 1 -type f -name "incidence.fl?p.hdr" | wc -l` -eq 0 ]
 					then
-						for file in incidence.fl?p.hdr ; do cp -n ${file} ${DESTINATION} ; done
-						for file in incidence.fl?p ; do cp -n ${file} ${DESTINATION} ; done
+						#for file in incidence.fl?p.hdr ; do cp -n ${file} ${DESTINATION} ; done
+						for file in incidence.fl?p.hdr
+							do 
+								if [ ! -e "${DESTINATION}" ] ; then cp "${file}" "${DESTINATION}" ; fi 
+						done
+						#for file in incidence.fl?p ; do cp -n ${file} ${DESTINATION} ; done
+						for file in incidence.fl?p
+							do 
+								if [ ! -e "${DESTINATION}" ] ; then cp "${file}" "${DESTINATION}" ; fi 
+						done
 				fi
 		fi
 		cd ${ORIGIN}

@@ -52,13 +52,21 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
-#
+# New in Distro V 3.1 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
+# New in Distro V 3.2 20250523:	- state that it allows asymetric zoom 
+#								- corr error message "Change param SKIPUW as Mask in Param file" 
+#								- rm moved computed dir only if TOMOV != OUTPUTDATE
+#								- debug copying coherence to ${OUTPUTDATA}/_MASK/
+#								- check if SUPERMASTER is the same in LaunchParam and SM table 
+# New in Distro V 3.3 20250626:	- remove MULTIPLEIMG
+
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V3.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 26, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -151,10 +159,10 @@ SUPERMASTER=`GetParam "SUPERMASTER,"`		# date of the Global Primary (supermaster
 
 FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are stored
 
-MULTIPLEIMG=`GetParam MULTIPLEIMG`			# MULTIPLEIMG, as long as the stitching of S1 img is not ready, keep NOMULTIPLE to process only the first img (ie _A.csl or _D.csl) in mass processing. 
-											#            Other occurences (ie _A.1.csl or _D.1.csl etc) will be ignored. However, for manual single processing, one may want to process both images. 
-											#            In such a case, run the first processing with MASBURSTSET (and/or SLVBURSTSET) set to 1 then rerun with set to 2. Not tested... 
-ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+#MULTIPLEIMG=`GetParam MULTIPLEIMG`			# MULTIPLEIMG, as long as the stitching of S1 img is not ready, keep NOMULTIPLE to process only the first img (ie _A.csl or _D.csl) in mass processing. 
+#											#            Other occurences (ie _A.1.csl or _D.1.csl etc) will be ignored. However, for manual single processing, one may want to process both images. 
+#											#            In such a case, run the first processing with MASBURSTSET (and/or SLVBURSTSET) set to 1 then rerun with set to 2. Not tested... 
+ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
 INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
 
 source ${FCTFILE}
@@ -192,7 +200,7 @@ CHECKUNWP=`GetParam "SKIPUW,"`
 if [ ${CHECKUNWP} != "Mask" ]
 	then 
 		echo "You seems to want to do the processing for Mask but did not restrict the unwrapping and geocoding accordingly"
-		echo " Change param DEFOTHRESHFACTOR as Mask in Param file"
+		echo " Change param SKIPUW as Mask in Param file"
 
 		while true; do
 				read -p "Confirm you want to continue anyway with SKIPUW as ${CHECKUNWP} ?"  yn
@@ -282,10 +290,24 @@ case ${METHOD} in
 			if [ ! -s ${SETI}_Filtered.txt ] ; then echo "No satisfyning baselines found in ${PATHSETI}; you must run ma" ; exit 0 ; fi
 
 			# remove all but the date and add .csl to mimick the file format of New_Slaves_to_process_${RUNDATE}.txt	
-			${PATHGNU}/gawk '$1 == '$SUPERMASTER' { print $2".csl" }' ${SETI}_Filtered.txt > ${SETI}_Filtered_slv.txt 
-			${PATHGNU}/gawk '$2 == '$SUPERMASTER' { print $1".csl" }' ${SETI}_Filtered.txt > ${SETI}_Filtered_mas.txt 
-
-			cat ${SETI}_Filtered_slv.txt ${SETI}_Filtered_mas.txt > New_Slaves_to_process_${RUNDATE}.txt
+			# This may cause a prblm if SUPERMASTER was imposed to  another date as the one suggested in ${SETI}
+			APPARENTSM=$(${PATHGNU}/gawk '{print $1; print $2}' ${SETI}_Filtered.txt | sort | uniq -c | ${PATHGNU}/gawk -v lines=$(wc -l < ${SETI}_Filtered.txt) '$1 == lines {print $2}')
+			if [ "${APPARENTSM}" ! -eq "${SUPERMASTER}" ]
+				then 
+					EchoTee " The SUPERMASTER parameter in the LaucnhParam.txt file is not the same as the one in your SM_Approx_baselines.txt" 
+					EchoTee " Either update you param fil or I suggest an option in the script but you might have prbms later on because of confusions in SuperMasters... "
+					echo 
+					exit
+						# you can continue with the following instead but you might have prblms.... 
+					
+						#cat ${SETI}_Filtered_slv.txt ${SETI}_Filtered_mas.txt > New_Slaves_to_process_${RUNDATE}.txt
+						#${PATHGNU}/gawk '{print $1; print $2}' ${SETI}_Filtered.txt ${SETI}_Filtered.txt | sort -u > New_Slaves_to_process_${RUNDATE}_tmp.txt
+						#grep -v ${APPARENTSM} New_Slaves_to_process_${RUNDATE}_tmp.txt > New_Slaves_to_process_${RUNDATE}.txt
+						#rm -f New_Slaves_to_process_${RUNDATE}_tmp.txt
+				else 
+					${PATHGNU}/gawk '$1 == '$SUPERMASTER' { print $2".csl" }' ${SETI}_Filtered.txt > ${SETI}_Filtered_slv.txt 
+					${PATHGNU}/gawk '$2 == '$SUPERMASTER' { print $1".csl" }' ${SETI}_Filtered.txt > ${SETI}_Filtered_mas.txt 
+			fi
 
 			if [ -f "New_Slaves_to_process_${RUNDATE}.txt" ] && [ -s "New_Slaves_to_process_${RUNDATE}.txt" ]
 				then
@@ -327,12 +349,17 @@ then
 			echo "n" | ${SOFTNAME} ${SUPERMASTER} ${SLV} ${PARAM}
 
 			TOMOVE=`ls -d ${PROROOTPATH}/${SATDIR}/${TRKDIR}/${SUPERMASTER}_${SLV}_*`
-			if [ -d ${OUTPUTDATA} ] 						
+			if [ -d ${OUTPUTDATA} ] && [ "${TOMOVE}" != "${OUTPUTDATA}" ] 						
 					then	
 						cp -r ${TOMOVE} ${OUTPUTDATA}
 						rm -r ${TOMOVE}
 					else 
 						EchoTeeRed "Can't find ${OUTPUTDATA}. Manually cp then remove ./${SOFTNAME} and ${TOMOVE}"
+						if [ "${TOMOVE}" == "${OUTPUTDATA}" ] 
+							then
+								EchoTeeRed "Ensure that OUTPUTDATA (${OUTPUTDATA} here) is not the same as TOMOVE (${TOMOVE}). Change second param (OUTPUTDATA) when launching script if needed."
+								exit
+						fi
 			fi
 			SpeakOut "${SATDIR} ${TRKDIR} : Pair ${SUPERMASTER} ${SLV} done and copied"
 			EchoTee "${SATDIR} ${TRKDIR} : Pair ${SUPERMASTER} ${SLV} done  and copied"
@@ -358,10 +385,10 @@ else
 				echo "n" | ${SOFTNAME} ${MAS} ${SLV} ${PARAM}
 
 				TOMOVE=`ls -d ${PROROOTPATH}/${SATDIR}/${TRKDIR}/${MAS}_${SLV}_*`
-				if [ -d ${OUTPUTDATA} ] 						
+				if [ -d ${OUTPUTDATA} ] && [ "${TOMOVE}" != "${OUTPUTDATA}" ] 				
 						then	
 							cp -r ${TOMOVE} ${OUTPUTDATA}
-							rm -r ${TOMOVE}
+							rm -r ${TOMOVE} 
 						else 
 							EchoTeeRed "Can't find ${OUTPUTDATA}. Manually cp then remove ./${SOFTNAME} and ${TOMOVE}"
 				fi
@@ -383,7 +410,8 @@ mkdir -p  ${OUTPUTDATA}/_MASK
 for filename in `find * -type f | ${PATHGNU}/grep coherence | ${PATHGNU}/grep ${SATDIR}`
    do
  		# Do not overwrite existing files
- 		cp -n ${filename} ${OUTPUTDATA}/_MASK/ 	>/dev/null 2>&1
+ 		#cp -n ${filename} ${OUTPUTDATA}/_MASK/ 	>/dev/null 2>&1
+ 		if [ ! -e "${OUTPUTDATA}/_MASK/${filename}" ] ; then cp "${filename}" "${OUTPUTDATA}/_MASK/" >/dev/null 2>&1 ; fi
 done
 
 # Create mask by computing mean with threshold 

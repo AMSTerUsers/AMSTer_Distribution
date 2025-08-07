@@ -43,13 +43,15 @@
 # New in Distro V 5.0 20241015:	- multi level mask 
 # New in Distro V 5.1 20241112:	- debug PATHTOMASK
 # New in Distro V 5.2 20241202:	- take mask(s) basename only if exist  
+# New in Distro V 5.3 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
+# New in Distro V 5.4 20250806:	- Add test to check if externalSlantRangeDEM exists before claiming that it worked
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 06, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -95,6 +97,22 @@ FIRSTL=`GetParam "FIRSTL,"`					# Crop limits: first line to use
 LASTL=`GetParam "LASTL,"`					# Crop limits: last line to use
 FIRSTP=`GetParam "FIRSTP,"`					# Crop limits: first point (row) to use
 LASTP=`GetParam "LASTP,"`					# Crop limits: last point (row) to use
+COORDSYST=`GetParam "COORDSYST,"`			# COORDSYST, type of coordinates used to define crop: SRA (lines and pixels) or GEO
+
+	if [ "${CROP}" == "CROPyes" ] && [ "${COORDSYST}" == "" ]
+		then 
+			echo " COORDSYST not defined. I try to see if there is a dot in your coordinates for crop region. "
+			if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
+				then
+					echo "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
+					COORDSYST="GEO"
+				else
+					echo "None of the crop coordinates has a dot. Must hence be SRA coord system"
+					COORDSYST="SRA"
+			fi
+	fi
+
+REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 
 MLAMPLI=`GetParam "MLAMPLI,"`				# MLAMPLI, Multilooking factor for amplitude images reduction (used for coregistration - 4-6 is appropriate). If rectangular pixel, it will be multiplied by corresponding ratio.
 ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
@@ -201,7 +219,6 @@ XMAX=`GetParam "XMAX,"`						# XMAX, maximum X UTM coord of final Forced geocode
 YMIN=`GetParam "YMIN,"`						# YMIN, minimum Y UTM coord of final Forced geocoded product
 YMAX=`GetParam "YMAX,"`						# YMAX, maximum Y UTM coord of final Forced geocoded product
 
-REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 DEMNAME=`GetParam "DEMNAME,"`				# DEMNAME, name of DEM inverted by lines and columns
 
 RESAMPDATPATH=`GetParam RESAMPDATPATH`		# RESAMPDATPATH, path to dir where resampled data will be stored 
@@ -213,7 +230,7 @@ source ${FCTFILE}
 # Define Crop Dir
 if [ ${CROP} == "CROPyes" ]
 	then
-		if [ ${ZOOM} -eq 1 ] 
+		if [ "${ZOOM}" == "1" ] 
 			then 
 				CROPDIR=/Crop_${REGION}_${FIRSTL}-${LASTL}_${FIRSTP}-${LASTP} #_Zoom${ZOOM}_ML${INTERFML}
 			else
@@ -459,11 +476,30 @@ OS=`uname -a | cut -d " " -f 1 `
 
 case ${OS} in 
 	"Linux") 
-		espeak " DEM computed. Hope it worked." ;;
+		if [ -f "${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Data/externalSlantRangeDEM" ] && [ -s "${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Data/externalSlantRangeDEM" ] 
+			then 
+				espeak " DEM computed. Hope it worked." 
+			else 
+				espeak " DEM not computed  ? Check..." 
+			
+		fi
+		;;
 	"Darwin")
-		say " DEM computed. Hope it worked." 	;;
+		if [ -f "${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Data/externalSlantRangeDEM" ] && [ -s "${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Data/externalSlantRangeDEM" ] 
+			then 
+				say " DEM computed. Hope it worked." 	
+			else 
+				say " DEM not computed ? Check..." 	
+		fi
+		;;
 	*)
-		echo " DEM computed. Hope it worked." 	;;
+		if [ -f "${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Data/externalSlantRangeDEM" ] && [ -s "${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}/${MASDIR}/Data/externalSlantRangeDEM" ] 
+			then 
+				echo " DEM computed. Hope it worked." 	
+			else 
+				echo " DEM not computed ? Check..." 	
+		fi
+		;;
 esac			
 
 # All done 

@@ -51,13 +51,16 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
 # New in Distro V 3.2 20240416:	- Search for Asc or Desc mode in dir name compatible with ALOS2 modes, that is e.g. zz_LOS_6811_L_A_Auto_2_0.04_PF 
-#
+# New in Distro V 3.3 20250203:	- Search for A_${mode}_auto... or D_${mode}_auto... in dir name compatible with Nepal
+# New in Distro V 3.4 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
+# New in Distro V 3.5 20250428:	- DS: Add defo mode COR_Defo
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 16, 2024"
+VER="Distro V3.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 28, 2025"
+
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -90,7 +93,8 @@ RegionFolder=$(dirname ${RUNDIR})
 # NdO Jan 25 2021
 mkdir -p ${RegionFolder}/_CombiFiles
 # ONLY COPY PARAM FILE IF IT DOES NOT EXIST TO PRESERVE POSSIBLE ADJUSTMENTS ALREADY PERFORMED TO PARAM FILE   
-cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/ 2>/dev/null
+#cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/ 2>/dev/null
+if [ ! -e "${RegionFolder}/_CombiFiles/" ] ; then cp "${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/*" "${RegionFolder}/_CombiFiles/" ; fi 
 
 #if [ ! -e ${RUNDIR}/_images ]; then mkdir ${RUNDIR}/_images; fi
 # NdO Jan 25 2021
@@ -125,6 +129,9 @@ if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_EW_" | wc -c` -gt 0 ] ;
 
 if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_A_Auto" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for ALOS2 type
 if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_D_Auto" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for ALOS2 type
+
+if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_A_" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for Nepal area
+if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_D_" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for Nepal area
 
 
 if [ "${OrbitMode}" == "LOS" ] ; then TagOrbit="LOS" ; else TagOrbit="${Orbit}" ; fi
@@ -205,9 +212,14 @@ if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEA
 									LinkedFile=$(find ${RegionFolder}/Defo1/ -name "defo*deg" 2>/dev/null | head -1) 
 									if [ "${LinkedFile}" == "" ] 
 										then 
-											# There is no file at all - can't make the fig with amplitude background
-											echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend]1. "
-											echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
+											# There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
+											LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
+											if [ "${LinkedFile}" == "" ] 
+												then 
+													# There is no file at all - can't make the fig with amplitude background
+													echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend]1. "
+													echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
+											fi
 									fi
 							fi
 					fi

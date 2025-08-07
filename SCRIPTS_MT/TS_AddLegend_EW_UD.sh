@@ -48,13 +48,15 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
 # New in Distro V 3.2 20240702:	- from V3.1 modifications, add mode DefoInterpol2
-#
+# New in Distro V 3.3 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
+# New in Distro V 3.3 20250428:	- DS: Add defo mode COR_Defo
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 05, 2024"
+VER="Distro V3.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 28, 2025"
+
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -86,7 +88,8 @@ echo "Let's start creating EW and UD time series in the $RegionFolder folder'"
 # NdO Jan 25 2021
 mkdir -p ${RegionFolder}/_CombiFiles
 # ONLY COPY PARAM FILE IF IT DOES NOT EXIST TO PRESERVE POSSIBLE ADJUSTMENTS ALREADY PERFORMED TO PARAM FILE   
-cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/
+#cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/
+if [ ! -e "${RegionFolder}/_CombiFiles/" ] ; then cp "${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/*" "${RegionFolder}/_CombiFiles/" ; fi 
 ParamFile=${RegionFolder}/_CombiFiles/TS_parameters.txt
 
 function GetParam()
@@ -198,15 +201,20 @@ for RUNDIR in ${RUNDIR_UD} ${RUNDIR_EW}
 													LinkedFile=$(find ${RegionFolder}/Defo1/ -name "defo*deg" 2>/dev/null | head -1) 
 													if [ "${LinkedFile}" == "" ] 
 														then 
-															# There is no file at all - can't make the fig with amplitude background
-															echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend]1. "
-															echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
+															# There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
+															LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
+			
+															if [ "${LinkedFile}" == "" ] 
+																then 
+																	# There is no file at all - can't make the fig with amplitude background
+																	echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend]1. "
+																	echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
+															fi
 													fi
 											fi
 									fi
 								fi
-						fi
-					
+						fi					
 						#AmpliPath=$(readlink ${LinkedFile})
 						##echo "AmpliPath = ${AmpliPath}"
 						#Server=$(echo ${AmpliPath} | cut -d "/" -f 3 | ${PATHGNU}/grep -o [0-9][0-9][0-9][0-9])

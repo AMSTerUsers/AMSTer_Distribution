@@ -33,6 +33,7 @@
 # New in V3.5 : 	- replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20250318:	- allow searching for dir name after SAR_MASSPROCESS also when dir is named SAR_MASSPRPCESS_2 in PATHTOGEOCODED and SATTRK
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2019/12/05 - could make better... when time.
@@ -63,9 +64,15 @@ ORIGINALTARGET=`readlink ${FIRSTFILE}`
 PATHTOGEOCODEDMOUNTPT=`dirname ${ORIGINALTARGET}`	# dir where original geocoded defo maps are stored in SAR_MASSPROCESS.
 # because the script may be launched on a computer with another OS let's get rid of disk mounting path 
 # For that, one must replace everything until SAR_MASSPROCESS by ${MASSPROCESS}
-PATHTOGEOCODED=`echo ${PATHTOGEOCODEDMOUNTPT} | ${PATHGNU}/gawk -F"SAR_MASSPROCESS" '/SAR_MASSPROCESS/{print "'${MASSPROCESS}'" $2}' `
+#PATHTOGEOCODED=`echo ${PATHTOGEOCODEDMOUNTPT} | ${PATHGNU}/gawk -F"SAR_MASSPROCESS" '/SAR_MASSPROCESS/{print "'${MASSPROCESS}'" $2}' `
+# more robust (eg for SAR_MASSPROCESS and SAR_MASSPROCESS_2) though without pattern matching 
+#PATHTOGEOCODED=$(echo "${PATHTOGEOCODEDMOUNTPT}" | ${PATHGNU}/gawk -F"SAR_MASSPROCESS[^/]*" '{print "'${MASSPROCESS}'" $2}')
+PATHTOGEOCODED=$(echo "${PATHTOGEOCODEDMOUNTPT}" | ${PATHGNU}/gawk -F"SAR_MASSPROCESS[^/]*" '/SAR_MASSPROCESS/{print "'${MASSPROCESS}'" $2}')
+
 #get SAT/TRK/Region without trailing /Geocoded/Mode
-SATTRK=`echo ${PATHTOGEOCODED} | awk -F"SAR_MASSPROCESS" '/SAR_MASSPROCESS/{print "" $2}' | ${PATHGNU}/gsed 's/\/Geocoded.*//' `
+#SATTRK=`echo ${PATHTOGEOCODED} | awk -F"SAR_MASSPROCESS" '/SAR_MASSPROCESS/{print "" $2}' | ${PATHGNU}/gsed 's/\/Geocoded.*//' `
+# more robust (eg for SAR_MASSPROCESS and SAR_MASSPROCESS_2) though without pattern matching 
+SATTRK=$(echo ${PATHTOGEOCODED} | ${PATHGNU}/gawk -F"SAR_MASSPROCESS[^/]*" '/SAR_MASSPROCESS/{print "" $2}' | ${PATHGNU}/gsed 's/\/Geocoded.*//')
 
 # First check that no lines contains the same file name with different Bp
 # Cut first col only (file name), sort and display only duplicated lines

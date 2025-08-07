@@ -60,13 +60,16 @@
 # New in Distro V 5.0 20241015:	- multi level mask 
 # New in Distro V 5.1 20241202:	- debug PATHTOMASK
 # New in Distro V 5.2 20241203:	- debug possible crach to fin MASNAME
-#
+# New in Distro V 5.3 20250519:	- Allows cropping on kml
+# 								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
+# New in Distro V 5.4 20250604:	- remove possible path to kml for re-geocoding when performing non Forced geocoding
+
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 03, 2024"
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 04, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -120,6 +123,14 @@ if [ $# -eq 3 ] ; then
 	FIG=`GetParam "FIG,"`
 
 	ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+		# Test asymetric zoom - not allowed for mass processing 
+		CheckZOOMasymetry
+		if [ "${ZOOMONEVAL}" == "Two" ] 
+			then 
+				echo " Performing mass processing with asymetric zoom is not allowed yet. Exiting..." 
+				exit 
+		fi
+
 	INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
 
 	PROJ=`GetParam "PROJ,"`						# PROJ, Chosen projection (UTM or GEOC)
@@ -188,6 +199,8 @@ if [ $# -eq 3 ] ; then
 	YMIN=`GetParam "YMIN,"`						# YMIN, minimum Y UTM coord of final Forced geocoded product
 	YMAX=`GetParam "YMAX,"`						# YMAX, maximum Y UTM coord of final Forced geocoded product
 
+	GEOCKML=`GetParam "GEOCKML,"`				# GEOCKML, a kml file to define final geocoded product. If not found, it will use the coordinates above
+
 	SKIPUW=`GetParam "SKIPUW,"`					# SKIPUW, SKIPyes skips unwrapping and geocode all available products
 	#INTERPOL=`GetParam "INTERPOL,"`				# INTERPOL, interpolate the unwrapped interfero BEFORE or AFTER geocoding or BOTH. 	
 	REMOVEPLANE=`GetParam "REMOVEPLANE,"`		# REMOVEPLANE, if DETREND it will remove a best plane after unwrapping. Anything else will ignore the detrending. 	
@@ -195,6 +208,7 @@ if [ $# -eq 3 ] ; then
 	DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored 
 	SATDIR=`GetParam "SATDIR,"`					# Satellite system. E.g. RADARSAT (must be the same as dirname structure)
 	TRKDIR=`GetParam "TRKDIR,"`					
+
 fi
 
 
@@ -485,7 +499,7 @@ do
 	cd  ${MASSPROCDIR}/${DIR}/i12/TextFiles
 
 	# Update which products to geocode
-	ChangeGeocParam "Geoproject measurement" ${DEFOMAP} geoProjectionParameters.txt
+	ChangeGeocParam "Geoproject measurement" ${DEFOMAP} #geoProjectionParameters.txt
 
 	if [ "${MVRES}" == "YES" ]
 		then
@@ -500,14 +514,14 @@ do
 					SLVAMPL=NO
 			fi
 	fi
-	ChangeGeocParam "Geoproject master amplitude" ${MASAMPL} geoProjectionParameters.txt 
-	ChangeGeocParam "Geoproject slave amplitude" ${SLVAMPL} geoProjectionParameters.txt
+	ChangeGeocParam "Geoproject master amplitude" ${MASAMPL} #geoProjectionParameters.txt 
+	ChangeGeocParam "Geoproject slave amplitude" ${SLVAMPL} #geoProjectionParameters.txt
 
-	ChangeGeocParam "Geoproject coherence" ${COH} geoProjectionParameters.txt 
-	ChangeGeocParam "Geoproject interferogram" ${INTERF} geoProjectionParameters.txt 
-	ChangeGeocParam "Geoproject filtered interferogram" ${FILTINTERF} geoProjectionParameters.txt 
-	ChangeGeocParam "Geoproject residual interferogram" ${RESINTERF} geoProjectionParameters.txt 
-	ChangeGeocParam "Geoproject unwrapped phase" ${UNWPHASE} geoProjectionParameters.txt 
+	ChangeGeocParam "Geoproject coherence" ${COH} #geoProjectionParameters.txt 
+	ChangeGeocParam "Geoproject interferogram" ${INTERF} #geoProjectionParameters.txt 
+	ChangeGeocParam "Geoproject filtered interferogram" ${FILTINTERF} #geoProjectionParameters.txt 
+	ChangeGeocParam "Geoproject residual interferogram" ${RESINTERF} #geoProjectionParameters.txt 
+	ChangeGeocParam "Geoproject unwrapped phase" ${UNWPHASE} #geoProjectionParameters.txt 
 
 	MASTERPATH=`GetParamFromFile "Master image file path" InSARParameters.txt `
 
@@ -571,6 +585,9 @@ do
 				GEOPIXSIZE=`echo ${PIXSIZEAZ} | xargs printf "%.*f\n" 0`  # (AzimuthPixSize x ML) rounded to 0th digits precision
 				if [ ${GEOPIXSIZE} -eq "0" ] ; then GEOPIXSIZE="1" ; fi 	# just in case...
 
+				# just in case 
+				ChangeGeocParam "Path to a kml file defining the geoProjection area" "None" #geoProjectionParameters.txt
+
 				EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 				;;
 				"Auto") 
@@ -578,6 +595,10 @@ do
 				EchoTeeYellow "          Will get the closest (upper) multiple of 10 of multilooked original pixel size. " 
 				EchoTeeYellow "     If gets holes in geocoded products, increase interpolation radius." 	
 				GEOPIXSIZE=${GEOPIXSIZE10}
+
+				# just in case 
+				ChangeGeocParam "Path to a kml file defining the geoProjection area" "None" #geoProjectionParameters.txt
+
 				EchoTeeYellow "Using ${GEOPIXSIZE} meters geocoded pixel size."
 				;;
 				"Forced") 
@@ -593,13 +614,15 @@ do
 						EchoTeeYellow "  It may not be a problem unless the center of the AoI is in another zone and you need to compare different modes which can have different central UTM zone."
 					else
 						EchoTeeYellow "Shall use UTM zone defined in LaunchParam.txt, that is: ${UTMZONE}"
-						ChangeGeocParam "UTM zone " ${UTMZONE} geoProjectionParameters.txt
+						ChangeGeocParam "UTM zone " ${UTMZONE} #geoProjectionParameters.txt
 				fi
 
-				ChangeGeocParam "xMin" ${XMIN} geoProjectionParameters.txt
-				ChangeGeocParam "xMax" ${XMAX} geoProjectionParameters.txt
-				ChangeGeocParam "yMin" ${YMIN} geoProjectionParameters.txt
-				ChangeGeocParam "yMax" ${YMAX} geoProjectionParameters.txt
+				ChangeGeocParam "Path to a kml file defining the geoProjection area" ${GEOCKML} #geoProjectionParameters.txt
+
+				ChangeGeocParam "xMin" ${XMIN} #geoProjectionParameters.txt
+				ChangeGeocParam "xMax" ${XMAX} #geoProjectionParameters.txt
+				ChangeGeocParam "yMin" ${YMIN} #geoProjectionParameters.txt
+				ChangeGeocParam "yMax" ${YMAX} #geoProjectionParameters.txt
 				;;
 				*) 
 				EchoTeeYellow "Not sure what you wanted => used Closest..." 
@@ -611,18 +634,18 @@ do
 			esac
 		
 			# Change default parameters : Geoprojected products generic extension 
-			ChangeGeocParam "Geoprojected products generic extension" ".UTM.${GEOPIXSIZE}x${GEOPIXSIZE}" geoProjectionParameters.txt
-			ChangeGeocParam "Easting sampling" ${GEOPIXSIZE} geoProjectionParameters.txt 
-			ChangeGeocParam "Northing sampling" ${GEOPIXSIZE} geoProjectionParameters.txt
+			ChangeGeocParam "Geoprojected products generic extension" ".UTM.${GEOPIXSIZE}x${GEOPIXSIZE}" #geoProjectionParameters.txt
+			ChangeGeocParam "Easting sampling" ${GEOPIXSIZE} #geoProjectionParameters.txt 
+			ChangeGeocParam "Northing sampling" ${GEOPIXSIZE} #geoProjectionParameters.txt
 		
 		
 		
-			ChangeGeocParam "Resampling method" ${RESAMPMETHD} geoProjectionParameters.txt
+			ChangeGeocParam "Resampling method" ${RESAMPMETHD} #geoProjectionParameters.txt
 			
-			ChangeGeocParam "Weighting method" ${WEIGHTMETHD} geoProjectionParameters.txt
-			ChangeGeocParam "ID smoothing factor" ${IDSMOOTH} geoProjectionParameters.txt
-			ChangeGeocParam "ID weighting exponent" ${IDWEIGHT} geoProjectionParameters.txt
-			ChangeGeocParam "FWHM : Lorentzian Full Width at Half Maximum" ${FWHM} geoProjectionParameters.txt
+			ChangeGeocParam "Weighting method" ${WEIGHTMETHD} #geoProjectionParameters.txt
+			ChangeGeocParam "ID smoothing factor" ${IDSMOOTH} #geoProjectionParameters.txt
+			ChangeGeocParam "ID weighting exponent" ${IDWEIGHT} #geoProjectionParameters.txt
+			ChangeGeocParam "FWHM : Lorentzian Full Width at Half Maximum" ${FWHM} #geoProjectionParameters.txt
 			# Since 2020 01 21 AMSTer Engine masking method is defined by either "mask" (all method but CIS) or "zoneMap" (for CIS in topo mode); no more path to mask
 			# In case of Snaphu or DetPhun, no need to change here below
 			# ChangeParam "Mask " ${PATHTOMASK} geoProjectionParameters.txt
@@ -676,7 +699,7 @@ do
 					ChangeParam "Masking: Use of slant range mask or zoneMap for measurement geo-projection " "NoMsk" geoProjectionParameters.txt
 			fi
 
-			ChangeGeocParam "Zone index" ${ZONEINDEX} geoProjectionParameters.txt
+			ChangeGeocParam "Zone index" ${ZONEINDEX} #geoProjectionParameters.txt
 		
 	fi
 

@@ -23,6 +23,9 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20240109:	- mute error message when cat LAUNCHF[$i] or LAUNCHF in GetAllPIDs when a Read_All_Img.sh
 # New in Distro V 4.2 20240605:	- remove typo that displayed an extra 1 after the Part nr 
+# New in Distro V 4.3 20250305:	- typo that prevented to list all PIDs of the same several processes that are running
+# New in Distro V 4.4 20250528:	- add check connections to servers and disks 
+# New in Distro V 4.5 20250710:	- add check AMSTer Engine version
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
@@ -54,8 +57,8 @@ function GetAllPIDs()
 
 			for n in $(seq 1 $i) 
 				do 
-					PID=`echo -e "${ID[$i]} $PID"`
-					PHD=`echo -e "${HD[$i]}-$PHD"`
+					PID=`echo -e "${ID[$n]} $PID"`
+					PHD=`echo -e "${HD[$n]}-$PHD"`
 				done
 			ID=${PID}
 			HD=${PHD}
@@ -295,4 +298,50 @@ echo "//________________________________________________________________________
 	fi
 
 
+# Check if disks are mounted 
+echo "// Check disks mounting"
+echo "//_____________________"
+# List of mount point variable names
+mount_vars=("PATH_1650" "PATH_3600" "PATH_3601" "PATH_3602" "PATH_1660" "PATH_3610" "PATH_3611" "PATH_DataSAR" )
 
+for var in "${mount_vars[@]}"; do
+    mount_point="${!var}"
+
+    if [[ -z "$mount_point" ]]; then
+        echo "❌ Variable $var is not defined."
+        continue
+    fi
+
+    # Remove trailing slash, but preserve '/' if that's the path
+    normalized_mount_point="${mount_point%/}"
+    [[ "$normalized_mount_point" == "" ]] && normalized_mount_point="/"
+
+    if mount | grep -q "on ${normalized_mount_point} "; then
+        echo "✅ $var ($mount_point) is mounted."
+    else
+        echo "❌ $var ($mount_point) is NOT mounted."
+    fi
+done
+
+echo
+echo "// Check AMSTer Engine version"
+echo "//____________________________"
+
+	PATHS1Reader=`which S1DataReader`
+	PATHAMSTERENGINE=$(dirname ${PATHS1Reader})
+	# suppose that sources are where the installer had put it... 
+	eval PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older/
+
+	if [ -f ${PATHAMSTERENGINE}/_History.txt ]
+		then 
+			# get version from History file 
+			eval LASTVERSIONMT=`head -1 ${PATHAMSTERENGINE}/_History.txt | ${PATHGNU}/grep -Eo "[0-9]{8}"`
+		else 
+			# get version from last directory 
+			LASTDIRINFO=`${PATHGNU}/find ${PATHSOURCES} -maxdepth 1 -type d -name "V*" -printf "%T@ %Tc %p\n"  | sort -n | tail -1 `  # get last creater dir
+			#	Get everything after the last /:
+			LASTDIRNAME="${LASTDIRINFO##*/}"
+			eval LASTVERSIONMT=`echo ${LASTDIRNAME} | cut -d "_" -f1`
+	fi
+	echo "Last AMSTer Engine version is ${LASTVERSIONMT}"
+	echo

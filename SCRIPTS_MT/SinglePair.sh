@@ -31,7 +31,7 @@
 #    - Python 
 #	 - scripts:	FLIPproducts.py.sh 
 #				FLOPproducts.py.sh
-#				byte2Float.py
+#				byte2float.py
 #				Swap_0_1_in_ByteFile.py 
 #    - convert (to create jpg images from sun rasters)
 #    - bc (for basic computations in scripts)
@@ -96,13 +96,23 @@
 # New in Distro V 7.2 20241127:	- Do not mask before interpolation after unwrapping (because masks are now inverted and products are masked at InSARProductsGeneration)
 # New in Distro V 7.3 20241202:	- Mask before interpolation after unwrapping ok with the 3 version of masking methods (old 1=keep; intermediate 1,2=mask in one file, latest 1,2,3 are masked in multiple masks)
 #								- swap 0 and 1 before multiply the defo by the thresholdedSlantRangeMask 
+# New in Distro V 7.4 20250224:	- typo in byte2float.py 
+# New in Distro V 7.5 20250415:	- check if mas or slv interpolated.csl in i12/InSARProducts are empty file AND if not, are dir when checking if already coregistered on SuperMaster  
+# New in Distro V 7.6 20250513:	- asymetric zoom 
+#								- new param to define crop as GEO or SRA (lines and pixels) coordinates
+#								- make use of GEOPIXSIZERG and GEOPIXSIZEAZ instead of GEOPIXSIZE as they are now define in FUNCTIONS_FOR_MT.sh to cope with possible asymetric pixel shape 
+#								- replace i12.No.Zoom with i12.NoZoom
+# New in Distro V 8.0 20250605:	- correct evaluation of pixel size in Az and Rg depending on ML and ZOOM (ZOOM is not taken into account in S1 IW SAR_CSL/NoCrop/SLCImageInfo.txt)
+# New in Distro V 8.1 20250708:	- remove computation of RANGEML and AZIMML because not used
+# New in Distro V 8.2 20250805:	- Cope with NISAR data
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V7.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2024"
+VER="Distro V8.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -159,7 +169,22 @@ FIRSTL=`GetParam "FIRSTL,"`					# Crop limits: first line to use
 LASTL=`GetParam "LASTL,"`					# Crop limits: last line to use
 FIRSTP=`GetParam "FIRSTP,"`					# Crop limits: first point (row) to use
 LASTP=`GetParam "LASTP,"`					# Crop limits: last point (row) to use
+COORDSYST=`GetParam "COORDSYST,"`			# COORDSYST, type of coordinates used to define crop: SRA (lines and pixels) or GEO
 
+	if [ "${CROP}" == "CROPyes" ] && [ "${COORDSYST}" == "" ]
+		then 
+			echo " COORDSYST not defined. I try to see if there is a dot in your coordinates for crop region. "
+			if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
+				then
+					echo "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
+					COORDSYST="GEO"
+				else
+					echo "None of the crop coordinates has a dot. Must hence be SRA coord system"
+					COORDSYST="SRA"
+			fi
+	fi
+REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
+	
 MLAMPLI=`GetParam "MLAMPLI,"`				# MLAMPLI, Multilooking factor for amplitude images reduction (used for coregistration - 4-6 is appropriate). If rectangular pixel, it will be multiplied by corresponding ratio.
 ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
 PIXSHAPE=`GetParam "PIXSHAPE,"`				# PIXSHAPE, pix shape for products : SQUARE or ORIGINALFORM   
@@ -273,8 +298,6 @@ YMIN=`GetParam "YMIN,"`						# YMIN, minimum Y UTM coord of final Forced geocode
 YMAX=`GetParam "YMAX,"`						# YMAX, maximum Y UTM coord of final Forced geocoded product
 GEOCKML=`GetParam "GEOCKML,"`				# GEOCKML, a kml file to define final geocoded product. If not found, it will use the coordinates above
 
-
-REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
 DEMNAME=`GetParam "DEMNAME,"`				# DEMNAME, name of DEM inverted by lines and columns
 
 RESAMPDATPATH=`GetParam RESAMPDATPATH`		# RESAMPDATPATH, path to dir where resampled data will be stored 
@@ -291,7 +314,7 @@ echo
 # Define Crop Dir
 if [ ${CROP} == "CROPyes" ]
 	then
-		if [ ${ZOOM} -eq 1 ] 
+		if [ "${ZOOM}" == "1" ] # ie will create CROPDIR for ZOOM even if asymetric ZOOM factor
 			then 
 				CROPDIR=/Crop_${REGION}_${FIRSTL}-${LASTL}_${FIRSTP}-${LASTP} #_Zoom${ZOOM}_ML${INTERFML}
 			else
@@ -309,6 +332,14 @@ eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
 eval RNDM1=`echo $(( $RANDOM % 10000 ))`
 
 case ${SATDIR} in 
+	"NISAR") 
+		MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MAS} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, MASNAME is now the full name of the image anyway
+		SLVNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SLV} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, SLVNAME is now the full name of the image anyway
+
+		MASDIR=${MASNAME}.csl  # need this definition here for usage in GetParamFromFile
+		SLVDIR=${SLVNAME}.csl
+
+		;;
 	"S1") 
 		MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MAS} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
 		SLVNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SLV} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, SLVNAME is now the full name of the image anyway
@@ -525,7 +556,7 @@ if [ $# -eq 5 ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ ${SATDIR} != "S1" ]
 
 		if [ ${CROP} == "CROPyes" ] 
 			then 
-				if [ ${ZOOM} -eq 1 ] 
+				if [ "${ZOOM}" == "1" ] 	# i.e. OK also if asymetric zoom
 					then 
 						SMCROPDIR=SMCrop_SM_${SUPERMASTER}_${REGION}_${FIRSTL}-${LASTL}_${FIRSTP}-${LASTP} #_Zoom${ZOOM}_ML${INTERFML}
 					else
@@ -594,7 +625,7 @@ if [ $# -eq 5 ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ ${SATDIR} != "S1" ]
 						
 						if [ ${CROP} == "CROPyes" ] 
 							then 
-								if [ ${ZOOM} -eq 1 ] 
+								if [ "${ZOOM}" == "1" ] # i.e. OK also if asymetric zoom
 									then 
 										SMCROPDIR=SMCrop_SM_${SMFORCOREG}_${REGION}_${FIRSTL}-${LASTL}_${FIRSTP}-${LASTP} #_Zoom${ZOOM}_ML${INTERFML}
 									else
@@ -606,17 +637,25 @@ if [ $# -eq 5 ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ ${SATDIR} != "S1" ]
 						OUTPUTDATA=${RESAMPDATPATH}/${SATDIR}/${TRKDIR}/${SMCROPDIR}
 		#				if [ -s ${OUTPUTDATA}/${SMFORCOREG}_${MAS}/i12/InSARProducts/${MAS}.interpolated.csl ] &&  [ -s ${OUTPUTDATA}/${SMFORCOREG}_${SLV}/i12/InSARProducts/${SLV}.interpolated.csl ] 
 						if [ -f "${OUTPUTDATA}/${SMFORCOREG}_${MASNAME}/i12/InSARProducts/${MASNAME}.interpolated.csl" ] &&  [ -f "${OUTPUTDATA}/${SMFORCOREG}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl" ] &&  [ -s "${OUTPUTDATA}/${SMFORCOREG}_${MASNAME}/i12/InSARProducts/${MASNAME}.interpolated.csl" ] &&  [ -s "${OUTPUTDATA}/${SMFORCOREG}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl" ] 
-
 							then 
 								EchoTee " OK images are already cropped and coregistered on ${SMFORCOREG}. Will use it for sparing time."
 								SUPERMASTER=${SMFORCOREG}
-								SUPERMASNAME=${SMFORCOREG}  # because it can't be S1
+								SUPERMASNAME=${SMFORCOREG}  # because it can not be S1
 								SUPERMASDIR=${SMFORCOREG}.csl
 								MODFROMSM="YES"
 							else
-								EchoTee " Sorry, images were not cropped and coregistered yet on ${SMFORCOREG}." 
-								EchoTee " Let's do the usual processing : compute modules and coarse coreg."
-								MODFROMSM="NO"
+								if [ -d "${OUTPUTDATA}/${SMFORCOREG}_${MASNAME}/i12/InSARProducts/${MASNAME}.interpolated.csl" ]  &&  [ -d "${OUTPUTDATA}/${SMFORCOREG}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl" ] && [ "$(ls -A "${OUTPUTDATA}/${SMFORCOREG}_${MASNAME}/i12/InSARProducts/${MASNAME}.interpolated.csl")" ] && [ "$(ls -A "${OUTPUTDATA}/${SMFORCOREG}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl")" ]
+									then 
+										EchoTee " OK images are already cropped and coregistered on ${SMFORCOREG}. Will use it for sparing time."
+										SUPERMASTER=${SMFORCOREG}
+										SUPERMASNAME=${SMFORCOREG}  # because it can not be S1
+										SUPERMASDIR=${SMFORCOREG}.csl
+										MODFROMSM="YES"
+									else
+										EchoTee " Sorry, images were not cropped and coregistered yet on ${SMFORCOREG}." 
+										EchoTee " Let's do the usual processing : compute modules and coarse coreg."
+										MODFROMSM="NO"
+									fi
 						fi
 						break ;;
 					[Nn]* ) 
@@ -631,8 +670,8 @@ if [ $# -eq 5 ] && [ "${S1MODE}" != "WIDESWATH" ] # && [ ${SATDIR} != "S1" ]
 fi
 
 
-# Let's Go:
-###########	
+# "Let's Go:"
+#############	
 
 	echo "" > ${LOGFILE}
 	EchoTee "--------------------------------"	
@@ -660,11 +699,15 @@ fi
 	EchoTee ""
 
 # Crop
+
+	# Test if Zoom is one value or two - Define ZOOMONEVAL and ZOOMRG and ZOOMAZ if needed. Needed for fct Crop
+	CheckZOOMasymetry
+
 	EchoTee "Crop CSL"	
 	EchoTee "--------------------------------"
 		case ${CROP} in 
 			"CROPyes")
-				if [  ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
+				if [  ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" == "1" ]
 					then
 						EchoTee "No need to crop S1 WideSwath now..."
 						CROPDIR=/NoCrop	
@@ -691,22 +734,44 @@ fi
 									EchoTee "Crop applied : Zoom ${ZOOM} ; Interferometric products ML factor ${INTERFML}"
 							fi
 							if [[ -d "${INPUTDATA}/${MASDIR}" && -d "${INPUTDATA}/${SLVDIR}" ]]; then
-									EchoTee "Primary ${MAS} and Secondary ${SLV} already cropped."
-									EchoTee ""
+									if [  ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] 
+										then 
+											EchoTee "S1 wide swath images with zoom !=1 will be cropped here after in the pair directory."
+											EchoTee ""
+										else 
+											EchoTee "Primary ${MAS} and Secondary ${SLV} already cropped."
+											EchoTee ""
+									fi
+
+
 							fi
 						fi 
 				fi
 				echo ;;
 			"CROPno")		
-				EchoTee "No crop applied. Keep full footprint" 
+				if [ "${ZOOM}" == "1" ]
+					then 
+						EchoTee "No crop applied. Keep full footprint" 
+					else 
+						EchoTee ""
+						EchoTee "*************************************"
+						EchoTee "No crop applied though Zoom requested. Since zooming makes the products voluminous, zoom is only expected to be used for cropped images."
+						EchoTee "if you want to zoom a full image anyway, define a very large Crop and relaunch...  "
+						EchoTee "*************************************"
+						echo
+						exit 1 
+				fi
 				echo ;;
 			*.kml)  # do not quote this because of the wild card
-				if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
+				if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" == "1" ]
 					then 
 						EchoTee "Shall use ${CROP} file for pseudo crop by defining area of interest."
 						CROPKML=${CROP}
-					else 	
+					elif  [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ] ; then	
 						EchoTee "Option for crop with kml not tested yet for non S1 IW images; Check scripts and test..."
+						exit 0
+					elif [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] ; then 
+						EchoTee "Crop S1 with Zoom != 1 requires to crop with SRA coordinates instead of kml. "
 						exit 0
 				fi	;;
 		esac
@@ -716,28 +781,42 @@ fi
 	if [ "${SATDIR}" != "S1" ] && [ "${MODFROMSM}" == "YES" ] && [ "${S1MODE}" != "WIDESWATH" ]
 		then
 			EchoTee "Get Rg and Az sampling [m] from Global Primary (SuperMaster)"
-			RGSAMP=`GetParamFromFile "Range sampling [m]" SuperMaster_SLCImageInfo.txt`   # not rounded 
-			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SuperMaster_SLCImageInfo.txt` # not rounded
+			RGSAMP=`GetParamFromFile "Range sampling [m]" SuperMaster_SLCImageInfo.txt`   # not rounded; size x ZOOM 
+			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SuperMaster_SLCImageInfo.txt` # not rounded; size x ZOOM 
 			INCIDANGL=`GetParamFromFile "Incidence angle at median slant range [deg]" SuperMaster_SLCImageInfo.txt` # not rounded
 		else 
 			EchoTee "Get Rg and Az sampling [m] from Primary image"
-			RGSAMP=`GetParamFromFile "Range sampling [m]" SinglePair_SLCImageInfo.txt`   # not rounded 
-			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SinglePair_SLCImageInfo.txt` # not rounded
+			RGSAMP=`GetParamFromFile "Range sampling [m]" SinglePair_SLCImageInfo.txt`   # not rounded; size x ZOOM (except for S1 IW)
+			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SinglePair_SLCImageInfo.txt` # not rounded; size x ZOOM (except for S1 IW)
 			INCIDANGL=`GetParamFromFile "Incidence angle at median slant range [deg]" SinglePair_SLCImageInfo.txt` # not rounded
 	fi
 
-	EchoTee "Range sampling : ${RGSAMP}"
-	EchoTee "Azimuth sampling : ${AZSAMP}"
-	EchoTee "Incidence angle : ${INCIDANGL}"
-
-	RATIO=`echo "scale=2; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l | xargs printf "%.*f\n" 0` # with two digits and rounded to 0th decimal
+	RATIO=`echo "scale=2; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l | xargs printf "%.*f\n" 0` # with two digits and rounded to 0th decimal; incl zoom if any, except for S1 IW
 	RATIOREAL=`echo "scale=5; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l` # with 5 digits 
 
-	EchoTee "--------------------------------"
-	EchoTee "Pixel Ratio is ${RATIO}"
- 	EchoTee "Pixel Ratio as Real is ${RATIOREAL}"
-	EchoTee "--------------------------------"
-	EchoTee ""
+	if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ]
+		then
+			EchoTee "Range sampling [without zoomed] : ${RGSAMP}"		# Beware: this sampling takes into account the zoom factor if any, except for S1 WS !!! 
+			EchoTee "Azimuth sampling [without zoomed] : ${AZSAMP}"		# Beware: this sampling takes into account the zoom factor if any, except for S1 WS !!! 
+			EchoTee "Incidence angle : ${INCIDANGL}"
+		
+			EchoTee "--------------------------------"
+			EchoTee "Pixel Ratio of RAW pixels [without zoom] is ${RATIO}"
+		 	EchoTee "Pixel Ratio of RAW pixels as Real is ${RATIOREAL}"
+			EchoTee "--------------------------------"
+			EchoTee ""
+
+		else 
+			EchoTee "Range [zoomed] sampling : ${RGSAMP}"		# Beware: this sampling takes into account the zoom factor if any, except for S1 WS !!! 
+			EchoTee "Azimuth [zoomed] sampling : ${AZSAMP}"		# Beware: this sampling takes into account the zoom factor if any, except for S1 WS !!! 
+			EchoTee "Incidence angle : ${INCIDANGL}"
+
+			EchoTee "--------------------------------"
+			EchoTee "Pixel Ratio [of zoomed pixels] is ${RATIO}"
+		 	EchoTee "Pixel Ratio [of zoomed pixels] as Real is ${RATIOREAL}"
+			EchoTee "--------------------------------"
+			EchoTee ""
+	fi
 
 # Define Global Primary (SuperMaster) if required and prepare stuffs
 	if [ "${MODFROMSM}" == "YES" ]		# When processing SinglePair, SUPERMASTER is not read from ParametersFile. It is read from input cmd if 5 parameters are provided
@@ -748,41 +827,34 @@ fi
 	fi
 
 	# Need this for ManageDEM
-	if [ "${ZOOM}" == "1"  ] 
+	# AZ and RG PIXSIZE taking into account the fact that Zoom factor is taken into acocunt in AZ/RGSAMP, except for S1 IW if any 
+	if [ "${ZOOM}" == "1"  ] || [ "${ZOOM}" == "1Az1Rg"  ] || [ "${ZOOM}" == "1Rg1Az"  ] 
 		then
 			PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
 			PIXSIZERG=`echo "${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
 		else
-# 
-# 			if [ "${RATIO}" -eq 1 ] 
-# 				then 
-# 					EchoTee "Az sampling (${AZSAMP}m) is similar to Range sampling (${RGSAMP}m)." 
-# 					EchoTee "   Probably processing square pixel data such as RS, CSK or TSX." 
-# 					EchoTee "Uses same ZOOM factor in X and Y"
-# 					ZOOMX=${ZOOM}
-# 					ZOOMY=${ZOOM}	
-# 				else
-# 					RET=$(echo "$RGSAMP < $AZSAMP" | bc )  # Trick needed for if to compare integer nrs
-# 					if [ ${RET} -ne 0 ] 
-# 						then
-# 							EchoTee "Az sampling (${AZSAMP}m) is larger than Range sampling (${RGSAMP}m)." 
-# 							EchoTee "   Probably processing Sentinel data." 
-# 							EchoTee "Uses original ZOOM factor (i.e. ${ZOOM}) in X and ZOOM*RATIO in Y (i.e. ${ZOOM} * ${RATIO})"
-# 							ZOOMX=${ZOOM}
-# 							ZOOMY=`echo "(${ZOOM} * ${RATIO})" | bc` # Integer	
-# 						else
-# 							EchoTee "Az sampling (${AZSAMP}m) is smaller than Range sampling (${RGSAMP}m)." 
-# 							EchoTee "   Probably processing ERS or Envisat data." 
-# 							EchoTee "Uses  ZOOM*RATIO in X  (i.e. ${ZOOM} * ${RATIO}) and original ZOOM factor (i.e. ${ZOOM}) in Y "
-# 							ZOOMX=`echo "(${ZOOM} * ${RATIO})" | bc` # Integer
-# 							ZOOMY=${ZOOM}	
-# 					fi	
-# 					unset RET	
-# 			fi
-			
-			PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of ML pixel in az (in m) 
-			PIXSIZERG=`echo "scale=2; ( ${RGSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of ML pixel in range (in m) 
-
+ 			if [ "${ZOOMONEVAL}" == "One" ]
+ 				then
+					# i.e. single value of zoom
+					if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
+						then
+							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of zoomed ML pixel in az (in m) 
+							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} * ${INTERFML} ) / ${ZOOM} " | bc`  # size of zoomed ML pixel in range (in m) 
+						else 
+							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} * ${INTERFML} ) " | bc`  # size of zoomed ML pixel in az (in m) 
+							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} * ${INTERFML} ) " | bc`  # size of zoomed ML pixel in range (in m) 
+					fi
+				else 
+					# i.e. asymetric zoom
+					if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
+						then
+							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} * ${INTERFML} ) / ${ZOOMAZ} " | bc`  # size of zoomed ML pixel in az (in m) 
+							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} * ${INTERFML} ) / ${ZOOMRG} " | bc`  # size of zoomed ML pixel in range (in m) 
+						else 
+							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} * ${INTERFML} ) " | bc`  # size of zoomed ML pixel in az (in m) 
+							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} * ${INTERFML} ) " | bc`  # size of zoomed ML pixel in range (in m) 
+					fi
+    		fi
 	fi
 
 # slantRangeDEM
@@ -798,8 +870,8 @@ fi
 		else 
 			if [ "${SATDIR}" == "S1" ]  && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1"  ] 
 				then 
-					# if request zoom of S1 WS, data will be prepared in a i12.NoZoom to end up in a classica i12 for the rest of processing 
-					initInSAR ${INPUTDATA}/${MASDIR} ${INPUTDATA}/${SLVDIR} ${RUNDIR}/i12.No.Zoom P=${INITPOL}
+					# if request zoom of S1 WS, data will be prepared in a i12.NoZoom to end up in a classical i12 for the rest of processing 
+					initInSAR ${INPUTDATA}/${MASDIR} ${INPUTDATA}/${SLVDIR} ${RUNDIR}/i12.NoZoom P=${INITPOL}
 				else
 					initInSAR ${INPUTDATA}/${MASDIR} ${INPUTDATA}/${SLVDIR} ${RUNDIR}/i12 P=${INITPOL}
 			fi
@@ -826,7 +898,7 @@ fi
 					ChangeParam "Bistatic interferometric pair" NO InSARParameters.txt
 			fi
 	fi
-# Amplitude images"					
+# Amplitude images					
 	EchoTee "--------------------------------"
 	EchoTee "Amplitude images"					
 	EchoTee "--------------------------------"
@@ -845,7 +917,7 @@ fi
 				then
 					cd ${RUNDIR}/i12
 				else
-					cd ${RUNDIR}/i12.No.Zoom	
+					cd ${RUNDIR}/i12.NoZoom	
 			fi
 		elif [ ${SATDIR} == "TDX" ] && [ ${MAS} == ${SLVORIG} ] ; then 
 			EchoTee "Skip Amplitude generation because not needed for TDX when MAS=SLV"
@@ -910,59 +982,25 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 		if [ "${ZOOM}" != "1" ] 
 			then 
 				EchoTeeRed "Coregister Sentinel data with zoom factor not 1." 
-				cd ${RUNDIR}/i12.No.Zoom
+				cd ${RUNDIR}/i12.NoZoom
 				S1Coregistration -n
 				# should now have a master and a slave interpolated i12/InSARProducts => need apply cut and zoom
+				
 				# the master
-				cd ${RUNDIR}/i12.No.Zoom/InSARProducts
-				cutAndZoomCSLImage ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt -create
-				ChangeParam "Input file path in CSL format" ${RUNDIR}/i12.No.Zoom/InSARProducts/${MASNAME}.csl CropZoom.txt
-				ChangeParam "Output file path" ${RUNDIR}/i12.No.Zoom/InSARProducts/${MASNAME}.Z.csl CropZoom.txt
+				cd ${RUNDIR}/i12.NoZoom/InSARProducts
+				cutAndZoomCSLImage ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt -create
+				ChangeParam "Input file path in CSL format" ${RUNDIR}/i12.NoZoom/InSARProducts/${MASNAME}.csl CropZoom.txt
+				ChangeParam "Output file path" ${RUNDIR}/i12.NoZoom/InSARProducts/${MASNAME}.Z.csl CropZoom.txt
 				# ChangeParam "Georeferenced DEM file path" ${DEMDIR}/${DEMNAME} CropZoom.txt # Not needed
 				
 				#RGSAMP=`GetParamFromFile "Range sampling [m]" SinglePair_SLCImageInfo.txt`   # not rounded 
 				#AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SinglePair_SLCImageInfo.txt` # not rounded
 				#RATIO=`echo "scale=2; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l | xargs printf "%.*f\n" 0` # with two digits and rounded to 0th decimal
 
-# 				if [ "${RATIO}" -eq 1 ] 
-# 					then 
-# 						EchoTee "Az sampling (${AZSAMP}m) is similar to Range sampling (${RGSAMP}m)." 
-# 						EchoTee "   Probably processing square pixel data such as RS, CSK or TSX." 
-# 						EchoTee "Uses same ZOOM factor in X and Y"
-# 						ZOOMX=${ZOOM}
-# 						ZOOMY=${ZOOM}	
-# 					else
-# 						RET=$(echo "$RGSAMP < $AZSAMP" | bc )  # Trick needed for if to compare integer nrs
-# 						if [ ${RET} -ne 0 ] 
-# 							then
-# 								EchoTee "Az sampling (${AZSAMP}m) is larger than Range sampling (${RGSAMP}m)." 
-# 								EchoTee "   Probably processing Sentinel data." 
-# 								EchoTee "Uses original ZOOM factor (i.e. ${ZOOM}) in X and ZOOM*RATIO in Y (i.e. ${ZOOM} * ${RATIO})"
-# 								ZOOMX=${ZOOM}
-# 								ZOOMY=`echo "(${ZOOM} * ${RATIO})" | bc` # Integer	
-# 							else
-# 								EchoTee "Az sampling (${AZSAMP}m) is smaller than Range sampling (${RGSAMP}m)." 
-# 								EchoTee "   Probably processing ERS or Envisat data." 
-# 								EchoTee "Uses  ZOOM*RATIO in X  (i.e. ${ZOOM} * ${RATIO}) and original ZOOM factor (i.e. ${ZOOM}) in Y "
-# 								ZOOMX=`echo "(${ZOOM} * ${RATIO})" | bc` # Integer
-# 								ZOOMY=${ZOOM}	
-# 						fi	
-# 						unset RET	
-# 				fi
-
-				
-
 				if [ "${CROP}" == "CROPyes" ] 
 					then
-						# test if crop is provided in pixels or in coordinates: if at least one of the coordinates has a dot, it must be GEO
-						if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
-							then
-								EchoTee "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
-								ChangeParam "Coordinate system [SRA / GEO]" GEO CropZoom.txt
-							else
-								EchoTee "None of the crop coordinates has a dot. Must hence be SRA coord system"
-								ChangeParam "Coordinate system [SRA / GEO]" SRA CropZoom.txt
-						fi
+						ChangeParam "Coordinate system [SRA / GEO]" ${COORDSYST} CropZoom.txt
+
 						ChangeCropZoomCSLImage "lower left corner X coordinate" ${FIRSTP}
 						ChangeCropZoomCSLImage "lower left corner Y coordinate" ${FIRSTL}
 						ChangeCropZoomCSLImage "upper right corner X coordinate" ${LASTP}
@@ -976,27 +1014,28 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 						ChangeCropZoomCSLImage "upper right corner X coordinate" ${LASTPIX}
 						ChangeCropZoomCSLImage "upper right corner Y coordinate" ${LASTLIN}
 				fi
-				ChangeCropZoomCSLImage "X zoom factor" ${ZOOM}
-				ChangeCropZoomCSLImage "Y zoom factor" ${ZOOM}
-				cutAndZoomCSLImage ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt
-				mv ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt ${RUNDIR}/i12.No.Zoom/InSARProducts/Crop_${MASNAME}.txt	
+				if [ "${ZOOMONEVAL}" == "One" ]
+ 					then
+						ChangeCropZoomCSLImage "X zoom factor" ${ZOOM}
+						ChangeCropZoomCSLImage "Y zoom factor" ${ZOOM}
+					else 
+						ChangeCropZoomCSLImage "X zoom factor" ${ZOOMRG}
+						ChangeCropZoomCSLImage "Y zoom factor" ${ZOOMAZ}
+    			fi
+
+				cutAndZoomCSLImage ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt
+				mv ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt ${RUNDIR}/i12.NoZoom/InSARProducts/Crop_${MASNAME}.txt	
+				
 				# the slave
-				cutAndZoomCSLImage ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt -create
-				ChangeParam "Input file path in CSL format" ${RUNDIR}/i12.No.Zoom/InSARProducts/${SLVNAME}.interpolated.csl CropZoom.txt
-				ChangeParam "Output file path" ${RUNDIR}/i12.No.Zoom/InSARProducts/${SLVNAME}.interpolated.Z.csl CropZoom.txt
+				cutAndZoomCSLImage ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt -create
+				ChangeParam "Input file path in CSL format" ${RUNDIR}/i12.NoZoom/InSARProducts/${SLVNAME}.interpolated.csl CropZoom.txt
+				ChangeParam "Output file path" ${RUNDIR}/i12.NoZoom/InSARProducts/${SLVNAME}.interpolated.Z.csl CropZoom.txt
 				#ChangeParam "Georeferenced DEM file path" ${DEMDIR}/${DEMNAME} CropZoom.txt # Not needed
 				
 				if [ "${CROP}" == "CROPyes" ]
 					then
-						# test if crop is provided in pixels or in coordinates: if at least one of the coordinates has a dot, it must be GEO
-						if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
-							then
-								EchoTee "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
-								ChangeParam "Coordinate system [SRA / GEO]" GEO CropZoom.txt
-							else
-								EchoTee "None of the crop coordinates has a dot. Must hence be SRA coord system"
-								ChangeParam "Coordinate system [SRA / GEO]" SRA CropZoom.txt
-						fi
+						ChangeParam "Coordinate system [SRA / GEO]" ${COORDSYST} CropZoom.txt
+						
 						ChangeCropZoomCSLImage "lower left corner X coordinate" ${FIRSTP}
 						ChangeCropZoomCSLImage "lower left corner Y coordinate" ${FIRSTL}
 						ChangeCropZoomCSLImage "upper right corner X coordinate" ${LASTP}
@@ -1008,12 +1047,18 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 						ChangeCropZoomCSLImage "upper right corner X coordinate" ${LASTPIX}
 						ChangeCropZoomCSLImage "upper right corner Y coordinate" ${LASTLIN}
 				fi
-				ChangeCropZoomCSLImage "X zoom factor" ${ZOOM}
-				ChangeCropZoomCSLImage "Y zoom factor" ${ZOOM}
-				cutAndZoomCSLImage ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt
-				mv ${RUNDIR}/i12.No.Zoom/InSARProducts/CropZoom.txt ${RUNDIR}/i12.No.Zoom/InSARProducts/Crop_${SLVNAME}.txt	
+				if [ "${ZOOMONEVAL}" == "One" ]
+ 					then
+						ChangeCropZoomCSLImage "X zoom factor" ${ZOOM}
+						ChangeCropZoomCSLImage "Y zoom factor" ${ZOOM}
+					else 
+						ChangeCropZoomCSLImage "X zoom factor" ${ZOOMRG}
+						ChangeCropZoomCSLImage "Y zoom factor" ${ZOOMAZ}
+    			fi
+				cutAndZoomCSLImage ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt
+				mv ${RUNDIR}/i12.NoZoom/InSARProducts/CropZoom.txt ${RUNDIR}/i12.NoZoom/InSARProducts/Crop_${SLVNAME}.txt	
 				# then must create new InitInSAR
-				initInSAR ${RUNDIR}/i12.No.Zoom/InSARProducts/${MASNAME}.Z.csl ${RUNDIR}/i12.No.Zoom/InSARProducts/${SLVNAME}.interpolated.Z.csl ${RUNDIR}/i12 ${CROPKML} P=${INITPOL}
+				initInSAR ${RUNDIR}/i12.NoZoom/InSARProducts/${MASNAME}.Z.csl ${RUNDIR}/i12.NoZoom/InSARProducts/${SLVNAME}.interpolated.Z.csl ${RUNDIR}/i12 ${CROPKML} P=${INITPOL}
 				cd ${RUNDIR}/i12
 				# must then change the Affine Transfo to 1
 				ChangeParam "Ax" 1 InSARParameters.txt
@@ -1023,11 +1068,22 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 				ChangeParam "By" 1 InSARParameters.txt
 				ChangeParam "Cy" 0 InSARParameters.txt
 				# and change interpolated slave by slave
-				ChangeParam "Interpolated slave image file path" ${RUNDIR}/i12.No.Zoom/InSARProducts/${SLVNAME}.interpolated.Z.csl InSARParameters.txt				
+				ChangeParam "Interpolated slave image file path" ${RUNDIR}/i12.NoZoom/InSARProducts/${SLVNAME}.interpolated.Z.csl InSARParameters.txt				
 				# compute slantRangeDEM for ${MASNAME}.Z.csl
-				INPUTDATA=${RUNDIR}/i12.No.Zoom/InSARProducts
+				INPUTDATA=${RUNDIR}/i12.NoZoom/InSARProducts
 				MASDIR=${MASNAME}.Z.csl
-				SlantRangeExtDEM PAIR BlankRunNo # need ${INPUTDATA}/${MASDIR} defined to ${RUNDIR}/i12.No.Zoom/InSARProducts/${MASNAME}.Z.csl
+				SlantRangeExtDEM PAIR BlankRunNo # need ${INPUTDATA}/${MASDIR} defined to ${RUNDIR}/i12.NoZoom/InSARProducts/${MASNAME}.Z.csl
+
+				# RECOMPUTE HERE from i12 (noti12.NoZoom) Rg and Az Sampling and Ratio to have these param idem for all type of data from now on
+				EchoTee "Get Rg and Az sampling [m] from Primary image"
+				RGSAMP=`GetParamFromFile "Range sampling [m]" SinglePair_SLCImageInfo_ZoomS1.txt`   # not rounded; size x ZOOM (except for S1 IW)
+				AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SinglePair_SLCImageInfo_ZoomS1.txt` # not rounded; size x ZOOM (except for S1 IW)
+				INCIDANGL=`GetParamFromFile "Incidence angle at median slant range [deg]" SinglePair_SLCImageInfo_ZoomS1.txt` # not rounded
+				
+				EchoTee "And compute new zoomed pixel ratio: "
+				RATIO=`echo "scale=2; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l | xargs printf "%.*f\n" 0` # with two digits and rounded to 0th decimal; incl zoom if any, except for S1 IW
+				RATIOREAL=`echo "scale=5; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l` # with 5 digits 
+				EchoTee "that is ${RATIO} (rounded) or ${RATIOREAL} (as Real number)"
 			else 
 				S1Coregistration
 		fi
@@ -1121,22 +1177,41 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 					EchoTee "--------------------------------"
 			fi	
 fi	
-if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
-	then
-		EchoTee ""	
-		EchoTee " Change the ML factor used for amplitude image generation for coregistration computation: "	
-		EchoTee " S1 WideSwath with zoom"
-		EchoTee " => Get back to desired ML factor for final product generation using ML from Parameters File"	
-		EchoTee "    without squaring it because pixels were shared at Zoom"		
-		ChangeParam "Range reduction factor" ${INTERFML} InSARParameters.txt
-		ChangeParam "Azimuth reduction factor" ${INTERFML} InSARParameters.txt	  	
-		PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m)  
-		PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-#		PIXSIZEAZ=`echo " ${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-#		PIXSIZERG=`echo " ${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-		
 
-	else
+###if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
+###	then
+###		EchoTee ""	
+###		EchoTee " Change the ML factor used for amplitude image generation for coregistration computation: "	
+###		EchoTee " S1 WideSwath with zoom"
+###		EchoTee " => Get back to desired ML factor for final product generation using ML from Parameters File"	
+###		EchoTee "    without squaring it because pixels were squared at Zoom"		
+###
+###		# Need to get now the zoomed pix size and adapt ratio
+###		#####################################################
+###		EchoTee "Get Rg and Az sampling [m] from Primary Zoomed image:"
+###		RGSAMP=`GetParamFromFile "Range sampling [m]" SinglePair_SLCImageInfo_ZoomS1.txt`   # not rounded 
+###		AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SinglePair_SLCImageInfo_ZoomS1.txt` # not rounded
+###		EchoTee "that is ${RGSAMP} and ${AZSAMP} respectively"
+###
+###		EchoTee "And compute new zoomed pixel ratio: "
+###		RATIO=`echo "scale=2; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l | xargs printf "%.*f\n" 0` # with two digits and rounded to 0th decimal
+###		RATIOREAL=`echo "scale=5; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l` # with 5 digits 
+###		EchoTee "that is ${RATIO} (rounded) or ${RATIOREAL} (as Real number)"
+###		#####################################################
+###
+###		ChangeParam "Range reduction factor" ${INTERFML} InSARParameters.txt
+###		ChangeParam "Azimuth reduction factor" ${INTERFML} InSARParameters.txt	  	
+###		if [ "${ZOOMONEVAL}" == "One" ]
+###			then
+###				PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m)  
+###				PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###		#		PIXSIZEAZ=`echo " ${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###		#		PIXSIZERG=`echo " ${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###			else 
+###				PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOMAZ} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m)  
+###				PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOMRG} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###		fi
+###	else
 		EchoTee ""	
 		EchoTee " Change the ML factor used for amplitude image generation for coregistration computation: "	
 		EchoTee " => Get back to desired ML factor for final product generation "	
@@ -1144,25 +1219,50 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 			if [ "${PIXSHAPE}" == "ORIGINALFORM" ] ; then
 					ChangeParam "Range reduction factor" ${INTERFML} InSARParameters.txt
 					ChangeParam "Azimuth reduction factor" ${INTERFML} InSARParameters.txt	  	
-#					PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-#					PIXSIZERG=`echo "${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-					PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-					PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-
+					# Zoom - if any - is already taken into account in AZSAMPL and RGSAMPL
+					PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+					PIXSIZERG=`echo "${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###					if [ "${ZOOMONEVAL}" == "One" ]
+###						then
+###							#PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							#PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###							# Zoom - if any - is already taken into account in AZSAMPL and RGSAMPL
+###							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###						else 
+###							#PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOMAZ} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							#PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOMRG} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###							# Zoom - if any - is already taken into account in AZSAMPL and RGSAMPL
+###							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###
+###					fi
 				else  
 					RatioPix ${INTERFML}
 					ChangeParam "Range reduction factor" ${RGML} InSARParameters.txt
 					ChangeParam "Azimuth reduction factor" ${AZML} InSARParameters.txt
-#					PIXSIZEAZ=`echo "${AZSAMP} * ${AZML}" | bc`  # size of ML pixel in az (in m) 
-#					PIXSIZERG=`echo "${RGSAMP} * ${RGML}" | bc`  # size of ML pixel in range (in m) 
-					PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-					PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-
-
+	
+					# Zoom - if any - is already taken into account in AZSAMPL and RGSAMPL
+					PIXSIZEAZ=`echo "${AZSAMP} * ${AZML}" | bc`  # size of ML pixel in az (in m) 
+					PIXSIZERG=`echo "${RGSAMP} * ${RGML}" | bc`  # size of ML pixel in range (in m) 
+###					if [ "${ZOOMONEVAL}" == "One" ]
+###						then
+###							# Zoom - if any - is already taken into account in AZSAMPL and RGSAMPL
+###							#PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							#PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOM} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###						else 
+###							# Zoom - if any - is already taken into account in AZSAMPL and RGSAMPL
+###							#PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} / ${ZOOMAZ} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							#PIXSIZERG=`echo "scale=2; ( ${RGSAMP} / ${ZOOMRG} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###							PIXSIZEAZ=`echo "scale=2; ( ${AZSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+###							PIXSIZERG=`echo "scale=2; ( ${RGSAMP} ) * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+###					fi
 					unset RGML
 					unset AZML
 			fi
-fi
+###fi
 #DO NOT CHANGE COMMENT LINE BELOW BECAUSE IT IS USED AS SEARCH AND REPLACE CRITERIA IN OTHER SCRIPT
 # INSAR
 	case ${SATDIR} in
@@ -1184,28 +1284,28 @@ fi
 			InSARprocess 1 1  	;;  #  Parameters = ML factor for raster figures only (eg 1 1 for square, 1 2 for S1 or 5 1 for ENV)
 	esac
 
-# Get master and slave modules at InSAR dimensions
-EchoTee "---------------------------------------------------------------- \n"	
-	RatioPix ${INTERFML}
-	EchoTee "Range and Azimuth reduction factors are ${RGML} and ${AZML} resp. \n"
-	RANGEML=${RGML}
-	AZIMML=${AZML}
-	unset RGML
-	unset AZML
+# UNUSED ? 
+## Get master and slave modules at InSAR dimensions
+#EchoTee "---------------------------------------------------------------- \n"	
+#	RatioPix ${INTERFML}
+#	EchoTee "Range and Azimuth reduction factors are ${RGML} and ${AZML} resp. \n"
+#	RANGEML=${RGML}
+#	AZIMML=${AZML}
+#	unset RGML
+#	unset AZML
 
 MASPOL=`GetParamFromFile "Master polarization channel" InSARParameters.txt`
 SLVPOL=`GetParamFromFile "Slave polarization channel" InSARParameters.txt`
 
 if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
 	then
-		EchoTee " Skip compute amplitude of Primary image Zoomed x ML for S1 WS Zoomed - may want to update script later for that"
-		# to operate, one must point toward images as MAS.Z.VV.mod and SLV.interpolated.Z.VV.mod
-		 
+		MASTERPOLNAME=${MASNAME}.Z.${MASPOL}
+		SLAVEPOLNAME=${SLVNAME}.interpolated.Z.${SLVPOL}			 
 	else 
-		EchoTee " Compute amplitude of Primary image Zoomed x ML"
-
 		MASTERPOLNAME=${MASNAME}.${MASPOL}
-		SLAVEPOLNAME=${SLVNAME}.${SLVPOL}
+		SLAVEPOLNAME=${SLVNAME}.${SLVPOL}		
+fi
+		EchoTee " Compute amplitude of Primary image Zoomed x ML"
 
 		# May not want to keep these files 
 		if [ -e ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.ras ] ; then mv ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.ras ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.beforeInSAR.ras ; fi
@@ -1222,7 +1322,7 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 
 		if [ ${MASX} != ${SLVX} ] || [ ${MASY} != ${SLVY} ] 
 			then 
-				EchoTeeRed "  // Amplitude reduced image size not the same for Prmiary and Secondary ??? Please check"
+				EchoTeeRed "  // Amplitude reduced image size not the same for Primary and Secondary ??? Please check"
 				EchoTee "MASX is ${MASX} and SLVX is ${SLVX}"
 				EchoTee "MASY is ${MASY} and SLVY is ${SLVY}"
 				exit 0
@@ -1230,14 +1330,15 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 
 		if [ ${INCIDX} != ${MASX} ] || [ ${INCIDY} != ${MASY} ] 
 				then 
-					EchoTeeRed "  // Interferometric products size not the same as reduced Prmiary and Secondary ??? Please check"
+					EchoTeeRed "  // Interferometric products size not the same as reduced Primary and Secondary ??? Please check"
 					exit 0
 		fi
 
 		HEADINGDIRFULL=`updateParameterFile ${RUNDIR}/i12/TextFiles/masterSLCImageInfo.txt "Heading direction"`
 		HEADINGDIR=`echo ${HEADINGDIRFULL} | cut -d " " -f 1`
 		EchoTee "Satellite is ${HEADINGDIR}."
-			case ${HEADINGDIR} in
+
+		case ${HEADINGDIR} in
 				"Ascending")   
 						   #SAT_ORBITS_IMAGE_DIRECTION="-flip" ;; # if ascending we need to flip it vertically
 						   FLP=flip
@@ -1281,20 +1382,20 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 				MakeFig ${SLVX} 1.0 2.0 normal gray 1/1 r4 ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod.${FLP} ;;
 		esac
 
-		# HEADERS
-			EchoTee " Create headers for amplitude image of Prmiary and Secondary Zoomed x ML \n"	
-			ORIGINALPROJ=${PROJ}
-			PROJ=""
-			CreateHDR ${MASX} ${MASY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.${FLP}
-			CreateHDR ${SLVX} ${SLVY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod.${FLP}
-			CreateHDR ${INCIDX} ${INCIDY} 4 1 1 ${RUNDIR}/i12/InSARProducts/incidence.${FLP}
-			 if [ ${CALIBSIGMA} == "SIGMAYES" ] && [ ${SATDIR} == "S1" ] ; then 
-					CreateHDR ${MASX} ${MASY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.sigma0.${FLP} 
-					CreateHDR ${SLVX} ${SLVY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.sigma0.${FLP}				   
-			 fi
+	# HEADERS
+		EchoTee " Create headers for amplitude image of Primary and Secondary Zoomed x ML \n"	
+		ORIGINALPROJ=${PROJ}
+		PROJ=""
+		CreateHDR ${MASX} ${MASY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.${FLP}
+		CreateHDR ${SLVX} ${SLVY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod.${FLP}
+		CreateHDR ${INCIDX} ${INCIDY} 4 1 1 ${RUNDIR}/i12/InSARProducts/incidence.${FLP}
+		 if [ ${CALIBSIGMA} == "SIGMAYES" ] && [ ${SATDIR} == "S1" ] ; then 
+				CreateHDR ${MASX} ${MASY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.sigma0.${FLP} 
+				CreateHDR ${SLVX} ${SLVY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.sigma0.${FLP}				   
+		 fi
 
-			# Finish createing headers, can get the projection to its real value if needed further
-			PROJ=${ORIGINALPROJ}
+		# Finish createing headers, can get the projection to its real value if needed further
+		PROJ=${ORIGINALPROJ}
 
 		# create jpg -  - flip for ease of comparison between modes
 			DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 12 -fill black -annotate +5+10 "
@@ -1308,7 +1409,7 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "
 			${PATHCONV}/convert -format jpg -quality 100% -sharpen 0.1 -resize '640>' ${DATECELL} "${MAS}" ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.${FLP}.ras ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.${FLP}.jpg
 			${PATHCONV}/convert -format jpg -quality 100% -sharpen 0.1 -resize '640>' ${DATECELL} "${SLV}" ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod.${FLP}.ras ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod.${FLP}.jpg
 		fi
-fi
+
 # UNWRAP
 	case ${SKIPUW} in
 		"SKIPyes" ) 
@@ -1360,7 +1461,7 @@ fi
  										then 
  											EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
  											# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
- 											byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
+ 											byte2float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
  											ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
  											convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
  										else 
@@ -1374,7 +1475,7 @@ fi
   															EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
  															# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
   															Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
- 															byte2Float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+ 															byte2float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
  															ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
  															convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
  													fi
@@ -1399,7 +1500,7 @@ fi
 								then 
 									EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
 									# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
-									byte2Float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
+									byte2float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
 									ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
 									convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
 								else 
@@ -1408,7 +1509,7 @@ fi
  											EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
  											# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
  											Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
- 											byte2Float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+ 											byte2float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
  											ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
  											convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
 										else
@@ -1476,7 +1577,7 @@ fi
 			GeocUTM ${FILESTOGEOC}
 	fi
 
-	if [ ${SKIPUW} == "SKIPyes" ] 
+	if [ ${SKIPUW} == "SKIPyes" ] || [ ${SKIPUW} == "Mask" ] 
 		then
 			EchoTeeYellow "  // Skip interpolation AFTER geocoding..."
 		else 
@@ -1490,12 +1591,12 @@ fi
 					if [ ${REMOVEPLANE} == "DETREND" ] 
 							then 
 								EchoTee "Request interpolation after geocoding."
-								PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+								PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
 								#PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated	
 							else 
 								EchoTee "Request interpolation after geocoding."
-								PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+								PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
 								#PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated	
 					fi ;;
@@ -1507,18 +1608,18 @@ fi
 					if [ ${REMOVEPLANE} == "DETREND" ] 
 							then 
 								EchoTee "Request interpolation before and after geocoding."
-								PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+								PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
 								#PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated   
 							else 
 								EchoTee "Request interpolation before and after geocoding."
-								PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil
+								PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
 								#PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated   
 					fi ;;
 				"BEFORE") 
 					EchoTee "Do not request interpolation after geocoding" 
-					PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil	;;		
+					PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil	;;		
 			esac
 	fi
 	

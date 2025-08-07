@@ -75,13 +75,20 @@
 # New in Distro V 5.2 20240305:	- Works for other defo mode than only DefoInterpolx2Detrend
 # New in Distro V 5.3 20240702:	- add info about format of table to split
 #								- take also table like from Prepa_MSBAS.sh, though without header
+# New in Distro V 5.4 20250204:	- zap hidden Gremlins in line 494 making wc to crash
+# New in Distro V 5.5 20250415:	- corr bug introduced in V3.4 which may have prevented to be asked to perform 
+#								  DEM computation when non S1 IW or EW processing (do not check anymore if S1 before checking S1 mode) 
+#								- skip .txt file in search of MASDIR in SAR_CSL
+# New in Distro V 5.6 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
+#								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 02, 2024"
+VER="Distro V5.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 20, 2025"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -186,16 +193,31 @@ PROROOTPATH=`GetParam PROROOTPATH`			# PROROOTPATH, path to dir where data will 
 MASSPROCESSPATH=`GetParam MASSPROCESSPATH`	# MASSPROCESSPATH, path to dir where all processed pairs will be stored in sub dir named by the sat/trk name (SATDIR/TRKDIR)
 
 CROP=`GetParam "CROP,"`						# CROP, CROPyes or CROPno 
-SATDIR=`GetParam "SATDIR,"`					# Satellite system. E.g. RADARSAT (must be the same as dirname structure)
-TRKDIR=`GetParam "TRKDIR,"`					# Processing directory and dir where data are stored E.g. RS2_UF (must be the same as dirname structure)
-ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
-INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
-
 FIRSTL=`GetParam "FIRSTL,"`					# Crop limits: first line to use
 LASTL=`GetParam "LASTL,"`					# Crop limits: last line to use
 FIRSTP=`GetParam "FIRSTP,"`					# Crop limits: first point (row) to use
 LASTP=`GetParam "LASTP,"`					# Crop limits: last point (row) to use
+COORDSYST=`GetParam "COORDSYST,"`			# COORDSYST, type of coordinates used to define crop: SRA (lines and pixels) or GEO
+
+	if [ "${CROP}" == "CROPyes" ] && [ "${COORDSYST}" == "" ]
+		then 
+			echo " COORDSYST not defined. I try to see if there is a dot in your coordinates for crop region. "
+			if [[ "${FIRSTL}${LASTL}${FIRSTP}${LASTP}" == *.* ]] 
+				then
+					echo "At least one of the crop coordinates has a dot. Must hence be GEO coord system"
+					COORDSYST="GEO"
+				else
+					echo "None of the crop coordinates has a dot. Must hence be SRA coord system"
+					COORDSYST="SRA"
+			fi
+	fi
+
 REGION=`GetParam "REGION,"`					# REGION, Text description of area for dir naming
+
+SATDIR=`GetParam "SATDIR,"`					# Satellite system. E.g. RADARSAT (must be the same as dirname structure)
+TRKDIR=`GetParam "TRKDIR,"`					# Processing directory and dir where data are stored E.g. RS2_UF (must be the same as dirname structure)
+ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
+INTERFML=`GetParam "INTERFML,"`				#  multilook factor for final interferometric products
 
 FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are stored
 
@@ -212,6 +234,14 @@ cd ${PROPATH}
 TABLEPATH=`dirname ${TABLEFILEPATH}`
 TABLEFILE=`basename ${TABLEFILEPATH}`
 TABLEEXT="${TABLEFILEPATH##*.}"
+
+# Test asymetric zoom - not allowed for mass processing 
+CheckZOOMasymetry
+if [ "${ZOOMONEVAL}" == "Two" ] 
+	then 
+		echo " Performing mass processing with asymetric zoom is not allowed yet. Exiting..." 
+		exit 
+fi
 
 # Update some infos
 	if [ ${CROP} == "CROPyes" ]
@@ -491,7 +521,7 @@ if [ "${OS}" == "Linux" ] ; then
 				;;
 			0) 
 				# no DISPLAY; try with who without -m
-				NRMYDISPLAYWHO=`who | grep -v tty | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l`
+				NRMYDISPLAYWHO=`who | grep -v tty | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l`
 				if [ ${NRMYDISPLAYWHO} -eq 1 ]
 					then 
 						# only one DISPLAY; I guess it is the good one
@@ -531,12 +561,12 @@ if [ "${OS}" == "Linux" ] ; then
 fi
 
 
-if [ "${SATDIR}" != "S1" ] 
-	then
+#if [ "${SATDIR}" != "S1" ] 
+#	then
 
-		MASDIR=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SUPERMASTER}` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
+		MASDIR=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep -v ".txt"  | ${PATHGNU}/grep ${SUPERMASTER}` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
 
-		S1ID=`GetParamFromFile "Scene ID" SAR_CSL_SLCImageInfo.txt`
+		S1ID=`GetParamFromFile "Scene ID" SAR_CSL_SLCImageInfo.txt` # i.e. search in ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASDIR}/Info/SLCImageInfo.txt
 		S1MODE=`echo ${S1ID} | cut -d _ -f 2`	
 		if [ ${S1MODE} != "IW" ] && [ ${S1MODE} != "EW" ]
 			then 
@@ -568,10 +598,10 @@ if [ "${SATDIR}" != "S1" ]
 								echo "Please answer yes or no.";;
 						esac
 					done
+			else 
+				echo "For S1 processing in IW or EW, ensure you ran SuperMasterCoreg.sh first to ensure proper DEM (and mask). "
 		fi
-	else 
-		echo "For S1 processing, ensure you ran SuperMasterCoreg.sh first to ensure proper DEM (and mask). "
-fi
+#fi
 
 # Now one can put it safely to KEEP.   
 ORIGINALMODE=`cat ${PARAMFILEPATH} | ${PATHGNU}/grep RECOMPDEM `

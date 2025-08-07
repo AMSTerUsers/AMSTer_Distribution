@@ -25,13 +25,15 @@
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20240924:	- if provided with a dir, search for i12 in that dir
+# New in Distro V 4.2 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 24, 2024"
+VER="Distro V4.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 27, 2025"
+
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -53,7 +55,9 @@ if [ "$#" -eq 1 ]
 	then
     	echo "Rename path only in ${DIRTOPROCESS}"
     	cd ${DIRTOPROCESS}/i12/TextFiles
-					cp -n InSARParameters.txt InSARParameters_original_ExtHDpath.txt # do not copy if exist already
+					#cp -n InSARParameters.txt InSARParameters_original_ExtHDpath.txt # do not copy if exist already
+					if [ ! -e InSARParameters_original_ExtHDpath.txt ] ; then cp InSARParameters.txt InSARParameters_original_ExtHDpath.txt ; fi 
+					
 					RenameVolNameToVariable InSARParameters_original_ExtHDpath.txt InSARParameters.txt
 # 					${PATHGNU}/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
 # 										 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 
@@ -64,7 +68,9 @@ if [ "$#" -eq 1 ]
 # 										 s%\/mnt\/3601%\/\$PATH_3601%g 
 # 										 s%\/mnt\/3602%\/\$PATH_3602%g" InSARParameters_original_ExtHDpath.txt > InSARParameters.txt
 					if [ -f geoProjectionParameters.txt ] && [ -s geoProjectionParameters.txt ] ; then
-						cp -n geoProjectionParameters.txt geoProjectionParameters_original_ExtHDpath.txt # do not copy if exist already
+						#cp -n geoProjectionParameters.txt geoProjectionParameters_original_ExtHDpath.txt # do not copy if exist already
+						if [ ! -e geoProjectionParameters_original_ExtHDpath.txt ] ; then cp geoProjectionParameters.txt geoProjectionParameters_original_ExtHDpath.txt ; fi 
+						
 						RenameVolNameToVariable geoProjectionParameters_original_ExtHDpath.txt geoProjectionParameters.txt
 # 						${PATHGNU}/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
 # 											 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 
@@ -91,7 +97,9 @@ if [ "$#" -eq 1 ]
 				for DIR in `cat -s Files_To_Rename.txt` 
 				do 
 					cd ${DIR}/i12/TextFiles
-					cp -n InSARParameters.txt InSARParameters_original_ExtHDpath.txt # do not copy if exist already
+					#cp -n InSARParameters.txt InSARParameters_original_ExtHDpath.txt # do not copy if exist already
+					if [ ! -e InSARParameters_original_ExtHDpath.txt ] ; then cp InSARParameters.txt InSARParameters_original_ExtHDpath.txt ; fi 
+					
 					RenameVolNameToVariable InSARParameters_original_ExtHDpath.txt InSARParameters.txt
 # 					${PATHGNU}/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
 # 										 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 
@@ -102,7 +110,9 @@ if [ "$#" -eq 1 ]
 # 										 s%\/mnt\/3601%\/\$PATH_3601%g 
 # 										 s%\/mnt\/3602%\/\$PATH_3602%g" InSARParameters_original_ExtHDpath.txt > InSARParameters.txt
 					if [ -f geoProjectionParameters.txt ] && [ -s geoProjectionParameters.txt ] ; then
-						cp -n geoProjectionParameters.txt geoProjectionParameters_original_ExtHDpath.txt # do not copy if exist already
+						#cp -n geoProjectionParameters.txt geoProjectionParameters_original_ExtHDpath.txt # do not copy if exist already
+						if [ ! -e geoProjectionParameters_original_ExtHDpath.txt ] ; then cp geoProjectionParameters.txt geoProjectionParameters_original_ExtHDpath.txt ; fi 
+					
 						RenameVolNameToVariable geoProjectionParameters_original_ExtHDpath.txt geoProjectionParameters.txt
 # 						${PATHGNU}/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
 # 											 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 
@@ -125,7 +135,9 @@ if [ "$#" -eq 1 ]
 								cd ${DIR}/Info
 								for MASKSANDDEM in `ls *.txt | ${PATHGNU}/grep -v readme | ${PATHGNU}/grep -v SLC | ${PATHGNU}/grep -v Pattern | ${PATHGNU}/grep -v original` 
 									do
-										cp -n ${MASKSANDDEM} ${MASKSANDDEM}_original_ExtHDpath.txt # do not copy if exist already
+										#cp -n ${MASKSANDDEM} ${MASKSANDDEM}_original_ExtHDpath.txt # do not copy if exist already
+										if [ ! -e "${MASKSANDDEM}_original_ExtHDpath.txt" ] ; then cp "${MASKSANDDEM}" "${MASKSANDDEM}_original_ExtHDpath.txt" ; fi 
+					
 										RenameVolNameToVariable ${MASKSANDDEM}_original_ExtHDpath.txt ${MASKSANDDEM}
 # 										${PATHGNU}/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
 # 															 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 

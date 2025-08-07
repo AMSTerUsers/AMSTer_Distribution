@@ -16,6 +16,7 @@
 # Dependencies:
 #    - gnu sed and awk for more compatibility. 
 #    - functions "say" for Mac or "espeak" for Linux, but might not be mandatory
+#	 - function RenameVolNameToVariable from __HardCodedLines.sh
 #
 #
 # New in Distro V 1.0:	- Based on developpement version and Beta V1.2.2
@@ -42,24 +43,32 @@
 #								- debug isting of missing pair dirs 
 # New in Distro V 2.3 20240508:	- offer the option to start the check from a given date provided as a 3rd param
 # New in Distro V 2.4 20240527:	- more robust way to get MAS and SLV dates from PAIR dir before deleting stuffs
+# New in Distro V 2.5 20241220:	- Do not verify pairs with images in Quarantained
+# New in Distro V 2.6 20250417:	- Check that dates of Primary and Secondary images are not empty before deleting directories of files
+#								- debug rm ${FIRSTPAIR}/i12/TextFiles/InSARParameters_StateVar.txt
+#								- add quotes around some directories and files names for robustness and security 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 27, 2024"
+VER="Distro V2.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 16, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
 
+# vvv ----- Hard coded lines to check --- vvv 
+source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
+# needed for function RenameVolNameToVariable
+# ^^^ ----- Hard coded lines to check -- ^^^ 
 
-PAIRSFILE=$1				# file with the list of pairs supposed to be processed in the form of PRIMARY_SECONDARY dates
+PAIRSFILE=$1					# file with the list of pairs supposed to be processed in the form of PRIMARY_SECONDARY dates
 MASSPROCESSGEOCPATHTMP=$2		# dir where Geocoded results are stored (eg. /.../SAR_MASSPROCESS/SAT/TRACK/CROP_SM_DATE_ZOOM_ML/Geocoded)
 
-if [ $# -lt 2 ] ; then echo “Usage $0 LIST_OF_PAIRS DIR_TO_GEOCODED”; exit; fi
+if [ $# -lt 2 ] ; then echo "Usage $0 LIST_OF_PAIRS DIR_TO_GEOCODED"; exit; fi
 
 # Remove possible trailing /
 MASSPROCESSGEOCPATH=${MASSPROCESSGEOCPATHTMP%/} 
@@ -96,7 +105,7 @@ PAIRSFILE=${MASSPROCESSPATH}/_CheckResults/${PAIRSFILENAME}_NoBaselines_${RNDM1}
 if [ $# -eq 3 ] 
 	then 
 		DATEFROM=$3				# a date in the form YYYYMMDD: it will only check pairs with both Primary and Secondary dates >= that date  
-		echo “Restrict list of pairs to check to pairs with both Priamry and Secondary images after ${DATEFROM}”
+		echo "Restrict list of pairs to check to pairs with both Priamry and Secondary images after ${DATEFROM}"
 		${PATHGNU}/gawk -v given_date="${DATEFROM}" -F '_' '$1 >= given_date && $2 >= given_date {print}' ${PAIRSFILE} > ${PAIRSFILE}_From${DATEFROM}.txt
 		PAIRSFILE=${PAIRSFILE}_From${DATEFROM}.txt	
 fi
@@ -144,7 +153,7 @@ function CheckGeocProduct()
 	#		fi
 	#fi	
 
-	if [ `find "${MASSPROCESSGEOCPATH}/${MODE}" -maxdepth 1 -type f -type f \( -name "*${MASDATE}_*${SLVDATE}*" -o -name "*${SLVDATE}_${MASDATE}*" \) 2>/dev/null | wc -l` -lt 1 ] 
+	if [ `${PATHGNU}/find "${MASSPROCESSGEOCPATH}/${MODE}" -maxdepth 1 -type f -type f \( -name "*${MASDATE}_*${SLVDATE}*" -o -name "*${SLVDATE}_${MASDATE}*" \) 2>/dev/null | wc -l` -lt 1 ] 
 		then
 	    	echo "	Geocoded file ${MASDATE}_${SLVDATE} does not exist in ${MODE}"
 	    	echo "${MASDATE}_${SLVDATE}" >> "Imgs_NotIn${MODE}.txt"
@@ -154,7 +163,44 @@ function CheckGeocProduct()
 	fi
 
 	}
+	
+function GetParamFromFile()
+	{
+	unset CRITERIA 
+	local CRITERIA
+	CRITERIA=$1
 
+	unset KEY
+
+	local KEY
+
+	KEY=`echo ${CRITERIA} | tr ' ' _`
+	
+	updateParameterFile ${FIRSTPAIRPARAMFILE}_StateVar.txt ${KEY}
+	}	
+	
+
+function RemoveQuarantined()
+	{
+	FILETOCLN=$1
+	if [ -f ${FILETOCLN} ] && [ -s ${FILETOCLN} ]
+		then 
+			mkdir -p ${MASSPROCESSPATH}/_CheckResults/Quarantined
+			${PATHGNU}/ggrep -F -f ${MASSPROCESSPATH}/_CheckResults/_Quarantined_ImagesDates.txt -v ${FILETOCLN} > ${FILETOCLN}_Without_Quarantined_Img.txt
+			${PATHGNU}/ggrep -F -f ${MASSPROCESSPATH}/_CheckResults/_Quarantined_ImagesDates.txt ${FILETOCLN} > ${FILETOCLN}_Quarantined.txt
+			
+			mv -f ${FILETOCLN}_Without_Quarantined_Img.txt ${FILETOCLN}
+			mv -f ${MASSPROCESSPATH}/_CheckResults/*_Quarantined.txt ${MASSPROCESSPATH}/_CheckResults/Quarantined/
+			
+			if [ -f ${FILETOCLN} ] && [ ! -s ${FILETOCLN} ]
+				then 
+					echo " ${FILETOCLN} is empty; remove it" 
+					rm  ${FILETOCLN}	
+			fi
+	fi
+	}
+	
+	
 rm -f Img_NotInAmpli.txt
 rm -f Imgs_NotInCoh.txt
 rm -f Imgs_NotInDefo.txt
@@ -167,6 +213,51 @@ rm -f Imgs_NotInUnwrapPhase.txt
 rm -f Number_Geoc_Files_inPairs.txt
 
 rm -f DirPair_NotInMassProcess.txt
+
+
+rm -f ./Quarantined/Img_NotInAmpli.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInCoh.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInDefo.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInDefoInterpol.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInDefoInterpolDetrend.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInDefoInterpolx2Detrend.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInInterfFilt.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInInterfResid.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Imgs_NotInUnwrapPhase.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/Number_Geoc_Files_inPairs.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/DirPair_NotInMassProcess.txt_Without_Quarantined_Img.txt
+
+rm -f ./Quarantined/PairFiles_NoBaselines_Sorted_NoUnderscore.txt_Without_Quarantined_Img.txt
+rm -f ./Quarantined/_GeocNotOK_AllGeocAreMissing_MissingPairDir.txt_Without_Quarantined_Img.txt
+
+
+
+# Check data in Quarantine: 
+###########################
+
+# take first pair in ${MASSPROCESSPATH} that contains a */i12/TextFiles/InSARParameters.txt where one can get the path to SAR_CSL dir
+FIRSTPAIRPARAMFILE=$(${PATHGNU}/gfind ${MASSPROCESSPATH} -mindepth 3 -maxdepth 4 -type f -name "InSARParameters.txt" | head -n 1)
+
+# and get the list of quarantined images ()
+if [ -f "${FIRSTPAIRPARAMFILE}" ]
+	then 
+		echo "Get path to SAR_CSL from ${FIRSTPAIRPARAMFILE}"
+		RenameVolNameToVariable ${FIRSTPAIRPARAMFILE} ${FIRSTPAIRPARAMFILE}_StateVar.txt
+		PATHMAS=$(GetParamFromFile "Master image file path [CSL image format]")
+		PATHCSLDIRNoCrop=$(dirname ${PATHMAS})
+		eval PATHCSLDIR=$(dirname ${PATHCSLDIRNoCrop})
+		if [ -d "${PATHCSLDIR}/Quarantained" ]
+			then
+				${PATHGNU}/gfind ${PATHCSLDIR}/Quarantained -maxdepth 1 -type d -name "*.csl" | grep -oE '[0-9]{8}' > ${MASSPROCESSPATH}/_CheckResults/_Quarantined_ImagesDates.txt
+			else 
+				echo "No quarantined images in ${PATHCSLDIR}/Quarantained"
+
+		fi
+	else 
+		echo "  No InSARParameters.txt file, "
+		echo "  Hence, I can't figure out where is the SAR_CSL dir and check if there are quarantined files. "
+		echo "  "
+fi 
 
 while read -r MASDATE SLVDATE
 do	
@@ -230,7 +321,7 @@ do
 done < ${MASSPROCESSPATH}/_CheckResults/PairFiles_NoBaselines_Sorted_NoUnderscore.txt
 
 if [ -f "${MASSPROCESSPATH}/_CheckResults/Img_NotInAmpli_tmp.txt" ] && [ -s "${MASSPROCESSPATH}/_CheckResults/Img_NotInAmpli_tmp.txt" ] ; then sort ${MASSPROCESSPATH}/_CheckResults/Img_NotInAmpli_tmp.txt | uniq > Img_NotInAmpli.txt ; fi
-rm -f ${MASSPROCESSPATH}/_CheckResults/Img_NotInAmpli_tmp.txt
+rm -f "${MASSPROCESSPATH}/_CheckResults/Img_NotInAmpli_tmp.txt"
 
 
 # Check if one mode is empty, that is the Imgs_NotIn*.txt file is the same as PAIRSFILE
@@ -240,7 +331,7 @@ do
 	if diff Imgs_NotIn${FILETOTEST}.txt ${MASSPROCESSPATH}/_CheckResults/PairFiles_NoBaselines_Sorted.txt 2> /dev/null
 		then
 			echo "Imgs_NotIn${FILETOTEST}.txt is idential to ${MASSPROCESSPATH}/_CheckResults/PairFiles_NoBaselines_Sorted.txt, that is no porducts of that mode were processed. Discard this mode from check."
-			mv Imgs_NotIn${FILETOTEST}.txt EmptyMode_${FILETOTEST}.txt
+			mv "Imgs_NotIn${FILETOTEST}.txt" "EmptyMode_${FILETOTEST}.txt"
 			i=`echo "$i + 1" | bc -l`
 			echo $i
 	fi
@@ -272,60 +363,68 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 			#MASDATE=`echo ${PAIR} | cut -d _ -f 1`
 			#SLVDATE=`echo ${PAIR} | cut -d _ -f 2`
 			#Check if a pair is in some check files 
-			PAIR=${MASDATE}_${SLVDATE}
-			MISSING=`grep -o ${PAIR} Imgs_*.txt | wc -l`
-			echo -n " Missing ${MISSING} geocoded products / ${NROFMODE} modes;  "
-			if [ ${MISSING} == 0 ] 
-				then 
-					if [ ! -d ${MASSPROCESSPATH}/*${MASDATE}*_*${SLVDATE}*/i12/GeoProjection ] 
+			if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] ; then 
+					PAIR="${MASDATE}_${SLVDATE}"
+					MISSING=`grep -o ${PAIR} Imgs_*.txt | wc -l`
+					echo -n " Missing ${MISSING} geocoded products / ${NROFMODE} modes;  "
+					if [ ${MISSING} == 0 ] 
 						then 
-							if [ ! -d ${MASSPROCESSPATH}/*${SLVDATE}*_*${MASDATE}*/i12/GeoProjection ] 
-								then
-									echo "${PAIR} not OK : All Geocoded products are stored correctly for that pair BUT a dir is missing in MASSPROCESS" 
-									echo ${PAIR} >> _GeocOK_MissingPairDir.txt
-								else
-									echo "${PAIR} OK though inverted during mass processing for sake of efficiency. Not a problem. " 
-							fi
+							if [ ! -d ${MASSPROCESSPATH}/*${MASDATE}*_*${SLVDATE}*/i12/GeoProjection ] 
+								then 
+									if [ ! -d ${MASSPROCESSPATH}/*${SLVDATE}*_*${MASDATE}*/i12/GeoProjection ] 
+										then
+											echo "${PAIR} not OK : All Geocoded products are stored correctly for that pair BUT a dir is missing in MASSPROCESS" 
+											echo ${PAIR} >> _GeocOK_MissingPairDir.txt
+										else
+											echo "${PAIR} OK though inverted during mass processing for sake of efficiency. Not a problem. " 
+									fi
+								else 
+									echo "All Geocoded products are stored correctly and ${PAIR} dir is OK. Not a problem. " 
+							fi	
 						else 
-							echo "All Geocoded products are stored correctly and ${PAIR} dir is OK. Not a problem. " 
-					fi	
-				else 
-					if [ ${MISSING} == ${NROFMODE} ] 
-						then 
-							if [ -d ${MASSPROCESSPATH}/*${MASDATE}*_*${SLVDATE}*/i12/GeoProjection ] 
+							if [ ${MISSING} == ${NROFMODE} ] 
 								then 
-									echo "${PAIR} not OK : All Geocoded products are missing BUT a dir exists in MASSPROCESSPATH. " 
-									echo ${PAIR} >> _GeocNotOK_AllGeocAreMissing_ExistingPairDir.txt
-								else 
-									if [ -d ${MASSPROCESSPATH}/*${SLVDATE}*_*${MASDATE}*/i12/GeoProjection ] 
-										then
-											echo "${PAIR} not OK : All Geocoded products are missing BUT an INVERTED dir exists in MASSPROCESSPATH. " 
-											echo ${PAIR} >> _GeocNotOK_AllGeocAreMissing_ExistingInvertedPairDir.txt
+									if [ -d ${MASSPROCESSPATH}/*${MASDATE}*_*${SLVDATE}*/i12/GeoProjection ] 
+										then 
+											echo "${PAIR} not OK : All Geocoded products are missing BUT a dir exists in MASSPROCESSPATH. " 
+											echo ${PAIR} >> _GeocNotOK_AllGeocAreMissing_ExistingPairDir.txt
 										else 
-											echo "${PAIR} not OK : All Geocoded products and process dir are missing." 
-											echo ${PAIR} >> _GeocNotOK_AllGeocAreMissing_MissingPairDir.txt
-									fi
-							fi	
-						else
-							if [ -d ${MASSPROCESSPATH}/*${MASDATE}*_*${SLVDATE}*/i12/GeoProjection ] 
-								then 
-									echo "${PAIR} not OK : Some Geocoded products are missing BUT a dir exists in MASSPROCESSPATH." 
-									echo ${PAIR} >> _GeocNotOK_SomeGeocAreMissing_ExistingPairDir.txt
-								else 
-									if [ -d ${MASSPROCESSPATH}/*${SLVDATE}*_*${MASDATE}*/i12/GeoProjection ] 
-										then
-											echo "${PAIR} not OK : Some Geocoded products are missing BUT an INVERTED dir exists in MASSPROCESSPATH. " 
-											echo ${PAIR} >> _GeocNotOK_SomeGeocAreMissing_ExistingInvertedPairDir.txt
+											if [ -d ${MASSPROCESSPATH}/*${SLVDATE}*_*${MASDATE}*/i12/GeoProjection ] 
+												then
+													echo "${PAIR} not OK : All Geocoded products are missing BUT an INVERTED dir exists in MASSPROCESSPATH. " 
+													echo ${PAIR} >> _GeocNotOK_AllGeocAreMissing_ExistingInvertedPairDir.txt
+												else 
+													echo "${PAIR} not OK : All Geocoded products and process dir are missing." 
+													echo ${PAIR} >> _GeocNotOK_AllGeocAreMissing_MissingPairDir.txt
+											fi
+									fi	
+								else
+									if [ -d ${MASSPROCESSPATH}/*${MASDATE}*_*${SLVDATE}*/i12/GeoProjection ] 
+										then 
+											echo "${PAIR} not OK : Some Geocoded products are missing BUT a dir exists in MASSPROCESSPATH." 
+											echo ${PAIR} >> _GeocNotOK_SomeGeocAreMissing_ExistingPairDir.txt
 										else 
-											echo "${PAIR} not OK : Some Geocoded products are missing and process dir are missing." 
-											echo ${PAIR} >> _GeocNotOK_SomeGeocAreMissing_MissingPairDir.txt
-									fi
-							fi	
+											if [ -d ${MASSPROCESSPATH}/*${SLVDATE}*_*${MASDATE}*/i12/GeoProjection ] 
+												then
+													echo "${PAIR} not OK : Some Geocoded products are missing BUT an INVERTED dir exists in MASSPROCESSPATH. " 
+													echo ${PAIR} >> _GeocNotOK_SomeGeocAreMissing_ExistingInvertedPairDir.txt
+												else 
+													echo "${PAIR} not OK : Some Geocoded products are missing and process dir are missing." 
+													echo ${PAIR} >> _GeocNotOK_SomeGeocAreMissing_MissingPairDir.txt
+											fi
+									fi	
+							fi
 					fi
 			fi
-
 		done < ${MASSPROCESSPATH}/_CheckResults/PairFiles_NoBaselines_Sorted_NoUnderscore.txt
-
+		echo " ************************************************************************************"
+		echo " ************************************************************************************"
+		echo " WARNING : choosing to remove the files and directories here after may be harmfull"
+		echo "         if you do not have the expected directory structure and naming convetion."
+		echo " It might be wise to chose not to delete automatically these files and directories. "
+		echo " Instead you can do it manually thanks to the products listed in the corresponding files."
+		echo " ************************************************************************************"
+		echo " ************************************************************************************"
 		# Offers to remove geocoded products from /Geocoded and /Geocoded_Rasters that are from PAIR which dir are missing in MASSPROCESS
 		if [ -f "_GeocOK_MissingPairDir.txt" ] && [ -s "_GeocOK_MissingPairDir.txt" ] ; then
 			SpeakOut "Do you want to remove geocoded files and rasters which have no corresponding processing PAIR directory in MASSPROCESS ? " 
@@ -340,16 +439,21 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 										MASDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
 										SLVDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
 
-										for MODE in `cat -s MODES.TXT`
-											do   
-												#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
-												#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
-										
-												#hopefuly a faster solution...
-												find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-												find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-
-											done 
+										if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+											then 
+												for MODE in `cat -s MODES.TXT`
+													do   
+														#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
+														#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
+												
+														#hopefuly a faster solution...
+														find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+														find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+												done 
+											else 
+												echo "Something went wrong..., I will not remove ${MASSPROCESSGEOCPATH}[Rasters]/Mode/*_* "
+												echo "  Check _GeocOK_MissingPairDir.txt and clean manually."
+										fi
 									echo
 									done
 								break ;;
@@ -374,8 +478,15 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 										SLVDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
 
 										PAIRDIRTMP=$(find ${MASSPROCESSPATH}/ -maxdepth 1 -type d -name "*${MASDATE}*_*${SLVDATE}*")
-										echo "Removing ${PAIRDIRTMP}..."
-										rm -fR ${PAIRDIRTMP}
+
+										if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+											then 
+												echo "Removing ${PAIRDIRTMP}..."
+												rm -fR ${PAIRDIRTMP}
+											else 
+												echo "Something went wrong..., I will not remove ${PAIRDIRTMP}. "
+												echo "  Check _GeocNotOK_AllGeocAreMissing_ExistingPairDir.txt and clean manually."
+										fi
 									done
 								unset PAIRDIRTMP
 								break ;;
@@ -399,8 +510,15 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 										SLVDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
 
 										PAIRDIRTMP=$(find ${MASSPROCESSPATH}/ -maxdepth 1 -type d -name "*${MASDATE}*_*${SLVDATE}*")
-										echo "Removing ${PAIRDIRTMP}..."
-										rm -fR ${PAIRDIRTMP}
+
+										if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+											then 
+												echo "Removing ${PAIRDIRTMP}..."
+												rm -fR ${PAIRDIRTMP}
+											else 
+												echo "Something went wrong..., I will not remove ${PAIRDIRTMP}. "
+												echo "  Check _GeocNotOK_AllGeocAreMissing_ExistingInvertedPairDir.txt and clean manually."
+										fi
 									done
 								unset PAIRDIRTMP
 								break ;;
@@ -424,19 +542,28 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 										#SLVDATE=`echo ${PAIR} | cut -d _ -f 2`
 										MASDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
 										SLVDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
-
-										for MODE in `cat -s MODES.TXT`
-											do   
-												#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
-												#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
-
-												#hopefuly a faster solution...
-												find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-												find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-											done 
+										
 										PAIRDIRTMP=$(find ${MASSPROCESSPATH}/ -maxdepth 1 -type d -name "*${MASDATE}*_*${SLVDATE}*")
-										echo "Removing ${PAIRDIRTMP}..."
-										rm -fR ${PAIRDIRTMP}
+
+										if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+											then 
+												for MODE in `cat -s MODES.TXT`
+													do   
+														#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
+														#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
+		
+														#hopefuly a faster solution...
+														find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+														find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+													done 
+												
+												echo "Removing ${PAIRDIRTMP}..."
+												rm -fR ${PAIRDIRTMP}
+											else 
+												echo "Something went wrong..., I will not remove ${MASSPROCESSGEOCPATH}[Rasters]/Mode/*_* "
+												echo "                        nor remove ${PAIRDIRTMP}"
+												echo "  Check _GeocNotOK_SomeGeocAreMissing_ExistingPairDir.txt and clean manually."
+										fi
 									echo
 									done
 								unset PAIRDIRTMP
@@ -461,18 +588,26 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 										MASDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
 										SLVDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
 										
-										for MODE in `cat -s MODES.TXT`
-											do   
-												#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
-												#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
-
-												#hopefuly a faster solution...
-												find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-												find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-											done 
 										PAIRDIRTMP=$(find ${MASSPROCESSPATH}/ -maxdepth 1 -type d -name "*${MASDATE}*_*${SLVDATE}*")
-										echo "Removing ${PAIRDIRTMP}..."
-										rm -fR ${PAIRDIRTMP}
+										
+										if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+											then 
+												for MODE in `cat -s MODES.TXT`
+													do   
+														#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
+														#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
+		
+														#hopefuly a faster solution...
+														find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+														find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+													done 
+												echo "Removing ${PAIRDIRTMP}..."
+												rm -fR ${PAIRDIRTMP}
+											else 
+												echo "Something went wrong..., I will not remove ${MASSPROCESSGEOCPATH}[Rasters]/Mode/*_* "
+												echo "                        nor remove ${PAIRDIRTMP}"
+												echo "  Check _GeocNotOK_SomeGeocAreMissing_ExistingInvertedPairDir.txt and clean manually."
+										fi
 									echo
 									done
 								unset PAIRDIRTMP
@@ -496,15 +631,21 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 										MASDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | head -1`
 										SLVDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
 
-										for MODE in `cat -s MODES.TXT`
-											do   
-												#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
-												#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
-
-												#hopefuly a faster solution...
-												find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-												find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
-											done 
+										if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+											then 
+												for MODE in `cat -s MODES.TXT`
+													do   
+														#rm -f ${MASSPROCESSGEOCPATH}/${MODE}/*${PAIR}*
+														#rm -f ${MASSPROCESSGEOCPATH}Rasters/${MODE}/*${PAIR}*
+		
+														#hopefuly a faster solution...
+														find ${MASSPROCESSGEOCPATH}/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+														find ${MASSPROCESSGEOCPATH}Rasters/${MODE}/ -name "*${MASDATE}*_*${SLVDATE}*" -print0 | xargs -0 rm 
+													done 
+											else 
+												echo "Something went wrong..., I will not remove ${MASSPROCESSGEOCPATH}[Rasters]/Mode/*_* "
+												echo "  Check _GeocNotOK_SomeGeocAreMissing_MissingPairDir.txt and clean manually."
+										fi
 									echo
 									done
 								break ;;
@@ -541,8 +682,15 @@ if  [ ${NROFNOTEMPTY} != 0 ]
 										SLVDATE=`echo ${PAIR} | ${PATHGNU}/grep -Eo "[0-9]{8}" | tail -1`
 
 										PAIRDIRTMP=$(find ${MASSPROCESSPATH}/ -maxdepth 1 -type d -name "*${MASDATE}*_*${SLVDATE}*")
-										echo "Removing ${PAIRDIRTMP}..."
-										rm -fR ${PAIRDIRTMP}
+
+										if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+											then 
+												echo "Removing ${PAIRDIRTMP}..."
+												rm -fR ${PAIRDIRTMP}
+											else 
+												echo "Something went wrong..., I will not remove ${PAIRDIRTMP}"
+												echo "  Check PAIRSTOREMOVE.TXT and clean manually."
+										fi
 								done
 								unset PAIRDIRTMP
 								break ;;
@@ -558,7 +706,7 @@ fi  # en of "if at least one mode is not empty"
 #for PAIR in `ls -d ${MASSPROCESSPATH}/*_* | ${PATHGNU}/grep -v ".txt" | ${PATHGNU}/grep -v "_CheckResults"`    
 for PAIR in `find ${MASSPROCESSPATH} -maxdepth 1 -mindepth 1 -type d -name "*_*" | ${PATHGNU}/grep -v ".txt" | ${PATHGNU}/grep -v "_CheckResults"`  
 do	
-	if [ ! -d ${PAIR}/i12/GeoProjection ] ; then echo "The dir ${PAIR} seems empty" ; echo ${PAIR} >> _Empty_Dirs.txt ; fi	
+	if [ ! -d ${PAIR}/i12/GeoProjection ] ; then echo "The dir ${PAIR} seems empty; at least it does not have a i12/GeoProjection directory" ; echo ${PAIR} >> _Empty_Dirs.txt ; fi	
 done
 if [ -f _Empty_Dirs.txt ] ; then 
 		SpeakOut "Do you want to remove empty dirs in MASSPROCESS?  " 
@@ -569,7 +717,14 @@ if [ -f _Empty_Dirs.txt ] ; then
 						for PAIR in `cat -s _Empty_Dirs.txt`    
 							do 
 								PAIRDIRTMP=$(find ${MASSPROCESSPATH}/ -maxdepth 1 -type d -name "*${MASDATE}*_*${SLVDATE}*")
-								rm -fR ${PAIRDIRTMP}
+								if [ "${MASDATE}" != "" ] && [ "${SLVDATE}" != "" ] 
+									then 
+										echo "Removing ${PAIRDIRTMP}..."
+										rm -fR ${PAIRDIRTMP}
+									else 
+										echo "Something went wrong..., I will not remove ${PAIRDIRTMP}"
+										echo "  Check _Empty_Dirs.txt and clean manually."
+								fi
 						done
 						break ;;
 				[Nn]* ) break ;;
@@ -579,7 +734,30 @@ if [ -f _Empty_Dirs.txt ] ; then
 		done
 fi
 
+
+
+# Remove quarantined images from each error file (if exist) 
+if [ -f ${MASSPROCESSPATH}/_CheckResults/_Quarantined_ImagesDates.txt ] && [ -s ${MASSPROCESSPATH}/_CheckResults/_Quarantined_ImagesDates.txt ]
+	then 
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/_GeocNotOK_AllGeocAreMissing_MissingPairDir.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/DirPair_NotInMassProcess.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Img_NotInAmpli.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInCoh.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInDefo.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInDefoInterpol.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInDefoInterpolDetrend.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInDefoInterpolx2Detrend.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInInterfFilt.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInInterfResid.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Imgs_NotInUnwrapPhase.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/Number_Geoc_Files_inPairs.txt"
+		RemoveQuarantined "${MASSPROCESSPATH}/_CheckResults/PairFiles_NoBaselines_Sorted_NoUnderscore.txt"
 		
+		#rm ${FIRSTPAIR}/i12/TextFiles/InSARParameters_StateVar.txt 2/dev/null
+		rm -f "${FIRSTPAIRPARAMFILE}_StateVar.txt" #2/dev/null
+		
+fi
+
 rm -f MODES.TXT PAIRSTOREMOVE.TXT
 
 echo "Check in Number_Geoc_Files_inPairs.txt if all pairs have the same number of geocoded files. Discrepencies would reflect processing problem : "

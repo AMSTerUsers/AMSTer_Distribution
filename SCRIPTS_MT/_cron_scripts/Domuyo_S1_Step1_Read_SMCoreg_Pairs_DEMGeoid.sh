@@ -50,6 +50,7 @@ DIRSARCSL=${PATH_1650}/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid
 
 #kml file
 KMLFILE=${DIRSARCSL}/DomuyoYLagunaFea.kml		# also in $PATH_1650/kml/ARGENTINA/DomuyoYLagunaFea.kml
+KMLDOWNLOADFILE=$PATH_1650/kml/ARGENTINA/Argentina_download_Polygon.kml
 
 #Launch param files
 PARAMCOREGASC=$PATH_1650/Param_files/S1/ARG_DOMU_LAGUNA_A_18/LaunchMTparam_S1_Arg_Domu_Laguna_A_18_Zoom1_ML4_MassProc_Coreg_DEMGeoid.txt 
@@ -88,24 +89,39 @@ $PATH_SCRIPTS/SCRIPTS_MT/Read_All_Img.sh ${DIRSARDATA} ${DIRSARCSL}/NoCrop S1 ${
 # Check nr of bursts and coordinates of corners. If not as expected, move img in temp quatantine and log that. Check regularily: if not updated after few days, it means that image is bad or zip file not correctly downloaded
 ################################################
 # Asc ; bursts size and coordinates are obtained by running e.g.:  _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/ARG_DOMU_LAGUNA_A_18/NoCrop/S1B_18_20211210_A.csl Dummy
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 -71.1264 -37.3038 -69.1902 -36.8461 -71.5447 -36.0797 -69.6394 -35.6292 &
+#_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 -71.1264 -37.3038 -69.1902 -36.8461 -71.5447 -36.0797 -69.6394 -35.6292 &
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 ${KMLDOWNLOADFILE}
 
 # Desc ; bursts size and coordinates are obtained by running e.g.: _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/ARG_DOMU_LAGUNA_D_83/NoCrop/S1B_83_20211109_D.csl Dummy
 # Beware D83 with S1B after Jan 2020 are shorter on the Western side, hence check first with large coordinate, then check the images in __TMP_QUARANTINE with smaller coordinates. 
 #        If OK, put them back in NoCrop dir. If not, keep them in original __TMP_QUARANTINE
 
 # consistent with S1B before Jan 2020 
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 -69.0318 -36.1361 -70.9962 -35.6524 -69.4497 -37.3619 -71.4464 -36.8704 &
+#_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 -69.0318 -36.1361 -70.9962 -35.6524 -69.4497 -37.3619 -71.4464 -36.8704 &
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 ${KMLDOWNLOADFILE}
 
 wait 
 
-# consistent with S1B after Jan 2020 
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE 14 -68.9461 -36.1361 -70.9962 -35.6524 -69.3630 -37.3619 -71.4464 -36.8704
-	mv ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_D_83/NoCrop/ 2>/dev/null
-	mv ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/ 2>/dev/null
-	mv ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/*.txt ${DIRSARCSL}_D_83/NoCrop 2>/dev/null
-	rm -R ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE 2>/dev/null
+# Temp quarantined files 
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_${TRKASC}/NoCrop/__TMP_QUARANTINE 14 ${KMLDOWNLOADFILE}
+	mv ${DIRSARCSL}_${TRKASC}/NoCrop/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_${TRKASC}/NoCrop/ 2>/dev/null
+	mv ${DIRSARCSL}_${TRKASC}/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_${TRKASC}/NoCrop/__TMP_QUARANTINE/ 2>/dev/null
+	mv ${DIRSARCSL}_${TRKASC}/NoCrop/__TMP_QUARANTINE/*.txt ${DIRSARCSL}_${TRKASC}/NoCrop 2>/dev/null
+	rm -R ${DIRSARCSL}_${TRKASC}/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE 2>/dev/null
 
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE 14 ${KMLDOWNLOADFILE}
+	mv ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_${TRKDESC}/NoCrop/ 2>/dev/null
+	mv ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE/ 2>/dev/null
+	mv ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE/*.txt ${DIRSARCSL}_${TRKDESC}/NoCrop 2>/dev/null
+	rm -R ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE 2>/dev/null
+
+## consistent with S1B after Jan 2020 
+#_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANTINE 14 -68.9461 -36.1361 -70.9962 -35.6524 -69.3630 -37.3619 -71.4464 -36.8704
+#	mv ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_D_83/NoCrop/ 2>/dev/null
+#	mv ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/ 2>/dev/null
+#	mv ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/*.txt ${DIRSARCSL}_D_83/NoCrop 2>/dev/null
+#	rm -R ${DIRSARCSL}_D_83/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE 2>/dev/null
+#
 
 # Coregister all images on the Global Primary (Super Master) 
 ############################################################
