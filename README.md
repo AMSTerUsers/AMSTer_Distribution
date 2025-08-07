@@ -22,8 +22,8 @@ AMSTer can also create time series of coherence or amplitude maps coregistered o
 Primary (both in radar geometry or in geographic coordinates), e.g. for land use or geomorphological changes tracking. 
 
 AMSTer is able to process any type of SAR data (ERS1 & 2, EnviSAT, ALOS, ALOS2, RadarSAT,
-CosmoSkyMed, TerraSAR-X, TanDEM-X (incl. bistatic mode), Sentinel1 A & B (incl. SM mode), 
-Kompsat5, PAZ, SAOCOM, ICEYE...).  
+CosmoSkyMed, TerraSAR-X, TanDEM-X (incl. bistatic mode), Sentinel1 A, B, C & D (incl. SM mode), 
+Kompsat5, PAZ, SAOCOM, ICEYE, NISAR...).  
 AMSTer Engine is optimised to fit the needs of the AMSTer Toolbox, which benefitted from some
 of its unique specificities.   
 
