@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The script aims at displaying the (double difference) time series of a msbas inversion performed in 2 parts. 
 #
@@ -48,6 +48,8 @@
 #  
 
 # New in Distro V 1.0  20240808: - set up 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024 - could make better with more functions... when time.

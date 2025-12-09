@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # """
 #Script: Check_images.py
 #------------------------
@@ -65,6 +65,9 @@
 #python Check_images.py /path/to/CSL /path/to/MSBAS 20220101 20221231 /path/to/eventsfile /path/to/results modelist.txt rejected_modes.txt
 #
 ## New in Distro V 1.1 20250212:   - Make events and reject optionnal
+## New in Distro V 1.2 20250808:   - bug fix plot two dataframes CSL_filtered
+## New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 ##
 ##
 ## AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -161,7 +164,7 @@ print("Compare CSL and MSBAS databases :")
 df_Diff = CI.compare_dataframes(df_CSL_filtered, df_MSBAS_filtered)
 df_mode_count = CI.count_dates_per_mode(df_Diff, rejected_modes)
 
-CI.plot_two_dataframes(df_CSL_filtered, df_MSBAS_filtermodes, dfco, output_dir,modelist)
+CI.plot_two_dataframes(df_CSL, df_MSBAS_filtermodes, dfco, output_dir,modelist)
 
 # Sauvegarder les DataFrames sous forme de fichiers CSV
 output_pathname = os.path.join(output_dir, "combined_subdirectories_with_modes_and_dates.csv")

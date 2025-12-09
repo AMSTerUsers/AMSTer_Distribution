@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script replaces 255 in 0 (to keep) and 0 in 1 (to mask) from a file in bytes.
 # It renames the outputfile with an extra string _255and0_to_0and1.
@@ -11,6 +11,8 @@
 # launch command : python thisscript.py param1 
 #
 # New in Distro V 1.0 20214418:	- setup
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.

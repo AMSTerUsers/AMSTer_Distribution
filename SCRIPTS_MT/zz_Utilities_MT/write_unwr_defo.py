@@ -1,8 +1,10 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script write unwrapped phases and deformation maps
 #
 # New in V1.1 :	- add line or col of zero's instead of NaN to get file of even size
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016

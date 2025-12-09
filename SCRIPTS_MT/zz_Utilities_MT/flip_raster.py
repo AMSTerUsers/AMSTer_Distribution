@@ -1,6 +1,9 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ###############################################################################
 # $Id: flip_raster.py
+#
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # Purpose:  Module to flip a raster dataset on the y axis.
 #           Useful for netcdf and surfer grd files with upper y values

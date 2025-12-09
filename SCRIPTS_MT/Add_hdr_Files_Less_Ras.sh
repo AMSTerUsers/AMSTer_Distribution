@@ -43,6 +43,7 @@
 # New in Distro V 3.8 20250317:	- improve yesterday's modification
 # New in Distro V 3.9 20250402:	- make grep case insensitive while searching for Samples
 # New in Distro V 3.10 20250424:	- mv log in zz_EW${PARAMNAME}
+# New in Distro V 3.11 20250903:	- Use Envi2kmz.sh with option -l to add a legend in kmz
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -244,7 +245,7 @@ case ${lname} in
 					${PATHTOCPXFIDDLE}/cpxfiddle -w ${WIDTH} -q normal -o sunraster -c jet -M 1/1 -f r4 MSBAS_LINEAR_RATE_STD_EW.bin > MSBAS_LINEAR_RATE_STD_EW.bin.ras				
 			fi
 			# make kmz of linear rate
-			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_EW.bin
+			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_EW.bin -l
 			cd ..
 		fi
 
@@ -265,7 +266,7 @@ case ${lname} in
 					${PATHTOCPXFIDDLE}/cpxfiddle -w ${WIDTH} -q normal -o sunraster -c jet -M 1/1 -f r4 MSBAS_LINEAR_RATE_STD_NS.bin > MSBAS_LINEAR_RATE_STD_NS.bin.ras				
 			fi
 			# make kmz of linear rate
-			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_NS.bin
+			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_NS.bin -l
 			cd ..
 		fi
 
@@ -283,7 +284,7 @@ case ${lname} in
 					${PATHTOCPXFIDDLE}/cpxfiddle -w ${WIDTH} -q normal -o sunraster -c jet -M 1/1 -f r4 MSBAS_LINEAR_RATE_STD_UD.bin > MSBAS_LINEAR_RATE_STD_UD.bin.ras				
 			fi			
 			# make kmz of linear rate
-			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_UD.bin
+			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_UD.bin -l
 			cd ..
 			#if [ `ls -1 zz_${ALLCOMP}_TS${PARAMNAME}/MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
 			#	cd zz_${ALLCOMP}_TS${PARAMNAME} 
@@ -339,7 +340,7 @@ case ${lname} in
 			fi			
 	
 			# make kmz of linear rate
-			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_LOS.bin
+			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_LOS.bin -l
 			cd ..
 			if [ `ls -1 zz_LOS_TS${PARAMNAME}/*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
 				cd zz_LOS_TS${PARAMNAME} 

@@ -1,10 +1,13 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # -----------------------------------------------------------------------------------------
 # This script aims at displaying comparison of MSBAS results from 2 processings
 #
 # Dependencies: python3
 #
 # New in 1.0 (20250205 - DS): - Compare EW and UD maps from 2 MSBAS Processing even if not exact same resolution and extent
+# New in 1.1 (20250808 - DS): - Robust case sensitive map info
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # This script is part of the AMSTer Toolbox
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -34,10 +37,13 @@ def read_hdr(hdr_file):
                 if value.startswith('{') and value.endswith('}'):
                     value = value[1:-1].strip()  # Strip curly braces
                 metadata[key] = value
+    metadata = {k.lower(): v for k, v in metadata.items()}
+    print(metadata)
+
 
     # Extract resolution and georeferencing (map_info)
-    if 'Map info' in metadata:
-        map_info = metadata['Map info']
+    if 'map info' in metadata:
+        map_info = metadata['map info']
         map_info_values = map_info.strip('{}').split(',')
         
         # Map info fields:
@@ -72,7 +78,7 @@ def load_image_data(img_file):
     """Load image and metadata."""
     hdr_file = img_file + '.hdr'
     metadata = read_hdr(hdr_file)
-    dimensions = (int(metadata['Lines']), int(metadata['Samples']), int(metadata['Bands']))
+    dimensions = (int(metadata['lines']), int(metadata['samples']), int(metadata['bands']))
     return read_binary_image(img_file, dimensions, np.float32), metadata
 
 def resize_image(image, target_shape):
@@ -352,5 +358,5 @@ else:
         plot1image(image_5, image_6, annot5, annot6)
         plt.savefig(os.path.join(ResultDIR, "mapNS.png"))
 
-plt.show()
+#plt.show()
 

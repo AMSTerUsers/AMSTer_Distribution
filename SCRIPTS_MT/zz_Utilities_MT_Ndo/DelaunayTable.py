@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # 
 # This scripts computes an unweighted Delaunay triangulation based on the file  allPairsListing_Without_Quanrantained_Data.txt in the pwd. 
 #
@@ -26,6 +26,8 @@
 # New in Distro V 2.1 20231219:	- Remove info about max Bp or Bt because not taken into account
 # New in Distro V 2.2 20231223:	- use allPairsListing_Without_Quanrantained_Data.txt
 # New in Distro V 2.3 20240107:	- specific request from Delphine: two tabs between col 8 & 9
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.

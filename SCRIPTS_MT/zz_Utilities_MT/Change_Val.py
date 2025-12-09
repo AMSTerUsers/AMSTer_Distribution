@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script replaces given value with another in byte or float32 file.
 # Original file is saved as file_{FindVal}_ReplacedBy_{ReplaceVal}
@@ -15,6 +15,8 @@
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 2.1 20214418:	- change byte type 0->255 instead of signed byte -128->127
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.

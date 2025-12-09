@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # This script adds to all deformation maps in the current dir a given defo map of the same size. 
 # That defo map is the difference between two defo maps provided as parameters. 
@@ -48,6 +48,8 @@
 #
 # New in Distro V 1.0  20240729: - set up 
 # New in Distro V 1.1  20240812: - adapt pattern to LOS modes as well
+# New in Distro V 2.0  20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024 - could make better with more functions... when time.

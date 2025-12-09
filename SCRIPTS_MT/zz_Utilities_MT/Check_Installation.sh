@@ -42,14 +42,25 @@
 #								- correct test module scikit-gstat
 # New in Distro V 4.6 20250303:	- add module diagtoolbox
 #								- add python3 rasterio
-# New in Distro V 4.7 20250325:		- add python3 modules for diagtoolbox: pandas, argparse, glob2, pickle, statistics
+# New in Distro V 4.7 20250325:	- add python3 modules for diagtoolbox: pandas, argparse, glob2, pickle, statistics
+# New in Distro V 4.8 20250820:	- Python3 insatlled in virtual environment
+#								- test if MSBAS 3D is installed
+#								- test installed QGIS plugins 
+# New in Distro V 4.9 20250821:	- Test if both imagemagick and graphicsmagik are installed 
+#								- test QGIS and plugins for Linux
+# New in Distro V 4.10 20250822:- test Mac hdf5-gdal lib 
+# New in Distro V 4.11 20250825:- Add check gsfonts fonts for Linux for usage with GraphicMagick 
+# New in Distro V 4.12 20250827:- Check cv4 or opencv depending on OSX version
+# New in Distro V 4.13 20250902:- do not test python gdal as it is not there anymore 
+#								- test if GDAL has JP2 support
+# New in Distro V 4.14 20250910:- test if normalized_mount_point is a directroy 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 4.7 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Mar 25, 2025"
+VER="version 4.14 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Sept 10, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -65,7 +76,12 @@ eval HOMEDIR=$(pwd)
 # Check OS
 OS=`uname -a | cut -d " " -f 1 `
 echo "Running on ${OS}"
+OSX_VER=$(sw_vers -productVersion)
+OSX_MAJOR=$(echo $OSX_VER | cut -d. -f1)
+OSX_MINOR=$(echo $OSX_VER | cut -d. -f2)
 echo
+
+
 
 function EchoInverted()
 	{
@@ -275,6 +291,41 @@ function TestPythonModule()
 		fi
 	}
 
+
+function TestPythonModulePip()
+{
+    local MODULE=$1
+    local VER=$(/opt/local/amster_python_env/bin/pip show "${MODULE}" 2>/dev/null | awk '/^Version:/ {print $2}')
+
+    if [[ -n "$VER" ]]; then
+        local LABEL="${MODULE}: passed"
+        printf "%-25s %-10s %s\n" \
+            "${MODULE}:" \
+            "$(tput setaf 2)passed$(tput sgr0)" \
+            "	Version $(tput setaf 2)${VER}$(tput sgr0)"
+            
+        if [ "${MODULE}" == "opencv-contrib-python" ] ; then OPENCVCONTRIBTST="ok" ; fi
+    else
+        if [ "${MODULE}" == "opencv-python" ] && [ "${OPENCVCONTRIBTST}" == "ok" ]
+        	then 
+         		printf "%-25s %-10s\n" \
+       			    "${MODULE}:" \
+       			    "$(tput setaf 3)missing althought ok because you have opencv-contrib-python, which includes opencv-python $(tput sgr0)"
+        	else 
+       			if [ "${MODULE}" == "opencv-contrib-python" ] 
+       				then 
+          				printf "%-25s %-10s\n" \
+       					    "${MODULE}:" \
+       					    "$(tput setaf 3)missing althought might be ok if you have opencv-python, which includes most (but not all) of the functionalities of opencv-contrib-python $(tput sgr0)"
+       				else			
+       					printf "%-25s %-10s\n" \
+       			    		"${MODULE}:" \
+       			    		"$(tput setaf 1)$(tput setab 7)missing$(tput sgr0)"
+       			 fi
+       	fi
+    fi
+}
+
 function TestPythonModuleQt()
 	{
 		unset MODULE
@@ -396,6 +447,25 @@ function CheckLib1()
 		fi
 	}
 
+function CheckPkg()
+	{
+		unset LIBTOTEST
+		unset VER
+
+		local LIBTOTEST=$1	
+				
+		if [ `dpkg  -l | ${PATHGNU}/grep ${LIBTOTEST} | wc -l` -gt 0 ] 
+			then 
+						VER=$(dpkg  -l | ${PATHGNU}/grep ${LIBTOTEST} | ${PATHGNU}/gawk '{ print $3 }'  | head -1 )			# if more than one version, take only the first one... 
+				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+			else
+				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
+		fi
+	}
+
+
+
+
 function CheckLibMAC()
 	{
 		unset LIBTOTEST
@@ -408,10 +478,10 @@ function CheckLibMAC()
 				VER=$(port info "${LIBTOTEST}" 2>/dev/null | ${PATHGNU}/grep " @" | ${PATHGNU}/gawk '{ print $2 }' )
 				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
 			else
-				if [" ${LIBTOTEST}" == "clang-14" ]
+				if [ " ${LIBTOTEST}" == "clang-20" ]
 					then 
 						CLANGVER=`clang --version 2>/dev/null`
-						echo "$(tput setaf 1)$(tput setab 7)--> clang-14 : failed$(tput sgr 0)"	
+						echo "$(tput setaf 1)$(tput setab 7)--> clang-20 : failed$(tput sgr 0)"	
 						if [ `clang --version 2>/dev/null  | wc -w ` -gt 0 ] 
 							then 
 								echo " Although the following version exists:"
@@ -423,6 +493,96 @@ function CheckLibMAC()
 		fi
 	}
 
+function ListPluginsInTable()
+	{
+		unset PLUGIN_DIR
+		local PLUGIN_DIR=$1	
+
+		{
+		    echo "PLUGIN VERSION"
+		    for PLUGIN_NAME in "$PLUGIN_DIR"/* ; do
+		        METADATA_FILE="$PLUGIN_NAME/metadata.txt"
+		        if [ -f "$METADATA_FILE" ]; then
+		            VERSION=$(grep -i "^version=" "$METADATA_FILE" | cut -d'=' -f2)
+		            if [ "${VERSION}" == "" ] ; then VERSION=$(grep -i "^version =" "$METADATA_FILE" | cut -d'=' -f2) ; fi 
+		            PLUGIN=$(basename "$PLUGIN_NAME")
+		            echo "		$PLUGIN $(tput setaf 2)$VERSION$(tput sgr 0)"
+		        else
+		            echo "$(basename "		$PLUGIN_NAME")(tput setaf 1) N/A$(tput sgr 0)"
+		        fi
+		    done
+		} | column -t | sed 's/^/\t  /'  # print as a table, 1 tab and 2 spaces from left side 
+	}
+
+function TestQGISplugins()
+	{
+		unset PLUGIN_NAME
+		local PLUGIN_NAME=$1	
+
+		case ${OS} in 
+		    "Linux") 
+			    	QGIS_PLUGIN_DIR="$HOME/.local/share/QGIS/QGIS3/profiles/default/python/plugins"	# User-installed plugins (via QGIS GUI → Plugins → Manage and Install Plugins)
+	    			#QGIS_PLUGIN_DIR_2="/usr/lib/qgis/plugins/ "	# System-wide compiled C++ plugins (from apt, eg apt install qgis-plugin-grass)
+	    			QGIS_PLUGIN_DIR_3="/usr/share/qgis/python/plugins/"	# System-wide Python plugins that ship with QGIS (from apt, eg apt install qgis-plugin-grass)
+
+					if find "${QGIS_PLUGIN_DIR}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | grep -q .; then
+						echo "	Here is what is already installed in what I believe is your User-installed QGIS plugins dir (via QGIS GUI → Plugins → Manage and Install Plugins):"
+						echo "		${QGIS_PLUGIN_DIR}"
+						echo "$(tput setaf 3)	(Change in script if that path is not correct.)$(tput sgr 0)"
+						
+						ListPluginsInTable "$QGIS_PLUGIN_DIR"
+						echo ""
+					fi
+					
+					# This dir contains only files, not plugins subdirs... Do not test
+					#if find "${QGIS_PLUGIN_DIR_2}" -mindepth 1 -maxdepth 1 -type d  2>/dev/null | grep -q .; then
+					#	echo "	Here is what is already installed in what I believe is your QGIS System-wide compiled C++ plugins dir (insatlled with apt):"
+					#	echo "		${QGIS_PLUGIN_DIR_2}"
+					#	echo "$(tput setaf 3)	(Change in script if that path is not correct.)$(tput sgr 0)"
+					#	
+					#	ListPluginsInTable "${QGIS_PLUGIN_DIR_2}"
+					#	echo ""	
+					#fi			
+					
+					if find "${QGIS_PLUGIN_DIR_3}" -mindepth 1 -maxdepth 1 -type d  2>/dev/null | grep -q .; then
+						echo "	Here is what is already installed in what I believe is your QGIS  i.e. System-wide Python plugins that ship with QGIS (installed with apt) dir:"
+						echo "		${QGIS_PLUGIN_DIR_3},"
+						echo "$(tput setaf 3)	(Change in script if that path is not correct.)$(tput sgr 0)"
+						
+						ListPluginsInTable "${QGIS_PLUGIN_DIR_3}"
+					fi
+					echo ""
+		        ;;
+		    "Darwin") 
+		    		QGIS_PLUGIN_DIR="$HOME/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins"
+
+					if find "${QGIS_PLUGIN_DIR}" -mindepth 1 -maxdepth 1 -type d  2>/dev/null | grep -q .; then
+						echo "	Here is what is already installed in what I believe is your User-installed QGIS plugins dir (via QGIS GUI → Plugins → Manage and Install Plugins):"
+						echo "		${QGIS_PLUGIN_DIR}"
+						echo "$(tput setaf 3)	(Change in script if that path is not correct.)$(tput sgr 0)"
+						
+						ListPluginsInTable "${QGIS_PLUGIN_DIR}"
+						echo ""
+					fi
+	
+					#{
+					#    echo "PLUGIN VERSION"
+					#    for PLUGIN_NAME in "$QGIS_PLUGIN_DIR"/* ; do
+					#        METADATA_FILE="$PLUGIN_NAME/metadata.txt"
+					#        if [ -f "$METADATA_FILE" ]; then
+					#            VERSION=$(grep -i "^version=" "$METADATA_FILE" | cut -d'=' -f2)
+					#            if [ "${VERSION}" == "" ] ; then VERSION=$(grep -i "^version =" "$METADATA_FILE" | cut -d'=' -f2) ; fi 
+					#            PLUGIN=$(basename "$PLUGIN_NAME")
+					#            echo "		$PLUGIN $(tput setaf 2)$VERSION$(tput sgr 0)"
+					#        else
+					#            echo "$(basename "		$PLUGIN_NAME")(tput setaf 1) N/A$(tput sgr 0)"
+					#        fi
+					#    done
+					#} | column -t | sed 's/^/\t  /'  # print as a table, 1 tab and 2 spaces from left side 
+		        ;;
+		esac
+		
+	}
 
 
 clear 
@@ -457,9 +617,9 @@ TestVarBashrc "EARTH_GRAVITATIONAL_MODELS_DIR"
 TestVarBashrc "EXTERNAL_DEMS_DIR"
 TestVarBashrc "EXTERNAL_MASKS_DIR"
 
+echo ""
 echo "2) AMSTer Software main components" 
 echo "---------------------------------"
-echo ""
 
 # test presence of AMSTer Software main components in $PATH
 ##########################################################
@@ -644,7 +804,8 @@ echo "Directories in \$PATH in bashrc:"
 
 # MSBAS
 	which msbas > List_msbas.txt
-	for i in `seq 1 20` ; do which msbasv$i; done >> List_msbas.txt
+	for i in `seq 1 20` ; do which msbasv${i}; done >> List_msbas.txt
+	for i in `seq 1 20` ; do which msbasv${i}_3D; done >> List_msbas.txt
 	NROFMSBAS=$(cat List_msbas.txt | wc -l)
 	if [ ${NROFMSBAS} -gt 1 ] ; then echo "$(tput setaf 3)You have ${NROFMSBAS} msbas versions:$(tput sgr 0)"	; fi	#yellow text
 
@@ -731,76 +892,96 @@ echo ""
 echo ""
 
 # Test python in expected path
-EXPECTEDPYTHON=`/opt/local/bin/python --version 2>/dev/null`
+EXPECTEDPYTHON=`/opt/local/amster_python_env/bin/python --version 2>/dev/null`
 if [ "${EXPECTEDPYTHON}" == "" ]
 	then 
-		echo "--> python:	$(tput setaf 1)$(tput setab 7)failed$(tput sgr 0)		No python found in /opt/local/bin"  
+		echo "--> python:	$(tput setaf 1)$(tput setab 7)failed$(tput sgr 0)		No python found in the expected virtual env: /opt/local/amster_python_env/bin"  
 	else 
 		EXPECTEDPYTHONVER=`echo "${EXPECTEDPYTHON}" | awk '{print $2}' | cut -d. -f 1 `
 		if [ "${EXPECTEDPYTHONVER}" == "3" ]
 			then  
-				echo "--> python:	$(tput setaf 2)passed$(tput sgr 0)		Need V${EXPECTEDPYTHONVER} for AMSTer. ${EXPECTEDPYTHON} found in /opt/local/bin"
+				echo "--> python:	$(tput setaf 2)passed$(tput sgr 0)		Need V${EXPECTEDPYTHONVER} for AMSTer. ${EXPECTEDPYTHON} found in expected virtual env: /opt/local/amster_python_env/bin"
 				TSTMODULES="YES"
-				# check a possible default dir for python if called without path
-				DEFAULTPYTH=$(which -a python | tr -s / | sort | uniq)
-				if [ "${DEFAULTPYTH}" != "/opt/local/bin/python" ] && [ "${DEFAULTPYTH}" != "/opt/local/bin/python3" ]
-					then 
-						LISTDEFAULTPY=`echo "${DEFAULTPYTH}" | grep -v "/opt/local/bin/python"`
-						echo "       $(tput setaf 3)Warning: a python exist in a default directory that is not the expected /opt/local/bin, i.e.:  $(tput sgr 0)"  
-						echo "${DEFAULTPYTH}" | sed "s/^/\t\t/"
-				fi
-			else 
-				echo "--> python:	$(tput setaf 1)$(tput setab 7)failed$(tput sgr 0)		${EXPECTEDPYTHON} found in /opt/local/bin, though V3 is mandatroy"  
-		fi
-fi
-# Test python3 in expected path
-EXPECTEDPYTHON3=`/opt/local/bin/python3 --version 2>/dev/null`
-if [ "${EXPECTEDPYTHON3}" == "" ]
-	then 
-		echo "--> python3:	$(tput setaf 1)$(tput setab 7)failed$(tput sgr 0)		No python3 found in /opt/local/bin"  
-	else 
-		echo "--> python3:	$(tput setaf 2)passed$(tput sgr 0)		${EXPECTEDPYTHON3} required for AMSTer found in /opt/local/bin"
-		TSTMODULES="YES"
-		# check a possible default dir for python if called without path
-		DEFAULTPYTH3=$(which -a python3 | tr -s / | sort | uniq)
-		if [ "${DEFAULTPYTH3}" != "/opt/local/bin/python3" ] && [ "${DEFAULTPYTH3}" != "/opt/local/bin/python" ]
-			then 
-				LISTDEFAULTPY3=`echo "${DEFAULTPYTH3}" | grep -v "/opt/local/bin/python3"`
-				echo "       $(tput setaf 3)Warning: a python3 exist in a default directory that is not the expected /opt/local/bin, i.e.:  $(tput sgr 0)"
-				echo "${LISTDEFAULTPY3}" | sed "s/^/\t\t/"
-		fi
 
+				# Because it is in a virtual env, it must point toward an executable. Find here where is the final executable python command
+					TARGET="/opt/local/amster_python_env/bin/python"
+					while [ -L "${TARGET}" ]; do
+					    dir=$(dirname "${TARGET}")
+					    link=$(readlink "${TARGET}")
+					    # If the link is relative, prepend the directory
+					    case "$link" in
+					        /*) TARGET="$link" ;;
+					        *)  TARGET="$dir/$link" ;;
+					    esac
+					done
+					TARGET=$(cd "$(dirname "${TARGET}")" && pwd)/$(basename "${TARGET}")
+					echo "				Virtual environment python points toward executable in: ${TARGET}"
+
+				# check a possible default dir for python if called without path
+					DEFAULTPYTH=$(which -a python | tr -s / | sort | uniq)
+					if [ "${DEFAULTPYTH}" != "/opt/local/amster_python_env/bin/python" ]
+						then 
+							if [ "${DEFAULTPYTH}" != "" ] ; then
+								LISTDEFAULTPY=`echo "${DEFAULTPYTH}" | grep -v "/opt/local/amster_python_env/bin/python"`
+								echo "       			$(tput setaf 3)Warning: another python exist in a default directory that is not the expected virtual environment /opt/local/amster_python_env/bin/, i.e.:  $(tput sgr 0)"  
+								echo "		${DEFAULTPYTH}" | sed "s/^/\t\t/"
+							fi
+					fi
+			else 
+				echo "--> python:	$(tput setaf 1)$(tput setab 7)failed$(tput sgr 0)		${EXPECTEDPYTHON} found in /opt/local/amster_python_env/bin/, though V3 is mandatroy"  
+		fi
 fi
-echo ""
 
 # Check python modules
 if [ "${TSTMODULES}" == "YES" ] 
 	then 
-		echo "--> Check modules for  /opt/local/bin/python 	$(tput setaf 2)$(tput sgr 0)"
-		TestPythonModule numpy /opt/local/bin/python
-		TestPythonModule scipy /opt/local/bin/python
-		TestPythonModule matplotlib /opt/local/bin/python
-		TestPythonModule utm /opt/local/bin/python
-		TestPythonModule osgeo /opt/local/bin/python 		# for gdal
-		TestPythonModule pip /opt/local/bin/python
-		TestPythonModule networkx /opt/local/bin/python
-		TestPythonModuleQt PyQt6.QtWidgets QApplication /opt/local/bin/python
-		TestPythonModule shapely /opt/local/bin/python
-		TestPythonModule skgstat /opt/local/bin/python
-		TestPythonModule geopandas /opt/local/bin/python
-		TestPythonModule rasterio /opt/local/bin/python
-		TestPythonModule pandas /opt/local/bin/python
-		TestPythonModule argparse /opt/local/bin/python
-		TestPythonModule glob2 /opt/local/bin/python
+		echo "--> Check modules for python in virtual environment /opt/local/amster_python_env 	$(tput setaf 2)$(tput sgr 0)"
+		TestPythonModulePip numpy
+		TestPythonModulePip scipy
+		TestPythonModulePip matplotlib
+		TestPythonModulePip utm
+		#TestPythonModulePip osgeo	# osgeo Python module comes with GDAL’s Python bindings.
+		TestPythonModulePip pip
+		TestPythonModulePip networkx
+		TestPythonModulePip PyQt6
+		TestPythonModulePip shapely
+		TestPythonModulePip scikit-gstat 	# ok for mac
+		TestPythonModulePip geopandas
+		TestPythonModulePip rasterio
+		TestPythonModulePip pandas
+		#TestPythonModulePip argparse # argparseis part of Python’s standard library since Python 2.7 and Python 3.2
+		TestPythonModulePip glob2
+
+		#if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -lt 15 ]]; then
+		#    echo "⚠️ macOS $OSX_MAJOR.$OSX_MINOR detected (< Catalina)."
+		#
+		#elif [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -eq 15 ]]; then
+		#    echo "macOS 10.15 (Catalina) detected "
+		#	TestPythonModulePip opencv4
+		#
+		#elif [[ "$OSX_MAJOR" -eq 11 || "$OSX_MAJOR" -eq 12 ]]; then
+		#    echo "macOS $OSX_MAJOR.$OSX_MINOR (Big Sur / Monterey) detected "
+		#	TestPythonModulePip opencv-contrib-python
+		#	TestPythonModulePip opencv-python
+		#else
+		#    echo "macOS $OSX_MAJOR.$OSX_MINOR (Ventura or newer) detected "
+		#	TestPythonModulePip opencv-contrib-python
+		#	TestPythonModulePip opencv-python
+		#fi
+
+
+		TestPythonModulePip opencv-contrib-python
+		TestPythonModulePip opencv-python
 	
 		case ${OS} in 
-			"Linux") 
-				TestPythonModule opencv /opt/local/bin/python
-				;;
-				
 			"Darwin")
-				TestPythonModule cv2 /opt/local/bin/python
-				TestPythonModule appscript /opt/local/bin/python
+				#TestPythonModule cv2 /opt/local/bin/python
+				TestPythonModulePip appscript
+				echo
+				;;
+			"Linux") 
+				#TestPythonModule opencv /opt/local/bin/python
+				echo
 				;;
 		esac
 
@@ -815,7 +996,46 @@ echo "----------------------------------"  # For Mac or Linux
 case ${OS} in 
 	"Linux") 
 		echo "Testing libraries for MSBAS, AMSTerEngine etc..." 
-		CheckLib1 "clang"	
+		CheckLib2 "gdal-bin"				# version nr can't be obtained as others 
+		CheckLib2 "libgdal-dev"
+		CheckLib2 "libhdf5-dev"
+		CheckLib2 "libnetcdf-dev"
+		CheckLib2 "libopenjp2-7-dev"	
+		CheckLib2 "proj-bin"	
+		CheckLib2 "libproj-dev"		
+		CheckLib2 "libgeos-dev"					
+		CheckLib2 "build-essential"					
+		CheckLib1 "python3.12"					
+		CheckLib2 "python3.12-venv"					
+		CheckLib2 "python3.12-dev"					
+	
+		CheckLib1 "gmt"	
+		CheckLib1 "mpich"	
+		CheckLib2 "mpich-dev"	
+		CheckLib2 "libomp-dev"	
+		
+		# graphicsmagick is used e.g. for convert; more performant than imagemagick but less compatible
+		# Also, unlike graphicsmagick, it needs to edit the policy.xml file, hence prefer graphicsmagick 
+		# However, do not mix with graphicsmagick !
+		CheckPkg "graphicsmagick"		# no capital letters ; e.g. used for convert 
+		CheckPkg "graphicsmagick-imagemagick-compat"
+
+		# imagemagick is used e.g. for convert; more compatible than graphicsmagick but less performant; do not mix with graphicsmagick 
+		CheckPkg "imagemagick"		# no capital letters ; e.g. used for convert 
+		CheckLib3 "imagemagick-6-common"
+		
+		# check that both are not installed 
+		if [ `dpkg  -l | ${PATHGNU}/grep graphicsmagick | wc -l` -gt 0 ] && [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] ; then 
+			printf "%-55s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "Beware: Both GraphicsMagick and ImageMagick are installed. Possible conflict for usage of functions like convert.$(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "The first is more performant than the other and do not need setup of policy.xml to manage max height/width or allow permissions to read/write PS, EPS or PDF files. $(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "However, graphicsmagick may be less compatible. For instance, permissions to read/write PS, EPS or PDF files might need to be managed by ghostscript.$(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "In case of problem, unsintall one or the other, or manage the priority with update-alternatives.$(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "Example: 'sudo update-alternatives --config convert' will let you pick whether /usr/bin/convert points to ImageMagick or GraphicsMagick.$(tput sgr 0)"
+		fi
+
+		CheckPkg "ffmpeg"	
+
+		CheckLib1 "clang-18"	
 		CheckLib2 "libfftw3-dev"
 		CheckLib2 "libfftw3-long3"
 		CheckLib2 "libfftw3-single3"
@@ -824,26 +1044,11 @@ case ${OS} in
 		CheckLib1 "libxml2"
 		CheckLib2 "libxml2-dev"
 		CheckLib2 "liblapack-dev"
-		CheckLib2 "libomp-dev"		
+	
+		CheckPkg "gsfonts"
+	
 		CheckLib2 "libopenblas-dev"	
-		CheckLib1 "mpich"	
-#		CheckLib3 "imagemagick-6-common"
-#		CheckLib1 "graphicsmagick"						
- 		if [ `convert  | wc -l` -gt 0 ] 
- 			then 
- 				VER=$(${PATHGNU}/convert -version 2>/dev/null | ${PATHGNU}/grep "Version" | ${PATHGNU}/gawk '{ print $3 " " $4 }')
- 				#echo "--> ImageMagick :$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VERLPK}$(tput sgr 0)"
- 				printf "%-60s%-20s\n" "--> ImageMagick :" "$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VER}$(tput sgr 0)"
- 			else
- 				#echo "$(tput setaf 1)$(tput setab 7)--> ImageMagick  : failed$(tput sgr 0)"	
- 				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ImageMagick:" "failed$(tput sgr 0)"
- 		fi
 
-		CheckLib1 "gdal"				# version nr can't be obtained as others 
-		CheckLib2 "libgdal-dev"
-#		CheckLib1 "libgdal26"
-		CheckLib2 "libhdf5-dev"
-		CheckLib2 "libnetcdf-dev"		
 		CheckLib2 "libgsl-dev"
 		
 		CheckLib1 "gfortran"
@@ -852,7 +1057,7 @@ case ${OS} in
 			then 
 				VER=$(g++ --version | ${PATHGNU}/grep g++  | ${PATHGNU}/gawk '{ print $3 }' )
 				#echo "--> g++:$(tput setaf 2)	  passed$(tput sgr 0)		Version	$(tput setaf 2)${VERLPK}$(tput sgr 0)"
-				printf "%-60s%-20s\n" "--> g++:" "$(tput setaf 2)passed$(tput sgr 0)		Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+				printf "%-60s%-20s\n" "--> g++:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
 			else
 				#echo "$(tput setaf 1)$(tput setab 7)--> g++ : failed$(tput sgr 0)"	
 				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> g++:" "failed$(tput sgr 0)"
@@ -860,6 +1065,7 @@ case ${OS} in
 	
 		echo ""		
 		echo "Testing specific Linux features:"
+		CheckPkg "gzip"
 		TestVariableShort "x-terminal-emulator"
 		TestVariableShort "espeak"
 		TestVarBashrc "OPENBLAS_NUM_THREADS="
@@ -867,7 +1073,16 @@ case ${OS} in
 		;;
 	"Darwin")
 		echo "Testing libraries for MSBAS, AMSTerEngine etc..." 
+		CheckLibMAC "gdal"
+		CheckLibMAC "netcdf"		
+		CheckLibMAC "openjpeg"
+		CheckLibMAC "proj"
+		CheckLibMAC "geos"
+		CheckLibMAC "gmt6"
+		CheckLibMAC "GraphicsMagick"
+		CheckLibMAC "ffmpeg"
 		CheckLibMAC "hdf5"
+		CheckLibMAC "gdal-hdf5"
 		CheckLibMAC "libgeotiff"
 		CheckLibMAC "lapack"
 #		CheckLibMAC "atlas"
@@ -878,30 +1093,12 @@ case ${OS} in
 		CheckLibMAC "fftw-3-single"
 		CheckLibMAC "libomp"
 		CheckLibMAC "libkml"
-		CheckLibMAC "clang-14"
+		CheckLibMAC "clang-20"
 		CheckLibMAC "mpich"
 		CheckLibMAC "gsl"
-				
-		if [ `convert  | wc -l` -gt 0 ] 
-			then 
-				VER=$(${PATHGNU}/convert -version 2>/dev/null | ${PATHGNU}/grep "Version" | ${PATHGNU}/gawk '{ print $3 " " $4 }')
-				#echo "--> ImageMagick :$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VERLPK}$(tput sgr 0)"
-				printf "%-60s%-20s\n" "--> ImageMagick:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
-			else
-				#echo "$(tput setaf 1)$(tput setab 7)--> ImageMagick  : failed$(tput sgr 0)"	
-				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ImageMagick:" "failed$(tput sgr 0)"
-		fi		
-		if [ `gdalinfo --version 2>/dev/null | wc -l` -gt 0 ] 
-			then 
-				VER=$(gdalinfo --version | ${PATHGNU}/grep "GDAL" | ${PATHGNU}/gawk '{ print $2 }' )
-				#echo "--> gdal :$(tput setaf 2)		passed$(tput sgr 0)		Version	$(tput setaf 2)${VERLPK}$(tput sgr 0)"
-				printf "%-60s%-20s\n" "--> gdal:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
-			else
-				#echo "$(tput setaf 1)$(tput setab 7)--> gdal  : failed$(tput sgr 0)"	
-				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> gdal:" "failed$(tput sgr 0)"
-		fi		
-		
-
+		CheckLibMAC "parallel"		
+		CheckLibMAC "ImageMagick"		
+	
 		echo ""
 		echo "Testing specific Mac features:"
 		TestVariableShort "osascript"
@@ -945,134 +1142,153 @@ fi
 
 
 echo ""
-echo "6) Testing some configs in mandatory files (Linux only):"
-echo "--------------------------------------------------------"  # For Mac and Linux
-if [ -f "/etc/ImageMagick/policy.xml" ] ; then 
-	if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | grep "read\|write" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains read & write rights for PS:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain read & write rights for PS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain rights for PS :	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
+echo "6) Testing some configs in mandatory files when using imagemagick (Linux only) or jp2 support:"
+echo "----------------------------------------------------------------------------------------------" 
 
-	if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | grep "read\|write" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains read & write rights for EPS:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain read & write rights for EPS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain rights for EPS :	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
-
-	if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "resource" | grep "name=" | grep "height" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "resource" | grep "name=" | grep "height" | grep "32" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains height value up to 32KP:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain height value up to 32KP:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain height value:	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
-
-	if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "resource" | grep "name=" | grep "width" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "resource" | grep "name=" | grep "width" | grep "32" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains width value up to 32KP:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain width value up to 32KP:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain width value:	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
-
-	if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "name=" | grep "disk" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "name=" | grep "disk" | grep "8GiB" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains disk value up to 8GiB:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain disk value up to 8GiB:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain disk value:	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
+# Check if GDAL has JP2 support
+if gdalinfo --formats | grep -qi jp2; then
+  echo "✅ GDAL supports reading JP2 images."
+else
+  echo "❌ GDAL does not support JP2 images. May be a problem for e.g. Sentinel 2 data "
 fi
 
-if [ -f "/etc/ImageMagick-6/policy.xml" ] ; then 
+echo ""
 
-	if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | grep "read\|write" | wc -l` -gt 0 ]
+# Set up specs for imagemagick
+if  [ "${OS}" == "Linux" ] ; then
+	if [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] 
+		then 	
+			if [ -f "/etc/ImageMagick/policy.xml" ] && [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] 
 				then 
-					echo "ImageMagick config file contains read & write rights for PS:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain read & write rights for PS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+					if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | wc -l` -gt 0 ]
+						then 
+							if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | grep "read\|write" | wc -l` -gt 0 ]
+								then 
+									echo "ImageMagick config file contains read & write rights for PS:	$(tput setaf 2)OK$(tput sgr 0)"
+								else
+									echo "ImageMagick config file does not contain read & write rights for PS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+						else 
+								echo "ImageMagick config file does not contain rights for PS :	$(tput setaf 3)Please check$(tput sgr 0)"
+					fi
+				
+					if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | wc -l` -gt 0 ]
+						then 
+							if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | grep "read\|write" | wc -l` -gt 0 ]
+								then 
+									echo "ImageMagick config file contains read & write rights for EPS:	$(tput setaf 2)OK$(tput sgr 0)"
+								else
+									echo "ImageMagick config file does not contain read & write rights for EPS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+						else 
+								echo "ImageMagick config file does not contain rights for EPS :	$(tput setaf 3)Please check$(tput sgr 0)"
+					fi
+				
+					HEIGHT=$(grep "policy domain=" /etc/ImageMagick/policy.xml | grep "resource" | grep "name=" | grep "height" | sed -n 's/.*value="\([0-9]\+\).*/\1/p') 	# captures only the digits before any unit (K, M, P, etc.) and prints them.
+					if [ -n "${HEIGHT}" ] && [ "${HEIGHT}" -ge 32 ]
+						then
+							echo "ImageMagick config file contains height value = ${HEIGHT}KP, which is at least 32KP:  $(tput setaf 2)OK$(tput sgr 0)"
+						else
+							if [ "${HEIGHT}" == "" ] ; then  
+									echo "ImageMagick config file does not contain height value:	$(tput setaf 3)Please check$(tput sgr 0)"
+								else 
+									echo "ImageMagick config file contains height value = ${HEIGHT}KP, which is less than 32KP:  $(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"							
+							fi
+					fi
+	
+					WIDTH=$(grep "policy domain=" /etc/ImageMagick/policy.xml | grep "resource" | grep "name=" | grep "width" | sed -n 's/.*value="\([0-9]\+\).*/\1/p') 	# captures only the digits before any unit (K, M, P, etc.) and prints them.
+					if [ -n "${WIDTH}" ] && [ "${WIDTH}" -ge 32 ]
+						then
+							echo "ImageMagick config file contains width value = ${WIDTH}KP which is at least 32KP:  $(tput setaf 2)OK$(tput sgr 0)"
+						else
+							if [ "${WIDTH}" == "" ] ; then  
+									echo "ImageMagick config file does not contain width value:	$(tput setaf 3)Please check$(tput sgr 0)"
+								else 
+									echo "ImageMagick config file contains width value = ${WIDTH}KP which is less than 32KP:  $(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+					fi
+				
+					DISKSIZE=$(grep "policy domain=" /etc/ImageMagick/policy.xml | grep "name=" | grep "disk" | sed -n 's/.*value="\([0-9]\+\).*/\1/p') 	# captures only the digits before any unit (K, M, P, etc.) and prints them.
+					if [ -n "${DISKSIZE}" ] && [ "${DISKSIZE}" -ge 8 ]
+						then
+							echo "ImageMagick config file contains disk value = ${DISKSIZE}GiB which is at least 8GiB:  $(tput setaf 2)OK$(tput sgr 0)"
+						else
+							if [ "${DISKSIZE}" == "" ] ; then  
+									echo "ImageMagick config file does not contain disk value:	$(tput setaf 3)Please check$(tput sgr 0)"
+								else 
+									echo "ImageMagick config file contains disk value = ${DISKSIZE}GiB which is less than 8GiB:  $(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+					fi
+			
 			fi
-		else 
-				echo "ImageMagick config file does not contain rights for PS :	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
-
-	if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | grep "read\|write" | wc -l` -gt 0 ]
+			
+			if [ -f "/etc/ImageMagick-6/policy.xml" ] && [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] 
 				then 
-					echo "ImageMagick config file contains read & write rights for EPS:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain read & write rights for EPS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+					if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | wc -l` -gt 0 ]
+						then 
+							if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | grep "read\|write" | wc -l` -gt 0 ]
+								then 
+									echo "ImageMagick config file contains read & write rights for PS:	$(tput setaf 2)OK$(tput sgr 0)"
+								else
+									echo "ImageMagick config file does not contain read & write rights for PS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+						else 
+								echo "ImageMagick config file does not contain rights for PS :	$(tput setaf 3)Please check$(tput sgr 0)"
+					fi
+				
+					if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | wc -l` -gt 0 ]
+						then 
+							if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"EPS\" | grep "read\|write" | wc -l` -gt 0 ]
+								then 
+									echo "ImageMagick config file contains read & write rights for EPS:	$(tput setaf 2)OK$(tput sgr 0)"
+								else
+									echo "ImageMagick config file does not contain read & write rights for EPS:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+						else 
+								echo "ImageMagick config file does not contain rights for EPS :	$(tput setaf 3)Please check$(tput sgr 0)"
+					fi
+				
+					HEIGHT=$(grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "resource" | grep "name=" | grep "height" | sed -n 's/.*value="\([0-9]\+\).*/\1/p') 	# captures only the digits before any unit (K, M, P, etc.) and prints them.
+					if [ -n "${HEIGHT}" ] && [ "${HEIGHT}" -ge 32 ]
+						then
+							echo "ImageMagick config file contains height value = ${HEIGHT}KP, which is at least 32KP:  $(tput setaf 2)OK$(tput sgr 0)"
+						else
+							if [ "${HEIGHT}" == "" ] ; then  
+									echo "ImageMagick config file does not contain height value:	$(tput setaf 3)Please check$(tput sgr 0)"
+								else 
+									echo "ImageMagick config file contains height value = ${HEIGHT}KP, which is less than 32KP:  $(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"							
+							fi
+					fi
+				
+					WIDTH=$(grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "resource" | grep "name=" | grep "width" | sed -n 's/.*value="\([0-9]\+\).*/\1/p') 	# captures only the digits before any unit (K, M, P, etc.) and prints them.
+					if [ -n "${WIDTH}" ] && [ "${WIDTH}" -ge 32 ]
+						then
+							echo "ImageMagick config file contains width value = ${WIDTH}KP which is at least 32KP:  $(tput setaf 2)OK$(tput sgr 0)"
+						else
+							if [ "${WIDTH}" == "" ] ; then  
+									echo "ImageMagick config file does not contain width value:	$(tput setaf 3)Please check$(tput sgr 0)"
+								else 
+									echo "ImageMagick config file contains width value = ${WIDTH}KP which is less than 32KP:  $(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+					fi
+	
+					DISKSIZE=$(grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "name=" | grep "disk" | sed -n 's/.*value="\([0-9]\+\).*/\1/p') 	# captures only the digits before any unit (K, M, P, etc.) and prints them.
+					if [ -n "${DISKSIZE}" ] && [ "${DISKSIZE}" -ge 8 ]
+						then
+							echo "ImageMagick config file contains disk value = ${DISKSIZE}GiB which is at least 8GiB:  $(tput setaf 2)OK$(tput sgr 0)"
+						else
+							if [ "${DISKSIZE}" == "" ] ; then  
+									echo "ImageMagick config file does not contain disk value:	$(tput setaf 3)Please check$(tput sgr 0)"
+								else 
+									echo "ImageMagick config file contains disk value = ${DISKSIZE}GiB which is less than 8GiB:  $(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
+							fi
+					fi
+		
 			fi
-		else 
-				echo "ImageMagick config file does not contain rights for EPS :	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
-
-	if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "resource" | grep "name=" | grep "height" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "resource" | grep "name=" | grep "height" | grep "32" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains height value up to 32KP:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain height value up to 32KP:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain height value:	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
-
-	if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "resource" | grep "name=" | grep "width" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "resource" | grep "name=" | grep "width" | grep "32" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains width value up to 32KP:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain width value up to 32KP:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain width value:	$(tput setaf 3)Please check$(tput sgr 0)"
-	fi
-
-	if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "name=" | grep "disk" | wc -l` -gt 0 ]
-		then 
-			if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "name=" | grep "disk" | grep "8GiB" | wc -l` -gt 0 ]
-				then 
-					echo "ImageMagick config file contains disk value up to 8GiB:	$(tput setaf 2)OK$(tput sgr 0)"
-				else
-					echo "ImageMagick config file does not contain disk value up to 8GiB:	$(tput setaf 1)$(tput setab 7)NOT OK$(tput sgr 0)"
-			fi
-		else 
-				echo "ImageMagick config file does not contain disk value:	$(tput setaf 3)Please check$(tput sgr 0)"
+		else
+			echo "  ImageMagick not installed. I guess you are using GraphicsMagick instead, which is fine."
 	fi
 fi
-
-
 
 echo ""
 echo "7) Testing usefull stuffs though not mandatory:"
@@ -1136,8 +1352,16 @@ if [ "${FIJIVERMAC}" == "" ] && [ "${FIJIVERLNX}" == "" ]
 		printf "%-60s%-20s\n" "--> ImageJ-Fiji:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${FIJIVERMAC}${FIJIVERLNX}$(tput sgr 0)"
 fi
 #QGIS
-QGISVER=`/Applications/QGIS.app/Contents/MacOS/QGIS --version 2>/dev/null`
-QGISVER2=`qgis --version 2>/dev/null`
+		case ${OS} in 
+		    "Linux")	QGISVER=`qgis --version 2>/dev/null`		# insatlled from apt installer 
+		    			QGISVER2=`dpkg -l | grep qgis | awk '{print $3}' 2>/dev/null`
+		        ;;
+		    "Darwin")	QGISVER=`/Applications/QGIS.app/Contents/MacOS/QGIS --version 2>/dev/null`
+						QGISVER2=`qgis --version 2>/dev/null`
+				;;
+		esac
+
+
 if [ "${QGISVER}" == "" ] && [ "${QGISVER2}" == "" ]
 	then 
 		#echo "$(tput setaf 3)--> QGIS : 		failed, though it is not mnadatory$(tput sgr 0)"
@@ -1155,6 +1379,9 @@ if [ "${QGISVER}" == "" ] && [ "${QGISVER2}" == "" ]
 		echo "  	- Serval"
 		echo "  	- Temporal/Spectal Profile Tool"
 		echo "  	- Value Tool"
+		echo ""
+		
+		TestQGISplugins 
 fi
 
  
@@ -1194,7 +1421,7 @@ if [ ! -e ${HOMEDIR}/.netrc ]
 		if grep -q "identity.dataspace.copernicus.eu" "${HOMEDIR}/.netrc"
 			then 
 				echo "$(tput setaf 2) And it seems to have a line with login and password to dataspace.copernicus.eu $(tput sgr 0)"
-				echo "	Nevertheless it the download of S1 orbits fails, double check your .netrc file contains a line as follow:"
+				echo "	Nevertheless if the download of S1 orbits fails, double check your .netrc file contains a line as follow:"
 				echo "		machine identity.dataspace.copernicus.eu login <YourLogin> password <YourPassword>"
 				UPDATENETRCS1="NO"
 			else 
@@ -1208,7 +1435,7 @@ if [ ! -e ${HOMEDIR}/.netrc ]
 		if grep -q "e4ftl01.cr.usgs.gov" "${HOMEDIR}/.netrc"
 			then 
 				echo "$(tput setaf 2) And it seems to have a line with login and password to e4ftl01.cr.usgs.gov $(tput sgr 0)"
-				echo "	Nevertheless it the download of SRTM fails, double check your .netrc file contains a line as follow:"
+				echo "	Nevertheless if the download of SRTM fails, double check your .netrc file contains a line as follow:"
 				echo "		machine e4ftl01.cr.usgs.gov login <YourLogin> password <YourPassword>"
 				UPDATENETRCSRTM="NO"
 			else 
@@ -1262,23 +1489,31 @@ echo "9) Summary of all mounted hard disk (just for your info...):"
 echo "------------------------------------------------------------"  # For Mac and Linux
 echo "------------------------------------------------------------" 
 
-if [ "${OS}" == "Darwin" ]	
-	then 
-		MOUNTPOINT="/Volumes/"
-	else 
-		MOUNTPOINT="/mnt/"	
-fi	
-echo 
-echo "Disks mounted by smb:"
-echo "---------------------" 
-	ls ${MOUNTPOINT} | df -h -T smbfs | grep "Filesystem" 				# Only the header 
-	ls ${MOUNTPOINT} | df -h -T smbfs | grep -v "Filesystem" | sort 	# All but the header sorted
+mount_vars=("PATH_1650" "PATH_3600" "PATH_3601" "PATH_3602" "PATH_1660" "PATH_3610" "PATH_3611" "PATH_DataSAR" )
 
-echo 
-echo "Local disks:"
-echo "------------" 
-	ls ${MOUNTPOINT} | df -h -T apfs | grep "Filesystem" 				# Only the header 
-	ls ${MOUNTPOINT} | df -h -T apfs | grep -v "Filesystem" | sort 	# All but the header sorted
+for var in "${mount_vars[@]}"; do
+    mount_point="${!var}"
+
+    if [[ -z "$mount_point" ]]; then
+        echo "❌ Variable $var is not defined."
+        continue
+    fi
+
+    # Remove trailing slash, but preserve '/' if that's the path
+    normalized_mount_point="${mount_point%/}"
+    [[ "$normalized_mount_point" == "" ]] && normalized_mount_point="/"
+
+    if mount | grep -q "on ${normalized_mount_point} "; then
+        echo "✅ $var ($mount_point) is mounted."
+    else
+        if [ -d " ${normalized_mount_point}" ]; then
+			    echo "✅ $var (${normalized_mount_point}) is a mounted or is a valid directroy."
+			else
+			    echo "❌ $var ($mount_point) is NOT mounted or is not a valid directory."
+		fi
+        
+    fi
+done
 
 echo 
 echo 

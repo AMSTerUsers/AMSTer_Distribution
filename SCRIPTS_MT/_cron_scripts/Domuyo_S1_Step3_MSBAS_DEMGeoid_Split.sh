@@ -48,13 +48,16 @@
 # 									- simplify some fcts
 # New in Distro V 6.1.0 20240805:	- Crop empty lines to speed up the process
 # New in Distro V 6.1.1 20250306:	- rename recomputed R2 files and create rasters   
+# New in Distro V 6.2.0 20251103:	- cp instead of link results in COMMON
+# New in Distro V 6.2.1 20251125 :	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V6.1.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 06, 2025"
+VER="Distro V6.2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 25, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -69,6 +72,9 @@ DD=$(date +%d)
 YYYY=$(date +%Y)
 
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
+	# Max number of threads (to avoid problem with openmp which is by default compiled for max 128)
+	MAXTHREADS=128
+
 	# Dates for split
 	#################
 		SPLIT="YES"
@@ -212,6 +218,25 @@ YYYY=$(date +%Y)
 	
 # ^^^^^^^^^^ Hard coded lines ^^^^^^^^^^^^
 
+# set the max number of threads to be used by MSBAS. 
+####################################################
+#Remember that OPENBLAS is pre-compiled for Ubuntu with max 128 threads
+	# Check OS
+	OS=`uname -a | cut -d " " -f 1 `
+
+	case ${OS} in 
+		"Linux") 
+			NTHR=$(nproc --all)	 ;;
+		"Darwin")
+			NTHR=$(sysctl -n hw.ncpu) 	;;
+		*)
+			echo "${MESSAGE}" 	;;
+	esac			
+
+	# get the number frm your hardware 
+	if [ ${NTHR} -gt ${MAXTHREADS} ] ; then NTHR=${MAXTHREADS} ; fi
+
+
 # Prepare directories
 #####################
 	mkdir -p ${MSBASDIR}
@@ -260,16 +285,18 @@ YYYY=$(date +%Y)
 		local TARGETDIR=$2	# e.g. ${COMMONLOS}
 		
 		FILENAMEONLY=$(basename $FILEPATH)
-		
+
 		rm -f "${TARGETDIR}/${FILENAMEONLY}"
 		rm -f "${TARGETDIR}/${FILENAMEONLY}.hdr"
 		
-		mv -f "$FILEPATH" "${TARGETDIR}/${FILENAMEONLY}"
-		mv -f "$FILEPATH.hdr" "${TARGETDIR}/${FILENAMEONLY}.hdr"
-		
-		# Create a symbolic link in the target directory
-		ln -sf "${TARGETDIR}/${FILENAMEONLY}" "$FILEPATH" 
-		ln -sf "${TARGETDIR}/${FILENAMEONLY}.hdr" "$FILEPATH.hdr" 
+		cp -f "$FILEPATH" "${TARGETDIR}/${FILENAMEONLY}"
+		cp -f "$FILEPATH.hdr" "${TARGETDIR}/${FILENAMEONLY}.hdr"
+		###mv -f "$FILEPATH" "${TARGETDIR}/${FILENAMEONLY}"
+		###mv -f "$FILEPATH.hdr" "${TARGETDIR}/${FILENAMEONLY}.hdr"
+		###
+		#### Create a symbolic link in the target directory
+		###ln -sf "${TARGETDIR}/${FILENAMEONLY}" "$FILEPATH" 
+		###ln -sf "${TARGETDIR}/${FILENAMEONLY}.hdr" "$FILEPATH.hdr" 
 		}
 
 	function CreateRasAndMv()
@@ -298,7 +325,7 @@ YYYY=$(date +%Y)
 		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}_recomputed.bin.ras" "${COMMONDIR}/MSBAS_LINEAR_RATE_STD_${COMPOCODE}.bin.ras"
 		mv -f "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}_recomputed.bin.ras" "${COMMONDIR}/MSBAS_LINEAR_RATE_R2_${COMPOCODE}.bin.ras"
 		
-		# Keep corresponding recomputed.bin.ras.sh ro remember that it comes from recomputed   
+		# Keep corresponding recomputed.bin.ras.sh to remember that it comes from recomputed   
 		
 		}
 				
@@ -448,7 +475,7 @@ YYYY=$(date +%Y)
 							${PATHGNU}/gsed -i "s/${DEFOTXT}/${PART1MODELIST}/" ${MSBASDIR}/header.txt
 							# ${MSBASDIR}/header.txt makes use of only one DefoInterpolx2Detrend${MODENR}_Below${PART1END}.txt dataset for part 1 WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 			
-							${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAP} #${TIMESERIESPTS} # Do not compute TS 
+							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAP} #${TIMESERIESPTS} # Do not compute TS 
 							cp -f ${MSBASDIR}/header_${MODE}.txt header.txt
 							# back to ${MSBASDIR}/header.txt that makes use of only one DefoInterpolx2Detrendi.txt dataset WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 						
@@ -466,7 +493,7 @@ YYYY=$(date +%Y)
 							  	
 							  	# Compare the file date with the cutoff date
 							  	if [ "$file_date_ts" -le "$MIDOVERLAPSEC" ]; then
-							  	  MoveAndLinkBack "$file" "${COMMONLOS}"
+									MoveAndLinkBack "$file" "${COMMONLOS}"
 							  	fi
 							  fi
 							done
@@ -498,7 +525,7 @@ YYYY=$(date +%Y)
 					${PATHGNU}/gsed -i "s/${DEFOTXT}/${PART2MODELIST}/" ${MSBASDIR}/header.txt			
 					# ${MSBASDIR}/header.txt makes use of only one DefoInterpolx2Detrend${MODENR}_After${PART2START}.txt dataset for part 2 WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 	
-					${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAP} #${TIMESERIESPTS} # Do not compute TS 
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAP} #${TIMESERIESPTS} # Do not compute TS 
 					cp -f ${MSBASDIR}/header_${MODE}.txt header.txt
 					# back to ${MSBASDIR}/header.txt that makes use of only one DefoInterpolx2Detrendi.txt dataset WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 
@@ -564,7 +591,7 @@ YYYY=$(date +%Y)
 	 				cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 						
 				else 		
-					${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
 					
 					cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 					# remove header line to avoid error message 
@@ -586,8 +613,6 @@ YYYY=$(date +%Y)
 		# move all plots in same dir 
 		rm -f ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/*.jpg
 		mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Combi*.jpg ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-		# move all time series in dir 
-		#mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
 		}
 
 
@@ -749,7 +774,6 @@ cd ${MSBASDIR}
 	# crop empty lines 
 	${PATHGNU}/gsed -i 's/WINDOW_SIZE = 0, 5360, 0, 4800/WINDOW_SIZE = 550, 4960, 500, 4200/' ${MSBASDIR}/header.txt
 
-
 	# Check again that files are OK
 		# ensure that format is ok, that is with 4 columns 
 		mv DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_all4col.txt
@@ -869,7 +893,7 @@ cd ${MSBASDIR}
 								# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Full_Below${PART1END}.txt dataset, ie. part 1 with No coh threshold applied in these lists
 
 			
-								${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS 
+								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS 
 								cp -f header_back.txt header.txt 
 								# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets with No coh threshold applied in these lists
 
@@ -947,7 +971,7 @@ cd ${MSBASDIR}
 						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART2MODE2LIST}/" ${MSBASDIR}/header.txt
 						# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Full_After${PART2START}.txt dataset, ie. part 2 with No coh threshold applied in these lists
 	
-						${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS 
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS 
 						# Now that fresh msbas was computed, remove tag file attesting of offset applied to defo maps 
 						rm -f ${UDTARGETDIR2}/_Offset_applied.txt  2>/dev/null
 						rm -f ${EWTARGETDIR2}/_Offset_applied.txt  2>/dev/null
@@ -1071,7 +1095,7 @@ cd ${MSBASDIR}
 					${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend2.txt/DefoInterpolx2Detrend2_Full.txt/' ${MSBASDIR}/header.txt
 					# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Full.txt datasets and there is No coh threshold applied in these lists
 
-		 			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+		 			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
 
 					cp -f header_back.txt header.txt
 					# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets with No coh threshold applied in these lists
@@ -1150,7 +1174,7 @@ cd ${MSBASDIR}
 								${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART1MODE2LIST}/" ${MSBASDIR}/header.txt
 								# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Below${PART1END}.txt datasets and there is No coh threshold applied in these lists
 			
-								${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS 
+								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS 
 								cp -f header_back.txt header.txt 
 								# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets with No coh threshold applied in these lists
 
@@ -1225,7 +1249,7 @@ cd ${MSBASDIR}
 						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART2MODE2LIST}/" ${MSBASDIR}/header.txt
 						# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_After${PART2START}.txt datasets and there is No coh threshold applied in these lists
 	
-						${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS 
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS 
 						# Now that fresh msbas was computed, remove tag file attesting of offset applied to defo maps 
 						rm -f ${UDTARGETDIR2}/_Offset_applied.txt  2>/dev/null
 						rm -f ${EWTARGETDIR2}/_Offset_applied.txt  2>/dev/null
@@ -1341,7 +1365,7 @@ cd ${MSBASDIR}
 						# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 	 					cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 				else # i. no split
-					${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
 
 					# Make baseline plot 
 					PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1.txt
@@ -1435,7 +1459,7 @@ cd ${MSBASDIR}
 								${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART1MODE2LIST}/" ${MSBASDIR}/header.txt
 								# Now ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi_Below${PART1END}.txt datasets WITH coh threshold applied in these lists
 			
-								${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS 
+								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS 
 								cp -f header_back.txt header.txt 
 								# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets WITH coh threshold applied in these lists
 
@@ -1509,7 +1533,7 @@ cd ${MSBASDIR}
 						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART2MODE2LIST}/" ${MSBASDIR}/header.txt
 						# Now ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi_After${PART2START}.txt datasets WITH coh threshold applied in these lists
 	
-						${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS 
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS 
 						# Now that fresh msbas was computed, remove tag file attesting of offset applied to defo maps 
 						rm -f ${UDTARGETDIR2}/_Offset_applied.txt  2>/dev/null
 						rm -f ${EWTARGETDIR2}/_Offset_applied.txt  2>/dev/null
@@ -1629,7 +1653,7 @@ cd ${MSBASDIR}
 	 					cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 				else 
 					cd ${MSBASDIR}
-					${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
 		
 					# Make baseline plot 
 					PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1.txt

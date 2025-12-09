@@ -1,10 +1,14 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script displays profiles from velocity maps stored 
 # in multiple MSBAS directories and aligns them in Y by subtracting the mean.
 #
-# V 1.3 (20250303)
+# V 1.0 (20250303)
 # New in Distro V1.1 (20250304) -DS - Compute distance in UTM and change sys to argparse 
+# New in Distro V1.2 (20250808) -DS - add optional ylim parameter + bug fixes
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS
 ######################################################################################
@@ -30,6 +34,7 @@ def parse_arguments():
 	parser.add_argument('--mode', type=str, help="Mode d'exécution")
 	parser.add_argument('--figname', type=str, help="Nom du fichier de figure")
 	parser.add_argument('--align', action='store_true', help="Alignement moyen (optionnel)")
+	parser.add_argument('--ylim', type=float,default=None,  help="optionnal ylim for plot")
 	
 	# Parser les arguments
 	return parser.parse_args()
@@ -58,7 +63,7 @@ def convert_utm_to_pixels(x_utm, y_utm, transform):
     row = round((y_utm - transform[5]) / transform[4])
     return col, row
 
-def extract_profile(data, src, profilelim, utm=False, min_distance=5):
+def extract_profile(data, src, profilelim, utm=False, min_distance=30):
     """Extrait un profil entre deux points avec interpolation linéaire si nécessaire,
     et calcule num_points à partir de la distance entre (x1, y1) et (x2, y2)."""
     x1, y1, x2, y2 = profilelim
@@ -87,22 +92,27 @@ def extract_profile(data, src, profilelim, utm=False, min_distance=5):
     
     if np.any(valid):
         interp = interp1d(np.where(valid)[0], values[valid], kind='cubic', fill_value='extrapolate')
-        values = interp(np.arange(num_points))
+#        values = interp(np.arange(num_points))
         
     return distcum, values
 
 
-def plot_profile(image_file, profilelim, label, meanalign=None,utm=False):
+def plot_profile(image_file, profilelim, label, meanalign=None,utm=False,ref=0):
     """Affiche le profil extrait, en soustrayant la valeur moyenne pour aligner les profils en Y."""
     data, src = load_envi(image_file)
     distances, profile = extract_profile(data, src, profilelim, utm)
-    
+    #print("REF=",ref)
     # Soustraire la valeur moyenne du profil pour l'aligner en Y
     if meanalign:
     	profile_mean = np.nanmean(profile)  # Calculer la moyenne
     	profile -= profile_mean  # Soustraire la moyenne
-
-    plt.plot(distances, profile, linestyle='-', label=label)
+    
+    if ref==1: 
+    	plt.plot(distances, profile, linestyle='-', label=label, linewidth=2, color='black')
+    elif ref==2: 
+    	plt.plot(distances, profile, linestyle='-', label=label, linewidth=2, color='red')
+    else:
+    	plt.plot(distances, profile, linestyle='-', label=label)
 
 ## MAIN
 
@@ -117,35 +127,45 @@ if __name__ == "__main__":
 	meanalign = args.align
 	profile = args.profile
 	utm = args.utm
+	YLIM = args.ylim
 	# Initialiser la figure pour afficher les profils
 	plt.figure(figsize=(20, 15))
 	
 	# Boucle sur chaque répertoire pour extraire et afficher les profils
 	k=0
+	l=0
 	for MSBASdir in MSBASdirs:
 	    label=labels[k]
 	    k+=1 
 	    # Recherche du fichier MSBAS correspondant
 	    if mode == "EW":
-	    	file = find_msbas_file(MSBASdir, f"zz_EW_{label}", "MSBAS_LINEAR_RATE_EW.bin")
+	    	file = find_msbas_file(MSBASdir, f"zz_EW{label}", "MSBAS_LINEAR_RATE_EW.bin")
 	    elif mode == "NS":
-	        file = find_msbas_file(MSBASdir, f"zz_NS_{label}", "MSBAS_LINEAR_RATE_NS.bin")
+	        file = find_msbas_file(MSBASdir, f"zz_NS{label}", "MSBAS_LINEAR_RATE_NS.bin")
 	    elif mode == "UD":
-	        file = find_msbas_file(MSBASdir, f"zz_UD_{label}", "MSBAS_LINEAR_RATE_UD.bin")
+	        file = find_msbas_file(MSBASdir, f"zz_UD{label}", "MSBAS_LINEAR_RATE_UD.bin")
 	    
 	    # if file exist 
 	    if file:
-	        plot_profile(file, profile, label=f"{MSBASdir}/zz_{mode}_{label}", meanalign=meanalign, utm=utm)
+	        l+=1
+	        if l==1:
+	        	plot_profile(file, profile, label=f"{MSBASdir}/zz_{mode}{label}", meanalign=meanalign, utm=utm,ref=1)
+	        elif l==2:
+	        	plot_profile(file, profile, label=f"{MSBASdir}/zz_{mode}{label}", meanalign=meanalign, utm=utm,ref=2)
+	        else:
+	        	plot_profile(file, profile, label=f"{MSBASdir}/zz_{mode}{label}", meanalign=meanalign, utm=utm,ref=0)
 	    else:
-	        print(f"File not found in {MSBASdir}")
+	        print(f"File not found in {MSBASdir}/zz_{mode}{label}")
 	
 	# Ajouter les labels et afficher le graphique
 	plt.xlabel('Distance (m)')
 	plt.ylabel('Linear Velocity (m/yr)')
 	plt.legend(loc='upper left', bbox_to_anchor=(0, 1.15), borderaxespad=0.)
-	plt.ylim(-0.03, 0.03)
+	if YLIM:
+		plt.ylim(-YLIM, YLIM)
+	
 	plt.grid()
 	
 	plt.savefig(f"{figname}.png", format='png')
-	plt.show()
+	#plt.show()
 	

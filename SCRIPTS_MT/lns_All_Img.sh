@@ -6,6 +6,7 @@
 # Parameters : - path to dir with the csl archives are stored.   
 #              - path to dir where link will be copied (something like .../seti  where i is integer)
 #              - SAT (required for TSX/TDX to get down to BTX dir)
+#			   - optional: file name containing list of images to link as dates (yyyymmdd). Other images, although in source dir, will be ignored 
 #
 # Dependencies:	- none
 #
@@ -14,13 +15,14 @@
 # New in Distro V 1.2: - remove stray \ before _ while calling grep to cope with new grep syntax and avoid waring
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20250925:	- allows restricting to images contained in a file provided as a 4th param 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 25, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -30,6 +32,7 @@ echo " "
 ARCHIVES=$1					# path to dir where the csl archives are stored (for TDX, it must be the _TX dir that is used)
 LINKTOCSL=$2				# path to dir where link will be copied (e.g. set"i")
 SAT=$3						# required for TSX/TDX to get down to BTX dir
+LISTDATES=$4				# optional: list of dates (yyyymmdd) to restrict linking
 
 if [ $# -lt 2 ] ; then echo “Usage $0 PATH_TO_ARCHIVES PATH_TO_LINK [SATifTDX]”; exit; fi
 
@@ -59,6 +62,8 @@ else
    mkdir -p ${LINKTOCSL}
 fi
 
+if [ "${LISTDATES}" != "" ] ;  then echo "You resquested to restrict the link of images to those with dates contained in ${LISTDATES}" ; fi
+
 # Let's Go:
 ###########	
 
@@ -75,6 +80,15 @@ case ${SAT} in
 		cd ${ARCHIVES}				
 		ls -d *.csl  > List_raw.txt;;
 esac
+
+if [ "${LISTDATES}" != "" ] 
+	then 
+		# Keep only elements of List_raw.txt that have the same date in ${LISTDATES}
+		mv -f List_raw.txt List_raw_FULL.txt 
+		${PATHGNU}/gawk 'NR==FNR {dates[$0]; next} { if (match($0,/[0-9]{8}/)) d=substr($0,RSTART,RLENGTH); if (d in dates) print }' "$LISTDATES" List_raw_FULL.txt > List_raw.txt 
+fi
+
+
 # If S1, get list of csl images dates
 if [ ${SAT} == "S1" ] ; then 
 	for ARCH in `cat -s ${ARCHIVES}/List_raw.txt`
@@ -145,7 +159,7 @@ for LINE in `cat -s Img_To_Read.txt`
 
 	done
 
-rm ${ARCHIVES}/List_raw.txt ${ARCHIVES}/List_csl.txt ${ARCHIVES}/Img_To_Read.txt
+rm ${ARCHIVES}/List_raw.txt ${ARCHIVES}/List_csl.txt ${ARCHIVES}/Img_To_Read.txt ${ARCHIVES}/List_raw_FULL.txt 
 if [ "${SAT}" == "S1" ] ; then rm ${ARCHIVES}/List_Dates_csl.txt ${ARCHIVES}/List_Dates_raw.txt ; fi
 
 # Remove possible broken links 

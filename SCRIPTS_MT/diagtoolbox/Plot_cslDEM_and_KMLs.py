@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # -----------------------------------------------------------------------------------------
 # This script allows you to visualize a Digital Elevation Model (DEM) in AMSTer format and 
 # overlay the contours of polygons contained in multiple KML files listed in a text file.
@@ -7,6 +7,9 @@
 #
 # New in 1.0 (20250130 - DS): -
 # New in 1.1 (20250212 - DS): - Cosmetic
+# New in 1.2 (20250808 - DS): - make kml-list optional
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # This script is part of the AMSTer Toolbox
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -23,7 +26,7 @@ from shapely.geometry import Polygon
 import numpy as np
 import re  
 
-def validate_inputs(dem, kml_list_file):
+def validate_inputs(dem, kml_list_file=None):
     """
     Validates the provided DEM file and KML list file.
     """
@@ -34,15 +37,17 @@ def validate_inputs(dem, kml_list_file):
         errors.append(f"Error: DEM file '{dem}' does not exist or is not a valid file.")
 
     # Check if the KML list file exists
-    if not os.path.isfile(kml_list_file):
-        errors.append(f"Error: KML list file '{kml_list_file}' does not exist or is not a valid file.")
-    else:
-        # Validate each KML file listed in the KML list file
-        with open(kml_list_file, 'r') as file:
-            kml_files = [line.strip() for line in file if line.strip()]
-            for kml_file in kml_files:
-                if not os.path.isfile(kml_file):
-                    errors.append(f"Error: KML file '{kml_file}' listed in '{kml_list_file}' does not exist or is not a valid file.")
+    if kml_list_file is not None :
+        print(kml_list_file)
+        if not os.path.isfile(kml_list_file):
+            errors.append(f"Error: KML list file '{kml_list_file}' does not exist or is not a valid file.")
+        else:
+            # Validate each KML file listed in the KML list file
+            with open(kml_list_file, 'r') as file:
+                kml_files = [line.strip() for line in file if line.strip()]
+                for kml_file in kml_files:
+                    if not os.path.isfile(kml_file):
+                        errors.append(f"Error: KML file '{kml_file}' listed in '{kml_list_file}' does not exist or is not a valid file.")
 
     return errors
 
@@ -224,12 +229,13 @@ def main():
         sys.exit(1)
 
     dem_file_path = sys.argv[1]
-    kml_list_file = sys.argv[2]
+    kml_list_file = None if sys.argv[2] == "None" else sys.argv[2]
     resultdir = sys.argv[3]
     # Informations provenant du fichier txt
     txt_file_path = txt_file_path = dem_file_path + '.txt' # Remplace par le chemin réel du fichier .txt
     dem_name=os.path.basename(dem_file_path)
-    kml_list_file_name=os.path.basename(kml_list_file)
+    
+    
     # Validate the inputs
     errors = validate_inputs(dem_file_path, kml_list_file)
     if errors:
@@ -248,8 +254,11 @@ def main():
     # Affichage du DEM
     plot_dem(dem_matrix, dem_info)
     # Plot the KML files
-    plot_kml_files(kml_list_file)
-    
+    if kml_list_file is not None :
+        kml_list_file_name=os.path.basename(kml_list_file)
+        plot_kml_files(kml_list_file)
+    else : 
+        kml_list_file_name=""
     os.makedirs(resultdir, exist_ok=True)
     outputname = dem_name + '_' + kml_list_file_name + '_kmlplot.pdf'
     output_path = os.path.join(resultdir,outputname)
@@ -259,7 +268,8 @@ def main():
     # Affichage du DEM
     plot_dem(dem_matrix, dem_info)
     # Plot the KML files
-    plot_kml_files(kml_list_file, apply_zoom=True)
+    if kml_list_file is not None :
+        plot_kml_files(kml_list_file, apply_zoom=True)
     outputname_zoom = dem_name + '_' + kml_list_file_name + '_kmlplot_ZOOM.pdf'
     output_path_zoom = os.path.join(resultdir,outputname_zoom)
     plt.savefig(output_path_zoom)

@@ -1,12 +1,17 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script displays EW, UD, and NS velocity maps stored 
 # in a MSBAS directory. 
 # It takes crop coordinates as an optional argument and displays all 3 maps with respect to this crop. 
 # Optionally, it can also display a profile on the maps.
 #
-# V 1.1 (20250303)
+# V1.0 (20250303)
 # New in Distro V1.1 (20250304) -DS - Adjust number of subplot if NS is present or not
+# New in Distro V1.2 (20250305) -DS - option to use UTM for crop and plot + plot a profile position
+# New in Distro V1.3 (20250307) -DS - cosmetic plot and saving as png
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS
 ######################################################################################
@@ -20,7 +25,7 @@ import matplotlib.pyplot as plt
 
 def parse_arguments():
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Process SAR images and visualize deformation, coherence, and interferograms.")
+    parser = argparse.ArgumentParser(description="Process SAR images and visualize MSBAS maps .")
     
     parser.add_argument("base_path", type=str, help="MSBAS directory.")
     parser.add_argument("label", type=str, help="MBSBAS Label")
@@ -78,7 +83,7 @@ def convert_pixels_to_utm(col, row, transform):
 
 def plot_maps(EWmap, UDmap, NSmap, label, transform, crs, profile=None, crop=None, utm=None):
     """Display a figure with three subplots: Deformation, Coherence, and Interferogram."""
-    
+    figfilename=f"Quicklook_MSBAS_{label}.png"
     # Determine subplot configuration based on which maps are available
     if (EWmap is not None) and (UDmap is not None) and (NSmap is not None):
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
@@ -93,12 +98,13 @@ def plot_maps(EWmap, UDmap, NSmap, label, transform, crs, profile=None, crop=Non
         fig, axes = plt.subplots(1, 2, figsize=(15, 5))
         numaxE, numaxU, numaxN = 0, 1, 2
     else:
-        fig, axes = plt.subplots(1, 4, figsize=(15, 5))
+        fig, axes = plt.subplots(1, 4, figsize=(18, 6))
         numaxE, numaxU, numaxN = 0, 0, 0
 
     # Deformation map (EW)
     if EWmap is not None:
         max_val = np.nanmax(np.abs(EWmap))  # Ignore NaNs
+#        max_val = 0.001  # Ignore NaNs
         im1 = axes[numaxE].imshow(EWmap, cmap='coolwarm', vmin=-max_val, vmax=max_val)
         fig.colorbar(im1, ax=axes[numaxE], fraction=0.046, pad=0.04)
         axes[numaxE].set_title(f"Deformation EW (m)")
@@ -106,6 +112,7 @@ def plot_maps(EWmap, UDmap, NSmap, label, transform, crs, profile=None, crop=Non
     # Deformation map (UD)
     if UDmap is not None:
         max_val = np.nanmax(np.abs(UDmap))  # Ignore NaNs
+#        max_val = 0.001  # Ignore NaNs
         im2 = axes[numaxU].imshow(UDmap, cmap='coolwarm', vmin=-max_val, vmax=max_val)
         fig.colorbar(im2, ax=axes[numaxU], fraction=0.046, pad=0.04)
         axes[numaxU].set_title(f"Deformation UD (m)")
@@ -113,6 +120,7 @@ def plot_maps(EWmap, UDmap, NSmap, label, transform, crs, profile=None, crop=Non
     # Deformation map (NS)
     if NSmap is not None:
         max_val = np.nanmax(np.abs(NSmap))  # Ignore NaNs
+#        max_val = 0.001  # Ignore NaNs
         im3 = axes[numaxN].imshow(NSmap, cmap='coolwarm', vmin=-max_val, vmax=max_val)
         fig.colorbar(im3, ax=axes[2], fraction=0.046, pad=0.04)
         axes[numaxN].set_title(f"Deformation NS (m)")
@@ -184,7 +192,9 @@ def plot_maps(EWmap, UDmap, NSmap, label, transform, crs, profile=None, crop=Non
             ax.set_xlabel(f"Eastern UTM WGS84 (km)")
             ax.set_ylabel(f"Northern UTM WGS84 (km)")
 
+    plt.suptitle(f"MSBAS Velocity Maps\n {label}\n ")
     plt.tight_layout()
+    plt.savefig(figfilename)
     plt.show()
 
 
@@ -192,6 +202,8 @@ def plot_maps(EWmap, UDmap, NSmap, label, transform, crs, profile=None, crop=Non
 if __name__ == "__main__":
     args = parse_arguments()
     base_path = args.base_path.rstrip("/") + "/"
+    msbasdir=os.path.basename(base_path.rstrip("/"))
+    print(msbasdir)
     label = args.label.lstrip('_')
     utm = args.utm
 
@@ -209,6 +221,8 @@ if __name__ == "__main__":
     EWmap, transform = load_image_envi(ew_file, crop=args.crop,utm=utm) if ew_file else (None, None)
     UDmap, _ = load_image_envi(ud_file, crop=args.crop,utm=utm) if ud_file else (None, None)
     NSmap, _ = load_image_envi(ns_file, crop=args.crop,utm=utm) if ns_file else (None, None)
+    
+    msbaslabeling=f"{msbasdir}___{label}"
 
     # Display maps in a single figure
-    plot_maps(EWmap, UDmap, NSmap, args.label, transform, crs="UTM", profile=args.profile, crop=args.crop, utm=utm)
+    plot_maps(EWmap, UDmap, NSmap, msbaslabeling, transform, crs="UTM", profile=args.profile, crop=args.crop, utm=utm)

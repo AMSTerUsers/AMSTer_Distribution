@@ -192,13 +192,35 @@
 #									- option to install full 3D msbasv4_3D
 #New in Distro V 5.16 20250704:		- update install geopandas for linux with correct package name
 #New in Distro V 5.17 20250805:		- use clang 20 for new AE (NISAR reader)
+#New in Distro V 6.00 20250813:		- setup python3.11 for Mac and 3.12 for Linux in a virtual environment 
+#									- corr typo AptInsatll instead of AptInstall
+#New in Distro V 6.01 20250820:		- some cleaning in gmt/gdal Linux install 
+#									- sudo apt install clang-18 with Linux
+#New in Distro V 6.02 20250821:		- install only graphicsmagick with linux (more performant than imagemagick but maybe less compatible). 
+#										Also it doe not restrict width and heights' size and read/write EPS, PS, PDF... persmission is managed by e.g. ghoscript.
+#  										Hence, there is no more need to edit the policy.xml. 
+#									- revised Linux QGIS installation 
+#New in Distro V 6.03 20250822:		- avoid using <<EOF 
+#									- Mac: add lib hdf5 with gdal-hdf5 for OSX; install earlier version of PyQt if Mac OSX =< 10.15
+#New in Distro V 6.04 20250825:		- Add gsfonts fonts for Linux for usage with GraphicMagick  
+#New in Distro V 6.05 20250826:		- Solve Numpy error on Monterey OSX (12.7). Make it compatible with old OSX version (hopefully)
+#New in Distro V 6.06 20250827:		- use clang14 for old OSX and adapt other python 3 modules for old OSX
+#New in Distro V 6.07 20250901:		- fall back to python3.10 when there is no opencv compatible wheel for 3.11
+#New in Distro V 6.08 20250902:		- Replace osx installation of gdal +hdf5 with subport installation gdal gdal-hdf5 gdal-netcdf gdal-openjpeg proj geos 
+#									- find and install the latsest jdk (Mac)
+#									- add opencv-contrib-python for Mac
+#New in Distro V 6.09 20250903:		- clean install gdal for Mac OSX
+#New in Distro V 6.10 20250910:		- modifies source of cpxfiddle also for recent OSX. Not sure from which version it is mandatory, but at least from v.15  
+#New in Distro V 6.11 20251029:		- adapt compiler for MSBAS make file depending on OS version ; install several clang for most recent versions because needed for various usage
+#									- avoid using simple backquote for variable definition  
+#New in Distro V 6.12 20251030:		- if recompile msbas, move all former versions 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
-PRG=`basename "$0"`
-VER="version 5.17 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 05, 2025"
+PRG=$(basename "$0")
+VER="version 6.12 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Oct 30, 2025"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -207,9 +229,9 @@ echo " "
 ############
 # Check OS #
 ############
-OS=`uname -a | cut -d " " -f 1 `
+OS=$(uname -a | cut -d " " -f 1 )
 
-TSTSH=`echo "$SHELL"`
+TSTSH=$(echo "$SHELL")
 if [ "${OS}" == "Darwin" ] 
 	then 
 		if [ "${TSTSH}" == "/bin/bash" ] 
@@ -223,10 +245,15 @@ if [ "${OS}" == "Darwin" ]
 		fi
 		
 		PROCESSOR=$(uname -m)
+
+		OSX_VER=$(sw_vers -productVersion)
+		OSX_MAJOR=$(echo "$OSX_VER" | cut -d. -f1)
+		OSX_MINOR=$(echo "$OSX_VER" | cut -d. -f2)
+
 fi
 				
 
-eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm%Ss" | sed "s/ //g"`
+eval RUNDATE=$(date "+ %m_%d_%Y_%Hh%Mm%Ss" | sed "s/ //g")
 
 
 ##########################################################
@@ -247,20 +274,20 @@ function EchoInverted()
 	echo "${smso}${MESSAGE}${rmso}"
 	}
 
-function AptInsatll()
+function AptInstall()
 	{
 	unset APTNAME
 	unset NEWAPTNAME
 	local APTNAME=$1
 
-	TSTEXISTAPT=`apt show ${APTNAME} 2>/dev/null | wc -w`
+	TSTEXISTAPT=$(apt show "${APTNAME}" 2>/dev/null | wc -w)
 	if [ "${TSTEXISTAPT}" == "" ] 
 		then 
 			#apt does not exist; search for similar
 			echo "  // Sorry, can't find your apt. " 
 			echo "    Here is however the list of similar apt I can find:"
-			FIRSTAPT=`echo ${APTNAME} | cut -d " " -f 1 `
-			apt search --names-only ${FIRSTAPT}  
+			FIRSTAPT=$(echo "${APTNAME}" | cut -d " " -f 1 )
+			apt search --names-only "${FIRSTAPT}"  
 			while true; do
 				read -p "Do you want to install one of those (similar) ones ?  [y/n] "  yn
 				case $yn in
@@ -280,7 +307,7 @@ function AptInsatll()
 			done
 		else 
 			#apt exists ; install it
-			sudo apt install ${APTNAME}
+			sudo apt install "${APTNAME}"
 	fi
 	}
 	
@@ -290,7 +317,7 @@ function CheckLastAptVersion()
 	local APTNAME=$1	
 	# Last version of apt available online 
 	echo "  // The last version available seems to be : "
-	apt show ${APTNAME} 2>/dev/null | grep Version
+	apt show "${APTNAME}" 2>/dev/null | grep Version
 	}
 
 function PortInstall()
@@ -299,15 +326,15 @@ function PortInstall()
 	unset NEWPORTNAME
 	local PORTNAME=$1
 
-	TSTEXISTPORT=`port search ${PORTNAME} 2>/dev/null | wc -l`
-	if [ ${TSTEXISTPORT} -le 1 ] 
+	TSTEXISTPORT=$(port search "${PORTNAME}" 2>/dev/null | wc -l)
+	if [ "${TSTEXISTPORT}" -le 1 ] 
 		then 
 			#port does not exist; search for similar
-			echo "  // Sorry, can't find your port. " 
+			echo "  // Sorry, can't find your port ${PORTNAME}. " 
 			echo "    Here is however the list of similar port I can find:"
 			#take only 1st name in port name
-			FIRSTPORT=`echo ${PORTNAME} | cut -d " " -f 1 `
-			port search ${FIRSTPORT}  
+			FIRSTPORT=$(echo "${PORTNAME}" | cut -d " " -f 1 )
+			port search "${FIRSTPORT}"  
 			while true; do
 				read -p "Do you want to install one of those (similar) ones ?  [y/n] "  yn
 				case $yn in
@@ -315,7 +342,7 @@ function PortInstall()
 						echo
 						echo "  // OK, let's try. "
 						read -e -p "Enter the exact name of port to install (DO NOT FORGET DEPENDENCES IF ANY and frame them within quotes):  "  NEWPORTNAME
-						sudo port install ${NEWPORTNAME}
+						sudo port install "${NEWPORTNAME}"
 						break ;;
 					[Nn]* ) 
 						echo
@@ -327,7 +354,8 @@ function PortInstall()
 			done
 		else 
 			#port exists ; install it
-			sudo port install ${PORTNAME}
+			echo "  // Install port ${PORTNAME}. " 
+			sudo port install "${PORTNAME}"
 	fi
 	}
 
@@ -337,7 +365,7 @@ function CheckLasPortVersion()
 	local PORTNAME=$1	
 	# Last version of apt available online 
 	echo "  // The last version available seems to be : "
-	port search --exact ${APTNAME} 2>/dev/null | head -1
+	port search --exact "${APTNAME}" 2>/dev/null | head -1
 	}
 
 function AskExternalComponent()
@@ -348,7 +376,7 @@ function AskExternalComponent()
 		COMPONENT=$1
 		LOCATION=$2
 		
-		cd ${HOMEDIR}/SAR/EXEC
+		cd "${HOMEDIR}/SAR/EXEC"
 		read -e -p "Enter the name of the source file (without path!) downloaded from ${LOCATION} and that you stored in ${HOMEDIR}/SAR/EXEC. You can use Tab for autocompletion: " RAWFILE
 			
 		while true ; do
@@ -377,7 +405,7 @@ function AskDistroComponent()
 		COMPONENT=$1
 		LOCATION=$2
 
-		cd ${PATHDISTRO}/${COMPONENT}_sources
+		cd "${PATHDISTRO}/${COMPONENT}_sources"
 		read -e -p "Enter the name of the ${COMPONENT} source file (without path!) downloaded from ${LOCATION}. It must be in ${PATHDISTRO}/${COMPONENT}_sources. You can use Tab for autocompletion: " RAWFILE
 			
 		while true ; do
@@ -404,14 +432,14 @@ function SearchForSimilar()
 		RAWFILE=$1
 		FILETOINSTALL=$2
 		
-		if [ ! -f ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ]
+		if [ ! -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ]
 			then
 				while true; do
 					read -p "I cant find ${RAWFILE} in ${HOMEDIR}/SAR/EXEC/ but I found ${FILETOINSTALL}. Can I use it ? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 
 						echo "  // OK, I will try to install it."
-						RAWFILE=$(basename ${FILETOINSTALL})
+						RAWFILE=$(basename "${FILETOINSTALL}")
 						break
 						;;
 					[Nn]*)
@@ -434,39 +462,39 @@ function InsertBelowVARIABLESTitle()
 		EXPECTED=$1
 
 		# Replace $ by \$ in EXPECTED
-		EXPECTEDCLN=`echo ${EXPECTED} | sed 's%$%\$%g'`
+		EXPECTEDCLN=$(echo "${EXPECTED}" | sed 's%$%\$%g')
 		
 		# Back it up first if not done yet
-		if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+		if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}/.bashrc" "${HOMEDIR}/.bashrc_${RUNDATE}" ; fi
 	
 		# Check if variable exist in /.bashrc
-		TEST=$(grep "${EXPECTEDCLN}" ${HOMEDIR}/.bashrc)
-		if [ `echo "${TEST}" | wc -w` -eq 0 ]  
+		TEST=$(grep "${EXPECTEDCLN}" "${HOMEDIR}"/.bashrc)
+		if [ $(echo "${TEST}" | wc -w) -eq 0 ]  
 			then 
 				# Check if # AMSTer VARIABLES exists
 				TSTTITLE=$(grep "# AMSTer VARIABLES" ${HOMEDIR}/.bashrc)
-				if [ `echo "${TSTTITLE}" | wc -w` -eq 0 ]  
+				if [ $(echo "${TSTTITLE}" | wc -w) -eq 0 ]  
 					then
 						echo "  // No section named # AMSTer VARIABLES exists in .bashrc. Let's create it and add the variable after"	
-						sudo echo "" >> ${HOMEDIR}/.bashrc
-						sudo echo "# AMSTer VARIABLES" >> ${HOMEDIR}/.bashrc
-						sudo echo "##################" >> ${HOMEDIR}/.bashrc
-						sudo echo "" >> ${HOMEDIR}/.bashrc
-						sudo echo "${EXPECTED}" >> ${HOMEDIR}/.bashrc
+						sudo echo "" >> "${HOMEDIR}"/.bashrc
+						sudo echo "# AMSTer VARIABLES" >> "${HOMEDIR}"/.bashrc
+						sudo echo "##################" >> "${HOMEDIR}"/.bashrc
+						sudo echo "" >> "${HOMEDIR}"/.bashrc
+						sudo echo "${EXPECTED}" >> "${HOMEDIR}"/.bashrc
 						YOURSELF=$(whoami)
-						sudo chown ${YOURSELF} ${HOMEDIR}/.bashrc
+						sudo chown "${YOURSELF}" "${HOMEDIR}"/.bashrc
 					else
 						echo "  // Let's add the variable after the section named # AMSTer VARIABLES in .bashrc. "
-						TITLEPOS=`grep -n "# AMSTer VARIABLES" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
-						WHERETOINSTERT=`echo "${TITLEPOS} + 3" | bc -l`
-						sudo ${PATHGNU}/sed -i ''"${WHERETOINSTERT}"' i '"${EXPECTED}"'' ${HOMEDIR}/.bashrc
+						TITLEPOS=$(grep -n "# AMSTer VARIABLES" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1)
+						WHERETOINSTERT=$(echo "${TITLEPOS} + 3" | bc -l)
+						sudo "${PATHGNU}"/sed -i ''"${WHERETOINSTERT}"' i '"${EXPECTED}"'' "${HOMEDIR}"/.bashrc
 				fi
 			else 
 				echo "  // ${EXPECTED} already in .bashrc. "
 		fi
 		
-		source ${HOMEDIR}/.bashrc
-		OS=`uname -a | cut -d " " -f 1 `
+		source "${HOMEDIR}"/.bashrc
+		OS=$(uname -a | cut -d " " -f 1 )
 	}
 
 function InsertBelowPATHTitle()
@@ -476,31 +504,31 @@ function InsertBelowPATHTitle()
 		STRINGTOSEARCH=$1
 
 		# Back it up first if not done yet
-		if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+		if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 		
 		# Check if # AMSTer VARIABLES exists
-		TSTTITLE=$(grep "# AMSTer PATHS" ${HOMEDIR}/.bashrc)
-		if [ `echo "${TSTTITLE}" | wc -w` -eq 0 ]  
+		TSTTITLE=$(grep "# AMSTer PATHS" "${HOMEDIR}"/.bashrc)
+		if [ $(echo "${TSTTITLE}" | wc -w) -eq 0 ]  
 			then
 				echo "  // No section named # AMSTer PATHS exists in .bashrc. Let's create it and add the variable after"	
-				sudo echo "" >> ${HOMEDIR}/.bashrc
-				sudo echo "# AMSTer PATHS" >> ${HOMEDIR}/.bashrc
-				sudo echo "##################" >> ${HOMEDIR}/.bashrc
-				sudo echo "" >> ${HOMEDIR}/.bashrc
-				sudo echo "PATH=\$PATH:${STRINGTOSEARCH}" >> ${HOMEDIR}/.bashrc 
+				sudo echo "" >> "${HOMEDIR}"/.bashrc
+				sudo echo "# AMSTer PATHS" >> "${HOMEDIR}"/.bashrc
+				sudo echo "##################" >> "${HOMEDIR}"/.bashrc
+				sudo echo "" >> "${HOMEDIR}"/.bashrc
+				sudo echo "PATH=\$PATH:${STRINGTOSEARCH}" >> "${HOMEDIR}"/.bashrc 
 			else
 				echo "  // Let's add the variable after the section named # AMSTer PATHS in .bashrc. "
-				TITLEPOS=`grep -n "# AMSTer PATHS" ${HOMEDIR}/.bashrc | cut -d : -f 1 | head -1`
-				WHERETOINSTERT=`echo "${TITLEPOS} + 3" | bc -l`
-				sudo ${PATHGNU}/sed -i ''"${WHERETOINSTERT}"' i PATH=\$PATH:'"${STRINGTOSEARCH}"'' ${HOMEDIR}/.bashrc
+				TITLEPOS=$(grep -n "# AMSTer PATHS" "${HOMEDIR}"/.bashrc | cut -d : -f 1 | head -1)
+				WHERETOINSTERT=$(echo "${TITLEPOS} + 3" | bc -l)
+				sudo "${PATHGNU}"/sed -i ''"${WHERETOINSTERT}"' i PATH=\$PATH:'"${STRINGTOSEARCH}"'' "${HOMEDIR}"/.bashrc
 
 				# to avoid problem of interpreting search and replace, do it in two steps
 				#sudo sed -i ''"${WHERETOINSTERT}"' i PATH=\$PATH:STRINGTOREPLACEATNEXTLINEAFTERTITLE' ${HOMEDIR}/.bashrc
 				#sudo sed -i "s%STRINGTOREPLACEATNEXTLINEAFTERTITLE%${STRINGTOSEARCH}%" ${HOMEDIR}/.bashrc
 		fi
 
-		source ${HOMEDIR}/.bashrc
-		OS=`uname -a | cut -d " " -f 1 `
+		source "${HOMEDIR}"/.bashrc
+		OS=$(uname -a | cut -d " " -f 1 )
 	}
 
 function UpdateVARIABLESBashrc()
@@ -516,21 +544,21 @@ function UpdateVARIABLESBashrc()
 		STRINGTOSEARCHIN="$1"
 		EXPECTED="$2"
 
-		TST=$(grep "export ${STRINGTOSEARCHIN}" ${HOMEDIR}/.bashrc )
-		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+		TST=$(grep "export ${STRINGTOSEARCHIN}" "${HOMEDIR}"/.bashrc )
+		if [ $(echo "${TST}" | wc -w) -eq 0 ] 
 			then 
 				STRINGTOSEARCH=${STRINGTOSEARCHIN}
 				echo "  // .bashrc does not contain ${smso}${EXPECTED}${rmso} yet. Add it now (former .bashrc was saved in .bashrc_${RUNDATE}). "
 
 				# Back it up first if not done yet
-				if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+				if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 
 				InsertBelowVARIABLESTitle "${EXPECTED}"
 				echo
 			else 
-				for STRINGTOSEARCH in `grep "export ${STRINGTOSEARCHIN}" ${HOMEDIR}/.bashrc | cut -d t -f 2 | sort | uniq` 		# for multiple occurrence of an exported variable in bashrc, take only one run. Search for string after expor[t] 
+				for STRINGTOSEARCH in $(grep "export ${STRINGTOSEARCHIN}" "${HOMEDIR}"/.bashrc | cut -d t -f 2 | sort | uniq) 		# for multiple occurrence of an exported variable in bashrc, take only one run. Search for string after expor[t] 
 				do 
-					TST=$(grep "export ${STRINGTOSEARCH}" ${HOMEDIR}/.bashrc )
+					TST=$(grep "export ${STRINGTOSEARCH}" "${HOMEDIR}"/.bashrc )
 					if [ "${TST}" == "${EXPECTED}" ] 
 						then 
 							echo "  // .bashrc does contain ${STRINGTOSEARCH} as ${smso}${EXPECTED}${rmso}. OK "
@@ -551,10 +579,10 @@ function UpdateVARIABLESBashrc()
 													# Check again if variable exist in /.bashrc
 
 													# Replace $ by \$ in EXPECTED just in case...
-													EXPECTEDCLN=`echo ${DECLAREVAR} | sed 's%\$%\\$%g'`
-													TEST1=$(grep "${DECLAREVAR}" ${HOMEDIR}/.bashrc | grep -v ":")
-													TEST2=$(grep "${EXPECTEDCLN}" ${HOMEDIR}/.bashrc)
-													if [ `echo "${TEST1}" | wc -w` -eq 0 ] && [ `echo "${TEST2}" | wc -w` -eq 0 ] 
+													EXPECTEDCLN=$(echo "${DECLAREVAR}" | sed 's%\$%\\$%g')
+													TEST1=$(grep "${DECLAREVAR}" "${HOMEDIR}"/.bashrc | grep -v ":")
+													TEST2=$(grep "${EXPECTEDCLN}" "${HOMEDIR}"/.bashrc)
+													if [ $(echo "${TEST1}" | wc -w) -eq 0 ] && [ $(echo "${TEST2}" | wc -w) -eq 0 ] 
 														then 
 															InsertBelowVARIABLESTitle "${DECLAREVAR}"
 													fi		
@@ -564,11 +592,11 @@ function UpdateVARIABLESBashrc()
 														case $yn in
 															[Yy]* ) 
 																# Back it up first if not done yet
-																if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+																if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 
-																grep -v "^${TST}$"  ${HOMEDIR}/.bashrc >  ${HOMEDIR}/.bashrc_tmp
-																cp -f  ${HOMEDIR}/.bashrc_tmp  ${HOMEDIR}/.bashrc
-																rm -f ${HOMEDIR}/.bashrc_tmp
+																grep -v "^${TST}$"  "${HOMEDIR}"/.bashrc >  "${HOMEDIR}"/.bashrc_tmp
+																cp -f  "${HOMEDIR}"/.bashrc_tmp  "${HOMEDIR}"/.bashrc
+																rm -f "${HOMEDIR}"/.bashrc_tmp
 																break ;;
 															[Nn]* )
 																echo " // OK, you know"
@@ -594,8 +622,8 @@ function UpdateVARIABLESBashrc()
 				echo	
 				done
 			fi
-		source ${HOMEDIR}/.bashrc
-		OS=`uname -a | cut -d " " -f 1 `
+		source "${HOMEDIR}"/.bashrc
+		OS=$(uname -a | cut -d " " -f 1 )
 	}
 
 function UpdatePATHBashrcBEFORE()
@@ -606,51 +634,51 @@ function UpdatePATHBashrcBEFORE()
 		
 		STRINGTOSEARCH=$1
 				
-		TST=$(grep "PATH=" ${HOMEDIR}/.bashrc)
+		TST=$(grep "PATH=" "${HOMEDIR}"/.bashrc)
 
-		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+		if [ $(echo "${TST}" | wc -w) -eq 0 ] 
 			then 
 				echo "  // .bashrc does not contain PATH yet. Add it now (former .bashrc was saved in .bashrc_${RUNDATE}). "
 				echo "  // and add ${smso}${STRINGTOSEARCH}${rmso}"
 				# Back it up first if not done yet
-				if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+				if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 						
-				sudo echo "PATH=${STRINGTOSEARCH}:\$PATH" >> ${HOMEDIR}/.bashrc 
+				sudo echo "PATH=${STRINGTOSEARCH}:\$PATH" >> "${HOMEDIR}"/.bashrc 
 			else 
-				TST=$(grep "PATH=" ${HOMEDIR}/.bashrc | grep "${STRINGTOSEARCH}")
+				TST=$(grep "PATH=" "${HOMEDIR}"/.bashrc | grep "${STRINGTOSEARCH}")
 				
-				if [ `echo "${TST}" | wc -w` -eq 0 ] 
+				if [ $(echo "${TST}" | wc -w) -eq 0 ] 
 					then 
 					
 						echo "  // .bashrc already contains PATH though it does not contains ${smso}${STRINGTOSEARCH}${rmso}. Will add here new path BEFORE existing PATH (former .bashrc was saved in .bashrc_${RUNDATE}). "
 						# Back it up first if not done yet
-						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+						if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 
 						# add PATH=STRINGTOSEARCH:$PATH before the first line of bashrc	containing PATH=
-						eval FIRSTPATH=$(grep -n "PATH=" ${HOMEDIR}/.bashrc | cut -d : -f1  | head -1)	# line nr of first PATH definition in bashrc
+						eval FIRSTPATH=$(grep -n "PATH=" "${HOMEDIR}"/.bashrc | cut -d : -f1  | head -1)	# line nr of first PATH definition in bashrc
 						
 						# to avoid problem of interpreting search and replace, do it in two steps with a DUMMYSTRING
 
-						sudo ${PATHGNU}/sed -i "${FIRSTPATH} i DUMMYSTRING" ${HOMEDIR}/.bashrc
-						sudo ${PATHGNU}/sed -i "s%DUMMYSTRING%PATH=${STRINGTOSEARCH}:\$PATH%" ${HOMEDIR}/.bashrc
+						sudo "${PATHGNU}"/sed -i "${FIRSTPATH} i DUMMYSTRING" "${HOMEDIR}"/.bashrc
+						sudo "${PATHGNU}"/sed -i "s%DUMMYSTRING%PATH=${STRINGTOSEARCH}:\$PATH%" "${HOMEDIR}"/.bashrc
 
 					
 					else
 					
-						OCCUR=$(grep "PATH=" ${HOMEDIR}/.bashrc | grep -n "PATH=${STRINGTOSEARCH}" | cut -d : -f1  | head -1)	# check if exist at beginning of a PATH line 
+						OCCUR=$(grep "PATH=" "${HOMEDIR}"/.bashrc | grep -n "PATH=${STRINGTOSEARCH}" | cut -d : -f1  | head -1)	# check if exist at beginning of a PATH line 
 						if [ "${OCCUR}" != "1" ] && [ "${OCCUR}" != "2" ]
 							then 
 								echo "  // .bashrc already contains PATH with ${STRINGTOSEARCH}, though not on the 1st or 2nd but the ${OCCUR}th line of PATH. "
 								echo "  // To avoid problem, lets add ${smso}${STRINGTOSEARCH}${rmso} on the 1st line of PATH (former .bashrc was saved in .bashrc_${RUNDATE}). "
 								# Back it up first if not done yet
-								if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+								if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 
 								# add PATH=STRINGTOSEARCH:$PATH before the first line of bashrc	containing PATH=
 								eval FIRSTPATH=$(grep -n "PATH=" ${HOMEDIR}/.bashrc | cut -d : -f1  | head -1)	# line nr of first PATH definition in bashrc
 
 								# to avoid problem of interpreting search and replace, do it in two steps with a DUMMYSTRING
-								sudo ${PATHGNU}/sed -i "${FIRSTPATH} i DUMMYSTRING" ${HOMEDIR}/.bashrc
-								sudo ${PATHGNU}/sed -i "s%DUMMYSTRING%PATH=${STRINGTOSEARCH}:\$PATH%" ${HOMEDIR}/.bashrc
+								sudo "${PATHGNU}"/sed -i "${FIRSTPATH} i DUMMYSTRING" "${HOMEDIR}"/.bashrc
+								sudo "${PATHGNU}"/sed -i "s%DUMMYSTRING%PATH=${STRINGTOSEARCH}:\$PATH%" "${HOMEDIR}"/.bashrc
 
 							else
 								echo "  // OK, .bashrc already contains PATH with ${STRINGTOSEARCH} on the ${OCCUR}th of PATH. "
@@ -658,8 +686,8 @@ function UpdatePATHBashrcBEFORE()
 						
 				fi
 		fi
-		source ${HOMEDIR}/.bashrc
-		OS=`uname -a | cut -d " " -f 1 `
+		source "${HOMEDIR}"/.bashrc
+		OS=$(uname -a | cut -d " " -f 1 )
 		echo
 	}
 	
@@ -672,9 +700,9 @@ function UpdatePATHBashrcAFTER()
 		STRINGTOSEARCH="$1"
 		PATTERN="PATH=\$PATH:${STRINGTOSEARCH}"
 	
-		TST=$(grep "PATH=" ${HOMEDIR}/.bashrc)
+		TST=$(grep "PATH=" "${HOMEDIR}"/.bashrc)
 
-		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+		if [ $(echo "${TST}" | wc -w) -eq 0 ] 
 			then 
 				echo "  // .bashrc does not contain PATH yet. Add it now (former .bashrc was saved in .bashrc_${RUNDATE}). "
 				echo "  // and add ${smso}${STRINGTOSEARCH}${rmso}"
@@ -691,7 +719,7 @@ function UpdatePATHBashrcAFTER()
 						else 
 							ADD="YES"
   					fi
-				done < ${HOMEDIR}/.bashrc
+				done < "${HOMEDIR}"/.bashrc
 				
 				if [ "${ADD}" == "YES" ] 
 					then 
@@ -703,8 +731,8 @@ function UpdatePATHBashrcAFTER()
 				fi
 				ADD=""
 		fi
-		source ${HOMEDIR}/.bashrc
-		OS=`uname -a | cut -d " " -f 1 `
+		source "${HOMEDIR}"/.bashrc
+		OS=$(uname -a | cut -d " " -f 1 )
 		echo
 	}
 
@@ -716,8 +744,8 @@ function NecessaryDisk()
 		DISKNAME=$1
 		EXAMPLE=$2
 		
-		TST=$(grep "export PATH_${DISKNAME}=" ${HOMEDIR}/.bashrc)
-		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+		TST=$(grep "export PATH_${DISKNAME}=" "${HOMEDIR}"/.bashrc)
+		if [ $(echo "${TST}" | wc -w) -eq 0 ] 
 			then 
 				echo "  // 	   No ${DISKNAME} state varaibale defined yet to point toward a mounted disk. "
 				echo "  // 	   Example: ${EXAMPLE}"
@@ -726,7 +754,7 @@ function NecessaryDisk()
 					case $yn in
 					[Yy]* ) 
 						echo "  // OK, I will add its mounting point or path here as a state variable."
-						cd ${HOMEDIR}
+						cd "${HOMEDIR}"
 						read -e -p "Enter the name of the mounting point (e.g. /mnt/YourDisk/PATH_TO/YOUR_DIR) or path (e.g. /users/your_account/PATH_TO/YOUR_DIR). You can use Tab for autocompletion or drag/drop the path: " DIRMOUNT
 						if [ -d "${DIRMOUNT}" ]
 							then 
@@ -768,7 +796,7 @@ function NecessaryDisk()
 									[Dd]* ) 
 											echo "  // OK, I define it now and try to create the directory"
 											UpdateVARIABLESBashrc "PATH_${DISKNAME}" "export PATH_${DISKNAME}=${DIRMOUNT}"
-											mkdir -p ${DIRMOUNT}
+											mkdir -p "${DIRMOUNT}"
 											if [ ! -d "${DIRMOUNT}" ] ; then echo "I can't create ${DIRMOUNT}. Please check your path !" ; exit ; fi
 											break
 											;;
@@ -782,10 +810,10 @@ function NecessaryDisk()
 				
 						;;
 					[Nn]*)
-						if [ `grep "PATH_${DISKNAME}" ${HOMEDIR}/.bashrc | wc -w` -eq 0 ] 
+						if [ $(grep "PATH_${DISKNAME}" ${HOMEDIR}/.bashrc | wc -w) -eq 0 ] 
 							then
 								echo "  // OK, you know... It seems that a state variable PATH_${DISKNAME} is already defined in .bashrc:  "
-								grep "PATH_${DISKNAME}" ${HOMEDIR}/.bashrc
+								grep "PATH_${DISKNAME}" "${HOMEDIR}"/.bashrc
 								echo "  // OK, you know... " 
 				
 							else
@@ -799,9 +827,9 @@ function NecessaryDisk()
 				done
 			else 
 				echo "  // 	A ${DISKNAME} state varaibale is already defined to point toward a mounted disk: "
-				MLUNTEDDISK=`grep "export PATH_${DISKNAME}=" ${HOMEDIR}/.bashrc`
+				MLUNTEDDISK=$(grep "export PATH_${DISKNAME}=" "${HOMEDIR}"/.bashrc)
 				echo "  // 		${MLUNTEDDISK} "
-				DISK=`grep "export PATH_${DISKNAME}=" ${HOMEDIR}/.bashrc | cut -d = -f 2 | sed 's/"//g'`
+				DISK=$(grep "export PATH_${DISKNAME}=" "${HOMEDIR}"/.bashrc | cut -d = -f 2 | sed 's/"//g')
 				if [ -d "${DISK}" ] 
 					then 
 						echo "  // and that disk ${DISK} is reachable. "
@@ -810,8 +838,8 @@ function NecessaryDisk()
 				fi
 		fi
 		echo ""
-		source ${HOMEDIR}/.bashrc
-		OS=`uname -a | cut -d " " -f 1 `
+		source "${HOMEDIR}"/.bashrc
+		OS=$(uname -a | cut -d " " -f 1 )
 	}
 
 function InstallSnaphu()
@@ -822,7 +850,7 @@ function InstallSnaphu()
 			case $cis in
 			[Cc]* ) 	
 				echo "  // OK, let's check its version. "
-				SNAPHUVER=`snaphu 2>/dev/null | grep snaphu | head -1`
+				SNAPHUVER=$(snaphu 2>/dev/null | grep snaphu | head -1)
 				if [ "${SNAPHUVER}" == "" ] 
 					then 
 						echo "snaphu seems not installed. "
@@ -834,32 +862,33 @@ function InstallSnaphu()
 									AskExternalComponent "snaphu" "https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/ "
 									if [ "${SKIP}" == "No" ] ; then 
 										# just if there is a typo in the version, or name... hoping that at least the main name is OK					
-										if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
-											FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*snaphu*" 2>/dev/null`
-											SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
+										if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
+											FILETOINSTALL=$(find "${HOMEDIR}"/SAR/EXEC/ -maxdepth 1 -type f -name "*snaphu*" 2>/dev/null)
+											SearchForSimilar "${RAWFILE}" "${FILETOINSTALL}"
 										fi
 										
 										FILEXT="${RAWFILE##*.}"
  
 										if [ "${FILEXT}" == "gz" ] || [ "${FILEXT}" == "tar" ] 
 											then 
-												tar -zxvf ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
+												tar -zxvf "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
 												#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
-												mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-												mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
+												mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+												mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 												#SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
 												# take only the most recent if more than one dir satisfies the search
 												SNAPHUSOURCEDIR=$(find "${HOMEDIR}/SAR/EXEC/" -type d -name "*snaphu*" | grep "snaphu" | xargs ls -td 2>/dev/null | head -1)
 
-												cd ${SNAPHUSOURCEDIR}/src
+												cd "${SNAPHUSOURCEDIR}"/src
 												
 												# needed for makefile in snaphu V 2.0.7, which had the following default line incompatible with some architecture: 
 												# CFLAGS		=	-arch x86_64 $(OPTIMFLAGS) -Wall # -arch arm64 -Wuninitialized -m64 -D NO_CS2 
-												sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
+												"${PATHGNU}"/sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
+
 
 												make
-												mv ${SNAPHUSOURCEDIR}/bin/snaphu ${HOMEDIR}/SAR/EXEC/
-												mv ${SNAPHUSOURCEDIR} ${HOMEDIR}/SAR/EXEC/Sources_Installed
+												mv "${SNAPHUSOURCEDIR}"/bin/snaphu "${HOMEDIR}"/SAR/EXEC/
+												mv "${SNAPHUSOURCEDIR}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed
 												echo "  // "
 											else 
 												echo " Format not as expected (gz). May not be genuine file ? Please do manually"			
@@ -883,34 +912,34 @@ function InstallSnaphu()
 					echo "  // OK, I do it now."
 					AskExternalComponent "snaphu" "https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/ "
 					# just if there is a typo in the version, or name... hoping that at least the main name is OK					
- 					if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
- 						FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*snaphu*" 2>/dev/null`
- 						SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
+ 					if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
+ 						FILETOINSTALL=$(find "${HOMEDIR}"/SAR/EXEC/ -maxdepth 1 -type f -name "*snaphu*" 2>/dev/null)
+ 						SearchForSimilar "${RAWFILE}" "${FILETOINSTALL}"
  					fi
  			
  					FILEXT="${RAWFILE##*.}"
  
 					if [ "${FILEXT}" == "gz" ] || [ "${FILEXT}" == "tar" ]  
 						then 
-							cd ${HOMEDIR}/SAR/EXEC/
-							tar -zxvf ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
+							cd "${HOMEDIR}"/SAR/EXEC/
+							tar -zxvf "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
 							#SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
 							# take only the most recent if more than one dir satisfies the search
 							SNAPHUSOURCEDIR=$(find "${HOMEDIR}/SAR/EXEC/" -type d -name "*snaphu*" | grep "snaphu" | xargs ls -td 2>/dev/null | head -1)
 
 
-							cd ${SNAPHUSOURCEDIR}/src
+							cd "${SNAPHUSOURCEDIR}"/src
 																			
 							# needed for makefile in snaphu V 2.0.7, which had the following default line incompatible with some architecture: 
 							# CFLAGS		=	-arch x86_64 $(OPTIMFLAGS) -Wall # -arch arm64 -Wuninitialized -m64 -D NO_CS2 
-							sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
+							"${PATHGNU}"/sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
 
 							make
-							mv ${SNAPHUSOURCEDIR}/bin/snaphu ${HOMEDIR}/SAR/EXEC/
+							mv "${SNAPHUSOURCEDIR}"/bin/snaphu "${HOMEDIR}"/SAR/EXEC/
 							#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
-							mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-							mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
-							mv ${SNAPHUSOURCEDIR} ${HOMEDIR}/SAR/EXEC/Sources_Installed
+							mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+							mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+							mv "${SNAPHUSOURCEDIR}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed
 							echo "  // "
 						else 
 							echo " Format not as expected (gz). May not be genuine file ? Please do manually"			
@@ -931,27 +960,35 @@ DoInstallCpxfiddle()
 		AskExternalComponent "cpxfiddle.cc" " https://github.com/TUDelftGeodesy/Doris/tree/master/sar_tools"
 		if [ "${SKIP}" == "No" ] ; then 
 			# just if there is a typo in the version, or name... hoping that at least the main name is OK					
-			if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
-				FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*cpxfiddle*" 2>/dev/null`
-				SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
+			if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
+				FILETOINSTALL=$(find "${HOMEDIR}"/SAR/EXEC/ -maxdepth 1 -type f -name "*cpxfiddle*" 2>/dev/null)
+				SearchForSimilar "${RAWFILE}" "${FILETOINSTALL}"
 			fi
 		
 			FILEXT="${RAWFILE##*.}"
  
 			if [ "${FILEXT}" == "cc" ] 
 				then 
-					cd ${HOMEDIR}/SAR/EXEC/
+					cd "${HOMEDIR}"/SAR/EXEC/
 					if [ "${OS}" == "Linux" ] ; then 													
 						ORIGINAL="if (argv\[optind\]==" 
 						NEW="if (argv\[optind\]==0 || argv\[optind\]\[0\]==\'\\\0\'\)" 		# this is a tricky one... 
-						${PATHGNU}/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' ${RAWFILE}				# this is a tricky one... 
+						"${PATHGNU}"/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' "${RAWFILE}"				# this is a tricky one... 
 					fi
+					
+					# Moste recent version of OSX also require the change. Not sure from which version though but at least 15
+					if [ "${OS}" == "Darwin" ] && [ "$OSX_MAJOR" -ge 15 ] ; then 													
+						ORIGINAL="if (argv\[optind\]==" 
+						NEW="if (argv\[optind\]==0 || argv\[optind\]\[0\]==\'\\\0\'\)" 		# this is a tricky one... 
+						"${PATHGNU}"/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' "${RAWFILE}"				# this is a tricky one... 
+					fi
+
 					make -n cpxfiddle
 					g++ -O -c -ocpxfiddle.o cpxfiddle.cc  
 					g++ -O cpxfiddle.o -o cpxfiddle
 					rm -f cpxfiddle.o # cpxfiddle.cc
-					mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-					mv cpxfiddle.cc ${HOMEDIR}/SAR/EXEC/Sources_Installed/
+					mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+					mv cpxfiddle.cc "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
 				else 
 					echo " Format not as expected (cc). May not be genuine file ? Please do manually"			
@@ -968,7 +1005,7 @@ function InstallCpxfiddle()
 			[Cc]* ) 	
 					echo "  // OK, let's check its version."
 					cpxfiddle 2> tmp_cpx.txt
-					CPXVER=`cat tmp_cpx.txt | grep version | cut -d " " -f6` 
+					CPXVER=$(cat tmp_cpx.txt | grep version | cut -d " " -f6) 
 					rm -f tmp_cpx.txt
 					
 					if [ "${CPXVER}" == "" ] 
@@ -1049,8 +1086,8 @@ CompileAMSTerEngine()
 		
 		NEWAMSTERENGINE=$1		# e.g. ${PATHDISTRO}/AMSTerEngine/Vyyyymmdd_AMSTerEngine/AMSTerEngineyyyymmdd.tar.xz
 
-		MESOURCEDIR=`dirname ${NEWAMSTERENGINE}`		# e.g. ${PATHDISTRO}/AMSTerEngine/Vyyyymmdd_AMSTerEngine
-		MESOURCEFILETAR=`basename ${NEWAMSTERENGINE}` 	# AMSTerEngineyyyymmdd.tar.xz
+		MESOURCEDIR=$(dirname "${NEWAMSTERENGINE}")		# e.g. ${PATHDISTRO}/AMSTerEngine/Vyyyymmdd_AMSTerEngine
+		MESOURCEFILETAR=$(basename "${NEWAMSTERENGINE}") 	# AMSTerEngineyyyymmdd.tar.xz
 
 		# where to install
 		PATHAMSTERENGINE=${HOMEDIR}/SAR/AMSTer/AMSTerEngine
@@ -1089,44 +1126,44 @@ CompileAMSTerEngine()
 			done					
 
 		# Crash if path to ${NEWAMSTERENGINE} contains white spaces 
-		if [ `echo "${NEWAMSTERENGINE}" | grep  \  | wc -l` -gt 0 ] ; then echo "Move your AMSTerEngine source in a dir without white spaces in name !" ; exit ; fi
+		if [ $(echo "${NEWAMSTERENGINE}" | grep  \  | wc -l) -gt 0 ] ; then echo "Move your AMSTerEngine source in a dir without white spaces in name !" ; exit ; fi
 		
-		if [ `dirname ${NEWAMSTERENGINE}` != ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine ]
+		if [ "$(dirname "${NEWAMSTERENGINE}")" != "${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine" ]
 			then 
 				echo "updating from source located anywhere but ${PATHAMSTERENGINE}/_Sources_AE/Older/V${DATEAMSTERENGINE}_AMSTerEngine"
-				mkdir -p ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine
-				cp -f ${NEWAMSTERENGINE} ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine/
+				mkdir -p "${PATHSOURCES}"/V"${DATEAMSTERENGINE}"_AMSTerEngine
+				cp -f "${NEWAMSTERENGINE}" "${PATHSOURCES}"/V"${DATEAMSTERENGINE}"_AMSTerEngine/
 			else 
 				echo "updating from  ${PATHAMSTERENGINE}/_Sources_AE/Older/V${DATEAMSTERENGINE}_AMSTerEngine"
 		fi
 		
 		cd ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine
 		
-			if [ `ls *.tar.xz  | wc -l` -gt 1 ] 
+			if [ $(ls *.tar.xz  | wc -l) -gt 1 ] 
 				then 
 					echo "More than one tar file. Please check"
 					exit 
 				else 
-					TARDIRNAME=`ls *.tar.xz | cut -d . -f 1`
+					TARDIRNAME=$(ls *.tar.xz | cut -d . -f 1)
 					echo "Decompress ${TARDIRNAME}.tar.xz..."
 					tar -xf *.tar.xz
 			fi
 		
-		if [ -d ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine/${TARDIRNAME}/Archives ]
+		if [ -d "${PATHSOURCES}"/V"${DATEAMSTERENGINE}"_AMSTerEngine/"${TARDIRNAME}"/Archives ]
 			then 
 				# seems to be the new version of AMSTerEngine distrubution, that is made for the installer
 				VERSION=NEW
-				cd ${TARDIRNAME}/Archives
-				TARNAME=`ls Mas*.tar.xz`
+				cd "${TARDIRNAME}"/Archives
+				TARNAME=$(ls Mas*.tar.xz)
 				echo "   Decompress ${TARNAME}.tar.xz..."
 				tar -xf Mas*.tar.xz
 				cd InSAR/sources
 			else
 				# seems to be the old version of AMSTerEngine distrubution
 				VERSION=OLD
-				if [ -d ${TARDIRNAME} ]		# because sometimes tar decompress in current dir or in dir named by the tar file...
+				if [ -d "${TARDIRNAME}" ]		# because sometimes tar decompress in current dir or in dir named by the tar file...
 					then 
-						cd ${TARDIRNAME}/InSAR/sources
+						cd "${TARDIRNAME}"/InSAR/sources
 					else 
 						TARDIRNAME=""
 						cd InSAR/sources			
@@ -1145,7 +1182,7 @@ CompileAMSTerEngine()
 		
 		#make 
 		
-		cp _History.txt ${PATHAMSTERENGINE}/
+		cp _History.txt "${PATHAMSTERENGINE}"/
 		
 		cd ../bin
 		if [ -f initInSAR ] 
@@ -1153,7 +1190,7 @@ CompileAMSTerEngine()
 				echo
 				echo "I will move all the binaries to ${PATHAMSTERENGINE} from here, that is: "
 				pwd
-				mv -f * ${PATHAMSTERENGINE}/
+				mv -f * "${PATHAMSTERENGINE}"/
 			else 
 				echo "I can't find the binaries to move to ${PATHAMSTERENGINE} from here. I am probably not at the right place. Please check. "
 				pwd
@@ -1182,7 +1219,7 @@ CompileAMSTerEngine()
 				echo
 				echo "I will move all the binaries to ${PATHAMSTERENGINE} from here, that is: "
 				pwd
-				mv -f * ${PATHAMSTERENGINE}/
+				mv -f * "${PATHAMSTERENGINE}"/
 			else 
 				echo "I can't find the binaries to move to ${PATHAMSTERENGINE} from here. I am probably not at the right place. Please check. "
 				pwd
@@ -1197,18 +1234,17 @@ CompileAMSTerEngine()
 			read -p "Do you want to clean ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine/${TARDIRNAME} ?"  yn
 			case $yn in
 				[Yy]* ) 
-					cd ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine/
+					cd "${PATHSOURCES}"/V"${DATEAMSTERENGINE}"_AMSTerEngine/
 					if [ "${TARDIRNAME}" == "" ]
 						then 
 							rm -R InSAR
 							rm -R MSBASTools
 						else
-							rm -R ${TARDIRNAME}
+							rm -R "${TARDIRNAME}"
 					fi
 					break ;;
 				[Nn]* ) 
-					exit 1	
-					break ;;
+					exit 1	;;
 				* ) echo "Please answer yes or no.";;
 			esac
 		done
@@ -1222,7 +1258,6 @@ function AskConfirmLoop()
 	{
 		#local EXITLOOP			
 		local TOPIC
-		local TOOL
 		
 		TOPIC=$1		# e.g. "Do you want to enter a new path to the source file [y/n]? " 
 		EXITMSG=$2		# e.g. "OK, I skip the installation of AMSTer Engine."
@@ -1254,7 +1289,7 @@ DoInstallAMSTerEngine()
 			    	# Check if the version exists
 					if [ -f "${RAWFILE}" ]
 						then
-							CompileAMSTerEngine ${RAWFILE}
+							CompileAMSTerEngine "${RAWFILE}"
 							break
 						else
 					       echo "No AMSTerEngineyyyymmdd.tar.xz file exists there."
@@ -1271,7 +1306,7 @@ DoInstallAMSTerEngine()
 			else 
 				# sources are in AMSTer_Distribution directory
 				echo "Here is the list of available versions in you AMSTer_Distribution directory:"
-				cd ${PATHDISTRO}/AMSTerEngine/
+				cd "${PATHDISTRO}"/AMSTerEngine/
 				ls -d V*
 			    while true; do
 			    	read -p "Which version would you like to install (enter the full name of directory without path !): " DIRVERTOINSTALL
@@ -1279,10 +1314,10 @@ DoInstallAMSTerEngine()
 			    	# Check if the version exists
 					if [ -d "${DIRVERTOINSTALL}" ]
 						then
-							if [ `ls ${PATHDISTRO}/AMSTerEngine/${DIRVERTOINSTALL}/*.tar.xz | wc -l` -eq 1 ]
+							if [ $(ls "${PATHDISTRO}"/AMSTerEngine/"${DIRVERTOINSTALL}"/*.tar.xz | wc -l) -eq 1 ]
 								then 
-									MESOURCEFILE=`ls ${PATHDISTRO}/AMSTerEngine/${DIRVERTOINSTALL}/*.tar.xz`
-									CompileAMSTerEngine ${MESOURCEFILE}
+									MESOURCEFILE=$(ls "${PATHDISTRO}"/AMSTerEngine/"${DIRVERTOINSTALL}"/*.tar.xz)
+									CompileAMSTerEngine "${MESOURCEFILE}"
 									break
 								else
 									echo "No or More than one .tar.xz file in ${PATHDISTRO}/AMSTerEngine/${DIRVERTOINSTALL}/"
@@ -1321,10 +1356,10 @@ function InstallAMSTerEngine()
 				echo "  // OK, let's check its version by looking at the last created source dir."
 				echo "  // It is your responsability to verify that it is the last one though..."
 				# Get last creater dir. Beware, it may not be the last version ?!
-				LASTDIRINFO=`find ${HOMEDIR}/SAR/AMSTer/AMSTerEngine/_Sources_AE/Older -type d -name "V*" -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -1 `  
+				LASTDIRINFO=$(find "${HOMEDIR}"/SAR/AMSTer/AMSTerEngine/_Sources_AE/Older -type d -name "V*" -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -1 )  
 				#	Get everything after the last /:
 				LASTDIRNAME="${LASTDIRINFO##*/}"
-				MEVER=`echo ${LASTDIRNAME} | cut -d _ -f1`
+				MEVER=$(echo "${LASTDIRNAME}" | cut -d _ -f1)
 				if [ "${MEVER}" == "" ] 
 					then 
 						echo "  AMSTerEngine seems not installed. "
@@ -1345,14 +1380,14 @@ function InstallAMSTerEngine()
 					else 
 						echo "  The last source of AMSTerEngine in ${HOMEDIR}/SAR/AMSTer/AMSTerEngine/_Sources_AE/Older" 
 						echo "     is ${MEVER}"
-						CHECKME=`S1DataReader | wc -l`
-						if [ ${CHECKME} -gt 0 ] 
+						CHECKME=$(S1DataReader | wc -l)
+						if [ "${CHECKME}" -gt 0 ] 
 							then 
 								echo "There is at least one AMSTer Engine compiled. "
 								echo "It is your responsability to verify that it is the last one though..."
 								# check the version from the _History.txt file 
 								echo "For your information, the last version most probably installed as mentionned in ${HOMEDIR}/SAR/AMSTer/AMSTerEngine/_History.txt is "
-								head -1 ${HOMEDIR}/SAR/AMSTer/AMSTerEngine/_History.txt
+								head -1 "${HOMEDIR}"/SAR/AMSTer/AMSTerEngine/_History.txt
 							else 
 								echo "However, no AMSTer Engine is compiled yet and/or executable from the PATH. "
 								while true ; do
@@ -1395,22 +1430,22 @@ function TstPathGnuFctMac()
 		
 		GFCT=$1
 
-		WHEREISGFCT=`which ${GFCT}`
-		TSTPATHGFCT=`dirname ${WHEREISGFCT}`
+		WHEREISGFCT=$(which "${GFCT}")
+		TSTPATHGFCT=$(dirname "${WHEREISGFCT}")
 		FCT="${GFCT:1}" 
 		
 		if [ "${WHEREISGFCT}" != "${PATHGNU}/${GFCT}" ] 
 			then 
 				echo "${GFCT} is in ${TSTPATHGFCT} instead of ${PATHGNU}. Let's link it to ${PATHGNU}/${GFCT} (and to ${PATHGNU}/${FCT} for security)" 
 				#sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${GFCT} 2>/dev/null 
-				if [ ! -f ${PATHGNU}/${GFCT} ] ; then sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${GFCT} 2>/dev/null ; else echo "	// ${GFCT} already linked in ${PATHGNU}" ; fi
+				if [ ! -f "${PATHGNU}"/"${GFCT}" ] ; then sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${GFCT}" 2>/dev/null ; else echo "	// ${GFCT} already linked in ${PATHGNU}" ; fi
 				
 				#sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${FCT} 2>/dev/null 
-				if [ ! -f ${PATHGNU}/${FCT} ] ; then sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${FCT} 2>/dev/null ; else echo "	// ${FCT} already linked in ${PATHGNU}" ; fi
+				if [ ! -f "${PATHGNU}"/"${FCT}" ] ; then sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null ; else echo "	// ${FCT} already linked in ${PATHGNU}" ; fi
 			else 
 				echo "Link ${GFCT} to ${FCT} in ${PATHGNU} for security" 
 				#sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${FCT} 2>/dev/null
-				if [ ! -f ${PATHGNU}/${FCT} ] ; then sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${FCT} 2>/dev/null ; else echo "	// ${FCT} already linked in ${PATHGNU}" ; fi
+				if [ ! -f "${PATHGNU}"/"${FCT}" ] ; then sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null ; else echo "	// ${FCT} already linked in ${PATHGNU}" ; fi
 
 		fi
 	}
@@ -1424,18 +1459,18 @@ function TstPathGnuFctLinux()
 		
 		FCT=$1
 
-		WHEREISFCT=`which ${FCT}`
-		TSTPATHFCT=`dirname ${WHEREISFCT}`
+		WHEREISFCT=$(which "${FCT}")
+		TSTPATHFCT=$(dirname "${WHEREISFCT}")
 		GFCT="g${FCT}" 
 		
 		if [ "${WHEREISFCT}" != "${PATHGNU}/${FCT}" ] 
 			then 
 				echo "${FCT} is in ${TSTPATHFCT} instead of ${PATHGNU}. Let's link it to ${PATHGNU}/${FCT} (and to ${PATHGNU}/${GFCT} for security)" 
-				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/${FCT} 2>/dev/null 
-				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null 
+				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/"${FCT}" 2>/dev/null 
+				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/"${GFCT}" 2>/dev/null 
 			else 
 				echo "Link ${FCT} to ${GFCT} in ${PATHGNU} for security" 
-				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/${GFCT} 2>/dev/null
+				sudo ln -sf "${WHEREISFCT}" ${PATHGNU}/"${GFCT}" 2>/dev/null
 		fi
 	}
 
@@ -1450,6 +1485,8 @@ DoInstallMSBAS()
 		echo "  //      msbas_20201009_wExtract_Unified_20220818-Gilles.zip runs msbasv4 (2D) on a LIMITED number of cores (max 12 threads). "
 		echo "  // 		msbas_20201009_wExtract_Unified_20220919_Optimized_v1.3_Full3D.zip runs msbasv4 for full 3D decomposition (only possible when enough diversity of looking geometry is available. DO NOT USE UNLESS YOU KNOW WHAT YOU DO - See AMSTer manual)"
 		echo "  //      msbas_v10_20230601_Gilles.zip runs msbasv10 (3/4D)... Not ready for the AMSTer software yet, i.e. for manual usage only . "
+
+
 		echo "  //   If you want another version, please install it manually. "
 		echo "  //   You can contact directely the autor (sergey.samsonov@NRCan-RNCan.gc.ca) for other version or for more info. In that case, you will have to compile it manually "
 		echo "  //   i.e.: unzip the package, go to sources subdirs and run make; move binaries in MSBAS dir)"
@@ -1464,7 +1501,7 @@ DoInstallMSBAS()
 			    	# Check if the version exists
 					if [ -f "${RAWFILE}" ]
 						then
-							CompileMSBAS ${RAWFILE}
+							CompileMSBAS "${RAWFILE}"
 							break
 						else
 					       echo "No MSBAS zip file exists there."
@@ -1481,14 +1518,14 @@ DoInstallMSBAS()
 			else 
 				# sources are in AMSTer_Distribution directory
 				echo "Here is the list of available versions in you AMSTer_Distribution directory:"
-				cd ${PATHDISTRO}/MSBAS_sources/
-				find ${PATHDISTRO}/MSBAS_sources/ -type f -name "*.zip"
+				cd "${PATHDISTRO}"/MSBAS_sources/
+				find "${PATHDISTRO}"/MSBAS_sources/ -type f -name "*.zip"
 			    while true; do
 			    	read -p "Which version would you like to install (enter the full path and zip file !): " RAWFILE
 			    	# Check if the version exists
 					if [ -f "${RAWFILE}" ]
 						then
-							CompileMSBAS ${RAWFILE}
+							CompileMSBAS "${RAWFILE}"
 							break
 						else
 					       echo "Version does not exist."
@@ -1513,39 +1550,63 @@ CompileMSBAS()
 			PATHMSBAS=${HOMEDIR}/SAR/AMSTer/MSBAS
 			# where to keep installed sources
 			PATHFORMERSOURCESMSBAS=${HOMEDIR}/SAR/EXEC/Sources_Installed/Former_msbas/
-			mkdir -p ${PATHFORMERSOURCESMSBAS}
+			mkdir -p "${PATHFORMERSOURCESMSBAS}"
 			echo "MSBAS will be installed in default directory ${PATHMSBAS}"
 			echo " and sources will be stored with possible older versions in ${PATHFORMERSOURCESMSBAS}"
 
-			MSBASSOURCEDIR=`dirname ${RAWFILE}`		# e.g. ${PATHDISTRO}/MSBAS_sources/msbasv4/
-			MSBASSOURCEFILETAR=`basename ${RAWFILE}` 	# e.g. msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip
+			MSBASSOURCEDIR=$(dirname "${RAWFILE}")		# e.g. ${PATHDISTRO}/MSBAS_sources/msbasv4/
+			MSBASSOURCEFILETAR=$(basename "${RAWFILE}") 	# e.g. msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip
 
 			FILEXT="${MSBASSOURCEFILETAR##*.}"
- 			FILENOXT=`echo "${MSBASSOURCEFILETAR%.*}"`
+ 			FILENOXT=$(echo "${MSBASSOURCEFILETAR%.*}")
 			if [ "${FILEXT}" == "zip" ] 
 				then 
 					# Save possible former versions
-					FORMERVERSION=`ls ${PATHMSBAS}/msbasv* 2>/dev/null | grep -v "zip"`
+					FORMERVERSION=$(ls "${PATHMSBAS}"/msbasv* 2>/dev/null | grep -v "zip")
 					if [ "${FORMERVERSION}" != "" ] ; then
-						echo "  // Save former version in ${PATHFORMERSOURCESMSBAS}. "
-						cp -f ${FORMERVERSION} ${PATHFORMERSOURCESMSBAS}
+						echo "  // Save former version(s) in ${PATHFORMERSOURCESMSBAS}. "
+						#cp -f "${FORMERVERSION}" "${PATHFORMERSOURCESMSBAS}"  
+						cp -f "${PATHMSBAS}"/msbasv* "${PATHFORMERSOURCESMSBAS}" 
 					fi
 
-					cp ${RAWFILE} ${PATHFORMERSOURCESMSBAS}
-					cd ${PATHFORMERSOURCESMSBAS}
-					unzip ${MSBASSOURCEFILETAR}
-					cd ${FILENOXT}
+					cp "${RAWFILE}" "${PATHFORMERSOURCESMSBAS}"
+					cd "${PATHFORMERSOURCESMSBAS}"
+					unzip "${MSBASSOURCEFILETAR}"
+					cd "${FILENOXT}"
+					
+					# Adapt clang version to OS version
+					case ${OS} in 
+						"Linux") 
+							echo "Linux: Suppose recent installation; use c++ v17."
+							cp -f Makefile_clang21_cpp17 Makefile
+							;;
+						"Darwin")
+							if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -lt 15 ]]; then
+							    echo "macOS $OSX_MAJOR.$OSX_MINOR detected (< Catalina); use clang-14 and c++11."
+								cp -f Makefile_clang14_cpp11 Makefile
+							elif [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -eq 15 ]]; then
+							    echo "macOS 10.15 (Catalina) detected; use clang-14 and c++11."
+								cp -f Makefile_clang14_cpp11 Makefile
+							elif [[ "$OSX_MAJOR" -eq 11 || "$OSX_MAJOR" -eq 12 ]]; then
+							    echo "macOS $OSX_MAJOR.$OSX_MINOR (Big Sur / Monterey) detected; use clang-21 and c++17."
+								cp -f Makefile_clang21_cpp17 Makefile
+							else
+							    echo "macOS $OSX_MAJOR.$OSX_MINOR (Ventura or newer) detected; use clang-21 and c++17."
+								cp -f Makefile_clang21_cpp17 Makefile
+							fi
+							;;
+					esac	
 					
 					make all 
 					
 					# Check version 
-					MSBASVERSION=`ls msbasv* | grep -v "zip" | cut -d v -f2`
+					MSBASVERSION=$(ls msbasv* | grep -v "zip" | cut -d v -f2)
 					echo "  // msbas version ${MSBASVERSION} compiled. "
 
 	
 					# store compiled msbas in SAR/AMSTer/MSBAS/
 					echo "  // store compiled msbasv${MSBASVERSION} in SAR/AMSTer/MSBAS/"
-					cp ${PATHFORMERSOURCESMSBAS}/${FILENOXT}/msbasv${MSBASVERSION} ${HOMEDIR}/SAR/AMSTer/MSBAS/
+					cp "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/msbasv"${MSBASVERSION}" "${HOMEDIR}"/SAR/AMSTer/MSBAS/
 
 					case ${MSBASVERSION} in 
 						"4")
@@ -1553,8 +1614,11 @@ CompileMSBAS()
 							echo "  // msbas_extract available with msbasv${MSBASVERSION}; Compile it now "
 							cd msbas_extract
 							make
-							cp ${PATHFORMERSOURCESMSBAS}/${FILENOXT}/msbas_extract/msbas_extract ${HOMEDIR}/SAR/AMSTer/MSBAS/
-							cd ${HOMEDIR} 
+							cp "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/msbas_extract/msbas_extract "${HOMEDIR}"/SAR/AMSTer/MSBAS/
+							cd "${HOMEDIR}" 
+							;;
+						"4_3D")
+							echo "  // Compile msbas_extract with msbasv4 if needed and not done yet. "
 							;;
 						"10")
 							echo "  // msbas_extract not available with msbasv${MSBASVERSION}; Compile it with a former version if needed... "
@@ -1565,8 +1629,8 @@ CompileMSBAS()
 					esac
 					
 					# Clean and keep sources
-					rm -rf ${PATHFORMERSOURCESMSBAS}/${FILENOXT}
-					rm -rf ${PATHFORMERSOURCESMSBAS}/${FILENOXT}/__MACOSX
+					rm -rf "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"
+					rm -rf "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/__MACOSX
 					
 				else 
 					echo " Format not as expected (zip). May not be genuine file ? Please do manually"		
@@ -1584,11 +1648,11 @@ function InstallMSBAS()
 						echo "  // OK, let's check its version. It is your responsability to verify that it is the last one though..."
 					
 						which msbas > List_msbas.txt
-						for i in `seq 1 20` ; do which msbasv${i}; done >> List_msbas.txt
+						for i in $(seq 1 20) ; do which msbasv"${i}"; done >> List_msbas.txt
 						NROFMSBAS=$(cat List_msbas.txt | wc -l)
 						if [ ${NROFMSBAS} -gt 0 ]
 							then
-								MSBASVER=`tail -1 List_msbas.txt`
+								MSBASVER=$(tail -1 List_msbas.txt)
 								echo "  // You have ${NROFMSBAS} MSBAS versions"		
  								rm -f List_msbas.txt
 							else
@@ -1646,17 +1710,17 @@ function GetSCRIPTS()
 	{
 		SCRIPTSDIR=$1		# e.g. ${PATHDISTRO}/SCRIPTS_MT/
 
-		if [ `ls -l ${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT 2>/dev/null | wc -l ` -gt 0 ] ; then 
+		if [ $(ls -l "${HOMEDIR}"/SAR/AMSTer/SCRIPTS_MT 2>/dev/null | wc -l ) -gt 0 ] ; then 
 			echo "Former scripts exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/"
 			# Save former scripts to ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/SCRIPTS_DATE
-			mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}
-			mv ${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/
+			mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_"${RUNDATE}"
+			mv "${HOMEDIR}"/SAR/AMSTer/SCRIPTS_MT/* "${HOMEDIR}"/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_"${RUNDATE}"/
 		fi 
 		# install
-		cp -Rf ${SCRIPTSDIR}/* ${HOMEDIR}/SAR/AMSTer/SCRIPTS_MT/
+		cp -Rf "${SCRIPTSDIR}"/* "${HOMEDIR}"/SAR/AMSTer/SCRIPTS_MT/
 		# keep installed sources 
-		mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
-		cp -Rf ${SCRIPTSDIR}/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_${RUNDATE}/
+		mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_"${RUNDATE}"/
+		cp -Rf "${SCRIPTSDIR}"/* "${HOMEDIR}"/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Installed_on_"${RUNDATE}"/
 
 		echo ""	
 	}
@@ -1665,13 +1729,13 @@ function GetDoc()
 	{
 		DOCDIR=$1		# e.g. ${PATHDISTRO}/DOC/
 
-		if [ `ls -l ${HOMEDIR}/SAR/AMSTer/DOC 2>/dev/null | wc -l ` -gt 0 ] ; then 
+		if [ $(ls -l "${HOMEDIR}"/SAR/AMSTer/DOC 2>/dev/null | wc -l ) -gt 0 ] ; then 
 			echo "Former DOCs exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/"
-			mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}
-			mv ${HOMEDIR}/SAR/AMSTer/DOC/* ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/
+			mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed/DOC/Removed_on_"${RUNDATE}"
+			mv "${HOMEDIR}"/SAR/AMSTer/DOC/* "${HOMEDIR}"/SAR/EXEC/Sources_Installed/DOC/Removed_on_"${RUNDATE}"/
 		fi 
 
-		cp -Rf ${DOCDIR}/* ${HOMEDIR}/SAR/AMSTer/DOC/
+		cp -Rf "${DOCDIR}"/* "${HOMEDIR}"/SAR/AMSTer/DOC/
 
 		echo ""	
 	}
@@ -1726,12 +1790,12 @@ case ${OS} in
 		EchoInverted "  // We shall install/update AMSTer Software on this Linux Computer. Your OS is:  "
 		echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
 		lsb_release -a 2> /dev/null
-		UBUNTUVER=`lsb_release -a 2> /dev/null | grep "Release" | awk '{ print $2 }' | cut -d . -f1`
+		UBUNTUVER=$(lsb_release -a 2> /dev/null | grep "Release" | awk '{ print $2 }' | cut -d . -f1)
 		if [ ${UBUNTUVER} -lt 18 ] ; then 
 			echo "  // Ubuntu versions before 18 does not have snap; install it now. " 
 			sudo apt install snapd
 		fi
-		TSTMAKE=`make -version 2>/dev/null`
+		TSTMAKE=$(make -version 2>/dev/null)
 		if [ "${TSTMAKE}" == "" ] 
 			then sudo apt install make 
 		fi
@@ -1744,7 +1808,7 @@ case ${OS} in
 		echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
 		
 		# Will need /opt/local/bin hence create it now if it does not exist yet
-		cd ${HOMEDIR}
+		cd "${HOMEDIR}"
 		mkdir -p /opt/local/bin/
 		;;
 esac			
@@ -1754,7 +1818,7 @@ echo
 ################################
 # Create mandatory directories #
 ################################
-cd ${HOMEDIR}
+cd "${HOMEDIR}"
 mkdir -p SAR
 mkdir -p SAR/EXEC
 mkdir -p SAR/AMSTer/DOC
@@ -1795,35 +1859,35 @@ if [ "${TYPERUN}" == "I" ] ; then
 	# setup the ${HOMEDIR}/.bash_profile
 	# -------------------------
 	EchoInverted "  // Test your /.bash_profile:"
-	if [ -f ${HOMEDIR}/.bash_profile ]
+	if [ -f "${HOMEDIR}"/.bash_profile ]
 		then 
 			echo "  // You already have a ${HOMEDIR}/.bash_profile "
-			TST=`grep "source ~/.bashrc" ${HOMEDIR}/.bash_profile | wc -w`
+			TST=$(grep "source ~/.bashrc" "${HOMEDIR}"/.bash_profile | wc -w)
 			if [ "${TST}" -gt 0 ] ; then 
 					echo "  // and .bashrc is already sourced in there."
 				else 
 					echo "  // but no .bashrc is sourced in there. Let's do it to be sure... (former .bash_profile is saved as .bash_profile_${RUNDATE}) "
-					if [ ! -f ${HOMEDIR}/.bash_profile_${RUNDATE} ] ; then cp ${HOMEDIR}/.bash_profile ${HOMEDIR}/.bash_profile_${RUNDATE} ; fi
+					if [ ! -f "${HOMEDIR}"/.bash_profile_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bash_profile "${HOMEDIR}"/.bash_profile_"${RUNDATE}" ; fi
 					
-					sudo echo "source ~/.bashrc" >> ${HOMEDIR}/.bash_profile
+					sudo echo "source ~/.bashrc" >> "${HOMEDIR}"/.bash_profile
 			fi		
 		else 
 			echo "  // No .bash_profile exists. Create one and source the .bashrc in the .bash_profile to be sure"
-			sudo echo "source ~/.bashrc" > ${HOMEDIR}/.bash_profile	
-			sudo chmod 700 ${HOMEDIR}/.bash_profile
+			sudo echo "source ~/.bashrc" > "${HOMEDIR}"/.bash_profile	
+			sudo chmod 700 "${HOMEDIR}"/.bash_profile
 	fi
 	echo ""
 	
 	# setup the ${HOMEDIR}/.bashrc
 	# -------------------
 	EchoInverted "  // Test your .bashrc:"
-	if [ -f ${HOMEDIR}/.bashrc ]
+	if [ -f "${HOMEDIR}"/.bashrc ]
 		then 
 			echo "  // You already have a .bashrc "
 		else 
 			echo "  // No .bashrc exists. Create one"
-			sudo touch ${HOMEDIR}/.bashrc
-			sudo chmod 700 ${HOMEDIR}/.bashrc
+			sudo touch "${HOMEDIR}"/.bashrc
+			sudo chmod 700 "${HOMEDIR}"/.bashrc
 	fi
 	echo ""	
 	
@@ -1847,7 +1911,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, it will request your admin pwd and may take time... "	
-							sudo apt update
+							sudo apt-get update
 							sudo apt upgrade
 							break ;;
 					[Nn]* ) 
@@ -1860,7 +1924,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo ""			
 
 			# to be sure... 
-			AptInsatll "gzip"
+			AptInstall "gzip"
 
 			# 2) Some optional stuffs - Linux
 			# -----------------------
@@ -1874,7 +1938,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 						case $cis in
 						[Cc]* ) 				
 								echo "  // OK, let's check its version. .."
-								GITVER=`gitkraken --version 2>/dev/null`
+								GITVER=$(gitkraken --version 2>/dev/null)
 								if [ "${GITVER}" == "" ] 
 									then 
 										echo "Gitkraken seems not installed. "
@@ -1884,7 +1948,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 												[Yy]* ) 
 													echo "  // OK, I will try to install it."
 													sudo snap install gitkraken --classic
-													#AptInsatll "gitkraken --classic"
+													#AptInstall "gitkraken --classic"
 													break ;;
 												[Nn]*)
 													echo "  // OK, you know..." 
@@ -1901,7 +1965,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 								break ;;
 						[Ii]* ) 				
 								sudo snap install gitkraken --classic
-								#AptInsatll "gitkraken --classic"
+								#AptInstall "gitkraken --classic"
 								break ;;
 						[Ssn]* ) 
 								echo "  // OK, I skip it."
@@ -1922,7 +1986,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 						case $cis in
 						[Cc]* ) 				
 								echo "  // OK, let's check its version. "
-								GIMPVER=`gimp -version 2>/dev/null`
+								GIMPVER=$(gimp -version 2>/dev/null)
 								if [ "${GIMPVER}" == "" ] 
 									then 
 										echo "Gimp seems not installed. "
@@ -1933,7 +1997,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 													echo "  // OK, I will try to install it."
 													sudo add-apt-repository ppa:ubuntuhandbook1/gimp 
 
-													AptInsatll "gimp"
+													AptInstall "gimp"
 													break ;;
 												[Nn]*)
 													echo "  // OK, you know..." 
@@ -1952,7 +2016,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 								echo "  // OK, I will try to install it."
 								sudo add-apt-repository ppa:ubuntuhandbook1/gimp 
 								#sudo apt update
-								AptInsatll "gimp"
+								AptInstall "gimp"
 								break ;;
 						[Ssn]* ) 
 								echo "  // OK, I skip it."
@@ -1975,18 +2039,30 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, install GMT (last version ?) and GDAL..."
-							AptInsatll "gdal-bin" 
-							AptInsatll "libgdal-dev"
-							#AptInsatll "libgdal26" 
-							AptInsatll "libgdal30" 
-							AptInsatll "libhdf5-dev" 
-							AptInsatll "gmt"
-							AptInsatll "libnetcdf-dev"
-							AptInsatll "libmpich-dev"
-							AptInsatll "libopenmpi-dev"
+							sudo apt install -y \
+   								gdal-bin libgdal-dev \
+   								libhdf5-dev libnetcdf-dev libopenjp2-7-dev \
+   								proj-bin libproj-dev \
+   								libgeos-dev \
+   								build-essential python3.12 python3.12-venv python3.12-dev 	# python3.10-venv and python3.10-dev are needed to create a venv and compile some Python packages.
+							
+							
+							##AptInstall "gdal-bin" 
+							##AptInstall "libgdal-dev"
+							#AptInstall "libgdal26" 
+							##AptInstall "libgdal30" 
+							##AptInstall "libhdf5-dev" 
+							##AptInstall "libopenjp2-7-dev"
+							##AptInstall "proj-bin"
+							##AptInstall "libproj-dev"
+							##AptInstall "libgeos-dev"
+							
+							AptInstall "gmt"
+							AptInstall "libmpich-dev"
+							AptInstall "libopenmpi-dev"
 							
 							#sudo apt install openjpeg  
-							AptInsatll "graphicsmagick ffmpeg "
+							AptInstall "graphicsmagick ffmpeg "	# No capital letters at graphicsmagick
 							echo "  // Your GDAL version is:"
 							gdalinfo --version
 							break ;;
@@ -2007,7 +2083,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, install gnu fortran."
-							AptInsatll "gfortran" 
+							AptInstall "gfortran" 
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2026,24 +2102,24 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, install gnu utilities and make appropriate alias."
-							AptInsatll "sed"
-							AptInsatll "gawk"
-							AptInsatll "coreutils"  	#(i.e. for gdate, gstat)
-							AptInsatll "findutils"		#(i.e. for find)
-							AptInsatll "grep"			#(i.e. for ggrep)
-							AptInsatll "wget"			#(needed i.e. to download the S1 orbits)
+							AptInstall "sed"
+							AptInstall "gawk"
+							AptInstall "coreutils"  	#(i.e. for gdate, gstat)
+							AptInstall "findutils"		#(i.e. for find)
+							AptInstall "grep"			#(i.e. for ggrep)
+							AptInstall "wget"			#(needed i.e. to download the S1 orbits)
 							sudo snap install curl			#and add the path to curl (e.g. /snap/bin) in your $PATH 
 
 							# To be sure, prepare to add curl in PATH (see at the bottom of the script)
-							WHEREISCURL=`which curl`
-							PATHCURL=`dirname ${WHEREISCURL}`						
+							WHEREISCURL=$(which curl)
+							PATHCURL=$(dirname "${WHEREISCURL}")						
 							
 							# To be sure, prepare to add gnu-named versions in PATHGNU state variable (see at the bottom of the script)
 							PATHGNU="/usr/bin" 	# should be this in Linux
 							
 							# awk might not be installed by default on Linux, hence we got gawk - all other will be made with function
-							WHEREISGAWK=`which gawk`  	# (beware if awk already exist and would be a link pointing toward another version of awk. Replace it with our gawk)
-							PATHGAWK=`dirname ${WHEREISGAWK}`
+							WHEREISGAWK=$(which gawk)  	# (beware if awk already exist and would be a link pointing toward another version of awk. Replace it with our gawk)
+							PATHGAWK=$(dirname "${WHEREISGAWK}")
 							if [ "${WHEREISGAWK}" != "${PATHGNU}/gawk" ] 
 								then 
 									echo "gawk is in ${PATHGAWK} instead of ${PATHGNU}. Let's link it to ${PATHGNU}/gawk (and to ${PATHGNU}/awk for security)" 
@@ -2062,17 +2138,17 @@ if [ "${TYPERUN}" == "I" ] ; then
 							TstPathGnuFctLinux "xargs"
 							TstPathGnuFctLinux "du"
 							
-							if [ `which date` != "${PATHGNU}/date" ] ; then echo "coreutils seems not in ${PATHGNU}; please check. I arrange it at least for date  here though" ; fi
+							if [ "$(which date)" != "${PATHGNU}/date" ] ; then echo "coreutils seems not in ${PATHGNU}; please check. I arrange it at least for date  here though" ; fi
 							TstPathGnuFctLinux "date"
 							
-							if [ `which stat` != "${PATHGNU}/stat" ] ; then echo "findutils seems not in ${PATHGNU}; please check. I arrange it at least for stat and find here though" ; fi
+							if [ "$(which stat)" != "${PATHGNU}/stat" ] ; then echo "findutils seems not in ${PATHGNU}; please check. I arrange it at least for stat and find here though" ; fi
 							TstPathGnuFctLinux "stat"
 							TstPathGnuFctLinux "find"
 							
-							WHEREISWGET=`which wget`
+							WHEREISWGET=$(which wget)
 							if [ "${WHEREISWGET}" != "${PATHGNU}/wget" ] ; then echo "wget seems not in ${PATHGNU}; please check. I make a link though" ; sudo ln -sf "${WHEREISWGET}" ${PATHGNU}/wget 2>/dev/null ; fi
 
-							cd  ${HOMEDIR}
+							cd "${HOMEDIR}"
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2092,42 +2168,50 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I install mandatory libraries"
-							AptInsatll "clang-20"
-							AptInsatll "libfftw3-dev"
-							AptInsatll "libfftw3-long3" 
-							AptInsatll "libfftw3-single3"
-							AptInsatll "libgeotiff-dev"
-							AptInsatll "libtiff-dev"
-							AptInsatll "libxml2"
-							AptInsatll "libxml2-dev"
-							AptInsatll "liblapack-dev"
-							AptInsatll "libomp-dev"
-							#AptInsatll "libatlas-base-dev"
-							AptInsatll "libopenblas-dev"
-							AptInsatll "graphicsmagick-imagemagick-compat"
-							AptInsatll "imagemagick-6-common"
-							AptInsatll "imagemagick"				# for convert
-							WHEREISCONV=`which convert`					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
-							PATHCONV=`dirname ${WHEREISCONV}`
+							AptInstall "clang-18"		# or clang-20
+								## in case of prblm try to download and make the LLVM script executable: 
+								#wget https://apt.llvm.org/llvm.sh
+								#chmod +x llvm.sh
+								#sudo ./llvm.sh 20
+							AptInstall "libfftw3-dev"
+							AptInstall "libfftw3-long3" 
+							AptInstall "libfftw3-single3"
+							AptInstall "libgeotiff-dev"
+							AptInstall "libtiff-dev"
+							AptInstall "libxml2"
+							AptInstall "libxml2-dev"
+							AptInstall "liblapack-dev"
+							AptInstall "libomp-dev"
+							#AptInstall "libatlas-base-dev"
 							sudo apt install "g++"
-							AptInsatll "espeak -y" 		#(to make your computer talking during mass processing)
-							if [ -f /etc/ImageMagick/policy.xml ] ; then 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick/policy.xml 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick/policy.xml 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick/policy.xml 
-							fi
-							if [ -f /etc/ImageMagick-6/policy.xml ] ; then 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick-6/policy.xml
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick-6/policy.xml
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
-								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick-6/policy.xml 
-							fi
-							AptInsatll "parallel"
-							AptInsatll "mpich"
-							AptInsatll "libgsl-dev"	
+							AptInstall "libopenblas-dev"
+
+							AptInstall "graphicsmagick-imagemagick-compat"	# add compatibility for usage in script. Needs graphicsmagick installed above
+							AptInstall "ghostscript"
+#							AptInstall "imagemagick"				# for convert; more compatible than graphicsmagick but less performant; do not mix with graphicsmagick
+#							AptInstall "imagemagick-6-common"		# 
+# if you use graphicsmagick-imagemagick-compat, you shouldn't have a policy.xml and no restriction in height and width should apply. Permissions to read/write EPS, PD, PDF might be however managed by Gohstscript
+#							WHEREISCONV=`which convert`					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
+#							PATHCONV=`dirname ${WHEREISCONV}`
+#							AptInstall "espeak -y" 		#(to make your computer talking during mass processing)
+#							if [ -f /etc/ImageMagick/policy.xml ] ; then 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick/policy.xml 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick/policy.xml 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick/policy.xml 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick/policy.xml 
+#							fi
+#							if [ -f /etc/ImageMagick-6/policy.xml ] ; then 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"PS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"PS\"/" /etc/ImageMagick-6/policy.xml
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"coder\" rights=\"none\" pattern=\"EPS\"/policy domain=\"coder\" rights=\"read|write\" pattern=\"EPS\"/" /etc/ImageMagick-6/policy.xml
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"height\" value=\"16KP\"/policy domain=\"resource\" name=\"height\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"width\" value=\"16KP\"/policy domain=\"resource\" name=\"width\" value=\"32KP\"/" /etc/ImageMagick-6/policy.xml 
+#								sudo ${PATHGNU}/sed -i "s/policy domain=\"resource\" name=\"disk\" value=\"1GiB\"/policy domain=\"resource\" name=\"disk\" value=\"8GiB\"/" /etc/ImageMagick-6/policy.xml 
+#							fi
+							AptInstall "parallel"
+							AptInstall "mpich"
+							AptInstall "libgsl-dev"	
+							AptInstall "gsfonts"
 							
 							break ;;
 					[Nn]* ) 
@@ -2149,7 +2233,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to install/update Java? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-						AptInsatll default-jdk
+						AptInstall default-jdk
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2177,7 +2261,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo "        << The operation couldn't be completed. Unable to locate a Java Runtime that supports (null). >>"
 				echo 
 
-				JAVAHOMEPATH=`java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | cut -d = -f2- | cut -d " " -f2-` 
+				JAVAHOMEPATH=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | cut -d = -f2- | cut -d " " -f2-) 
 				JVHP="\"${JAVAHOMEPATH}\""
 				UpdateVARIABLESBashrc "JAVA_HOME" "export JAVA_HOME=${JVHP}"
 			
@@ -2190,7 +2274,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to [c]heck, [i]nstall or [s]kip Fiji/ImageJ  ? [c/i/s] "  cis
 					case $cis in
 						[Cc]* ) 
-							FIJIEXEC=`find ${HOMEDIR}/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*" 2>/dev/null`
+							FIJIEXEC=$(find "${HOMEDIR}"/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*" 2>/dev/null)
 							if [ "${FIJIEXEC}" == "" ] 
 								then
 									echo "Fiji/ImageJ seems not installed. "
@@ -2202,24 +2286,24 @@ if [ "${TYPERUN}" == "I" ] ; then
 													AskExternalComponent "Fiji/ImageJ" "https://imagej.net/software/fiji/downloads" 
 													if [ "${SKIP}" == "No" ] ; then 
 														# just if there is a typo in the version, or name... hoping that at least the main name is OK					
-														if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
-															FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null`
-															SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
+														if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
+															FILETOINSTALL=$(find "${HOMEDIR}"/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null)
+															SearchForSimilar "${RAWFILE}" "${FILETOINSTALL}"
 														fi
 														
 														FILEXT="${RAWFILE##*.}"
  
 														if [ "${FILEXT}" == "zip" ] 
 															then 
-																unzip ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
+																unzip "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
 																#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
-																mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-													 			mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
+																mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+													 			mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
-																FIJIEXEC=`find ${HOMEDIR}/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*"  2>/dev/null`
-																if [ "${FIJIEXEC}" == "" ] ; then FIJIEXEC=`find ${HOMEDIR}/Fiji.app/ -type f -name "ImageJ-linux*"` ; fi
+																FIJIEXEC=$(find "${HOMEDIR}"/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*"  2>/dev/null)
+																if [ "${FIJIEXEC}" == "" ] ; then FIJIEXEC=$(find "${HOMEDIR}"/Fiji.app/ -type f -name "ImageJ-linux*") ; fi
 
-																PATHFIJI=`dirname ${FIJIEXEC}`
+																PATHFIJI=$(dirname "${FIJIEXEC}")
 																echo "  // "
 															else 
 																echo " Format not as expected (zip). May not be genuine file ? Please do manually"			
@@ -2242,23 +2326,23 @@ if [ "${TYPERUN}" == "I" ] ; then
 							AskExternalComponent "Fiji/ImageJ" "https://imagej.net/software/fiji/downloads" 
 							if [ "${SKIP}" == "No" ] ; then 
 								# just if there is a typo in the version, or name... hoping that at least the main name is OK					
-								if [ ! -f  ${HOMEDIR}/SAR/EXEC/"${RAWFILE}" ] ; then 
-									FILETOINSTALL=`find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null`
-									SearchForSimilar ${RAWFILE} ${FILETOINSTALL}
+								if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
+									FILETOINSTALL=$(find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null)
+									SearchForSimilar "${RAWFILE}" "${FILETOINSTALL}"
 								fi
 								
 								FILEXT="${RAWFILE##*.}"
  
 								if [ "${FILEXT}" == "zip" ] 
 									then 
-										unzip ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
+										unzip "${HOMEDIR}"/SAR/EXEC/"${RAWFILE} "
 										#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
-										mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-										mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
-										FIJIEXEC=`find ${HOMEDIR}/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*" 2>/dev/null`
-										if [ "${FIJIEXEC}" == "" ] ; then FIJIEXEC=`find ${HOMEDIR}/Fiji.app/ -type f -name "ImageJ-linux*"` ; fi
+										mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+										mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+										FIJIEXEC=$(find "${HOMEDIR}"/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*" 2>/dev/null)
+										if [ "${FIJIEXEC}" == "" ] ; then FIJIEXEC=$(find "${HOMEDIR}"/Fiji.app/ -type f -name "ImageJ-linux*") ; fi
 
-										PATHFIJI=`dirname ${FIJIEXEC}`
+										PATHFIJI=$(dirname "${FIJIEXEC}")
 										echo "  // "
 									else 
 										echo " Format not as expected (zip). May not be genuine file ? Please do manually"			
@@ -2293,8 +2377,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I do it."
-							AptInsatll "gnuplot-x11"
-							if [ `which gnuplot` != "${PATHGNU}" ] ; then echo "gnuplot seems not in ${PATHGNU}; please check" ; fi
+							AptInstall "gnuplot-x11"
+							if [ $(which gnuplot) != "${PATHGNU}" ] ; then echo "gnuplot seems not in ${PATHGNU}; please check" ; fi
 							echo "  // "
 							break ;;
 					[Nn]* ) 
@@ -2315,63 +2399,36 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I do it."
-							AptInsatll "python3"
-							AptInsatll "python3-opencv"
-							AptInsatll "python3-numpy"
-							AptInsatll "python3-scipy"
-							AptInsatll "python3-matplotlib"
-							AptInsatll "python3-gdal"
-							AptInsatll "python3-shapely"
-					
-							echo "  // Check python3 version:"
-							python -c 'import sys ; print(sys.path)'
-
-							echo "  // Create link for smooth call of python by all the scripts"
-							sudo mkdir -p /opt/local/
-							sudo mkdir -p /opt/local/bin
-							WHEREISPYTHON=`which python3`				#(To know where it is installed, e.g. /usr/bin)
-							sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python	2>/dev/null
-
-							if [ "${WHEREISPYTHON}" != "/opt/local/bin/python3" ]
-								then 
-									sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python3	2>/dev/null
-							fi
-
-
-							# UTM package
-							echo "  // Install also utm package for python v3. "
-							#pip install --upgrade pip
-							#AptInsatll "python3-pip"
-							#pip install utm
-							# For most recent version of python, install system wide with 
-							AptInsatll "python3-utm"
 							
-							# AMSTer Software Organizer
-							#/opt/local/bin/python -m pip install pyqt6
-							# For most recent version of python, install system wide with  
-							AptInsatll "python3-pyqt6"
+							# With venv
+								sudo mkdir -p /opt/local
+								sudo chown -R "$USER" /opt/local
+								python3.12 -m venv /opt/local/amster_python_env
+								sudo chown -R "$USER" /opt/local/amster_python_env
+								source /opt/local/amster_python_env/bin/activate
+	
+							# Upgrade pip
+								/opt/local/amster_python_env/bin/pip install --upgrade pip setuptools wheel
 							
-							# AMSTer Software Optimisation 
-							#/opt/local/bin/python -m pip install networkx
-							# For most recent version of python, install system wide with 
-							AptInsatll "python3-networkx"
-
-							# for computing Variogram
-							/opt/local/bin/python -m pip install scikit-gstat # MAY BE A PROBLEM ON MOST RECENT VERSION
+							# Install with requirments to get the versions:
+								echo "numpy==1.26.4" > /opt/local/requirements.txt
+								echo "scipy==1.11.4" >> /opt/local/requirements.txt
+								echo "matplotlib==3.8.2" >> /opt/local/requirements.txt
+								echo "gdal==3.4.1" >> /opt/local/requirements.txt
+								echo "shapely==2.0.2" >> /opt/local/requirements.txt
+								echo "utm==0.7.0" >> /opt/local/requirements.txt
+								echo "PyQt6==6.7.1" >> /opt/local/requirements.txt
+								echo "networkx==3.2.1" >> /opt/local/requirements.txt
+								echo "geopandas==0.14.3" >> /opt/local/requirements.txt
+								echo "scikit-gstat==1.0.18" >> /opt/local/requirements.txt
+								echo "rasterio==1.3.9" >> /opt/local/requirements.txt
+								echo "pandas==2.2.1" >> /opt/local/requirements.txt
+								echo "glob2==0.7" >> /opt/local/requirements.txt
+								#echo "opencv-python==4.9.0.80" >> /opt/local/requirements.txt 	# this package is included in opencv-contrib-python
+								echo "opencv-contrib-python==4.8.1.78" >> /opt/local/requirements.txt
+						
+								/opt/local/amster_python_env/bin/pip install -r /opt/local/requirements.txt
 							
-							# for Check_burst_coverage_kml.py 
-							#/opt/local/bin/python -m pip install geopandas
-							AptInsatll "python3-geopandas"
-
-							# for Check_burst_coverage_kml.py 
-							#/opt/local/bin/python -m pip install rasterio
-							AptInsatll "rasterio"
-
-							# for diagtoolbox 
-							AptInsatll "python3-pandas"
-							AptInsatll "statistics"	# MAY BE A PROBLEM ON MOST RECENT VERSION
-							AptInsatll "argparse"		# MAY BE A PROBLEM ON MOST RECENT VERSION
-							AptInsatll "python3-glob2"
 							
 							break ;;
 					[Nn]* ) 
@@ -2392,8 +2449,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $cis in
 					[Cc]* ) 				
 							echo "  // OK, let's check its version. "
-							QGISVER=`QGIS --version 2>/dev/null`
-							QGISVER2=`qgis --version 2>/dev/null`
+							QGISVER=$(QGIS --version 2>/dev/null)
+							QGISVER2=$(qgis --version 2>/dev/null)
 							if [ "${QGISVER}" == "" ] && [ "${QGISVER2}" == "" ]
 								then 
 									echo "QGIS seems not installed. "
@@ -2402,12 +2459,39 @@ if [ "${TYPERUN}" == "I" ] ; then
 										case $yn in
 											[Yy]* ) 
 												echo "  // OK, I will try to install it."
-												AptInsatll "gnupg software-properties-common"
-												wget -qO - https://qgis.org/downloads/qgis-2021.gpg.key | sudo gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/qgis-archive.gpg -import
-												sudo chmod a+r /etc/apt/trusted.gpg.d/qgis-archive.gpg
-												sudo add-apt-repository "deb https://qgis.org/ubuntu $(lsb_release -c -s) main"
+												AptInstall "gnupg software-properties-common"
+												
+												# wget -qO - https://qgis.org/downloads/qgis-2021.gpg.key | sudo gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/qgis-archive.gpg -import
+												sudo mkdir -m755 -p /etc/apt/keyrings
+												wget -qO- https://qgis.org/downloads/qgis-archive-keyring.gpg | sudo tee /etc/apt/keyrings/qgis-archive-keyring.gpg > /dev/null
+
+												## below may cause prblm with EOF because of possible blank indent in script.
+												#sudo tee /etc/apt/sources.list.d/qgis.sources <<-EOF
+												#Types: deb
+												#URIs: https://qgis.org/ubuntu
+												#Suites: $(lsb_release -c -s)
+												#Components: main
+												#Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
+												#EOF	
+												
+												## prefer this
+												suite=$(lsb_release -c -s 2>/dev/null || . /etc/os-release >/dev/null 2>&1; echo "${VERSION_CODENAME}")
+
+												printf '%s\n' \
+												  'Types: deb' \
+												  'URIs: https://qgis.org/ubuntu' \
+												  "Suites: ${suite}" \
+												  'Components: main' \
+												  'Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg' \
+												| sudo tee /etc/apt/sources.list.d/qgis.sources >/dev/null
+	
+													
+												#sudo chmod a+r /etc/apt/trusted.gpg.d/qgis-archive.gpg
+												#sudo add-apt-repository "deb https://qgis.org/ubuntu $(lsb_release -c -s) main"
+												
+												
 												#sudo apt update
-												AptInsatll "qgis qgis-plugin-grass"
+												AptInstall "qgis qgis-plugin-grass"
 												echo ""
 												echo "  // Note that the following plugins are highly convenients. It might be a good idea to install them"
 												echo "  // It is conveniently done manually from within QGIS:"
@@ -2439,12 +2523,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 							break ;;
 					[Ii]* ) 				
 							echo "  // OK, I do it."
-							AptInsatll "gnupg software-properties-common"
+							AptInstall "gnupg software-properties-common"
 							wget -qO - https://qgis.org/downloads/qgis-2021.gpg.key | sudo gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/qgis-archive.gpg -import
 							sudo chmod a+r /etc/apt/trusted.gpg.d/qgis-archive.gpg
 							sudo add-apt-repository "deb https://qgis.org/ubuntu $(lsb_release -c -s) main"
 							#sudo apt update
-							AptInsatll "qgis qgis-plugin-grass"
+							AptInstall "qgis qgis-plugin-grass"
 							echo ""
 							echo "  // Note that the following ${smso}plugins${rmso} are highly convenients. It might be a good idea to install them."
 							echo "  // It is conveniently done ${smso}manually from within QGIS${rmso}:"
@@ -2471,12 +2555,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 				# ...................
 				EchoInverted "  // A terminal emulator is required to open temrinal from command line (e.g. when splitting mass processing). "
 
-				eval MYDISPLAY=`who -m | cut -d "(" -f 2  | cut -d ")" -f 1`
+				eval MYDISPLAY="$(who -m | cut -d "(" -f 2  | cut -d ")" -f 1)"
 
 				if [ "$MYDISPLAY" == "" ]
 					then 
-						eval MYDISPLAY=`who | cut -d "(" -f 2  | cut -d ")" -f 1`
-						TSTNRDISPL=`who | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l`
+						eval MYDISPLAY="$(who | cut -d "(" -f 2  | cut -d ")" -f 1)"
+						TSTNRDISPL=$(who | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l)
 				fi 
 				if [ "$MYDISPLAY" == "" ] || [ ${TSTNRDISPL} -gt 1 ]
 					then 
@@ -2490,7 +2574,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							echo "If no Terminal pops up here after, cancel the current script and start again with another DISPLAY"
 							break
 						done
-						eval MYDISPLAY=`echo ${MYDISPLAY}`
+						eval MYDISPLAY=$(echo "${MYDISPLAY}")
 				fi 
 
 				echo "  // Your current session runs on DISPLAY ${MYDISPLAY}"
@@ -2500,9 +2584,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $cis in
 					[Cc]* ) 				
 							echo "  // OK, let's check its version. "
-							XTERMVER=`export DISPLAY=${MYDISPLAY} ; x-terminal-emulator --version  2>/dev/null | cut -d " " -f 2`
+							XTERMVER=$(export DISPLAY="${MYDISPLAY}" ; x-terminal-emulator --version  2>/dev/null | cut -d " " -f 2)
 							if [ "${XTERMVER}" == "" ] ; then 
-								XTERMVER=`export DISPLAY=${MYDISPLAY} ; x-terminal-emulator --help  2>/dev/null`
+								XTERMVER=$(export DISPLAY="${MYDISPLAY}" ; x-terminal-emulator --help  2>/dev/null)
 								if [ "${XTERMVER}" == "" ] ; then XTERMVER="Can't tell; check yourself" ; fi
 							fi
 							
@@ -2514,7 +2598,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 										case $yn in
 											[Yy]* ) 
 												echo "  // OK, I will try to install it."
-												AptInsatll "deepin-terminal"
+												AptInstall "deepin-terminal"
 												break ;;
 											[Nn]*)
 												echo "  // OK, you know..." 
@@ -2526,7 +2610,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 
 								else 
 									echo "x-terminal-emulator is installed: "
-									echo ${XTERMVER}
+									echo "${XTERMVER}"
 									CheckLastAptVersion "deepin-terminal"
 									echo "  // It is your responsability to compare your version with the last one available..."
 									echo
@@ -2534,7 +2618,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							break ;;
 					[Ii]* ) 				
 							echo "  // OK, I do it."
-							AptInsatll "deepin-terminal"
+							AptInstall "deepin-terminal"
 							break ;;
 					[Ssn]* ) 
 							echo "  // OK, I skip it."
@@ -2563,7 +2647,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo ""
 
 				# Need Xcode  - Mac OS X
-				if [ `pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | grep version | wc -w` -eq 0 ] 
+				if [ $(pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | grep version | wc -w) -eq 0 ] 
 					then 
 						echo "  // Xcode  is not installed. Let's install it first'"
 						xcode-select --install
@@ -2575,7 +2659,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				fi
 				
 				# Check mac ports - Mac OS X
-				if [ `port version 2>/dev/null | wc -w` -eq 0 ] 
+				if [ $(port version 2>/dev/null | wc -w) -eq 0 ] 
 					then 
 						echo "  // Mac ports is not installed. Let's try to install it now. "
 						echo "  // Visit https://guide.macports.org and download the MacPorts package consistent with your OS version,"
@@ -2588,10 +2672,10 @@ if [ "${TYPERUN}" == "I" ] ; then
  
 						if [ "${FILEXT}" == "pkg" ] 
 								then 
-									sudo installer -pkg ${HOMEDIR}/SAR/EXEC/${RAWFILE} -target /
+									sudo installer -pkg "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" -target /
 									#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}
-									mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-									mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
+									mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+									mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 									echo "  // "
 									if command -v port &> /dev/null
 										then
@@ -2650,8 +2734,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 						case $cis in
 						[Cc]* ) 				
 								echo "  // OK, let's check its version. "
-								GITVER=`gitkraken --version 2>/dev/null`
-								GITVER2=`/Applications/GitKraken.app/Contents/MacOS/GitKraken --version 2>/dev/null ` 
+								GITVER=$(gitkraken --version 2>/dev/null)
+								GITVER2=$(/Applications/GitKraken.app/Contents/MacOS/GitKraken --version 2>/dev/null ) 
 								if [ "${GITVER}" == "" ] && [ "${GITVER2}" == "" ] 
 									then 
 										echo "Gitkraken seems not installed. "
@@ -2703,12 +2787,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 						case $cis in
 						[Cc]* ) 				
 								echo "  // OK, let's check its version. "
-								GIMPVER=`gimp -version 2>/dev/null`
+								GIMPVER=$(gimp -version 2>/dev/null)
 								if [ "${GIMPVER}" == "" ] 
 									then 
-										if [ `port list 2>/dev/null | ${PATHGNU}/grep gimp2 | wc -l` -gt 0 ] 
+										if [ $(port list 2>/dev/null | ${PATHGNU}/grep gimp2 | wc -l) -gt 0 ] 
 											then 
-												GIMPVER=$(port info 'gimp2' 2>/dev/null | ${PATHGNU}/grep " @" | ${PATHGNU}/gawk '{ print $2 }' )
+												GIMPVER=$(port info 'gimp2' 2>/dev/null | "${PATHGNU}"/grep " @" | "${PATHGNU}"/gawk '{ print $2 }' )
 												echo "GIMP version ${GIMPVER} is installed"
 												echo "  // It is your responsability to compare your version with the last one available..."
 												#printf "%-60s%-20s\n" "--> GIMP (gimp2):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
@@ -2762,13 +2846,23 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, install GMT6 (change script if you want another version) and GDAL..."
-							PortInstall "gdal +hdf5 +netcdf +openjpeg" 
+							#PortInstall "gdal +hdf5 +netcdf +openjpeg proj geos" 			# ok with python in venv
+							#PortInstall "gdal-hdf5"
+							#PortInstall "gdal gdal-hdf5 gdal-netcdf gdal-openjpeg proj geos"
+							#PortInstall "gdal gdal-hdf5 +netcdf +openjpeg +libkml +postgresql17"
+							sudo port clean gdal
+							PortInstall "openjpeg"
+
+							echo "  // Install port gdal +netcdf +libkml +postgresql17. " 
+							sudo port install gdal +netcdf +libkml +postgresql17 #configure.cflags-append="-I/opt/local/include/openjpeg-2.5" configure.ldflags-append="-L/opt/local/lib"
+
+							PortInstall "proj geos"
 							PortInstall "gmt6"
-							PortInstall "graphicsmagick ffmpeg"
+							PortInstall "GraphicsMagick ffmpeg"
 							# make link for portability
-							GMTPATH=`which gmt6`
+							GMTPATH=$(which gmt6)
 							mkdir -p /opt/local/bin
-							sudo ln -sf ${GMTPATH} /opt/local/bin/gmt
+							sudo ln -sf "${GMTPATH}" /opt/local/bin/gmt
 							
 							echo "  // Your GDAL version is:"
 							gdalinfo --version
@@ -2785,8 +2879,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 				# C compiler and gnu fortran - Mac OS X
 				# ............................
 				EchoInverted "  // clang compiler  "
-				CLANGVER=`clang --version 2>/dev/null`
-				if [ `clang --version 2>/dev/null  | wc -w ` -gt 0 ] 
+				CLANGVER=$(clang --version 2>/dev/null)
+				if [ $(clang --version 2>/dev/null  | wc -w ) -gt 0 ] 
 					then 
 						echo "  // Current version is:"
 						echo ""
@@ -2794,10 +2888,29 @@ if [ "${TYPERUN}" == "I" ] ; then
 				fi
 				
 				while true; do
-					read -p "Requires clang v20 (mandataory to allows parallel processing). Do you want to install/update clang v20 compiler ? [y/n] "  yn
+					read -p "Requires clang at least v20 (mandataory to allows parallel processing). Do you want to install/update clang compiler ? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							PortInstall "clang-20"
+
+								if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -lt 15 ]]; then
+								    echo "⚠️ macOS $OSX_MAJOR.$OSX_MINOR detected (< Catalina)."
+									PortInstall "clang-14"
+								
+								elif [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -eq 15 ]]; then
+								    echo "macOS 10.15 (Catalina) detected → using pyproj 3.4.1 (needs PROJ via MacPorts)"
+									PortInstall "clang-14"
+								
+								elif [[ "$OSX_MAJOR" -eq 11 || "$OSX_MAJOR" -eq 12 ]]; then
+								    echo "macOS $OSX_MAJOR.$OSX_MINOR (Big Sur / Monterey) detected → using pyproj 3.6.1 (wheel available)"
+									PortInstall "clang-14"
+									PortInstall "clang-20"
+									PortInstall "clang-21"
+								else
+								    echo "macOS $OSX_MAJOR.$OSX_MINOR (Ventura or newer) detected → using latest pyproj (>=3.7)"
+									PortInstall "clang-14"
+									PortInstall "clang-20"
+									PortInstall "clang-21"
+								fi
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2821,17 +2934,17 @@ if [ "${TYPERUN}" == "I" ] ; then
  
 							if [ "${FILEXT}" == "dmg" ] 
 								then 
-									sudo hdiutil attach ${HOMEDIR}/SAR/EXEC/${RAWFILE}
+									sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}"
 									
-									LISTING=$(sudo hdiutil attach ${HOMEDIR}/SAR/EXEC/${RAWFILE} | grep Volumes) # exec and store output in variable 
+									LISTING=$(sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" | grep Volumes) # exec and store output in variable 
     								VOL=$(echo "$LISTING" | cut -f 3)		# take 3rd element 
 									
-									PCKG=`find ${VOL}/ -type f -name "*.pkg"`
-									sudo installer -package ${PCKG} -target /
-									sudo hdiutil detach ${VOL}
+									PCKG=$(find "${VOL}"/ -type f -name "*.pkg")
+									sudo installer -package "${PCKG}" -target /
+									sudo hdiutil detach "${VOL}"
 									#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}
-									mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-									mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
+									mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+									mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 									
 								else 
 									echo " Format not as expected (dmg). Please check or do manually"			
@@ -2865,8 +2978,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PortInstall "curl"			
 
 							# To be sure, prepare to add curl in PATH (see at the bottom of the script)
-							WHEREISCURL=`which curl`
-							PATHCURL=`dirname ${WHEREISCURL}`						
+							WHEREISCURL=$(which curl)
+							PATHCURL=$(dirname "${WHEREISCURL}")						
 							
 							# To be sure, make all gnu fct and their g-named version in PATHGNU 
 							PATHGNU="/opt/local/bin"
@@ -2880,17 +2993,17 @@ if [ "${TYPERUN}" == "I" ] ; then
 							TstPathGnuFctMac "gxargs"
 							TstPathGnuFctMac "gdu"
 							
-							if [ `which gdate` != "${PATHGNU}/gdate" ] ; then echo "coreutils seems not in ${PATHGNU}; please check. I arrange it at least for gdate  here though" ; fi
+							if [ "$(which gdate)" != "${PATHGNU}/gdate" ] ; then echo "coreutils seems not in ${PATHGNU}; please check. I arrange it at least for gdate  here though" ; fi
 							TstPathGnuFctMac "gdate"
 
-							if [ `which gstat` != "${PATHGNU}/gstat" ] ; then echo "findutils seems not in ${PATHGNU}; please check. I arrange it at least for gstat and gfind here though" ; fi
+							if [ "$(which gstat)" != "${PATHGNU}/gstat" ] ; then echo "findutils seems not in ${PATHGNU}; please check. I arrange it at least for gstat and gfind here though" ; fi
 							TstPathGnuFctMac "gstat"
 							TstPathGnuFctMac "gfind" 
 							
-							WHEREISWGET=`which wget`
+							WHEREISWGET=$(which wget)
 							if [ "${WHEREISWGET}" != "${PATHGNU}/wget" ] ; then echo "wget is in ${WHEREISWGET} instead of ${PATHGNU}; please check. I make a link though" ; sudo ln -sf "${WHEREISWGET}" ${PATHGNU}/wget 2>/dev/null ; fi
 					
-							cd ${HOMEDIR}
+							cd "${HOMEDIR}"
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2916,18 +3029,17 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PortInstall "libgeotiff"
 							PortInstall "libxml2"
 							PortInstall "lapack"
-							PortInstall "libomp-devel"
+							#PortInstall "libomp-devel"
+							PortInstall "libomp"
 							PortInstall "ImageMagick"
-							PortInstall "gdal +libkml"			
 							PortInstall "parallel"
 							
 							PortInstall "mpich"
-							PortInstall "libomp"
 							
 							PortInstall "gsl"
 							
-							WHEREISCONV=`which convert`					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
-							PATHCONV=`dirname ${WHEREISCONV}`
+							WHEREISCONV=$(which convert)					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
+							PATHCONV=$(dirname "${WHEREISCONV}")
 
 							break ;;
 					[Nn]* ) 
@@ -2947,7 +3059,24 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to install/update Java? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							PortInstall jdk20
+							#PortInstall jdk20
+							# Find the latest available JDK in MacPorts
+							#LATEST_JDK=$(port search openjdk | awk '/^openjdk[0-9]+ / {print $1}' | sort -V | tail -n 1)
+							echo "Installing latest JDK available: ${LATEST_JDK}"
+
+							for ver in $(port search openjdk | awk '/^openjdk[0-9]+ / {print $1}' | sort -Vr); do
+							    echo "Checking jdk $ver..."
+							    if sudo port -n install $ver 2>&1 | grep -q 'full Xcode installation'; then
+							        echo "$ver requires full Xcode → skip"
+							    else
+							        echo "$ver is installable!"
+							        LATEST_JDK=$ver
+							        break
+							    fi
+							done
+							
+							PortInstall "${LATEST_JDK}"
+							
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2970,7 +3099,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo "        << The operation couldn't be completed. Unable to locate a Java Runtime that supports (null). >>"
 				echo 
 
-				JAVAHOMEPATH=`java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | cut -d = -f2- | cut -d " " -f2-` 
+				JAVAHOMEPATH=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | cut -d = -f2- | cut -d " " -f2-) 
 				JVHP="\"${JAVAHOMEPATH}\""
 				UpdateVARIABLESBashrc "JAVA_HOME" "export JAVA_HOME=${JVHP}"
 
@@ -2984,7 +3113,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $cis in
 						[Cc]* ) 
 							echo "  // OK, let's check its version. "
-							FIJIEXEC=`find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*" 2>/dev/null`
+							FIJIEXEC=$(find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*" 2>/dev/null)
 							if [ "${FIJIEXEC}" == "" ] 
 								then
 									echo "Fiji/ImageJ seems not installed. "
@@ -3005,7 +3134,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 											esac
 										done
 									else 
-										FIJIVERMAC=`${PATHFIJI}/ImageJ-macosx --headless -h 2>&1 > /dev/null | grep launcher`
+										FIJIVERMAC=$("${PATHFIJI}"/ImageJ-macosx --headless -h 2>&1 > /dev/null | grep launcher)
 										echo "Fiji/ImageJ seems installed and is version ${FIJIVERMAC}"
 										echo  "  // It is your responsability to verify that it is the last one though..."
 										
@@ -3065,62 +3194,102 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I do it."
-							PortInstall "python310"
-							sudo port select --set python python310 	# To make this the default Python or Python 3
-							sudo port select --set python3 python310 	# To make this the default Python or Python 3
-							PortInstall "py310-opencv4"
-							PortInstall "py310-numpy"
-							PortInstall "py310-scipy"
-							#PortInstall "py310-matplotlib"
-							/opt/local/bin/python3.10 -m pip install matplotlib
 							
-							PortInstall "py310-gdal"
-							PortInstall "py310-shapely"
+							# Create venv
+								sudo mkdir -p /opt/local/
+								sudo chown -R "${USER}":staff /opt/local
+
+							# Use python 3.10 or 3.11 depending on OSX version								
+								USE_PY310=0
+								if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -le 15 ]]; then
+								    echo "macOS <= Catalina detected, openCV wheel not available for Python 3.11"
+								    USE_PY310=1
+								fi
+								
+								if [[ $USE_PY310 -eq 1 ]]; then
+									    echo "Installing Python 3.10 via MacPorts"
+    									sudo port -f install python310 py310-pip
+    									sudo port select --set python3 python310
+    									sudo port select --set pip pip310
+    									PYBIN=/opt/local/bin/python3.10
+									else
+									    echo "Installing Python 3.11 via MacPorts"
+										sudo port -f install python311 py311-pip
+    									sudo port select --set python3 python311
+    									sudo port select --set pip pip311
+    									PYBIN=/opt/local/bin/python3.11								
+    							fi
+
+								VENV=/opt/local/amster_python_env
+								rm -rf $VENV
+								$PYBIN -m venv ${VENV} --upgrade-deps 
+								sudo chown -R "${USER}":staff ${VENV}
+								source "${VENV}"/bin/activate
+								
+							# Upgrade pip
+								"${VENV}"/bin/pip install --upgrade pip setuptools wheel
+
 							
-							echo "  // Check python3 version:"
-							python -c 'import sys ; print(sys.path)'
-		
-							echo "  // Create link for smooth call of python by all the scripts"
-							sudo mkdir -p /opt/local/
-							sudo mkdir -p /opt/local/bin
-							WHEREISPYTHON=`which python3`				#(To know where it is installed, e.g. /usr/bin)
+							# Install with requirments to get the versions:
+								# Prepare requirements file
+								REQ=/opt/local/requirements.txt
+								echo "numpy==1.26.4"        >  $REQ
+								echo "scipy==1.11.4"        >> $REQ
+								echo "matplotlib==3.8.2"    >> $REQ
+								echo "shapely==2.0.2"       >> $REQ
+								echo "utm==0.7.0"           >> $REQ
+								echo "networkx==3.2.1"      >> $REQ
+								
+							# Handle pyproj + PyQt6 depending on macOS version
+								if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -lt 15 ]]; then
+								    echo "⚠️ macOS $OSX_MAJOR.$OSX_MINOR detected (< Catalina)."
+								    echo "Installing proj + gdal via MacPorts..."
+								    sudo port install proj gdal
+								    export PROJ_DIR=/opt/local
+								    echo "pyproj==3.4.1" >> $REQ
+								    echo "PyQt6==6.5.3"  >> $REQ
+								
+								elif [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -eq 15 ]]; then
+								    echo "macOS Catalina detected → using pyproj 3.4.1 + PyQt6 6.5.3"
+								    echo "Installing proj + gdal via MacPorts..."
+								    sudo port install proj gdal
+								    export PROJ_DIR=/opt/local
+								    echo "pyproj==3.4.1" >> $REQ
+								    echo "PyQt6==6.5.3"  >> $REQ
+								
+								elif [[ "$OSX_MAJOR" -eq 11 || "$OSX_MAJOR" -eq 12 ]]; then
+								    echo "macOS $OSX_VER (Big Sur / Monterey) → using pyproj 3.6.1 + PyQt6 6.7.1"
+								    echo "pyproj==3.6.1" >> $REQ
+								    echo "PyQt6==6.7.1"  >> $REQ
+								
+								else
+								    echo "macOS $OSX_VER (Ventura or newer) → using latest pyproj + PyQt6 6.7.1"
+								    echo "pyproj"        >> $REQ
+								    echo "PyQt6==6.7.1"  >> $REQ
+								fi
+								
+							# Handle OpenCV for all macOS versions
+								
+								if [[ "$USE_PY310" -eq 1 ]]; then
+								   echo "Installing OpenCV 4.6 from PyPI wheel for macOS < 11"
+									echo "opencv-python==4.6.0.66" >> $REQ
+									echo "opencv-contrib-python==4.6.0.66"  >> $REQ
+								else
+								   echo "Installing OpenCV 4.9 from PyPI wheel for macOS >= 11"
+								   echo "opencv-python==4.9.0.80" >> $REQ
+								   echo "opencv-contrib-python==4.9.0.80" >> $REQ
+								fi
+															
+							# Add the rest
+								echo "geopandas==0.14.3"    >> $REQ
+								echo "scikit-gstat==1.0.18" >> $REQ
+								echo "rasterio==1.3.9"      >> $REQ
+								echo "pandas==2.2.1"        >> $REQ
+								echo "glob2==0.7"           >> $REQ
+								echo "appscript==1.3.0"     >> $REQ
 
-							sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python	2>/dev/null
-							if [ "${WHEREISPYTHON}" != "/opt/local/bin/python3" ]
-								then 
-									sudo ln -sf ${WHEREISPYTHON} /opt/local/bin/python3	2>/dev/null
-							fi
-							
-							# UTM package
-							echo "  // Install also utm packege for python v3 using pip. "
-							curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-							/opt/local/bin/python3.10 get-pip.py
-							
-							#${HOMEDIR}/Library/Python/3.10/bin/pip install utm
-							/opt/local/bin/python3.10 -m pip install utm
-														
-							# AMSTer Software Organizer
-							/opt/local/bin/python3.10 -m pip install pyqt6
-							/opt/local/bin/python3.10 -m pip install appscript
-			
-							# AMSTer Software Optimisation
-							/opt/local/bin/python3.10 -m pip install networkx
-
-							# for computing Variogram 
-							/opt/local/bin/python3.10 -m pip install scikit-gstat
-
-							# for Check_burst_coverage_kml.py 
-							/opt/local/bin/python3.10 -m pip install geopandas
-
-							# for Check_burst_coverage_kml.py 
-							/opt/local/bin/python3.10 -m pip install rasterio
-
-							# for diagtoolbox 
-							/opt/local/bin/python3.10 -m pip install pandas
-							/opt/local/bin/python3.10 -m pip install statistics
-							/opt/local/bin/python3.10 -m pip install argparse
-							/opt/local/bin/python3.10 -m pip install glob2
-							
+							# Install from requirements
+									$VENV/bin/pip install -r $REQ
 
 							break ;;
 					[Nn]* ) 
@@ -3141,8 +3310,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $cis in
 					[Cc]* ) 				
 							echo "  // OK, let's check its version. "
-							QGISVER=`/Applications/QGIS*/Contents/MacOS/QGIS --version 2>/dev/null`
-							QGISVER2=`find /Applications/QGIS*/  -type f -name "QGIS" 2>/dev/null`
+							QGISVER=$(/Applications/QGIS*/Contents/MacOS/QGIS --version 2>/dev/null)
+							QGISVER2=$(find /Applications/QGIS*/  -type f -name "QGIS" 2>/dev/null)
 							if [ "${QGISVER}" == "" ] && [ "${QGISVER2}" == "" ] 
 								then 
 									echo "QGIS seems not installed. "
@@ -3159,25 +3328,25 @@ if [ "${TYPERUN}" == "I" ] ; then
 												if [ "${FILEXT}" == "dmg" ] 
 													then 
 														# trick to mute the License agreement questions 
-														sudo hdiutil convert  ${HOMEDIR}/SAR/EXEC/${RAWFILE}  -format UDTO -o  ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr
+														sudo hdiutil convert  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}"  -format UDTO -o  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr
 
-														LISTING=$(sudo hdiutil attach ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr | grep Volumes) # exec and store output in variable 
+														LISTING=$(sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr | grep Volumes) # exec and store output in variable 
     													VOL=$(echo "$LISTING" | cut -f 3)		# take 3rd element 
 														
 														echo " // move /SAR/EXEC/QGIS(.app) in /Applications. "
 														if [ -d /Applications/QGIS.app ] || [ -d /Applications/QGIS ] ; then 
 															echo "  // backup first the former version available in /Applications..." 
-															sudo mv -f /Applications/QGIS* /Applications/QGIS.bak.${RUNDATE}
+															sudo mv -f /Applications/QGIS* /Applications/QGIS.bak."${RUNDATE}"
 														fi 
-														sudo cp -rf ${VOL}/QGIS* /Applications/
+														sudo cp -rf "${VOL}"/QGIS* /Applications/
 														#sudo cp -rf ${VOL}/QGIS.app ${HOMEDIR}/SAR/EXEC/
 														#mv -f /SAR/EXEC/QGIS.app /Applications/
 
 														# detach and clean
-														sudo hdiutil detach ${VOL}
-														sudo rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr # ${HOMEDIR}/SAR/EXEC/${RAWFILE}
-														mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-													 	mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
+														sudo hdiutil detach "${VOL}"
+														sudo rm -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr # ${HOMEDIR}/SAR/EXEC/${RAWFILE}
+														mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+													 	mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
 														echo "  // "
 													else 
@@ -3221,25 +3390,25 @@ if [ "${TYPERUN}" == "I" ] ; then
 							if [ "${FILEXT}" == "dmg" ] 
 								then 
 									# trick to mute the License agreement questions 
-									sudo hdiutil convert  ${HOMEDIR}/SAR/EXEC/${RAWFILE}  -format UDTO -o  ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr
+									sudo hdiutil convert  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}"  -format UDTO -o  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr
 
-									LISTING=$(sudo hdiutil attach ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr | grep Volumes) # exec and store output in variable 
+									LISTING=$(sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr | grep Volumes) # exec and store output in variable 
     								VOL=$(echo "$LISTING" | cut -f 3)		# take 3rd element 
 
 									echo " // move /SAR/EXEC/QGIS(.app) in /Applications. "
 									if [ -d /Applications/QGIS.app ] || [ -d /Applications/QGIS ] ; then 
 										echo "  // backup first the former version available in /Applications..." 
-										sudo mv -f /Applications/QGIS* /Applications/QGIS.bak.${RUNDATE} 
+										sudo mv -f /Applications/QGIS* /Applications/QGIS.bak."${RUNDATE}" 
 									fi 
-									sudo cp -rf ${VOL}/QGIS* /Applications/
+									sudo cp -rf "${VOL}"/QGIS* /Applications/
 									#sudo cp -rf ${VOL}/QGIS.app ${HOMEDIR}/SAR/EXEC/
 									#mv -f /SAR/EXEC/QGIS.app /Applications/
 
 									# detach and clean
-									sudo hdiutil detach ${VOL}
-									sudo rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}.cdr # ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
-									mkdir -p ${HOMEDIR}/SAR/EXEC/Sources_Installed
-									mv ${HOMEDIR}/SAR/EXEC/${RAWFILE} ${HOMEDIR}/SAR/EXEC/Sources_Installed/
+									sudo hdiutil detach "${VOL}"
+									sudo rm -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr # ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
+									mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+									mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
 									echo "  // "
 								else 
@@ -3293,13 +3462,13 @@ echo "  // AMSTer Software is freely available (under GPL licence) from https://
 				while true; do
 			   		echo "Enter the path to the AMSTer_Distribution directory (e.g. ...YourPath/SAR/AMSTer_Distribution); "
 			   		read -e -p "   You can use Tab for autocompletion or drag/drop the full path : " PATHDISTRO	# expet something like ...YourPath/SAR/ where it will find AMSTer_Distribution
-					PATHDISTRO=$(echo "${PATHDISTRO}" | ${PATHGNU}/gsed -e "s/'//g" -e 's/"//g' -e 's/"//g')
+					PATHDISTRO=$(echo "${PATHDISTRO}" | "${PATHGNU}"/gsed -e "s/'//g" -e 's/"//g' -e 's/"//g')
 					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
 
 					# if AMSTer_Distribution is downloaded from GitHub, it might be zipped 
 					if [[ "${PATHDISTRO}" == *".zip" ]]; then
 						echo "The path to your AMSTer_Distribution ends with .zip and hence must be decompressed. "
-						WHERETOUNZIP=$(dirname ${PATHDISTRO})
+						WHERETOUNZIP=$(dirname "${PATHDISTRO}")
 						unzip -d "${WHERETOUNZIP}" "${PATHDISTRO}" # unzip in pwd
 						rm -f "${PATHDISTRO}"
 						PATHDISTRO="${PATHDISTRO%.zip}"
@@ -3374,7 +3543,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 						    	# Check if the dir exists
 								if [ -d "${SCRIPTSDIR}" ]
 									then
-										GetSCRIPTS ${SCRIPTSDIR}
+										GetSCRIPTS "${SCRIPTSDIR}"
 										break
 									else
 								       echo "No ${SCRIPTSDIR} exists."
@@ -3401,7 +3570,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 								SCRIPTSDIR="${PATHDISTRO}/SCRIPTS_MT"
 								if [ -d "${SCRIPTSDIR}" ]
 									then
-										GetSCRIPTS ${SCRIPTSDIR}
+										GetSCRIPTS "${SCRIPTSDIR}"
 									else
 								    	echo "No ${PATHDISTRO}/SCRIPTS_MT exists."
 										echo "Enter the path to the AMSTer Software directory named SCRIPTS_MT that you want to install."
@@ -3411,7 +3580,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 						    				# Check if the dir exists
 											if [ -d "${SCRIPTSDIR}" ]
 												then
-													GetSCRIPTS ${SCRIPTSDIR}
+													GetSCRIPTS "${SCRIPTSDIR}"
 													break
 												else
 											       echo "No ${SCRIPTSDIR} exists."
@@ -3457,7 +3626,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 						    	# Check if the dir exists
 								if [ -d "${DOCDIR}" ]
 									then
-										GetDoc ${DOCDIR}
+										GetDoc "${DOCDIR}"
 										break
 									else
 								       echo "No directory ${DOCDIR} exists."
@@ -3477,7 +3646,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 								DOCDIR="${PATHDISTRO}/DOC"
 								if [ -d "${DOCDIR}" ]
 									then
-										GetDoc ${DOCDIR}
+										GetDoc "${DOCDIR}"
 									else
 								    	echo "No ${PATHDISTRO}/DOC exists."
 										echo "Enter the path to the AMSTer documentation directory named DOC that you want to install."
@@ -3487,7 +3656,7 @@ echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 						    				# Check if the dir exists
 											if [ -d "${DOCDIR}" ]
 												then
-													GetDoc ${DOCDIR}
+													GetDoc "${DOCDIR}"
 													break
 												else
 											       echo "No ${DOCDIR} exists."
@@ -3528,7 +3697,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 		EchoInverted "  // Update now some PATH in .bashrc"
 		echo "  // "
 		echo "  // The .bashrc contains the following PATH:"		
-		grep "PATH=" ${HOMEDIR}/.bashrc | grep -v "export" | grep -v "#"  | ${PATHGNU}/sed -e "s/^[ \t]*//" | ${PATHGNU}/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
+		grep "PATH=" "${HOMEDIR}"/.bashrc | grep -v "export" | grep -v "#"  | "${PATHGNU}"/sed -e "s/^[ \t]*//" | "${PATHGNU}"/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
 		echo "  // "
 		EchoInverted "  // Let's review and update the PATH state variable if needed"	
 
@@ -3542,8 +3711,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 		if [ "${PATHGNU}" != "" ] ; then 
 				UpdatePATHBashrcBEFORE "${PATHGNU}"
 			else 
-				WHEREISGNU=`which gawk`			# gawk is probably always installed in PATHGNU 
-				PATHGNU=`dirname ${WHEREISGNU}`		
+				WHEREISGNU=$(which gawk)			# gawk is probably always installed in PATHGNU 
+				PATHGNU=$(dirname "${WHEREISGNU}")		
 				UpdatePATHBashrcBEFORE "${PATHGNU}"	
 		fi
 
@@ -3580,8 +3749,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 		if [ "${PATHCURL}" != "" ] ; then 
 				UpdatePATHBashrcAFTER  "${PATHCURL}"
 			else
-				WHEREISCURL=`which curl`
-				PATHCURL=`dirname ${WHEREISCURL}`
+				WHEREISCURL=$(which curl)
+				PATHCURL=$(dirname "${WHEREISCURL}")
 				UpdatePATHBashrcAFTER  "${PATHCURL}"		
 		fi	
 
@@ -3592,7 +3761,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 		EchoInverted "  // Update now some VARIABLES in .bashrc"
 		echo "  // "
 		echo "  // Currently, the state variables in the .bashrc are :"
-		cat ${HOMEDIR}/.bashrc | grep export | grep -v "#"  | ${PATHGNU}/sed -e "s/^[ \t]*//" | ${PATHGNU}/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
+		cat "${HOMEDIR}"/.bashrc | grep export | grep -v "#"  | "${PATHGNU}"/sed -e "s/^[ \t]*//" | "${PATHGNU}"/sed "s/^/\t/" # remove all leading white space then add a tab at beginning of each line for lisibility 
 		echo "  // "
 		echo "  // Let's review and update the ${smso}other state variables${rmso} if needed."	
 		
@@ -3604,8 +3773,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 		if [ "${PATHGNU}" != "" ] ; then 
 				UpdateVARIABLESBashrc "PATHGNU" "export PATHGNU=${PATHGNU}"
 			else 
-				WHEREISGNU=`which gawk`			# gawk is probably always installed in PATHGNU 
-				PATHGNU=`dirname ${WHEREISGNU}`		
+				WHEREISGNU=$(which gawk)			# gawk is probably always installed in PATHGNU 
+				PATHGNU=$(dirname "${WHEREISGNU}")		
 				UpdateVARIABLESBashrc "PATHGNU" "export PATHGNU=${PATHGNU}"
 		fi
 		if [ "${PATHFIJI}" != "" ] ; then 
@@ -3613,19 +3782,19 @@ if [ "${TYPERUN}" == "I" ] ; then
 			else 
 				if [ "${OS}" == "Linux" ] 
 					then 													
-						FIJIEXEC=`find ${HOMEDIR}/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*"`
+						FIJIEXEC=$(find "${HOMEDIR}"/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*")
 					else 
-						FIJIEXEC=`find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*"`
+						FIJIEXEC=$(find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*")
 				fi
 
-				PATHFIJI=`dirname ${FIJIEXEC}`	
+				PATHFIJI=$(dirname "${FIJIEXEC}")	
 				UpdateVARIABLESBashrc "PATHFIJI" "export PATHFIJI=${PATHFIJI}"
 		fi
 		if [ "${PATHCONV}" != "" ] ; then 
 				UpdateVARIABLESBashrc "PATHCONV" "export PATHCONV=${PATHCONV}"
 			else 
-				WHEREISCONV=`which convert`					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
-				PATHCONV=`dirname ${WHEREISCONV}`
+				WHEREISCONV=$(which convert)					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
+				PATHCONV=$(dirname "${WHEREISCONV}")
 				UpdateVARIABLESBashrc "PATHCONV" "export PATHCONV=${PATHCONV}"
 		fi
 
@@ -3641,8 +3810,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 		UpdateVARIABLESBashrc "ENVISAT_PRECISES_ORBITS_DIR" "export ENVISAT_PRECISES_ORBITS_DIR=\${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ENV_ORB"
 		UpdateVARIABLESBashrc "EARTH_GRAVITATIONAL_MODELS_DIR" "export EARTH_GRAVITATIONAL_MODELS_DIR=\${PATH_DataSAR}/SAR_AUX_FILES/EGM"
 
-		TST=$(grep "export EXTERNAL_DEMS_DIR" ${HOMEDIR}/.bashrc )
-		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+		TST=$(grep "export EXTERNAL_DEMS_DIR" "${HOMEDIR}"/.bashrc )
+		if [ $(echo "${TST}" | wc -w) -eq 0 ] 
 			then 
 				while true; do
 					read -p "Do you want to define an EXTERNAL_DEMS_DIR state variable ?  [y/n] "  yn
@@ -3656,7 +3825,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							read -p "Path to DEMS directory: " DECLAREDEMDIR
 		
 							UpdateVARIABLESBashrc "EXTERNAL_DEMS_DIR" "export EXTERNAL_DEMS_DIR=${DECLAREDEMDIR}"
-							mkdir -p ${DECLAREDEMDIR}
+							mkdir -p "${DECLAREDEMDIR}"
 							break ;;
 						[Nn]* ) 
 							echo
@@ -3668,7 +3837,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				done
 			else
 				echo "  // Your .bashrc contains the following EXTERNAL_DEMS_DIR state variable: "
-				grep "export EXTERNAL_DEMS_DIR" ${HOMEDIR}/.bashrc
+				grep "export EXTERNAL_DEMS_DIR" "${HOMEDIR}"/.bashrc
 				
 				while true; do
 					read -p "Do you want to change it ?  [y/n] "  yn
@@ -3682,7 +3851,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							read -p "Path to DEMS directory: " DECLAREDEMDIR
 		
 							UpdateVARIABLESBashrc "EXTERNAL_DEMS_DIR" "export EXTERNAL_DEMS_DIR=${DECLAREDEMDIR}"
-							mkdir -p ${DECLAREDEMDIR}
+							mkdir -p "${DECLAREDEMDIR}"
 							break ;;
 						[Nn]* ) 
 							echo
@@ -3695,8 +3864,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 		fi
 	
 	
-		TST=$(grep "export EXTERNAL_MASKS_DIR" ${HOMEDIR}/.bashrc )
-		if [ `echo "${TST}" | wc -w` -eq 0 ] 
+		TST=$(grep "export EXTERNAL_MASKS_DIR" "${HOMEDIR}"/.bashrc )
+		if [ $(echo "${TST}" | wc -w) -eq 0 ] 
 			then 
 				while true; do
 					read -p "Do you want to define an EXTERNAL_MASKS_DIR state variable ?  [y/n] "  yn
@@ -3708,10 +3877,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 							echo "  (something like: ${HOME}/SAR_TMP/MASKS)"
 							echo "  If it does not exist, it will be created."
 		
-							read -p "Path to MASKS directory:" DECLAREMASKDIR
+							read -p "Path to MASKS directory: " DECLAREMASKDIR
 		
 							UpdateVARIABLESBashrc "EXTERNAL_MASKS_DIR" "export EXTERNAL_MASKS_DIR=${DECLAREMASKDIR}"
-							mkdir -p ${DECLAREMASKDIR}
+							mkdir -p "${DECLAREMASKDIR}"
 							break ;;
 						[Nn]* ) 
 							echo
@@ -3723,7 +3892,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				done
 			else
 				echo "  // Your .bashrc contains the following EXTERNAL_MASKS_DIR state variable: "
-				grep "export EXTERNAL_MASKS_DIR" ${HOMEDIR}/.bashrc
+				grep "export EXTERNAL_MASKS_DIR" "${HOMEDIR}"/.bashrc
 				while true; do
 					read -p "Do you want to change it ?  [y/n] "  yn
 					case $yn in
@@ -3733,10 +3902,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 							echo "Enter the path to the directory where you want the MASKS to be created by getSRTMDEM."
 							echo "  (something like: ${HOME}/SAR_TMP/MASKS)"
 							echo "  If it does not exist, it will be created."
-							read -p "Path to MASKS directory:" DECLAREMASKDIR
+							read -p "Path to MASKS directory: " DECLAREMASKDIR
 		
 							UpdateVARIABLESBashrc "EXTERNAL_MASKS_DIR" "export EXTERNAL_MASKS_DIR=${DECLAREMASKDIR}"
-							mkdir -p ${DECLAREMASKDIR}
+							mkdir -p "${DECLAREMASKDIR}"
 							break ;;
 						[Nn]* ) 
 							echo
@@ -3804,28 +3973,28 @@ if [ "${TYPERUN}" == "I" ] ; then
 	# Update specifi stuffs in ${HOMEDIR}/.bashrc 
 	####################################
 		
-		TST=$(grep "export OMP_NUM_THREADS=" ${HOMEDIR}/.bashrc)
-		if [ `echo "${TST}" | wc -w` -eq 0 ]  
+		TST=$(grep "export OMP_NUM_THREADS=" "${HOMEDIR}"/.bashrc)
+		if [ $(echo "${TST}" | wc -w) -eq 0 ]  
 			then
 				# Back it up first if not done yet
-				if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+				if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 
-				echo "#export OMP_NUM_THREADS=10,8,4" >> ${HOMEDIR}/.bashrc 	# in case someone needs to limit hardware usage while running msbas in parallel with opemp
-				echo "#export OMP_NUM_THREADS=4,3,2" >> ${HOMEDIR}/.bashrc 	# in case someone needs to limit hardware usage while running msbas in parallel with opemp		
+				echo "#export OMP_NUM_THREADS=10,8,4" >> "${HOMEDIR}/".bashrc 	# in case someone needs to limit hardware usage while running msbas in parallel with opemp
+				echo "#export OMP_NUM_THREADS=4,3,2" >> "${HOMEDIR}"/.bashrc 	# in case someone needs to limit hardware usage while running msbas in parallel with opemp		
 		fi
 
 
 
 		case ${OS} in 
 			"Linux") 
-				TST=$(grep "# Trick to avoid error at usage of say function" ${HOMEDIR}/.bashrc)
-				if [ `echo "${TST}" | wc -w` -eq 0 ]  
+				TST=$(grep "# Trick to avoid error at usage of say function" "${HOMEDIR}"/.bashrc)
+				if [ $(echo "${TST}" | wc -w) -eq 0 ]  
 					then				
 						# Back it up first if not done yet
-						if [ ! -f ${HOMEDIR}/.bashrc_${RUNDATE} ] ; then cp ${HOMEDIR}/.bashrc ${HOMEDIR}/.bashrc_${RUNDATE} ; fi
+						if [ ! -f "${HOMEDIR}"/.bashrc_"${RUNDATE}" ] ; then cp "${HOMEDIR}"/.bashrc "${HOMEDIR}"/.bashrc_"${RUNDATE}" ; fi
 
-						echo "# Trick to avoid error at usage of say function" >> ${HOMEDIR}/.bashrc 	
-						echo "alias say='echo "\$1" | espeak -s 120 2>/dev/null'" >> ${HOMEDIR}/.bashrc 
+						echo "# Trick to avoid error at usage of say function" >> "${HOMEDIR}"/.bashrc 	
+						echo "alias say='echo "\$1" | espeak -s 120 2>/dev/null'" >> "${HOMEDIR}"/.bashrc 
 				fi 
 
 			
@@ -3852,10 +4021,10 @@ EchoInverted "  // AMSTer Software requires auxiliary files stored in PATH_DataS
 if [ -d "${PATH_DataSAR}" ] 
 	then 
 		echo "  // And the directory associated to PATH_DataSAR does exist ; OK."	
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/DEM
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/EGM/EGM96
-		if [ ! -f ${PATH_DataSAR}/SAR_AUX_FILES/EGM/EGM96/WW15MGH.DAC ] ; then 
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/DEM
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/EGM/EGM96
+		if [ ! -f "${PATH_DataSAR}"/SAR_AUX_FILES/EGM/EGM96/WW15MGH.DAC ] ; then 
 			echo "  // I need the geoid file e.g. from here :"
 			echo "  https://web.archive.org/web/20130314064801/http://earth-info.nga.mil/GandG/wgs84/gravitymod/egm96/binary/WW15MGH.DAC"
 			echo "  // and store it in ${PATH_DataSAR}/SAR_AUX_FILES/EGM/EGM96/WW15MGH.DAC"	
@@ -3867,8 +4036,8 @@ if [ -d "${PATH_DataSAR}" ]
 						wget https://web.archive.org/web/20130314064801/http://earth-info.nga.mil/GandG/wgs84/gravitymod/egm96/binary/WW15MGH.DAC
 						if [ -f WW15MGH.DAC ] 
 							then 
-								if [ -d ${PATH_DataSAR}/SAR_AUX_FILES/EGM/EGM96/ ] ; then
-										mv WW15MGH.DAC ${PATH_DataSAR}/SAR_AUX_FILES/EGM/EGM96/WW15MGH.DAC
+								if [ -d "${PATH_DataSAR}"/SAR_AUX_FILES/EGM/EGM96/ ] ; then
+										mv WW15MGH.DAC "${PATH_DataSAR}"/SAR_AUX_FILES/EGM/EGM96/WW15MGH.DAC
 										echo "  // OK, file dowloaded and moved"
 									else
 										echo "  // File was dowloaded in pwd but ccan't be moved to \${PATH_DataSAR}/SAR_AUX_FILES/EGM/EGM96/ because the dir does not exist (yet). Try again after first installation."
@@ -3885,13 +4054,13 @@ if [ -d "${PATH_DataSAR}" ]
 				esac
 			done							
 		fi 
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/ORBITS
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ENV_ORB
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ENV_ORB/vor_gdr_d
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/ERS
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB/AUX_POEORB
-		mkdir -p ${PATH_DataSAR}/SAR_AUX_FILES/ORBITS/S1_ORB/AUX_RESORB
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/ORBITS
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/ORBITS/ENV_ORB
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/ORBITS/ENV_ORB/vor_gdr_d
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/ORBITS/ERS
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/ORBITS/S1_ORB
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/ORBITS/S1_ORB/AUX_POEORB
+		mkdir -p "${PATH_DataSAR}"/SAR_AUX_FILES/ORBITS/S1_ORB/AUX_RESORB
 
 	else 
 		echo "  // However, no directory associated to the variable PATH_DataSAR can be accessed (supposed to be ${PATH_DataSAR})"	
@@ -3930,7 +4099,7 @@ while true; do
 	[Yy]* ) 
 		echo "  // OK, Let's do it. Please wait..."
 		# Check that AMSTerEngine fct exists
-		if [ ! -f ${HOMEDIR}/SAR/AMSTer/AMSTerEngine/updateS1Orbits ]
+		if [ ! -f "${HOMEDIR}"/SAR/AMSTer/AMSTerEngine/updateS1Orbits ]
 			then 
 				echo "Sorry, AMSTerEngine is not installed yet in /SAR/AMSTerEngine/. Can't perform the S1 orbit update..."
 				break	
@@ -3943,7 +4112,7 @@ while true; do
 		fi
 
 		# Ensure that .netrc exist with identity.dataspace.copernicus.eu login
-		if [ ! -e ${HOMEDIR}/.netrc ]
+		if [ ! -e "${HOMEDIR}"/.netrc ]
 			then 
 				echo "You do not have a .netrc file yet in your home directroy yet. It means that your computer is not configured yet to acess S1 orbits from ESA. "
 				echo "To be able to download the S1 orbits, visit https://dataspace.copernicus.eu and register to get a login and pwd."
@@ -3968,7 +4137,7 @@ while true; do
 				echo "Enter now your creditentials:"
 				read -p "	Enter your dataspace.copernicus.eu login: "  YourLogin
 				read -p "	Enter your dataspace.copernicus.eu password: "  YourPassword
-				echo "machine identity.dataspace.copernicus.eu login ${YourLogin} password ${YourPassword}" >> ${HOMEDIR}/.netrc		
+				echo "machine identity.dataspace.copernicus.eu login ${YourLogin} password ${YourPassword}" >> "${HOMEDIR}"/.netrc		
 		fi
 
 		# updateS1Orbits [S1_ORBITS_DIR] [-ASF] [from=YYYYMMDD]
@@ -3978,9 +4147,9 @@ while true; do
 			case $ad in
 			[Aa]* ) 				
 					echo "  // OK, Let's sync the whole S1 orbit data base"
-					source ${HOMEDIR}/.bashrc
-					OS=`uname -a | cut -d " " -f 1 `
-					updateS1Orbits ${S1_ORBITS_DIR}
+					source "${HOMEDIR}"/.bashrc
+					OS=$(uname -a | cut -d " " -f 1 )
+					updateS1Orbits "${S1_ORBITS_DIR}"
 					break ;;
 			[Dd]* ) 
 					echo "  // OK, Let's sync the S1 orbit data base from a given date."
@@ -3991,9 +4160,9 @@ while true; do
 					re='^[0-9]+$'
 					if ! [[ ${STARTDATE} =~ $re ]] ; then echo "Sorry, the date must be in the form of 8 digits as YYYYMMDD" >&2 ; echo "Try again later or use yourself the command: updateS1Orbits ${S1_ORBITS_DIR} from=YYYYMMDD " ; break  ; fi
 
-					source ${HOMEDIR}/.bashrc	
-					OS=`uname -a | cut -d " " -f 1 `				
-					updateS1Orbits ${S1_ORBITS_DIR} from=${STARTDATE}
+					source "${HOMEDIR}"/.bashrc	
+					OS=$(uname -a | cut -d " " -f 1 )				
+					updateS1Orbits "${S1_ORBITS_DIR}" from="${STARTDATE}"
 					
 					break ;;
 				* )  
@@ -4020,7 +4189,7 @@ done
 
 
 
-if [ -f ${HOMEDIR}/.bashrc_${RUNDATE} ] 
+if [ -f" ${HOMEDIR}"/.bashrc_"${RUNDATE}" ] 
 	then 
 		echo ""
 		EchoInverted "  // .bashrc has been sourced and hence is ready for this Terminal."

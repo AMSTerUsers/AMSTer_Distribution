@@ -15,6 +15,7 @@
 #
 # New in Distro V 1.0 20250121: DS	- save all plots at location of input file
 # New in Distro V 1.0 20250318: DS	- file naming and storage dir changes
+# New in Distro V 1.1 20251031: DS	- correct bug in file naming and storage dir changes
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS (c) 2022 - could make better with more functions... when time.
@@ -41,7 +42,7 @@ echo "I also use DEM : ${DEM}"
 # Create COR_Defo_Dem as output dir at same level as input dir
 BASE_DIR=$(dirname "$directory")
 DIRNAME=$(basename "$directory")
-OUTPUT_DIR="${directory}_Cor_Dem"
+OUTPUT_DIR="${BASE_DIR}/${DIRNAME}_Cor_Dem"
 OUTPUT_DIRPNG="${BASE_DIR}Rasters/${DIRNAME}_Cor_Dem"
 
 mkdir -p ${OUTPUT_DIR}

@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The scrip reads a target KML provided as first parameter and all the bursts KMLs
 # within the directory.
@@ -24,6 +24,8 @@
 #				  even if the overlap is OK. This might be useful when you suspect more bursts than needed
 #
 # New in V1.1 25 Feb 2025: 	- also OK with target kml that are not polygon
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 # 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2025/02/24 - could make better with more functions... when time.

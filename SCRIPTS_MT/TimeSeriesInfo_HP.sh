@@ -55,13 +55,18 @@
 # New in Distro V 5.2 20240603:	- Extract "LOS" from speed deformation filename instead of complete path (since ALOS2)
 # New in Distro V 5.3 20240620:	- from VD_5.2, come back in complete path with replacing the extraction of "LOS" to "_LOS" to filter "ALOS" stuff 
 # New in Distro V 5.4 20241104:	- Adapt legend picture if deformation NS available
+# New in Distro V 6.0. 20250825:	- Test if using ImageMagick or GraphicsMagick and adapt syntax of convert accordingly
+# New in Distro V 6.1 20250904:	- Avoid possible failure of double test (eg when shell has set -o pipefail enabled) in fct to test convert version
+#								- replace convert composite command by gm composite when using GraphicsMagick
+# New in Distro V 6.2 20250916:	- use no specific font with convert to avoid error when font not found
+# New in Distro V 6.3 20250917:	- Do not display message about Rate if only 2 parameters are provided, which is OK for EW & UD comp.
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 04, 2024"
+VER="Distro V6.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 17, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -72,9 +77,9 @@ source ${HOME}/.bashrc
 
 source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
 	# See below: 
+	# define FONT_OPT="-font $FONT, where FONT is searched among DejaVuSans, LiberationSans-Regular or Arial" 
 	# TimeSeriesInfoHPWebTag to tag the plot with the address of the web page
 # ^^^ ----- Hard coded lines to check --- ^^^ 
-
 
 #Read Arguments:
 TimeLine=$1			# Read the Time Series jpg file
@@ -88,7 +93,8 @@ WorkDir=$(dirname ${AmpliCohDefo})
 echo " TimeLine = ${TimeLine}"
 echo " AmpliCohDefo = ${AmpliCohDefo}"
 echo "WorkDir = ${WorkDir}"
-echo "Rate between pixel number on eps file and image to crop = ${Rate}"
+if [ $# -eq 3 ] ; then echo "Rate between pixel number on eps file and image to crop = ${Rate}" ; fi
+
 ParamFile=${WorkDir}/TS_parameters.txt
 bn=$(basename ${TimeLine})
 
@@ -100,17 +106,6 @@ SatView=${WorkDir}/satview.jpg
 # Check OS
 OS=`uname -a | cut -d " " -f 1 `
 echo "Running on ${OS}"
-
-case ${OS} in 
-	"Linux") 
-		font="FreeSans";;
-	"Darwin")
-		font="Helvetica";;	
-	*)
-		;;
-esac	
-
-echo "font = ${font}"
 
 function GetParam()
 	{
@@ -128,7 +123,34 @@ CrossBig=$(GetParam CrossBig)
 CrossSmall=$(GetParam CrossSmall)
 WebPage=$(GetParam WebPage)
 
+# Different usage of composite function depending on the version of imagesmagick or graphicmagick:
+case "$(convert -version 2>&1)" in 
+    *ImageMagick* )   
+    	echo " // Use imagemagick"
+    	TOOL="imagemagick" ;;
+    *GraphicsMagick* ) 
+     	echo " // Use graphicsmagick"   
+    	TOOL="graphicsmagick" ;;
+    * ) echo 
+    	"Unknown convert - quit here !!"
+    	exit 1 ;;
+esac
 
+function do_composite() 
+	{
+	    local base="$1"
+	    local overlay="$2"
+	    local gravity="$3"
+	    local geometry="$4"
+	
+	    if [ "$TOOL" = "imagemagick" ]; then
+	        convert "$base" "$overlay" -gravity "$gravity" -geometry "$geometry" -composite "$base"
+	    else
+	        #composite -gravity "$gravity" -geometry "$geometry" "$overlay" "$base" "$base"
+	        gm composite -gravity "$gravity" -geometry "$geometry" "$overlay" "$base" "$base"
+	    fi
+	}
+	
 echo "----------------------------------------------"
 echo "-----------Script TimeSeriesInfo starts:"
 echo "----------------------------------------------"
@@ -388,31 +410,34 @@ echo $combi
 touch $combi
 convert -size 3300x2100 xc:white -type TrueColor $combi
 convert -density 300 -rotate 90 ${TimeLine} ${TimeLine}.jpg
-convert $combi ${TimeLine}.jpg -gravity northwest -geometry +330+0 -composite $combi
 
+#convert $combi ${TimeLine}.jpg -gravity northwest -geometry +330+0 -composite $combi
+do_composite "$combi" "${TimeLine}.jpg" northwest +330+0
 # tag for web site
 #convert $combi -fill grey -pointsize 60 -font ${font} -draw "text 670,250 'WebSite: http://terra3.ecgs.lu/${WebPage}" $combi
 TimeSeriesInfoHPWebTag
 
-convert $combi $crop -gravity northwest -geometry +30+150 -composite $combi
+#convert $combi $crop -gravity northwest -geometry +30+150 -composite $combi
+do_composite "$combi" "$crop" northwest +30+150
 
 # Add logo to timestamp 
 logo=${WorkDir}/AMSTer.png
 convert ${logo} -resize 125x125 Temp
-convert $combi Temp -gravity southwest -geometry +525+7 -composite $combi
-
+#convert $combi Temp -gravity southwest -geometry +525+7 -composite $combi
+do_composite "$combi" Temp southwest +525+7
 
 # Add Legend to the Time serie image
 Legend=$(echo "${AmpliCohDefo//AMPLI_COH_MSBAS_LINEAR_RATE/Legend}")	# Create the name of the real file "legend"
 					
 # Add to the combi file the legend after having rescaled the legend to the size of the thumb (350 px = )
 convert ${Legend} -resize 400x60 Temp
-convert $combi Temp -gravity northwest -geometry +10+520 -composite $combi
-
+#convert $combi Temp -gravity northwest -geometry +10+520 -composite $combi
+do_composite "$combi" Temp northwest +10+520
 
 if [ $(basename ${Legend}) = 'Legend_EW.jpg' ]	# 'EW" because the last loop in previous script 'TS_AddLegend_EW_UD.sh'
 then
-	convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'East-West deformation'" $combi
+	#convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'East-West deformation'" $combi
+	convert $combi -pointsize 30 ${FONT_OPT} -draw "text 45,140 'East-West deformation'" $combi
 	
 	REMARKDIR=$(echo ${TimeLine} | sed -E 's/^.*timeLines?_([0-9]{2,4}_){4}//' | sed -E 's/.eps//')	# extract REMARKDIR string from eps filename
 	echo "!!!!!!!!!! pwd =  $(pwd)"
@@ -429,7 +454,8 @@ then
 	fi
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
-	convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
+	#convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
+	do_composite "$combi" Temp northwest +15+650
 		
 	
 	if [ -d  zz_NS_${REMARKDIR} ] && [ -n "$(ls -A "zz_NS_${REMARKDIR}")" ]
@@ -440,8 +466,8 @@ then
 	fi
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
-	convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
-	
+	#convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
+	do_composite "$combi" Temp northwest +15+1080
 	
 	AmpliCohDefo=$(echo "${AmpliCohDefo//AMPLI_COH_MSBAS_LINEAR_RATE_EW/AMPLI_COH_MSBAS_LINEAR_RATE_UD}")
 	Legend=$(echo "${Legend//_EW.jpg/_UD.jpg}")
@@ -452,52 +478,62 @@ then
 	convert $crop -draw "stroke yellow stroke-width 3.5 line $X21,$NewY2 $X22,$NewY2" $crop	#Build cross on a duplicate images $crop
 	convert $crop -draw "stroke yellow stroke-width 3.5 line $NewX2,$Y21 $NewX2,$Y22" $crop	#Build cross on a duplicate images $crop
 
-	convert $combi -pointsize 30 -font ${font} -draw "text 45,1510 'Up-down deformation' decorate UnderLine" $combi
-	convert $combi $crop -gravity northwest -geometry +30+1530 -composite $combi
+	#convert $combi -pointsize 30 -font ${font} -draw "text 45,1510 'Up-down deformation' decorate UnderLine" $combi
+	convert $combi -pointsize 30 ${FONT_OPT} -draw "text 45,1510 'Up-down deformation' decorate UnderLine" $combi
+	#convert $combi $crop -gravity northwest -geometry +30+1530 -composite $combi
+	do_composite "$combi" "$crop" northwest +30+1530
+	
 	convert ${Legend} -resize 400x60 Temp
-	convert $combi Temp -gravity northwest -geometry +10+1900 -composite $combi
-
+	#convert $combi Temp -gravity northwest -geometry +10+1900 -composite $combi
+	do_composite "$combi" Temp northwest +10+1900
+	
 # NdO 20 Jan 2021
 #elif [[ $(basename ${Legend}) = "Legend_LOS_"*"Asc.jpg" ]] || [[ $(basename ${Legend}) = "Legend_LOS_"*"asc.jpg" ]] 
 elif [[ $(basename ${Legend}) = "Legend_"*"Asc"*".jpg" ]] || [[ $(basename ${Legend}) = "Legend_"*"asc"*".jpg" ]] 
 
 then
-	convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'LOS-Ascending deformation' decorate UnderLine" $combi
+	#convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'LOS-Ascending deformation' decorate UnderLine" $combi
+	convert $combi -pointsize 30 ${FONT_OPT} -draw "text 45,140 'LOS-Ascending deformation' decorate UnderLine" $combi
 
 	Legend2=${WorkDir}/TS_Displ_LOS_Pos.png
  	echo "${Legend2}"
 	convert ${Legend2} -resize 350x350 Temp
-	convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
-		
+	#convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
+	do_composite "$combi" Temp northwest +15+650	
 	
 	Legend2=${WorkDir}/TS_Displ_LOS_Neg.png
  	echo "${Legend2}"
 	convert ${Legend2} -resize 350x350 Temp
-	convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
+	#convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
+	do_composite "$combi" Temp northwest +15+1080
 	if [ -e ${SatView} ];
 	    then
-            convert $combi $crop2 -gravity northwest -geometry +30+1530 -composite $combi
+            #convert $combi $crop2 -gravity northwest -geometry +30+1530 -composite $combi
+            do_composite "$combi" "$crop2" northwest +30+1530
         fi
 
 # NdO 20 Jan 2021
 #elif [[ $(basename ${Legend}) = "Legend_LOS_"*"Desc.jpg" ]] || [[ $(basename ${Legend}) = "Legend_LOS_"*"desc.jpg" ]]
 elif [[ $(basename ${Legend}) = "Legend_"*"Desc"*".jpg" ]] || [[ $(basename ${Legend}) = "Legend_"*"desc"*".jpg" ]]
 then
-	convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'LOS-Descending deformation' decorate UnderLine" $combi
+	#convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'LOS-Descending deformation' decorate UnderLine" $combi
+	convert $combi -pointsize 30 ${FONT_OPT} -draw "text 45,140 'LOS-Descending deformation' decorate UnderLine" $combi
 
 	Legend2=${WorkDir}/TS_Displ_LOS_Pos.png
  	echo "${Legend2}"
 	convert ${Legend2} -resize 350x350 Temp
-	convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
-		
+	#convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
+	do_composite "$combi" Temp northwest +15+650	
 	
 	Legend2=${WorkDir}/TS_Displ_LOS_Neg.png
  	echo "${Legend2}"
 	convert ${Legend2} -resize 350x350 Temp
-	convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
+	#convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
+	do_composite "$combi" Temp northwest +15+1080
 	if [ -e ${SatView} ];
 	    then
-            convert $combi $crop2 -gravity northwest -geometry +30+1530 -composite $combi
+            #convert $combi $crop2 -gravity northwest -geometry +30+1530 -composite $combi
+            do_composite "$combi" "$crop2" northwest +30+1530
         else
             echo "!!! ${SatView}  --> not available"
         fi
@@ -505,20 +541,21 @@ then
 # NdO 20 Jan 2021 vv
 elif [[ $(basename ${Legend}) = "Legend_GEOM_UD.jpg" ]] 
 then
-	convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'Up-Down deformation'" $combi
+	#convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'Up-Down deformation'" $combi
+	convert $combi -pointsize 30 -draw "text 45,140 'Up-Down deformation'" $combi
 	
 		
  	Legend2=${WorkDir}/TS_Displ_Pos_UD.png #Image to explain the sens of displacement between cross
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
-	convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
-		
+	#convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
+	do_composite "$combi" Temp northwest +15+650
 	
 	Legend2=${WorkDir}/TS_Displ_Neg_UD.png
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
-	convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
-	
+	#convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
+	do_composite "$combi" Temp northwest +15+1080
 	
 	AmpliCohDefo=$(echo "${AmpliCohDefo//AMPLI_COH_MSBAS_LINEAR_RATE_EW/AMPLI_COH_MSBAS_LINEAR_RATE_UD}")
 	Legend=$(echo "${Legend//_EW.jpg/_UD.jpg}")
@@ -532,20 +569,20 @@ then
 
 elif [[ $(basename ${Legend}) = "Legend_GEOM_EW.jpg" ]] 
 then
-	convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'East-West deformation'" $combi
-	
+	#convert $combi -pointsize 30 -font ${font} -draw "text 45,140 'East-West deformation'" $combi
+	convert $combi -pointsize 30 ${FONT_OPT} -draw "text 45,140 'East-West deformation'" $combi
 		
  	Legend2=${WorkDir}/TS_Displ_Pos_EW.png #Image to explain the sens of displacement between cross
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
-	convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
-		
+	#convert $combi Temp -gravity northwest -geometry +15+650 -composite $combi
+	do_composite "$combi" Temp northwest +15+650
 	
 	Legend2=${WorkDir}/TS_Displ_Neg_EW.png
  	echo "${Legend2}"
 	convert ${Legend2} -resize 400x400 Temp
-	convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
-	
+	#convert $combi Temp -gravity northwest -geometry +15+1080 -composite $combi
+	do_composite "$combi" Temp northwest +15+1080
 	
 	AmpliCohDefo=$(echo "${AmpliCohDefo//AMPLI_COH_MSBAS_LINEAR_RATE_EW/AMPLI_COH_MSBAS_LINEAR_RATE_UD}")
 	Legend=$(echo "${Legend//_EW.jpg/_UD.jpg}")

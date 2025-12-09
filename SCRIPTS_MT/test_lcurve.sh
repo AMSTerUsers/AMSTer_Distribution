@@ -27,13 +27,14 @@
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.1 20250905:	- typo in VFLAG 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 05, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -83,7 +84,7 @@ for ORDER in `seq 1 3`; do
 		echo "${WSIZE}" >> header.txt
 		echo "R_FLAG =  ${ORDER}, $i" >> header.txt
 		echo "${TFAG}" >> header.txt
-		if [ "${MSBAS}" == "msbasv4" ] ; then echo "${VLFAG}" >> header.txt ; fi		
+		if [ "${MSBAS}" == "msbasv4" ] ; then echo "${VFLAG}" >> header.txt ; fi		
 		echo "${CFLAG}" >> header.txt
 		echo "${IFLAG}"  >> header.txt
 		echo "${SETS}" >> header.txt

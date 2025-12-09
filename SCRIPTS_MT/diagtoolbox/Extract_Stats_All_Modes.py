@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script load a pickle file containing a graph dict  
 # then it compute some stats on all nodes(images)
@@ -8,8 +8,11 @@
 #
 # Dependencies:	- python3.10 and modules below (see import)
 #
-# New in Distro V 1.0:	- Based on developpement version 
-# New in Distro V 1.1:	- Fix some minor bugs with naming
+# New in Distro V 1.0 20250109:	- Based on developpement version 
+# New in Distro V 1.1:        	- Fix some minor bugs with naming
+# New in Distro V 1.2 20250808 :	- Fix some minor bugs print
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # launch command : python thisscript.py param1 param2
 #
@@ -70,6 +73,7 @@ def analyze_dates_by_mode(df):
     
 # ****** MAIN ********
 
+pd.set_option('display.max_columns', None)
 if len(sys.argv) > 2:
 	print(f"Running : {sys.argv[0]} {sys.argv[1]} {sys.argv[2]}")
 	pkl_filename = sys.argv[1]
@@ -82,7 +86,7 @@ if len(sys.argv) > 2:
 		print(" ")
 		result_df = analyze_dates_by_mode(graphs_by_mode)
 		print("Compute stats")
-		print(result_df)
+		print(result_df.to_string())
 		print(" ")
 
 		# Sauvegarder les objets dans un fichier pickle

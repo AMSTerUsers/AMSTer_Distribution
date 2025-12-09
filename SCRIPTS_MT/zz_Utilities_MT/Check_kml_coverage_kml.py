@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The scrip reads a target KML provided as first parameter and all the KMLs named map-overlayX.kml in a directory. These KMLs
 # are comming from RAW Sentinel 1 images (all kml files must be copied in a dir and named with trailing X, where X is an integer).
@@ -20,7 +20,8 @@
 #				- optional; if add -p option, it will save the plot of target and KMLs overlap in the directory with all the KMLs
 #				  even if the overlap is OK. 
 #
-# New in V1.1 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 # 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2025/02/24 - could make better with more functions... when time.

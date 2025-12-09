@@ -149,30 +149,30 @@ if [ ! -s ${NEWDESCPATH}/_No_New_Data_Today.txt ] ; then
 fi
 wait
 
-# Plot baseline plot with both modes - TAKING ONLY INTO ACCOUNT THE FIRST OF THE TWO BASELINE CRITERIA, THAT IS THE ONE USED BEFORE DATECHG 
-if [ ! -s ${NEWASCPATH}/_No_New_Data_Today.txt ] || [ ! -s ${NEWDESCPATH}/_No_New_Data_Today.txt ] ; then 
-		if [ `baselinePlot | wc -l` -eq 0 ] 
-			then
-				# use AMSTer Engine before May 2022
-				mkdir -p ${DIRSET}/BaselinePlots_S1_set_1_2
-				cd ${DIRSET}/BaselinePlots_S1_set_1_2
-
-				echo "${DIRSET}/set1" > ModeList.txt
-				echo "${DIRSET}/set2" >> ModeList.txt
-
-				$PATH_SCRIPTS/SCRIPTS_MT/plot_Multi_span.sh ModeList.txt 0 ${BP} 0 ${BT} ${COLORTABLE}
-			else
-				# use AMSTer Engine > May 2022
-				mkdir -p ${DIRSET}/BaselinePlots_set1_set2
-				cd ${DIRSET}/BaselinePlots_set1_set2
- 
-				echo "${DIRSET}/set1" > ModeList.txt
-				echo "${DIRSET}/set2" >> ModeList.txt
- 
-				plot_Multi_BaselinePlot.sh ${DIRSET}/BaselinePlots_set1_set2/ModeList.txt
-			
-		fi
-fi
+## Plot baseline plot with both modes - TAKING ONLY INTO ACCOUNT THE FIRST OF THE TWO BASELINE CRITERIA, THAT IS THE ONE USED BEFORE DATECHG 
+#if [ ! -s ${NEWASCPATH}/_No_New_Data_Today.txt ] || [ ! -s ${NEWDESCPATH}/_No_New_Data_Today.txt ] ; then 
+#		if [ `baselinePlot | wc -l` -eq 0 ] 
+#			then
+#				# use AMSTer Engine before May 2022
+#				mkdir -p ${DIRSET}/BaselinePlots_S1_set_1_2
+#				cd ${DIRSET}/BaselinePlots_S1_set_1_2
+#
+#				echo "${DIRSET}/set1" > ModeList.txt
+#				echo "${DIRSET}/set2" >> ModeList.txt
+#
+#				$PATH_SCRIPTS/SCRIPTS_MT/plot_Multi_span.sh ModeList.txt 0 ${BP} 0 ${BT} ${COLORTABLE}
+#			else
+#				# use AMSTer Engine > May 2022
+#				mkdir -p ${DIRSET}/BaselinePlots_set1_set2
+#				cd ${DIRSET}/BaselinePlots_set1_set2
+# 
+#				echo "${DIRSET}/set1" > ModeList.txt
+#				echo "${DIRSET}/set2" >> ModeList.txt
+# 
+#				plot_Multi_BaselinePlot.sh ${DIRSET}/BaselinePlots_set1_set2/ModeList.txt
+#			
+#		fi
+#fi
 
 echo "Ending $0" >> ${DIRSARCSL}/Last_Run_Cron_Step1.txt
 date >> ${DIRSARCSL}/Last_Run_Cron_Step1.txt

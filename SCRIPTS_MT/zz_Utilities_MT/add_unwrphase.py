@@ -1,6 +1,8 @@
-#!/opt/local/bin/python3
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script add two unwrapped phases
+#
+# New in Distro V 2.0 20250813:	- launched from python3 venv
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

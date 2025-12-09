@@ -13,13 +13,14 @@
 # New in Distro V 1.0 (Jan 13, 2020) 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20251111:	- typo in Triangels => Triangles  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 11, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -39,7 +40,7 @@ sort -n -k1,1 -k2,2 -k4,4 -k 3,3 ${MSBASTABLE} > ${NAMETABLE}_Sort_1_2_4_3.tmp.t
 
 # get rid of 2 line header 
 tail -n +3 ${NAMETABLE}_Sort_1_2_4_3.tmp.txt > ${NAMETABLE}_Sort_1_2_4_3.txt 
-rm -f ${NAMETABLE}_Sort_1_2_4_3.tmp.txt List_No_Triangels.txt List_Triangels.txt
+rm -f ${NAMETABLE}_Sort_1_2_4_3.tmp.txt List_No_Triangles.txt List_Triangles.txt
 
 
 # get number of pairs (edges)
@@ -61,14 +62,14 @@ for i in $(seq 1 ${M})
 						tri=`grep ${slv1}  ${NAMETABLE}_Sort_1_2_4_3.txt | ${PATHGNU}/grep ${slv2} | wc -l`
 						if [ ${tri} -eq 1 ]
 							then
-								echo "Triangle : ${mas1}_${slv1} : ${mas2}_${slv2} : ${slv1}_${slv2} " >> List_Triangels.txt
+								echo "Triangle : ${mas1}_${slv1} : ${mas2}_${slv2} : ${slv1}_${slv2} " >> List_Triangles.txt
 						fi
 					else 
 						tst1=`grep ${mas1}  ${NAMETABLE}_Sort_1_2_4_3.txt | wc -l`
 						tst2=`grep ${slv1}  ${NAMETABLE}_Sort_1_2_4_3.txt | wc -l`
 						if [ ${tst1} -eq 1 ] || [ ${tst2} -eq 1 ]  # master or slave of that pair used nowhere, hence no triangle possible 
 							then 
-								echo "No Triangle : ${mas1}_${slv1} " >> List_No_Triangels.txt
+								echo "No Triangle : ${mas1}_${slv1} " >> List_No_Triangles.txt
 								break 1
 							else 
 								echo "${mas2} > ${mas1}: exit ${mas1}"

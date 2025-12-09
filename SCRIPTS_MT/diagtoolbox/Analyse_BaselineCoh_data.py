@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # -----------------------------------------------------------------------------------------
 # This script aims at displays some stats after a BaselineCohTable
 # Parameter : Baseline_Coh_table_{kml}.txt
@@ -11,6 +11,9 @@
 # New in Distro V 2.1 20250130:	- Add Plot saving and make show as an hard coded option
 #								- add coh threshold as a parameter and in plots
 # New in Distro V2.2 20250306	- Add label to boxplot
+# New in Distro V2.3 20250808	- Fix bug plot label q1, q3
+# New in Distro V3.0 20250813:	- launched from python3 venv
+#
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
@@ -189,8 +192,8 @@ if plotfig == 1:
     ax_stats.axvline(x=coh_median, color='orange', linestyle='-', label=f"Median Coherence ({coh_median:.3f})")
     ax_stats.axvline(x=iqr_lower_bound, color='purple', linestyle=':', label=f"IQR Low ({iqr_lower_bound:.3f})")
     ax_stats.axvline(x=iqr_upper_bound, color='brown', linestyle=':', label=f"IQR Up({iqr_upper_bound:.3f})")
-    ax_stats.axvline(x=q1, color='cyan', linestyle='--', label=f"25th Percentile ({iqr_lower_bound:.3f})")
-    ax_stats.axvline(x=q3, color='magenta', linestyle='--', label=f"75th Percentile ({iqr_upper_bound:.3f})")
+    ax_stats.axvline(x=q1, color='cyan', linestyle='--', label=f"25th Percentile ({q1:.3f})")
+    ax_stats.axvline(x=q3, color='magenta', linestyle='--', label=f"75th Percentile ({q3:.3f})")
     ax_stats.axvline(x=coh_th, color='red', linestyle='-', label=f"Coherence Threshold ({coh_th:.3f})")
     ax_stats.set_title("Coherence Statistics")
     ax_stats.set_xlabel("Coherence")

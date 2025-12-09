@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # -*-coding:Utf-8 -*
 #import struct
 #	Dependencies: 
@@ -32,6 +32,8 @@
 #	- Write all these info in the 5th argument: TemFile 
 #
 # New in Distro V 1.0 20231213:	- convert potential negative infinite value to nan for amplitude file (Array_AmpliMod[_inf] = np.nan)
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

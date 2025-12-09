@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script load and plots stats about the linear regression between DEM and deformation 
 # It expect as input file, the output.txt file created with RegLin_DEM_Defo_all_Maps_In_Geocoded.sh 
@@ -11,6 +11,8 @@
 # launch command : Load_and_Plot_Output_DEMDefo.py "${Processdir}/output.txt"
 #
 # New in Distro V 1.0 20250121: DS	- save all plots at location of input file
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS (c) 2022 - could make better with more functions... when time.

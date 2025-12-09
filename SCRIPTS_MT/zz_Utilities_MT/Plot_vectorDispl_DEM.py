@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script makes a vecor plot from EW and NS displacements maps wrapped on DEM.	
 # All files are provided in UTM Envi Harris format. 
@@ -18,6 +18,7 @@
 #					e.g.:   --scalevalue 0.3	(default is 0.2)
 #			  - the downsampling rate (e.g. dwsple=3 will display one vector every 3 pixel)
 #					e.g.:   --dwsple 5			(default is 3)
+#			  - contour DEM instead of shaded relief if add --contour 
 # 
 # Dependencies:	- python3.10 and modules below (see import)
 #
@@ -27,6 +28,9 @@
 # 								- allows downsampling the plot (hardcoded)
 #								- correctly adjust the length of vector scale with fig
 # New in Distro V 1.2 20250103:	- set threshold, scale and downsampling as parameters 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20250904:	- add option to plot results on contoured DEM instead of shaded relief 
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024/01/16 - could make better with more functions... when time.
@@ -76,7 +80,8 @@ def main():
 	parser.add_argument('--threshold', type=float, default=0.002, help='Threshold for displacement magnitude (default: 0.002):  Pixels where magnitude of displ is below that threshold will be masked in vector plot. ')
 	parser.add_argument('--scalevalue', type=float, default=0.2, help='Scale value for the quiver plot (default: 0.2): larger scale values make vectors smaller')
 	parser.add_argument('--dwsple', type=int, default=3, help='Downsampling factor to plot vector plot with a vector for every 1/dwsple pixel (e.g. EW_NS_Vector_Displ_Downsampled_3.jpg) (default: 3)')
-
+	parser.add_argument('--contour', action='store_true', help='If provided, plot DEM as terrain contours instead of hillshade')
+	
 	args = parser.parse_args()
 	print(' ')
 	print('Mandatory Parameters:')
@@ -91,7 +96,8 @@ def main():
 	print(f'y_max: {args.y_max}')
 	print(f'threshold: {args.threshold}')
 	print(f'scalevalue: {args.scalevalue}')
-	print(f'dwsple: {args.dwsple}\n')
+	print(f'dwsple: {args.dwsple}')
+	print(f'contour: {args.contour}\n')
 
 
 	# Initialize first_lines_to_discard and x_max to 0 by default
@@ -265,15 +271,32 @@ def main():
 	# Plot the DEM with a light grey color scale
 	#plt.imshow(dem, cmap='gray', origin='upper')
 	
-	# Calculate hillshade using a LightSource
-	ls = LightSource(azdeg=315, altdeg=65)
-	hillshade = ls.hillshade(dem, vert_exag=1.0, dx=1.0, dy=1.0)
+	#### Calculate hillshade using a LightSource
+	###ls = LightSource(azdeg=315, altdeg=65)
+	###hillshade = ls.hillshade(dem, vert_exag=1.0, dx=1.0, dy=1.0)
 	
 	# Plot the shaded relief
 	plt.figure(figsize=(12, 12))
-	plt.imshow(hillshade, cmap='gray', origin='upper', extent=(0, dem.shape[1], dem.shape[0], 0))
+	#plt.imshow(hillshade, cmap='gray', origin='upper', extent=(0, dem.shape[1], dem.shape[0], 0))
 	
-	
+	#extent = (0, dem.shape[1], dem.shape[0], 0)
+	extent = (0, columns, 0, lines) 
+
+	if args.contour:
+		# Contour plotting without flipping the array
+		contourf = plt.contourf(dem, levels=30, cmap="terrain", extent=extent, alpha=0.7)
+		contours = plt.contour(dem, levels=30, colors="black", linewidths=0.3, extent=extent)
+		plt.clabel(contours, inline=True, fontsize=6, fmt="%d")
+		cbar = plt.colorbar(contourf)
+		cbar.set_label("Elevation (m)")
+		
+		# Flip the y-axis to match the NS orientation of imshow
+		plt.gca().invert_yaxis()
+	else:
+	 	# Hillshade plotting
+	 	ls = LightSource(azdeg=315, altdeg=65)
+	 	hillshade = ls.hillshade(dem, vert_exag=1.0, dx=1.0, dy=1.0)
+	 	plt.imshow(hillshade, cmap='gray', origin='upper', extent=extent)
 	
 	# Create a vector plot for displacement
 	#######################################forget anoy
@@ -312,16 +335,24 @@ def main():
 	if first_lines_to_discard > 0:
 		plt.xlabel(f'Columns\n 1 pixel = {pixel_size_y}m')
 		plt.ylabel(f'Rows ({full_lines} minus {first_lines_to_discard} first lines)\n 1 pixel = {pixel_size_x}m')
-		pltname="EW_NS_Vector_Displ_MinusLines.jpg"
+		pltname="EW_NS_Vector_Displ_MinusLines"
 	else:
 		if x_max > 0:
 			plt.xlabel(f'Columns (from {x_min} to {x_max} among {full_columns} original)\n 1 pixel = {pixel_size_y}m')
 			plt.ylabel(f'Rows (from {y_min} to {y_max} among {full_lines} original)\n 1 pixel = {pixel_size_x}m')
-			pltname="EW_NS_Vector_Displ_Zoom.jpg"
+			pltname="EW_NS_Vector_Displ_Zoom"
 		else: 
 			plt.xlabel(f'Columns\n 1 pixel = {pixel_size_y}m')
 			plt.ylabel(f'Rows\n 1 pixel = {pixel_size_x}m')
-			pltname="EW_NS_Vector_Displ.jpg"
+			pltname="EW_NS_Vector_Displ"
+
+	# Append "_contour" if the --contour flag is used
+	if args.contour:
+		pltname += "_contour"
+
+	# Add the extension
+	pltname += ".jpg"
+
 	plt.title(f'Vector plot of displacement wrapped on DEM')
 	
 	# Save the plot as a JPEG image
@@ -337,7 +368,21 @@ def main():
 	plt.clf()
 	# get background again
 	plt.figure(figsize=(12, 12))
-	plt.imshow(hillshade, cmap='gray', origin='upper', extent=(0, dem.shape[1], dem.shape[0], 0))
+	##plt.imshow(hillshade, cmap='gray', origin='upper', extent=(0, dem.shape[1], dem.shape[0], 0))
+	if args.contour:
+		# Contour plotting without flipping the array
+		contourf = plt.contourf(dem, levels=30, cmap="terrain", extent=extent, alpha=0.7)
+		contours = plt.contour(dem, levels=30, colors="black", linewidths=0.3, extent=extent)
+		plt.clabel(contours, inline=True, fontsize=6, fmt="%d")
+		cbar = plt.colorbar(contourf)
+		cbar.set_label("Elevation (m)")
+		
+		# Flip the y-axis to match the NS orientation of imshow
+		plt.gca().invert_yaxis()
+	else:
+		ls = LightSource(azdeg=315, altdeg=65)
+		hillshade = ls.hillshade(dem, vert_exag=1.0, dx=1.0, dy=1.0)
+		plt.imshow(hillshade, cmap='gray', origin='upper', extent=extent)
 
 	# Create a grid of coordinates
 	x = np.arange(0, columns)
@@ -359,16 +404,24 @@ def main():
 	if first_lines_to_discard > 0:
 		plt.xlabel(f'Columns\n 1 pixel = {pixel_size_y}m')
 		plt.ylabel(f'Rows ({full_lines} minus {first_lines_to_discard} first lines)\n 1 pixel = {pixel_size_x}m')
-		pltname = f"EW_NS_Vector_Displ_MinusLines_Downsampled_{dwsple}.jpg"
+		pltname = f"EW_NS_Vector_Displ_MinusLines_Downsampled_{dwsple}"
 	else:
 		if x_max > 0:
 			plt.xlabel(f'Columns (from {x_min} to {x_max} among {full_columns} original)\n 1 pixel = {pixel_size_y}m')
 			plt.ylabel(f'Rows (from {y_min} to {y_max} among {full_lines} original)\n 1 pixel = {pixel_size_x}m')
-			pltname = f"EW_NS_Vector_Displ_Zoom_Downsampled_{dwsple}.jpg"
+			pltname = f"EW_NS_Vector_Displ_Zoom_Downsampled_{dwsple}"
 		else: 
 			plt.xlabel(f'Columns\n 1 pixel = {pixel_size_y}m')
 			plt.ylabel(f'Rows\n 1 pixel = {pixel_size_x}m')
-			pltname = f"EW_NS_Vector_Displ_Downsampled_{dwsple}.jpg"
+			pltname = f"EW_NS_Vector_Displ_Downsampled_{dwsple}"
+
+	# Append "_contour" if the --contour flag is used
+	if args.contour:
+		pltname += "_contour"
+
+	# Add the extension
+	pltname += ".jpg"
+
 
 	plt.title(f'Subsampled vector plot of displacement wrapped on DEM (1 vector every {dwsple} pixel)')
 	

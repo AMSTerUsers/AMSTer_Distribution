@@ -1,11 +1,16 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 #This script displays interferogram, coherence and DefoInterpolx2Detrend maps stored 
 #in a Geocoded directory as result of a SAR_MASSPROCESS. 
 #It takes crop coordinates as an optional argument and displays all 3 maps with respect to this crop. 
 #It takes a coherence threshold as an optional argument and mask all pixels where coherence is below this threshold.
 #
+#Usage : Plot_Quicklookcompar_Geocoded.py GEOCODEDFULLPATH DATE1 DATE2 [--coh_threshold COTH] [–crop XMIN XMAX YMIN YMAX]
+#
 # V 1.0 (20250226)
+# New in Distro V1.1 20250307 - cosmetic and savefig
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS
 ######################################################################################
@@ -64,16 +69,19 @@ def apply_coherence_mask(defomap, cohmap, interfmap, coh_threshold):
 
     return defomap, interfmap
 
-def plot_maps(defomap, cohmap, interfmap, date1, date2):
+def plot_maps(defomap, cohmap, interfmap, date1, date2,label):
     """Display a figure with three subplots: Deformation, Coherence, and Interferogram."""
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    filenamefig=f"quicklook_geocoded_{date1}_{date2}.png"
+    
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
     # Deformation map
     if defomap is not None:
         max_val = np.nanmax(np.abs(defomap))  # Ignore NaNs
         im1 = axes[2].imshow(defomap, cmap='seismic', vmin=-max_val, vmax=max_val)
         fig.colorbar(im1, ax=axes[2], fraction=0.046, pad=0.04)
-        axes[2].set_title(f"Deformation {date1} - {date2}")
+        axes[2].set_title(f"Deformation (m) {date1} - {date2}")
     else:
         axes[2].set_title("Deformation not found")
 
@@ -89,15 +97,16 @@ def plot_maps(defomap, cohmap, interfmap, date1, date2):
     if interfmap is not None:
         im3 = axes[0].imshow(interfmap, cmap='twilight_shifted', vmin=-np.pi, vmax=np.pi)
         fig.colorbar(im3, ax=axes[0], fraction=0.046, pad=0.04)
-        axes[0].set_title(f"Interferogram {date1} - {date2}")
+        axes[0].set_title(f"Interferogram (rad) {date1} - {date2}")
     else:
         axes[0].set_title("Interferogram not found")
 
     for ax in axes:
-        ax.axis('off')
+        ax.axis('on')
 
-    plt.suptitle(f"SAR Analysis {date1} - {date2}")
+    plt.suptitle(f"SAR Analysis\n {label}\n {date1} - {date2}")
     plt.tight_layout()
+    plt.savefig(filenamefig)
     plt.show()
 
 if __name__ == "__main__":
@@ -109,8 +118,19 @@ if __name__ == "__main__":
 
     # Find corresponding files
     defomap_file = find_file(args.base_path + 'DefoInterpolx2Detrend', args.date1, args.date2)
+    #print(defomap_file)
     cohmap_file = find_file(args.base_path + 'Coh', args.date1, args.date2)
+    #print(cohmap_file)
     interfmap_file = find_file(args.base_path + 'InterfFilt', args.date1, args.date2)
+    #print(interfmap_file)
+
+    if defomap_file or cohmap_file or interfmap_file:
+    	infoSM=os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(defomap_file))))
+    	infomode=os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(defomap_file)))))
+    	infosat=os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(defomap_file))))))
+    	label=f"{infosat}/{infomode}"
+    else:
+    	label=None
 
     # Load images if files exist
     defomap = load_image_envi(defomap_file, crop=args.crop) if defomap_file else None
@@ -122,4 +142,4 @@ if __name__ == "__main__":
         defomap, interfmap = apply_coherence_mask(defomap, cohmap, interfmap, args.coh_threshold)
 
     # Display maps in a single figure
-    plot_maps(defomap, cohmap, interfmap, args.date1, args.date2)
+    plot_maps(defomap, cohmap, interfmap, args.date1, args.date2,label)

@@ -24,7 +24,7 @@
 #   							  - Filters based on the provided start and end dates.
 # New in Distro V 1.2 20250116:   - Adds Region Name and S1 satellite.
 # New in Distro V 1.3 20250305:   - cosmetic ${}
-#
+# New in Distro V 1.4 20250808:   - fix bug * on dir_mode detection
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS (c) 2024/01/16 
@@ -79,7 +79,7 @@ modes=0
 
 
 # List all mode directories in SAT directory:
-for dir_mode in  "${dir_sat_path}/${REGION}_*/" ; do
+for dir_mode in  "${dir_sat_path}/${REGION}"_*/ ; do
 	echo ${dir_mode}
     # Check if dir_mode is valid directory
     if [ -d "${dir_mode}" ]; then

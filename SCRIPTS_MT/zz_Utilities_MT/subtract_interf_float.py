@@ -1,6 +1,8 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script read two wrapped interferograms and substract 2 to 1
+#
+# New in Distro V 2.0 20250813:	- launched from python3 venv
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

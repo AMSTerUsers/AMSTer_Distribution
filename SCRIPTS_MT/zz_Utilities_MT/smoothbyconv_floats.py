@@ -1,7 +1,9 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script smooth an interferogram (float32) using a 2-D convolution
 # with a matrix ones(3x3)
+#
+# New in Distro V 2.0 20250813:	- launched from python3 venv
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016

@@ -1,6 +1,8 @@
-#!/opt/local/bin/python3
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script read an unwrapped phase and apply cutting filter
+#
+# New in Distro V 2.0 20250813:	- launched from python3 venv
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

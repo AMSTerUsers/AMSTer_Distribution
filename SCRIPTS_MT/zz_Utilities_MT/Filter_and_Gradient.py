@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script computes a Gaussian filter and the gradient along X and Y axis of a
 # UTM ENvi Harris image provided as input. 
@@ -16,6 +16,8 @@
 #
 # New in Distro V 1.1 20240123:	- Rename rep DefoDEM as DEM to avoid clash with some scripts 
 #								  searching for comp dir with similar name 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024/01/16 - could make better with more functions... when time.

@@ -105,13 +105,16 @@
 # New in Distro V 8.0 20250605:	- correct evaluation of pixel size in Az and Rg depending on ML and ZOOM (ZOOM is not taken into account in S1 IW SAR_CSL/NoCrop/SLCImageInfo.txt)
 # New in Distro V 8.1 20250708:	- remove computation of RANGEML and AZIMML because not used
 # New in Distro V 8.2 20250805:	- Cope with NISAR data
+# New in Distro V 8.3 20250808:	- Make use of ETAD products
+# New in Distro V 8.4 20250811:	- Compute combinations of ETAD corrections if ETADCOMBI is ETADCOMBIyes
+# New in Distro V 8.5 20251124 (A. Dille):	- check path to kml when crop must be based on kml 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+VER="Distro V8.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 24, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -208,6 +211,10 @@ COHESTIMFACT=`GetParam "COHESTIMFACT,"`		# COHESTIMFACT, Coherence estimator win
 FILTFACTOR=`GetParam "FILTFACTOR,"`			# Range and Az filtering factor for interfero
 POWSPECSMOOTFACT=`GetParam "POWSPECSMOOTFACT,"`	# POWSPECSMOOTFACT, Power spectrum filtering factor (for adaptative filtering)
 
+ETADPROD=`GetParam "ETADPROD,"`				# ETADPROD, only for S1: use of ETAD products at InSARProductsGeneration: ETADno (no ETAD correction) or ETADxyz, where x, y and z are Iono, Geo and Tropo correction respectively and take values 0 (not used) or 1 (used)
+ETADCOMBI=`GetParam "ETADCOMBI,"`			# ETADCOMBI, only for S1 (ETADCOMBIyes or ETADCOMBIno): if yes, and if ETADPROD is with two or more 1, it will compute all the combinations of corrections in addition to the resquested one 
+
+
 APPLYMASK=`GetParam "APPLYMASK,"`			# APPLYMASK, Apply mask before unwrapping (APPLYMASKyes or APPLYMASKno)
 if [ ${APPLYMASK} == "APPLYMASKyes" ] 
  then 
@@ -279,6 +286,8 @@ COHMUWPTHRESH=`GetParam "COHMUWPTHRESH"`	# COHMUWPTHRESH, coh threshold (between
 
 INTERPOL=`GetParam "INTERPOL,"`				# INTERPOL, interpolate the unwrapped interfero BEFORE or AFTER geocoding or BOTH. 	
 REMOVEPLANE=`GetParam "REMOVEPLANE,"`		# REMOVEPLANE, if DETREND it will remove a best plane after unwrapping. Anything else will ignore the detrending. 	
+
+ETADGEOC=`GetParam "ETADGEOC,"`				# ETADGEOC, only sor S1: Use of ETAD products to improve geocoding (ETADGEOCyes, or ETADGEOCno)
 
 PROJ=`GetParam "PROJ,"`						# PROJ, Chosen projection (UTM or GEOC)
 GEOCMETHD=`GetParam "GEOCMETHD,"`			# GEOCMETHD, Resampling Size of Geocoded product: Forced (at FORCEGEOPIXSIZE - convenient for further MSBAS), Auto (closest multiple of 10), Closest (closest to ML az sampling)
@@ -765,7 +774,15 @@ fi
 			*.kml)  # do not quote this because of the wild card
 				if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" == "1" ]
 					then 
-						EchoTee "Shall use ${CROP} file for pseudo crop by defining area of interest."
+					  # check provided path or fallback to INPUTDATA
+            			if [ -f "${CROP}" ] || [ -f "${INPUTDATA}/${CROP}" ]
+            				then
+            				  EchoTee "Shall use ${CROP} file for pseudo crop by defining area of interest."
+            				  if [ -f "${CROP}" ]; then CROPKML=${CROP}; else CROPKML=${INPUTDATA}/${CROP}; fi
+            				else
+            				  EchoTee "KML file not found: ${CROP}. Checked paths: ${CROP} and ${INPUTDATA}/${CROP}"
+            				  exit 1
+            			fi
 						CROPKML=${CROP}
 					elif  [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ] ; then	
 						EchoTee "Option for crop with kml not tested yet for non S1 IW images; Check scripts and test..."
@@ -1453,7 +1470,8 @@ fi
 					if [ ${INTERPOL} == "BEFORE" ] || [ ${INTERPOL} == "BOTH" ]
 						then
 							EchoTee "You requested an interpolation before geocoding." 
-
+							INTERPOLSUFFIX=".interpolated"
+							
  							if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
  								then 
  									EchoTee "First multiply deformation map with NaN mask."
@@ -1491,6 +1509,7 @@ fi
 							MakeFig ${DEFORG} 1.0 1.2 normal jet 1/1 r4 ${PATHDEFOMAP}.interpolated 
 						else
 							EchoTee "You did not request an interpolation before geocoding. \n"
+							INTERPOLSUFFIX=""
 					fi
 				else 
 					if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
@@ -1562,6 +1581,190 @@ fi
 			FILESTOGEOC=`echo "NO YES YES YES NO YES YES NO"` ;;
 	esac
 
+	if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011)$ ]]
+		then
+	    	if [ "${ETADCOMBI}" = "ETADCOMBIyes" ] ; then 
+				IONOCORRPHASE="${RUNDIR}/i12/InSARProducts/ETADIonosphericPhaseCorrection"			
+				GEOCORRPHASE="${RUNDIR}/i12/InSARProducts/ETADGeodeticPhaseCorrection"
+				TROPOCORRPHASE="${RUNDIR}/i12/InSARProducts/ETADTroposphericPhaseCorrection"
+				
+				WAVELENGTH=`GetParamFromFile "Wavelength" SAR_CSL_SLCImageInfo.txt`
+				NRPIXELS=`GetParamFromFile "Unwrapped phase range dimension"  InSARParameters.txt`
+				NRLINES=`GetParamFromFile "Unwrapped phase azimuth dimension"  InSARParameters.txt`
+				
+				if [ -f  ${IONOCORRPHASE} ] ; then Phase2Defo.py ${IONOCORRPHASE} ${NRLINES} ${NRPIXELS} ${WAVELENGTH} ; fi
+				if [ -f  ${GEOCORRPHASE} ] ; then Phase2Defo.py ${GEOCORRPHASE} ${NRLINES} ${NRPIXELS} ${WAVELENGTH} ; fi
+				if [ -f  ${TROPOCORRPHASE} ] ; then Phase2Defo.py ${TROPOCORRPHASE} ${NRLINES} ${NRPIXELS} ${WAVELENGTH} ; fi
+
+	    		EchoTee "You performed an ETAD correction with at least two layers (Iono, Geo, Tropo). Results in deformationMap are computed accordingly."
+	    		EchoTee "  But you also request the computation of all the other combination of corrections. Lets apply them now. "
+				case ${ETADPROD} in
+						"ETAD"|"ETAD111")
+							# ETAD correction maps already applied, expressed in m, to be removed to assess other combinations of corrections
+							IONOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADIonosphericCorrection"			
+							GEOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADGeodeticCorrection"
+							TROPOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADTroposphericCorrection"
+							
+							# if .interpolated and non interpolated, take only interpolated !!
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.011"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${GEOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.101"					
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.110"					
+
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.101" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.100"					
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.011" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.010"					
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.101" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.001"					
+
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.100" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.000"					
+
+							DEFO_IONO_GEO_TROPO="" 	 # already in deformationMap${INTERPOLSUFFIX} and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.111"
+							DEFO_IONO_GEO="deformationMap${INTERPOLSUFFIX}.110"
+							DEFO_IONO_TROPO="deformationMap${INTERPOLSUFFIX}.101"
+							DEFO_GEO_TROPO="deformationMap${INTERPOLSUFFIX}.011"
+							DEFO_IONO="deformationMap${INTERPOLSUFFIX}.100"	
+							DEFO_GEO="deformationMap${INTERPOLSUFFIX}.010"	
+							DEFO_TROPO="deformationMap${INTERPOLSUFFIX}.001"
+							DEFO_NOCORR="deformationMap${INTERPOLSUFFIX}.000"
+
+							if [ ${REMOVEPLANE} == "DETREND" ]  #RemovePlane already done but must change ETAD corrections on these versions as well
+								then 
+									# if .interpolated and non interpolated, take only interpolated !!
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.011"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${GEOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.101"					
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.110"					
+		
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.101" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.100"					
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.011" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.010"					
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.101" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.001"					
+		
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.100" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.000"					
+		
+									DEFO_IONO_GEO_TROPO_DETREND=""  # already in deformationMap${INTERPOLSUFFIX}.flattened and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.111"
+									DEFO_IONO_GEO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.110"
+									DEFO_IONO_TROPO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.101"
+									DEFO_GEO_TROPO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.011"
+									DEFO_IONO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.100"	
+									DEFO_GEO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.010"	
+									DEFO_TROPO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.001"
+									DEFO_NOCORR_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.000"
+							fi
+							
+							;;
+						"ETAD110")
+							# ETAD correction maps already applied, expressed in m, to be removed to assess other combinations of corrections
+							IONOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADIonosphericCorrection"			
+							GEOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADGeodeticCorrection"
+							
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.010"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${GEOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.100"					
+
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.100" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.000"					
+
+							DEFO_IONO_GEO_TROPO=""
+							DEFO_IONO_GEO=""  # already in deformationMap${INTERPOLSUFFIX} and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.110"
+							DEFO_IONO_TROPO=""
+							DEFO_GEO_TROPO=""
+							DEFO_IONO="deformationMap${INTERPOLSUFFIX}.100"	
+							DEFO_GEO="deformationMap${INTERPOLSUFFIX}.010"	
+							DEFO_TROPO=""
+							DEFO_NOCORR="deformationMap${INTERPOLSUFFIX}.000"
+
+							if [ ${REMOVEPLANE} == "DETREND" ]  #RemovePlane already done but must change ETAD corrections on these versions as well
+								then 
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.010"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${GEOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.100"					
+		
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.100" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.000"					
+		
+									DEFO_IONO_GEO_TROPO_DETREND=""
+									DEFO_IONO_GEO_DETREND=""	  # alraedy in deformationMap${INTERPOLSUFFIX}.flattened and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.110"
+									DEFO_IONO_TROPO_DETREND=""
+									DEFO_GEO_TROPO_DETREND=""
+									DEFO_IONO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.100"	
+									DEFO_GEO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.010"	
+									DEFO_TROPO_DETREND=""
+									DEFO_NOCORR_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.000"
+	
+							fi
+							;;
+						"ETAD101")
+							# ETAD correction maps already applied, expressed in m, to be removed to assess other combinations of corrections
+							IONOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADIonosphericCorrection"			
+							TROPOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADTroposphericCorrection"
+												
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.001"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.100"					
+
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.100" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.000"					
+
+							DEFO_IONO_GEO_TROPO=""
+							DEFO_IONO_GEO=""
+							DEFO_IONO_TROPO=""	  # already in deformationMap${INTERPOLSUFFIX} and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.101"
+							DEFO_GEO_TROPO=""
+							DEFO_IONO="deformationMap${INTERPOLSUFFIX}.100"	
+							DEFO_GEO=""	
+							DEFO_TROPO="deformationMap${INTERPOLSUFFIX}.001"
+							DEFO_NOCORR="deformationMap${INTERPOLSUFFIX}.000"
+
+							if [ ${REMOVEPLANE} == "DETREND" ]  #RemovePlane already done but must change ETAD corrections on these versions as well
+								then 
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.001"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.100"					
+		
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.100" + ${IONOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.000"					
+		
+									DEFO_IONO_GEO_TROPO_DETREND=""
+									DEFO_IONO_GEO_DETREND=""
+									DEFO_IONO_TROPO_DETREND="" # already in deformationMap${INTERPOLSUFFIX}.flattened and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.101"
+									DEFO_GEO_TROPO_DETREND=""
+									DEFO_IONO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.100"	
+									DEFO_GEO_DETREND=""	
+									DEFO_TROPO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.001"
+									DEFO_NOCORR_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.000"
+	
+							fi
+							;;
+						"ETAD011")
+							# ETAD correction maps already applied, expressed in m, to be removed to assess other combinations of corrections
+							GEOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADGeodeticCorrection"
+							TROPOCORRDEFO="${RUNDIR}/i12/InSARProducts/deformationETADTroposphericCorrection"
+
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${GEOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.001"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise	
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.010"					
+
+							ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.001" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.000"					
+
+							DEFO_IONO_GEO_TROPO=""
+							DEFO_IONO_GEO=""
+							DEFO_IONO_TROPO=""
+							DEFO_GEO_TROPO=""  # already in deformationMap${INTERPOLSUFFIX} and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.011"
+							DEFO_IONO=""	
+							DEFO_GEO="deformationMap${INTERPOLSUFFIX}.010"	
+							DEFO_TROPO="deformationMap${INTERPOLSUFFIX}.001"
+							DEFO_NOCORR="deformationMap${INTERPOLSUFFIX}.000"
+
+							if [ ${REMOVEPLANE} == "DETREND" ]  #RemovePlane already done but must change ETAD corrections on these versions as well
+								then 
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${GEOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.001"				# where INTERPOLSUFFIX=".interpolated" if BEFORE or BOTH and "" otherwise	
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.010"					
+		
+									ffa "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.001" + ${TROPOCORRDEFO} "${RUNDIR}/i12/InSARProducts/deformationMap${INTERPOLSUFFIX}.flattened.000"					
+		
+									DEFO_IONO_GEO_TROPO_DETREND=""
+									DEFO_IONO_GEO_DETREND=""
+									DEFO_IONO_TROPO_DETREND=""
+									DEFO_GEO_TROPO_DETREND=""   # already in deformationMap${INTERPOLSUFFIX}.flattened and equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.011"
+									DEFO_IONO_DETREND=""	
+									DEFO_GEO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.010"	
+									DEFO_TROPO_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.001"
+									DEFO_NOCORR_DETREND="deformationMap${INTERPOLSUFFIX}.flattened.000"
+	
+							fi
+							;;
+				esac
+	    	fi
+	fi
+
+
 	if [ ${PROJ} == "UTM" ]
 		then	
 			EchoTee "UTM geoprojection"
@@ -1594,11 +1797,52 @@ fi
 								PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
 								#PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated	
+
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_NOCORR_DETREND}
+								fi
 							else 
 								EchoTee "Request interpolation after geocoding."
 								PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
 								#PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated	
+
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO}
+									InterpoDefoInclETAD ${DEFO_GEO}
+									InterpoDefoInclETAD ${DEFO_TROPO}
+									InterpoDefoInclETAD ${DEFO_NOCORR}
+								fi
+
 					fi ;;
 				"BOTH")  
 # 					EchoTee "Request interpolation before and after geocoding."
@@ -1611,11 +1855,55 @@ fi
 								PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
 								#PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated   
+
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_NOCORR_DETREND}
+								fi
+
+
 							else 
 								EchoTee "Request interpolation before and after geocoding."
 								PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZERG}x${GEOPIXSIZEAZ}.bil
 								fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
 								#PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZE}x${GEOPIXSIZE}.bil.interpolated   
+
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO}
+									InterpoDefoInclETAD ${DEFO_GEO}
+									InterpoDefoInclETAD ${DEFO_TROPO}
+									InterpoDefoInclETAD ${DEFO_NOCORR}
+								fi
+
+
 					fi ;;
 				"BEFORE") 
 					EchoTee "Do not request interpolation after geocoding" 

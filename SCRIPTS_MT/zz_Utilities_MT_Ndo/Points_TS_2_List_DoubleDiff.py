@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The script aims at creating a list coordinates and name for double difference TS computation. 
 # It copes with the expected name when performing MSBAS.sh
@@ -13,6 +13,8 @@
 # Dependency: 	- none
 #
 # New in Distro V 1.0  20241231: - setup 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024 - could make better with more functions... when time.

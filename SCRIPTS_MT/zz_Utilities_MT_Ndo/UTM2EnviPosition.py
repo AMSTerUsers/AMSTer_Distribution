@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The script aims at converting coordinates into pixel positions in an ENVI raster file.
 # It reads geographical information provided in the .hdr file.
@@ -20,6 +20,8 @@
 #		should answer something like: 	Pixel Position (Option -UTM): X=2060, Y=770
 #
 # New in Distro V 1.0  20241231: - setup 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024 - could make better with more functions... when time.

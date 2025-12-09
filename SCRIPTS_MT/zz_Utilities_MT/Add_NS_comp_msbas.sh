@@ -47,13 +47,15 @@
 # New in Distro V 1.4 20240924:	- more robust to change all path in Parameters.txt files with 
 #								  global variables for disk names
 # New in Distro V 1.5 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
+# New in Distro V 1.6 20251104:	- because of an old bug in geoProjection which does not follow 
+#									links for AoI kml's, change path in geoProjectionParameters.txt
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 27, 2025"
+VER="Distro V1.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 04, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -266,8 +268,23 @@ if test -e ${GEOCDEMDIR}/externalSlantRangeDEM.UTM*.hdr
 					mkdir -p ${RESAMPSLVPATH}/Headers
 					touch ${RESAMPSLVPATH}/Headers/Dummy.txt
 			fi 
+
+		cd ..	# now in /${PAIRDIR}/i12/				
+		# old bug  in geoProjection prevents following links 
+			cd .. # now in /${PAIRDIR}
+			cd .. 
+			# Check OS
+			OS=`uname -a | cut -d " " -f 1 `
 		
-		cd ..
+			case ${OS} in 
+				"Linux") 
+					RenamePath_Volumes_VARtoMNT.sh ;;
+				"Darwin")
+					RenamePath_Volumes_VARtoVol.sh 	;;
+				*)
+					echo "Can't figure out you OS, hence I can't change paths in text files'" 	;;
+			esac
+			cd ${PAIRDIR}/i12		# back in /${PAIRDIR}/i12/			
 		geoProjection -e -r # -r is to get Envi format and -e aims at geocoding the slantRangeDEM 
 		
 		# mv dem and header in GEOCDEMDIR

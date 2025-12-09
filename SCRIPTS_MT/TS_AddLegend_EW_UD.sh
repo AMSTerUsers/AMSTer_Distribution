@@ -50,12 +50,17 @@
 # New in Distro V 3.2 20240702:	- from V3.1 modifications, add mode DefoInterpol2
 # New in Distro V 3.3 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 # New in Distro V 3.3 20250428:	- DS: Add defo mode COR_Defo
+# New in Distro V 3.4 20250813:	- Selection of appropriate amplitude file if combi mode to create AmpCohDefo map
+# New in Distro V 3.5 20250916:	- Force to cp instead of link images
+# New in Distro V 3.6 20251105:	- if does not find LinkedFile in all dirs down to Defo1 dir, search for Defo*1. 
+#									This should allows coping with all type of exotic processings... 
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 28, 2025"
+VER="Distro V3.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 05, 2025"
 
 
 echo " "
@@ -123,8 +128,10 @@ echo ""
 mkdir -p ${RUNDIR_EW}/_images
 mkdir -p ${RUNDIR_UD}/_images
 
-ln -s ${RegionFolder}/_CombiFiles/* ${RUNDIR_EW}/_images 2>/dev/null
-ln -s ${RegionFolder}/_CombiFiles/* ${RUNDIR_UD}/_images 2>/dev/null
+#ln -s -f ${RegionFolder}/_CombiFiles/* ${RUNDIR_EW}/_images 2>/dev/null
+#ln -s -f ${RegionFolder}/_CombiFiles/* ${RUNDIR_UD}/_images 2>/dev/null
+cp -f ${RegionFolder}/_CombiFiles/* ${RUNDIR_EW}/_images 2>/dev/null
+cp -f ${RegionFolder}/_CombiFiles/* ${RUNDIR_UD}/_images 2>/dev/null
 
 # Create the velocity map for EW and UP deformation
 # ---------------------------------------------------
@@ -167,7 +174,8 @@ for RUNDIR in ${RUNDIR_UD} ${RUNDIR_EW}
 						find $RUNDIR/_images -type f ! -name "TS_*" ! -name "AMSTer.png" -exec rm -f {} \;
 						DEFO="MSBAS_LINEAR_RATE_${EW_UD}.bin"
 						cp -p $PATHFILEDEFO $RUNDIR/_images
-						ln -s ${PATHFILEDEFO}.hdr $RUNDIR/_images
+						#ln -s -f ${PATHFILEDEFO}.hdr $RUNDIR/_images
+						cp -f ${PATHFILEDEFO}.hdr $RUNDIR/_images
 						PATHFILEDEFO=$RUNDIR/_images/${DEFO}
 
 						PATHFILECOH=$(echo "${PATHFILEDEFO//MSBAS_LINEAR_RATE/MSBAS_MASK}")
@@ -181,7 +189,42 @@ for RUNDIR in ${RUNDIR_UD} ${RUNDIR_EW}
 
 						# find the corresponding amplitude file
 						#-----------------------------------------------
-						LinkedFile=$(find ${RegionFolder}/DefoInterpolx2Detrend1/ -name "defo*deg" 2>/dev/null | head -1)
+						
+						# Check if REMARKDIR content Orbit info 
+						orbit=""
+						if [[ ! ${REMARKDIR} == _Auto* ]]; then
+							# 2. Split into part1 and part2 around the first occurrence of "_Auto"
+							if [[ ${REMARKDIR} == *"_Auto"* ]]; then
+								part1="${REMARKDIR%%_Auto*}"
+								part2="${REMARKDIR#"$part1"}"
+							else
+								part1="${REMARKDIR}"
+								part2=""
+								echo "...part1 = $part1"
+							fi
+
+						
+							# 3. Extract "A_[0-9]+" from part1 if it exists
+							if [[ $part1 =~ (A_[0-9]+) ]]; then
+								match="${BASH_REMATCH[1]}"
+								echo "Found pattern: $match"
+								orbit=${match}
+							else
+								echo "No A_[0-9]+ pattern found in part1"
+							fi
+						else
+							echo "String starts with _Auto — skipping."
+						fi
+						
+
+						
+						LinkedFile=$(find ${RegionFolder}/DefoInterpolx2Detrend1/ -name "defo*${orbit}*deg" 2>/dev/null | head -1)
+						if [ "${LinkedFile}" == "" ] 
+							then 
+								LinkedFile=$(find ${RegionFolder}/DefoInterpolx2Detrend2/ -name "defo*${orbit}*deg" 2>/dev/null | head -1)
+						fi
+					
+						
 						
 						if [ "${LinkedFile}" == "" ] 
 							then 
@@ -201,13 +244,24 @@ for RUNDIR in ${RUNDIR_UD} ${RUNDIR_EW}
 													LinkedFile=$(find ${RegionFolder}/Defo1/ -name "defo*deg" 2>/dev/null | head -1) 
 													if [ "${LinkedFile}" == "" ] 
 														then 
-															# There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
-															LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
+															#### There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
+															###LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
+															
+															# There is no file in Defo1, search in first of Defo*1		
+															FirstDir=$(ls -d "${RegionFolder}"/Defo*1/ 2>/dev/null | head -1)
+															echo "  // This is a fancy deformation Dir. Please check yourself if evrything is OK... "
+															LinkedFile=$(find "$FirstDir" -type f -name "defo*deg" 2>/dev/null | head -1)
+															# for really exotic and fancy processings.... be carefull.... 
+															if [ "${LinkedFile}" == "" ] 
+																then 
+																	echo "  // This is a very fancy deformation file. Please check yourself if evrything is OK... "
+																	LinkedFile=$(find "$FirstDir" -type f -name "*defo*deg" 2>/dev/null | head -1)
+															fi
 			
 															if [ "${LinkedFile}" == "" ] 
 																then 
 																	# There is no file at all - can't make the fig with amplitude background
-																	echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend]1. "
+																	echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend][*]1. "
 																	echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
 															fi
 													fi
@@ -255,8 +309,11 @@ for RUNDIR in ${RUNDIR_UD} ${RUNDIR_EW}
 						#echo ${AmpliPath}
 
 						#echo "Ampli file = ${AmpliFile}"
-						ln -s ${AmpliFolder}/${AmpliFile} $RUNDIR/_images/${AmpliFile}
-						ln -s ${AmpliFolder}/${AmpliFile}.hdr $RUNDIR/_images/${AmpliFile}.hdr
+						#ln -s -f ${AmpliFolder}/${AmpliFile} $RUNDIR/_images/${AmpliFile}
+						#ln -s -f ${AmpliFolder}/${AmpliFile}.hdr $RUNDIR/_images/${AmpliFile}.hdr
+						cp -f ${AmpliFolder}/${AmpliFile} $RUNDIR/_images/${AmpliFile}
+						cp -f ${AmpliFolder}/${AmpliFile}.hdr $RUNDIR/_images/${AmpliFile}.hdr
+
 						PATHFILEAMPLI=$RUNDIR/_images/${AmpliFile}
 						echo "PATHFILEAMPLI = $PATHFILEAMPLI"
 						echo "PATHFILEDEFO = $PATHFILEDEFO"
@@ -272,8 +329,8 @@ for RUNDIR in ${RUNDIR_UD} ${RUNDIR_EW}
 						${PATH_SCRIPTS}/SCRIPTS_MT/AmpDefo_map.sh ${PATHFILEAMPLI} ${PATHFILECOH} ${PATHFILEDEFO} AMPLI_COH_MSBAS_LINEAR_RATE_${EW_UD}  >> /dev/null  
 						#find $RUNDIR/_images -type f -name "*_2.0" -delete
 						#find $RUNDIR/_images -type f -name "*.hdr" -delete
-						find $RUNDIR/_images -type f -name "*_2.0" -exec rm -f {} \;
-						find $RUNDIR/_images -type f -name "*.hdr" -exec rm -f {} \;
+						#find $RUNDIR/_images -type f -name "*_2.0" -exec rm -f {} \;
+						#find $RUNDIR/_images -type f -name "*.hdr" -exec rm -f {} \;
 
 						if [ -e $RUNDIR/_images/AMPLI_COH_MSBAS_LINEAR_RATE_${EW_UD}.jpg ]
 							then 
@@ -315,8 +372,8 @@ echo ""
 echo "delete extra files"
 #find ${RUNDIR_UD}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_*.bin" \) -delete
 #find ${RUNDIR_EW}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_*.bin" \) -delete
-find ${RUNDIR_UD}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_*.bin" \) -exec rm -f {} \;
-find ${RUNDIR_EW}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_*.bin" \) -exec rm -f {} \;
+#find ${RUNDIR_UD}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_*.bin" \) -exec rm -f {} \;
+#find ${RUNDIR_EW}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_*.bin" \) -exec rm -f {} \;
 
 echo ""
 echo "------------- end ------------"

@@ -47,14 +47,15 @@
 #									It can't change the zoom factor though in case of S1 WS. 
 # New in Distro V 3.4 20250627:	- Erroneous ChangeGeocParam instead of ChangeParam in removing kml just in case in Closest and Auto 
 # New in Distro V 3.5 20250804:	- Correct checking unchanged zoom factor  
-
+# New in Distro V 3.6 20250821:	- debug search for "Slant range sampling [m]"
+# New in Distro V 3.7 20250822:	- more robust way of computing abs to avoid prblm eg. with values 1e-15
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 04, 2025"
+VER="Distro V3.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 21, 2025"
 
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -206,7 +207,7 @@ function GetParamFromFile()
 		then 
 			# Get param from NoZoom image
 			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" NoZoom_masterSLCImageInfo.txt`
-			RGSAMP=`GetParamFromFile "Range sampling [m]" NoZoom_masterSLCImageInfo.txt`
+			RGSAMP=`GetParamFromFile "Slant range sampling [m]" NoZoom_masterSLCImageInfo.txt`
 			INCIDANGL=`GetParamFromFile "Incidence angle at median slant range [deg]" NoZoom_masterSLCImageInfo.txt` # not rounded
 
 		else 
@@ -214,7 +215,7 @@ function GetParamFromFile()
 			#parameterFilePath=${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASNAME}.csl/Info/SLCImageInfo.txt
 			#AZSAMP=`updateParameterFile ${parameterFilePath} ${KEY}` # not rounded
 			AZSAMP=`GetParamFromFile "Azimuth sampling [m]" SLCImageInfo.txt`
-			RGSAMP=`GetParamFromFile "Range sampling [m]" SLCImageInfo.txt`
+			RGSAMP=`GetParamFromFile "Slant range sampling [m]" SLCImageInfo.txt`
 			INCIDANGL=`GetParamFromFile "Incidence angle at median slant range [deg]" SLCImageInfo.txt` # not rounded
 
 	fi
@@ -308,16 +309,16 @@ echo ""
 
 	# May want to check that zoom factor has not changed in Param file and former processing: 
 		ZOOMEDAZSAMP=`GetParamFromFile "Azimuth sampling [m]" InSARParameters.txt`
-		ZOOMEDRGSAMP=`GetParamFromFile "Range sampling [m]" InSARParameters.txt`
+		ZOOMEDRGSAMP=`GetParamFromFile "Slant range sampling [m]" InSARParameters.txt`
 		
 		if [ "${S1WSZOOM}" == "Yes" ]
 			then 
 				# Get param from NoZoom image
 				UNZOOMEDAZSAMP=`GetParamFromFile "Azimuth sampling [m]" NoZoom_masterSLCImageInfo.txt`
-				UNZOOMEDRGSAMP=`GetParamFromFile "Range sampling [m]" NoZoom_masterSLCImageInfo.txt`
+				UNZOOMEDRGSAMP=`GetParamFromFile "Slant range sampling [m]" NoZoom_masterSLCImageInfo.txt`
 			else 
 				UNZOOMEDAZSAMP=`GetParamFromFile "Azimuth sampling [m]" SLCImageInfo.txt`
-				UNZOOMEDRGSAMP=`GetParamFromFile "Range sampling [m]" SLCImageInfo.txt`
+				UNZOOMEDRGSAMP=`GetParamFromFile "Slant range sampling [m]" SLCImageInfo.txt`
 		fi
 	
 		# AZSAMP must be = to UNZOOMEDAZSAMP/ZOOMAZ
@@ -329,11 +330,13 @@ echo ""
 		EPSILON=0.0001
 		
 		diff=$(echo " ${REZOOMEDAZSAMP} - ${ZOOMEDAZSAMP}" | bc -l)
-		abs_diff=$(echo "$diff" | awk '{print ($1 >= 0) ? $1 : -$1}')
+		#abs_diff=$(echo "$diff" | awk '{print ($1 >= 0) ? $1 : -$1}')
+		abs_diff=$(echo "sqrt($diff^2)" | bc -l)
 		AZ_is_close=$(echo "$abs_diff < ${EPSILON}" | bc -l)
 
 		diff=$(echo " ${REZOOMEDRGSAMP} - ${ZOOMEDRGSAMP}" | bc -l)
-		abs_diff=$(echo "$diff" | awk '{print ($1 >= 0) ? $1 : -$1}')
+		#abs_diff=$(echo "$diff" | awk '{print ($1 >= 0) ? $1 : -$1}')
+		abs_diff=$(echo "sqrt($diff^2)" | bc -l)
 		RG_is_close=$(echo "$abs_diff < ${EPSILON}" | bc -l)
 		
 		if [ "${AZ_is_close}" -eq 1 ] && [ "${RG_is_close}" -eq 1 ]

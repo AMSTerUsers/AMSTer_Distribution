@@ -10,6 +10,7 @@
 # New in Distro V 2.0.0 20241111 :	- based on Lux cron script
 # New in Distro V 2.1.0 20250225 :	- adapt kml for reading to avoid extra bursts 
 #									- add kml with overlap area of interest to check bursts nr of each mode
+# New in Distro V 3.0.0 20251111 :	- Since new download and unzip from Mac doris5m4, no need to Sort_UNZIP_S1.sh
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -44,7 +45,8 @@ NR=3
 #SAR_DATA
 PATHDIRSARDATA=$PATH_3610/SAR_DATA/S1/
 
-DIRSARDATA=${PATHDIRSARDATA}/S1-DATA-NEPAL-SLC.UNZIP 
+# Not needed anymore since download and unzip from doris5m4
+#DIRSARDATA=${PATHDIRSARDATA}/S1-DATA-NEPAL-SLC.UNZIP 
 
 DIRSARDATAA85=${PATHDIRSARDATA}/S1-DATA-NEPAL-SLC_A85.UNZIP 
 DIRSARDATAA158=${PATHDIRSARDATA}/S1-DATA-NEPAL-SLC_A158.UNZIP 
@@ -113,7 +115,8 @@ date >> ${DIRSARCSL}/Last_Run_Cron_Step1.txt
 # that problem, raw images are sorted before reading with a dedicated kml. The global kml is 
 # however used for the final geocoding (CentralNepal.kml)
 
-Sort_UNZIP_S1.sh ${DIRSARDATA}
+# Not needed anymore since download and unzip from doris5m4
+#Sort_UNZIP_S1.sh ${DIRSARDATA}
 
 # Read all S1 images for that footprint by modes - DO NOT RUN IN BACKGROUND BECAUSE IT WOULD CRASH AT SORTING SOME MODES WHILE OTHER ARE STILL RUNNING
 ## $PATH_SCRIPTS/SCRIPTS_MT/Read_All_Img.sh ${DIRSARDATA} ${DIRSARCSL}/NoCrop S1 ${KMLFILEREADING} VV ${RESAMDIR} ${MASSPRODIR} EXACTKML > /dev/null 2>&1

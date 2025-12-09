@@ -116,13 +116,19 @@
 # New in Distro V 4.5 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
 #								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
 # New in Distro V 4.6 20250805:	- Cope with NISAR data (not tested yet)
+# New in Distro V 4.7 20250925:	- Allows usage of ETAD products: allows only to keep the corrected and uncorrected defo maps. Not all the combinations like for SinglePair.sh
+# New in Distro V 4.8 20250930:	- Rename geocoded products with EATD extension 
+# New in Distro V 4.9 20251023:	- test size of interferometric products before performing unwrapping: must be at least 85% of master img size. 
+#							      Interfero may be smaller than MAS because of overlap with SLV.
+#								  Note that the 85% is arbitrary chosen and may be changed in script (see variable SIZEPERCENT)
+# New in Distro V 4.10 20251027: - typo in echoed message (no closing }) 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.6 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+VER="Distro V4.10 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 27, 2025"
 
 
 echo " "
@@ -337,6 +343,11 @@ DEMNAME=`GetParam "DEMNAME,"`				# DEMNAME, name of DEM inverted by lines and co
 
 MASSPROCESSPATH=`GetParam MASSPROCESSPATH`	# MASSPROCESSPATH, path to dir where all processed pairs will be stored in sub dir named by the sat/trk name (SATDIR/TRKDIR)
 RESAMPDATPATH=`GetParam RESAMPDATPATH`		# RESAMPDATPATH, path to dir where resampled data are stored 
+
+ETADPROD=`GetParam "ETADPROD,"`				# ETADPROD, only for S1: use of ETAD products at InSARProductsGeneration: ETADno (no ETAD correction) or ETADxyz, where x, y and z are Iono, Geo and Tropo correction respectively and take values 0 (not used) or 1 (used)
+ETADCOMBI=`GetParam "ETADCOMBI,"`			# ETADCOMBI, only for S1 (ETADCOMBIyes or ETADCOMBIno): if yes, and if ETADPROD is with two or more 1, it will compute all the combinations of corrections in addition to the resquested one 
+ETADGEOC=`GetParam "ETADGEOC,"`				# ETADGEOC, only sor S1: Use of ETAD products to improve geocoding (ETADGEOCyes, or ETADGEOCno)
+
 
 mkdir -p ${PROROOTPATH}
 eval PROPATH=${PROROOTPATH}/${SATDIR}/${TRKDIR}	# Path to dir where data will be processed.
@@ -1142,121 +1153,150 @@ do
 				HEADING=`echo ${HEADING} | cut -d " " -f 1`
 				EchoTee "Satellite is ${HEADING}."
 
-				# compute unwrapping and plot figs
-				if [ ${SKIPUW} == "SKIPyes" ] 
-					then
-						EchoTeeYellow "  // Skip geocoding as requested, hence obviously skip interpolation and Detrending..."
-				#       Parameters are which products to geocode: set YES or NO in right order as below
-				#       SLRDEMorDEFO, MASAMPL, SLVAMPL, COH, INTERF, FILTINTERF, RESINTERF, UNWPHASE
-						FILESTOGEOC=`echo "NO YES YES YES NO YES YES NO"`
-					else 
-						case ${SATDIR} in
-							"RS"|"RADARSAT") 
-								UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
-								;;
-							"TSX") 
-								UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
-								;;
-							"TDX") 
-								UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
-								;;
-							"CSK") 
-								UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
-								;;
-							"S1") 
-								UnwrapAndPlot 1 2   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
-								;;
-							"ENVISAT") 
-								UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
-								;;
-							*) 
-								UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
-								;;
-						esac	
+				# TEST IF SUCCESSFUL
+					# Min % of size for interfero compared to initial master img (which is reduced as interfero because of overlap with salve)
+					SIZEPERCENT=85
+					# size of the interferogram
+					INTERFSIZE=$(stat -c %s "${RUNDIR}/i12/InSARProducts/interfero.${POLMAS}-${POLSLV}")
+					# size of AoI and Reduction factor in Rg and Az
+					URG=$(GetParamFromFile "Upper right range coordinate" InSARParameters.txt)
+					LRG=$(GetParamFromFile "Lower left range coordinate" InSARParameters.txt)
+					REDUCRG=$(GetParamFromFile "Range reduction factor [pix]" InSARParameters.txt)
+					UAZ=$(GetParamFromFile "Upper right azimuth coordinate" InSARParameters.txt)
+					LAZ=$(GetParamFromFile "Lower left azimuth coordinate" InSARParameters.txt)
+					REDUCAZ=$(GetParamFromFile "Azimuth reduction factor [pix]" InSARParameters.txt)
+					# (size of AoI in Rg / Reduction factor in Rg) * (size of AoI in Az / Reduction factor in Az) * 4 = size in bytes ()
+					EXPECTEDINTERFSIZE=$(echo "scale=0; (( ${URG} - ${LRG} ) / ${REDUCRG} ) * (( ${UAZ} - ${LAZ} ) / ${REDUCAZ} )  * 4" | bc -l) # truncated and usually larger than final interf product because of overlap
+					echo
 					
-						# Interpolation of small gaps - gaps are from holes in DEM and/or mask
-						if [ ${INTERPOL} == "BEFORE" ] || [ ${INTERPOL} == "BOTH" ]
+				if (( 100 * INTERFSIZE < ${SIZEPERCENT} * EXPECTEDINTERFSIZE ))
+					then
+						EchoTee "interfero.${POLMAS}-${POLSLV}'s size (${INTERFSIZE} bytes) is less than ${SIZEPERCENT}% of maximum expected size, that is without ignoring possible reduction to ensure overlap (${EXPECTEDINTERFSIZE} bytes)"
+						EchoTee "That seems too small; stop this pair here and save pair dir as ${RUNDIR}_CRASH "
+						EchoTee "If it was correct, change the script around line $LINENO to get a test with a comparison less restrictive as 85 %...  "
+						mv ${RUNDIR} ${RUNDIR}_CRASH
+						echo 
+						echo 
+					else
+						EchoTee "interfero.${POLMAS}-${POLSLV}'s size (${INTERFSIZE} bytes) is at least ${SIZEPERCENT}% of maximum expected size, that is without ignoring possible reduction to ensure overlap (${EXPECTEDINTERFSIZE} bytes)"
+						EchoTee " I guess it is OK ; continue with unwrapping "
+						echo
+						# compute unwrapping and plot figs
+						if [ ${SKIPUW} == "SKIPyes" ] 
 							then
-								EchoTee "You requested an interpolation before geocoding. "
-								DEFORG=`GetParamFromFile "Deformation measurement range dimension" InSARParameters.txt`
-								DEFOAZ=`GetParamFromFile "Deformation measurement azimuth dimension" InSARParameters.txt`
-
-								if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
-									then 
-										EchoTee "First multiply deformation map with NaN mask."
-										if [ -f "${RUNDIR}/i12/InSARProducts/binarySlantRangeMask" ]
+								EchoTeeYellow "  // Skip geocoding as requested, hence obviously skip interpolation and Detrending..."
+						#       Parameters are which products to geocode: set YES or NO in right order as below
+						#       SLRDEMorDEFO, MASAMPL, SLVAMPL, COH, INTERF, FILTINTERF, RESINTERF, UNWPHASE
+								FILESTOGEOC=`echo "NO YES YES YES NO YES YES NO"`
+							else 
+								case ${SATDIR} in
+									"RS"|"RADARSAT") 
+										UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
+										;;
+									"TSX") 
+										UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
+										;;
+									"TDX") 
+										UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
+										;;
+									"CSK") 
+										UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
+										;;
+									"S1") 
+										UnwrapAndPlot 1 2   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
+										;;
+									"ENVISAT") 
+										UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
+										;;
+									*) 
+										UnwrapAndPlot 1 1   #  Parameters = ML factor for raster figures only (eg 5 1 for rectangle pixels)
+										;;
+								esac	
+							
+								# Interpolation of small gaps - gaps are from holes in DEM and/or mask
+								if [ ${INTERPOL} == "BEFORE" ] || [ ${INTERPOL} == "BOTH" ]
+									then
+										EchoTee "You requested an interpolation before geocoding. "
+										DEFORG=`GetParamFromFile "Deformation measurement range dimension" InSARParameters.txt`
+										DEFOAZ=`GetParamFromFile "Deformation measurement azimuth dimension" InSARParameters.txt`
+		
+										if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
 											then 
-												EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
-												# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
-												byte2float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
-												ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
-												convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
-											else 
-												if [ -f "${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask" ] 											
+												EchoTee "First multiply deformation map with NaN mask."
+												if [ -f "${RUNDIR}/i12/InSARProducts/binarySlantRangeMask" ]
 													then 
-														EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
-														# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
-														Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
-														byte2float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
-														ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
-														convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
-													else
-														if [ ${UW_METHOD} == "CIS" ]
+														EchoTee "Suppose multilevel masking where 1 and/or 2 = to be masked and 0 = non masked in a single file, without detrend mask(s)."
+														# i.e. use new masking method with multilevel masks where 0 = non masked and 1 or 2 = masked
+														byte2float.py ${RUNDIR}/i12/InSARProducts/snaphuMask
+														ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/snaphuMaskFloat -i
+														convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/snaphuMask ${RUNDIR}/i12/InSARProducts/snaphuMask.gif
+													else 
+														if [ -f "${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask" ] 											
 															then 
-																EchoTee "CIS unwrapping performed with mask. However, deformation/Topo maps are not shown with masked area because there is no product with the same size. "
-																EchoTee "However, you can easily do it manually with any GIS software. "
-															else 
-																EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
-																# i.e. use old masking method with single level masks where 0 = masked
-																ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
+																EchoTee "Suppose multilevel masking where 1 and/or 2 and/or 3 = to be masked and 0 = non masked, that is with possible detrend masks."
+																# i.e. use new masking method with multiple masks where 0 = non masked and 1 or 2 or 3 = masked
+																Swap_0_1_in_ByteFile.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask
+																byte2float.py ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01
+																ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01Float -i
+																convert -depth 8 -equalize -size ${DEFORG}x${DEFOAZ} gray:${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01 ${RUNDIR}/i12/InSARProducts/thresholdedSlantRangeMask_Swap01.gif
+															else
+																if [ ${UW_METHOD} == "CIS" ]
+																	then 
+																		EchoTee "CIS unwrapping performed with mask. However, deformation/Topo maps are not shown with masked area because there is no product with the same size. "
+																		EchoTee "However, you can easily do it manually with any GIS software. "
+																	else 
+																		EchoTee "Suppose mask where 0 = to be masked and 1 = non masked."
+																		# i.e. use old masking method with single level masks where 0 = masked
+																		ffa ${RUNDIR}/i12/InSARProducts/deformationMap N ${RUNDIR}/i12/InSARProducts/slantRangeMask -i
+																fi
 														fi
 												fi
 										fi
+		
+										fillGapsInImage ${RUNDIR}/i12/InSARProducts/deformationMap ${DEFORG} ${DEFOAZ} 
+										# make raster
+										MakeFig ${DEFORG} 1.0 1.2 normal jet 1/1 r4 ${PATHDEFOMAP}.interpolated 
+									else
+										EchoTee "You did not request an interpolation before geocoding."
+								fi				
+				
+								# Remove best plane 
+								if [ ${REMOVEPLANE} == "DETREND" ] 
+									then 
+										EchoTee "You request detrending. \n" 
+										RemovePlane 
+									else 
+										EchoTee "You did not request detrending. \n" 
 								fi
-
-								fillGapsInImage ${RUNDIR}/i12/InSARProducts/deformationMap ${DEFORG} ${DEFOAZ} 
-								# make raster
-								MakeFig ${DEFORG} 1.0 1.2 normal jet 1/1 r4 ${PATHDEFOMAP}.interpolated 
-							else
-								EchoTee "You did not request an interpolation before geocoding."
-						fi				
+						fi   # end of test SKIPUW
 		
-						# Remove best plane 
-						if [ ${REMOVEPLANE} == "DETREND" ] 
-							then 
-								EchoTee "You request detrending. \n" 
-								RemovePlane 
-							else 
-								EchoTee "You did not request detrending. \n" 
+				
+						# Because for S1 STRIPMAP images masters are in the form of a date, one must rename the files as (super)master-name 	
+						if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "STRIPMAP" ] ; then 
+							cp ${RUNDIR}/i12/InSARProducts/${MAS}.${POLMAS}.mod ${RUNDIR}/i12/InSARProducts/${MASNAME}.${POLMAS}.mod 2>/dev/null
+						fi			
+			
+						# compute multiple geocoding and plot 
+							#  Parameters are which products to geocode: set YES or NO in right order as below
+							#  SLRDEM, MASAMPL, SLVAMPL, COH, INTERF, FILTINTERF, RESINTERF, UNWPHASE
+							# FILESTOGEOC=`echo "YES YES YES YES NO YES YES YES"`
+							ManageGeocoded
+		
+						# Clean slave.interpolated if S1
+						if [ ${SATDIR} == "S1" ] ; then 
+							SUBD=`echo ${RUNDIR}/i12/InSARProducts/S1*.interpolated.csl`
+							if [ ! -L ${SUBD} ]
+								then 	
+									EchoTee "Clean ${SUBD}/Data and /Headers"
+									rm -Rf ${SUBD}/Data
+									rm -Rf ${SUBD}/Headers
+								else
+									EchoTee "Keep ${SUBD}/Data and /Headers because it is only a link"
+							fi 
 						fi
-				fi   # end of test SKIPUW
-
-		
-				# Because for S1 STRIPMAP images masters are in the form of a date, one must rename the files as (super)master-name 	
-				if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "STRIPMAP" ] ; then 
-					cp ${RUNDIR}/i12/InSARProducts/${MAS}.${POLMAS}.mod ${RUNDIR}/i12/InSARProducts/${MASNAME}.${POLMAS}.mod 2>/dev/null
-				fi			
-		
-				# compute multiple geocoding and plot 
-					#  Parameters are which products to geocode: set YES or NO in right order as below
-					#  SLRDEM, MASAMPL, SLVAMPL, COH, INTERF, FILTINTERF, RESINTERF, UNWPHASE
-					# FILESTOGEOC=`echo "YES YES YES YES NO YES YES YES"`
-					ManageGeocoded
-
-				# Clean slave.interpolated if S1
-				if [ ${SATDIR} == "S1" ] ; then 
-					SUBD=`echo ${RUNDIR}/i12/InSARProducts/S1*.interpolated.csl`
-					if [ ! -L ${SUBD} ]
-						then 	
-							EchoTee "Clean ${SUBD}/Data and /Headers"
-							rm -Rf ${SUBD}/Data
-							rm -Rf ${SUBD}/Headers
-						else
-							EchoTee "Keep ${SUBD}/Data and /Headers becaus it is only a link"
-					fi 
 				fi
 		fi # end of if [ pair to process does not exist ]		
-	
+		
 		# See line 819 "may be a problem later ? "; one must now get back to proper naming
 		if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ] && [ "${SUPERMASNAMEBAK}" != "" ] 
 			then 
@@ -1265,7 +1305,9 @@ do
 		fi
 						
 		cd ${MAINRUNDIR}
-	
+
+				
+					
 		# copy/move processed pair in background
 	
 		if [ "${execdir}" == "${storedir}" ]

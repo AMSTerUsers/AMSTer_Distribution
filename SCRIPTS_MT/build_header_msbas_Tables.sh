@@ -75,14 +75,16 @@
 #								- make grep -Fvf with fct LinesInFile2NotInFile1, where FILE 1 si sort and uniq for safety
 # New in Distro V 2.7 20250401:	- make grep search case insensitive for Samples and lines 
 #								- check if raster exist before creating link 
+# New in Distro V 2.8 20251202:	- skip PrepareModeI if no hdr file found 
+#								- if HDR file of last mode does not exist, seach for a HDR file from previous mode to build the header.txt 
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.7 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 01, 2025"
+VER="Distro V2.8 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dev 02, 2025"
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -174,7 +176,7 @@ ContainsDates()
 PrepareModeI()
 	{
 		# Prepare j_th mode
-		local HDRMOD
+		#local HDRMOD 	# already computed outside of fct
 		local MODETOCP
 		local MASSPROCESSPATH
 		local PATHONLYTABLE 	
@@ -206,7 +208,7 @@ PrepareModeI()
 		
 		i=$1
 		
-		HDRMOD=`find ${PATHMODE[${i}]} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info
+		#HDRMOD=`find ${PATHMODE[${i}]} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info	# already computed outside of fct
 		MODETOCP=`echo $MODE${i}` 			# get only the name without path (that is Defo" and with index, i.e. Defo1)
 		MASSPROCESSPATH="$(dirname "$(dirname "$PATHMODE[${i}]")")"  # two levels up; needed for keeping track of possible pairs in table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt
 		# Check table with _AdditionalPairs.txt
@@ -590,7 +592,7 @@ do
 	ROOTPATH[${i}]=${!n}
 	PATHMODE=${!n}/Geocoded/${MODE}		# path to dir where defo maps of ith mode are stored : e.g. /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Virunga_Asc/Resampled_20120702_Crop_NyigoCrater_-1.520_-1.540_29.200_29.220_Zoom1_ML4/Geocoded/Defo 
 	PATHMODE[${i}]=${PATHMODE}			# same as before but named with an index for further call
-	HDRMOD=`find ${PATHMODE} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info
+	HDRMOD=`find ${PATHMODE} -maxdepth 1 -type f -name "*.hdr"  2>/dev/null | head -n 1`	# one envi header file for that mode to get some info
 	#HDRMOD=`ls ${PATHMODE}/*.hdr | head -n 1`	# one envi header file for that mode to get some info 
 	MODETOCP=`echo $MODE${i}` 			# get only the name without path (that is Defo" and with index, i.e. Defo1)
 
@@ -651,6 +653,14 @@ do
 	echo "  //   with: ${PATHMODE[${i}]}"
 	echo "  //   with: ${PATHTABLE[${i}]}"
 
+	HDRMOD=`find ${PATHMODE[${i}]} -maxdepth 1 -type f -name "*.hdr"  2>/dev/null | head -n 1`	# one envi header file for that mode to get some info
+	
+   	# Skip this mode if no .hdr file is found
+   	if [ -z "${HDRMOD}" ]; then
+   	    echo "  // No HDR file found for mode ${i}, skipping..."
+   	    continue  # skip the mode
+   	fi
+
 	PrepareModeI ${i} &
 
 done
@@ -660,6 +670,25 @@ wait
 
 # Header.txt 
 rm -f header.txt
+
+	
+   	# Skip this mode if no .hdr file is found
+   	if [ -z "${HDRMOD}" ]; then
+   	    echo "  // Last HDR file found for mode ${i}, Search another HDR from previous modes"
+		for ((i=NRMODES; i>=1; i--)); do
+		    echo "i = $i"
+		    HDRMOD=`find ${PATHMODE[${i}]} -maxdepth 1 -type f -name "*.hdr"  2>/dev/null | head -n 1`	# one envi header file for that mode to get some info
+   			if [ -n "${HDRMOD}" ]
+   				then
+           			echo "  // HDR file found for mode ${i}: ${HDRMOD}"
+            		break   # stop the loop as soon as we find a file
+				else
+            		echo "  // No HDR found for mode ${i}, continue searching..."
+       		fi
+		done   	    
+   	fi
+
+
 NRLINES=`${PATHGNU}/grep -i "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
 NRCOLMSS=`${PATHGNU}/grep -i "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
 WINLINES=`expr "$NRLINES" - 1`

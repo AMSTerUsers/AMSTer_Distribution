@@ -1,8 +1,11 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script read an interferogram and a coherence file to create a mask and replace 
 # interf values by white noise where coh < COHMUWPTHRESH
 #
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
+
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2016
 #################################

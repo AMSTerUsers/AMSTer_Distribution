@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # This script create the AMSTer Toolbox Organizer. 
 #
 # http://livre21.com/LIVREF/F6/F006059.pdf
@@ -22,6 +22,8 @@
 #				V 2.0: If Linux system, call function to read current display and export relative $DISPLAY variable
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 4.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series# By Maxime Jaspard, 2022-09-30
 #-------------------------------------------------------------------------------------------------------------------

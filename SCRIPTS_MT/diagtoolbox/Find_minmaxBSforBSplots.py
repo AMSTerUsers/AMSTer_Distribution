@@ -1,8 +1,10 @@
-#! /opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # Function to find common baseline span to both table.txt files
 # It add a delay of 10m before the first value and after the last for plot purposes 
 #
 # New in Distro V 1.0.1 20240209:  - Cosmetic
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello (c) 2024/02/09 - could make better with more functions... when time.

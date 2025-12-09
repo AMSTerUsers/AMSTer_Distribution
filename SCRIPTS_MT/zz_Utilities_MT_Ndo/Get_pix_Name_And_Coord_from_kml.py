@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The script aims at extracting pixel name and coordinates from a kml file.
 # It reads name from the "layer" field and the coordinates from the "coordinates" field.
@@ -8,6 +8,8 @@
 #
 #
 # New in Distro V 1.0  20241231: - setup 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024 - could make better with more functions... when time.

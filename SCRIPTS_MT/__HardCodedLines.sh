@@ -28,6 +28,9 @@
 # New in Distro V 3.4 20250321:	- allows HOMEDATA for Mac as well 
 # New in Distro V 3.5 20250707:	- 3610 was wrongly named as 3611 in line 73; one 3611 not defined in RenameVolNameToVariable
 #								- add ENVISAT Nepal
+# New in Distro V 3.6 20250917:	- find font depending on OSX for convert
+# New in Distro V 3.7 20251104:	- also replace if variable names are between {}
+#								- replace back quotes with $(), double quote some variable 
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -58,33 +61,33 @@
 	# definition of path to disks where multiple sessions of Splitxxx can be run.
 	function SplitDiskDef()
 		{
-		OS=`uname -a | cut -d " " -f 1 `
+		OS=$(uname -a | cut -d " " -f 1 )
 		echo "Running on ${OS}"
 		echo
 
 		# Common disks
-		PATH1650=${PATH_1650} 
-		PATH3600=${PATH_3600}
-		PATH3601=${PATH_3601}
-		PATH3602=${PATH_3602}
+		PATH1650="${PATH_1650}" 
+		PATH3600="${PATH_3600}"
+		PATH3601="${PATH_3601}"
+		PATH3602="${PATH_3602}"
 
 		# More disks at ECGS
-		PATH1660=${PATH_1660} 
-		PATH3610=${PATH_3610}				
-		PATH3611=${PATH_3611}
+		PATH1660="${PATH_1660}" 
+		PATH3610="${PATH_3610}"				
+		PATH3611="${PATH_3611}"
 				
-		PATHSYNODATA=${PATH_SynoData}
+		PATHSYNODATA="${PATH_SynoData}"
 		
 		case ${OS} in 
 			"Linux") 
 				PATHSYNOCONGO="/mnt/syno_congo"
 				PATHSYNOSAR="/mnt/syno_sar" 
-				PATHHOMEDATA=${PATH_HOMEDATA}
+				PATHHOMEDATA="${PATH_HOMEDATA}"
 				;;
 			"Darwin")
 				PATHSYNOCONGO="/Volumes/DataRDC"
 				PATHSYNOSAR="/Volumes/DataSAR" 
-				PATHHOMEDATA=${PATH_HOMEDATA}
+				PATHHOMEDATA="${PATH_HOMEDATA}"
 				;;
 		esac			
 		}
@@ -137,24 +140,24 @@
 				DISKPATH=/Volumes/SAR_20T_N1/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"7") 
-				mkdir -p /${PATHSYNODATA}/PROCESS/AS
-				DISKPATH=/${PATHSYNODATA}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /"${PATHSYNODATA}"/PROCESS/AS
+				DISKPATH=/"${PATHSYNODATA}"/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"8") 
-				mkdir -p /${PATHSYNOSAR}/PROCESS/AS
-				DISKPATH=/${PATHSYNOSAR}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /"${PATHSYNOSAR}"/PROCESS/AS
+				DISKPATH=/"${PATHSYNOSAR}"/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;				
 			"9") 
-				mkdir -p /${PATHSYNOCONGO}/PROCESS/AS
-				DISKPATH=/${PATHSYNOCONGO}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p /"${PATHSYNOCONGO}"/PROCESS/AS
+				DISKPATH=/"${PATHSYNOCONGO}"/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;				
 			"10") 
-				mkdir -p ${PATHHOMEDATA}/PROCESS/AS
-				DISKPATH=${PATHHOMEDATA}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p "${PATHHOMEDATA}"/PROCESS/AS
+				DISKPATH="${PATHHOMEDATA}"/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"11") 
-				mkdir -p ${HOME}/PROCESS/AS
-				DISKPATH=${HOME}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
+				mkdir -p "${HOME}"/PROCESS/AS
+				DISKPATH="${HOME}"/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 			"12") 
 				DISKPATH=/${PATH1660}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
@@ -260,8 +263,8 @@
 	# For tracking the version of AMSTer Engine
 	function FunctionsForAEPathSources()
 		{
-		eval PATHAMSTERENGINE=${HOME}/SAR/AMSTer/AMSTerEngine
-		eval PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older/
+		eval PATHAMSTERENGINE="${HOME}"/SAR/AMSTer/AMSTerEngine
+		eval PATHSOURCES="${PATHAMSTERENGINE}"/_Sources_AE/Older/
 		}	
 
 # Geocode_from_ALL2GIF.sh, RenamePath_Volumes.sh, RenamePathAfterMove_in_SAR_MASSPROC.sh,
@@ -272,7 +275,7 @@
 		{
 		ORIGINAL=$1
 		CHANGED=$2
-		${PATHGNU}/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
+		"${PATHGNU}"/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
 							 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 
 							 s%\/Volumes\/hp-D3601-Data_RAID6%\/\$PATH_3601%g 
 							 s%\/Volumes\/hp-D3602-Data_RAID5%\/\$PATH_3602%g
@@ -285,7 +288,7 @@
 							 s%\/mnt\/3602%\/\$PATH_3602%g
 							 s%\/mnt\/1660%\/\$PATH_1660%g 
 							 s%\/mnt\/3611%\/\$PATH_3611%g
-							 s%\/mnt\/3610%\/\$PATH_3610%g " ${ORIGINAL} > ${CHANGED}
+							 s%\/mnt\/3610%\/\$PATH_3610%g " "${ORIGINAL}" > "${CHANGED}"
 		}
 
 # PlotTS.sh
@@ -319,13 +322,13 @@
 		{
 		ORIGINAL=$1
 		CHANGED=$2
-		${PATHGNU}/gsed -e 	"s%\/mnt\/1650%\/Volumes\/hp-1650-Data_Share1%g  
+		"${PATHGNU}"/gsed -e 	"s%\/mnt\/1650%\/Volumes\/hp-1650-Data_Share1%g  
 							 s%\/mnt\/3600%\/Volumes\/hp-D3600-Data_Share1%g 
 							 s%\/mnt\/3601%\/Volumes\/hp-D3601-Data_RAID6%g  
 							 s%\/mnt\/3602%\/Volumes\/hp-D3602-Data_RAID5%g
 							 s%\/mnt\/1660%\/Volumes\/hp1660%g  
 							 s%\/mnt\/3611%\/Volumes\/D3611%g
-							 s%\/mnt\/3610%\/Volumes\/D3610%g" ${ORIGINAL} > ${CHANGED}
+							 s%\/mnt\/3610%\/Volumes\/D3610%g" "${ORIGINAL}" > "${CHANGED}"
 		}
 
 
@@ -336,13 +339,20 @@
 		{
 		ORIGINAL=$1
 		CHANGED=$2
-		${PATHGNU}/gsed -e 	"s%\/\$PATH_1650%\/mnt\/1650%g  
-							 s%\/\$PATH_3600%\/mnt\/3600%g  
-							 s%\/\$PATH_3601%\/mnt\/3601%g  
-							 s%\/\$PATH_3602%\/mnt\/3602%g
-							 s%\/\$PATH_1660%\/mnt\/1660%g  
-							 s%\/\$PATH_3611%\/mnt\/3611%g
-							 s%\/\$PATH_3610%\/mnt\/3610%g" ${ORIGINAL} > ${CHANGED}
+		#"${PATHGNU}"/gsed -e 	"s%\/\$PATH_1650%\/mnt\/1650%g  
+		#					 s%\/\$PATH_3600%\/mnt\/3600%g  
+		#					 s%\/\$PATH_3601%\/mnt\/3601%g  
+		#					 s%\/\$PATH_3602%\/mnt\/3602%g
+		#					 s%\/\$PATH_1660%\/mnt\/1660%g  
+		#					 s%\/\$PATH_3611%\/mnt\/3611%g
+		#					 s%\/\$PATH_3610%\/mnt\/3610%g" "${ORIGINAL}" > "${CHANGED}"
+		"${PATHGNU}"/gsed -E -e "s%/\\\$\\{?PATH_1650\\}?%/mnt/1650%g
+  								s%/\\\$\\{?PATH_3600\\}?%/mnt/3600%g
+  								s%/\\\$\\{?PATH_3601\\}?%/mnt/3601%g
+  								s%/\\\$\\{?PATH_3602\\}?%/mnt/3602%g
+  								s%/\\\$\\{?PATH_1660\\}?%/mnt/1660%g
+  								s%/\\\$\\{?PATH_3611\\}?%/mnt/3611%g
+  								s%/\\\$\\{?PATH_3610\\}?%/mnt/3610%g" "${ORIGINAL}" > "${CHANGED}"  	# \\$: matches a literal $ and \\{? and \\}?: make braces optional
 		}
 		
 		
@@ -353,13 +363,20 @@
 		{
 		ORIGINAL=$1
 		CHANGED=$2
-		${PATHGNU}/gsed -e 	"s%\/\$PATH_1650%\/Volumes\/hp-1650-Data_Share1%g  
-							 s%\/\$PATH_3600%\/Volumes\/hp-D3600-Data_Share1%g 
-							 s%\/\$PATH_3601%\/Volumes\/hp-D3601-Data_RAID6%g  
-							 s%\/\$PATH_3602%\/Volumes\/hp-D3602-Data_RAID5%g
-							 s%\/\$PATH_1660%\/Volumes\/hp1660%g  
-							 s%\/\$PATH_3611%\/Volumes\/D3611%g
-							 s%\/\$PATH_3610%\/Volumes\/D3610%g" ${ORIGINAL} > ${CHANGED}
+		#"${PATHGNU}/"gsed -e 	"s%\/\$PATH_1650%\/Volumes\/hp-1650-Data_Share1%g  
+		#					 s%\/\$PATH_3600%\/Volumes\/hp-D3600-Data_Share1%g 
+		#					 s%\/\$PATH_3601%\/Volumes\/hp-D3601-Data_RAID6%g  
+		#					 s%\/\$PATH_3602%\/Volumes\/hp-D3602-Data_RAID5%g
+		#					 s%\/\$PATH_1660%\/Volumes\/hp1660%g  
+		#					 s%\/\$PATH_3611%\/Volumes\/D3611%g
+		#					 s%\/\$PATH_3610%\/Volumes\/D3610%g" "${ORIGINAL}" > "${CHANGED}"
+		"${PATHGNU}/"gsed -e 	"s%/\\\$\\{?PATH_1650\\}?%/Volumes/hp-1650-Data_Share1%g
+  								s%/\\\$\\{?PATH_3600\\}?%/Volumes/hp-D3600-Data_Share1%g
+  								s%/\\\$\\{?PATH_3601\\}?%/Volumes/hp-D3601-Data_RAID6%g
+  								s%/\\\$\\{?PATH_3602\\}?%/Volumes/hp-D3602-Data_RAID5%g
+  								s%/\\\$\\{?PATH_1660\\}?%/Volumes/hp1660%g
+  								s%/\\\$\\{?PATH_3611\\}?%/Volumes/D3611%g
+  								s%/\\\$\\{?PATH_3610\\}?%/Volumes/D3610%g" "${ORIGINAL}" > "${CHANGED}"		# \\$: matches a literal $ and \\{? and \\}?: make braces optional
 		}
 
 
@@ -369,15 +386,40 @@
 	function RenameInPlaceVotToMnt()
 		{
 		INPUTFILE=$1
-		${PATHGNU}/gsed -i -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/mnt\/1650%g  
+		"${PATHGNU}"/gsed -i -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/mnt\/1650%g  
 								s%\/Volumes\/hp-D3600-Data_Share1%\/mnt\/3600%g 
 						 		s%\/Volumes\/hp-D3601-Data_RAID6%\/mnt\/3601%g  
 						 		s%\/Volumes\/hp-D3602-Data_RAID5%\/mnt\/3602%g
 						 		s%\/Volumes\/hp1660%\/mnt\/1660%g  
 								s%\/Volumes\/D3611%\/mnt\/3611%g
-								s%\/Volumes\/D3610%\/mnt\/3610%g" ${INPUTFILE}
+								s%\/Volumes\/D3610%\/mnt\/3610%g" "${INPUTFILE}"
 		}
 	
+# Find a valid font
+###################
+	FONT=$(fc-list | grep -i -m1 "DejaVuSans.ttf" | cut -d: -f1)
+
+	if [ -z "$FONT" ]; then
+	    FONT=$(fc-list | grep -i -m1 "LiberationSans-Regular.ttf" | cut -d: -f1)
+	fi
+
+	if [ -z "$FONT" ]; then
+	    FONT=$(fc-list | grep -i -m1 "Arial.ttf" | cut -d: -f1)
+	fi
+
+	# If still empty, pick the *first* font in the system
+	if [ -z "$FONT" ]; then
+	    FONT=$(fc-list | cut -d: -f1 | head -n1)
+	fi
+
+	# If still empty, leave FONT unset so GM uses its default
+	if [ -n "$FONT" ]; then
+	    FONT_OPT="-font $FONT"
+	    #echo "Use default font....."
+	else
+	    FONT_OPT=""
+	   # echo "[!] No standard TTF font found, falling back to default GM font."
+	fi
 
 # SinglePairNoUnwrap.sh
 #######################
@@ -386,19 +428,19 @@
 		{
 		   case ${TRKDIR} in
 		       "RS2_UF_Asc") 
-		    		DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 30 -fill black -annotate" ;;
+		    		DATECELL=" -gravity SouthWest -undercolor white ${FONT_OPT} -pointsize 30 -fill black -annotate" ;;
 		       "RS2_F2F_Desc") 
-		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 30 -fill black -annotate" ;;
+		        	DATECELL=" -gravity SouthWest -undercolor white ${FONT_OPT}-pointsize 30 -fill black -annotate" ;;
 		       "Virunga_Asc")  # for CSK
-		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 30 -fill black -annotate" ;;
+		        	DATECELL=" -gravity SouthWest -undercolor white ${FONT_OPT} -pointsize 30 -fill black -annotate" ;;
 		       "Virunga_Desc")  # for CSK
-		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 30 -fill black -annotate" ;;
+		        	DATECELL=" -gravity SouthWest -undercolor white ${FONT_OPT} -pointsize 30 -fill black -annotate" ;;
 		       "PF_SM_A_144")  # for S1 Pdf
-		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 2400 -fill black -annotate" ;;
+		        	DATECELL=" -gravity SouthWest -undercolor white ${FONT_OPT} -pointsize 2400 -fill black -annotate" ;;
 		       "PF_SM_D_151")  # for S1 Pdf
-		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 2400 -fill black -annotate" ;;	 
+		        	DATECELL=" -gravity SouthWest -undercolor white ${FONT_OPT} -pointsize 2400 -fill black -annotate" ;;	 
 		       *) 
-		        	DATECELL=" -gravity SouthWest -undercolor white -font Helvetica -pointsize 12 -fill black -annotate" ;;
+		        	DATECELL=" -gravity SouthWest -undercolor white ${FONT_OPT} -pointsize 12 -fill black -annotate" ;;
 		    esac
 		}
 
@@ -407,7 +449,7 @@
 	# Tag for web page 
 	function TimeSeriesInfoHPWebTag()
 		{
-		convert $combi -fill grey -pointsize 60 -font ${font} -draw "text 670,250 'WebSite: http://terra4.ecgs.lu/${WebPage}" $combi
+		convert $combi -fill grey -pointsize 60 ${FONT_OPT} -draw "text 670,250 'WebSite: http://terra4.ecgs.lu/${WebPage}" $combi
 		}
 
 # UpdateAMSTerEngine.sh

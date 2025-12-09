@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script load a dataframe of all pairs used in MSBAS contained in a pickle file. 
 # then it convert it in graphs for each mode
@@ -9,6 +9,8 @@
 # Dependencies:	- python3.10 and modules below (see import)
 #
 # New in Distro V 1.0:	- Based on developpement version 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # launch command : python thisscript.py param1 param2
 #

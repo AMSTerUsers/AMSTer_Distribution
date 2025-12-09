@@ -1,4 +1,4 @@
-#!/opt/local/bin/python3
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script crop the last line from a binary matrix (in bytes)
 #
@@ -13,6 +13,8 @@
 # New in Distro V 1.2:  - debug nr of argument check (NdO March 7 2023) - watch out, it takes the script name as an argument 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # launch command : python thisscript.py param1 param2
 #

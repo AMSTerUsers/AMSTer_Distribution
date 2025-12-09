@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script computes the rank of radar unit vector matrix as well as its SVD. 
 # 	Unit vectors must be computed beforehand e.g. with Earth2Sat_UnitVectors.py
@@ -8,7 +8,8 @@
 # 
 # Dependencies:	- python 3.10
 #
-# New in V1.0 : - 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2024

@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script computes radar look vector (unit vector Earth-to_sat) 
 #
@@ -10,6 +10,8 @@
 #               - see https://pypi.org/project/utm/#files
 #
 # New in V1.0 : - based on python code from Nelly-Wangue Moussissa
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2024

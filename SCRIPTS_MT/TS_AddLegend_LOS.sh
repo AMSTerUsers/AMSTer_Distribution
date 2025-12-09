@@ -54,12 +54,16 @@
 # New in Distro V 3.3 20250203:	- Search for A_${mode}_auto... or D_${mode}_auto... in dir name compatible with Nepal
 # New in Distro V 3.4 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 # New in Distro V 3.5 20250428:	- DS: Add defo mode COR_Defo
+# New in Distro V 3.6 20250916:	- Force to cp instead of link images
+# New in Distro V 3.7 20251105:	- if does not find LinkedFile in all dirs down to Defo1 dir, search for Defo*1. 
+#									This should allows coping with all type of exotic processings... 
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 28, 2025"
+VER="Distro V3.7 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 5, 2025"
 
 
 echo " "
@@ -139,7 +143,8 @@ if [ "${OrbitMode}" == "LOS" ] ; then TagOrbit="LOS" ; else TagOrbit="${Orbit}" 
 echo "eps file to be decorated = ${eps_file}"
 echo "Orbit type: ${Orbit}"
 
-ln -s ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images  >> /dev/null 2>&1
+#ln -s ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images  >> /dev/null 2>&1
+cp -f ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images  >> /dev/null 2>&1
 
 
 # find deformation speed file in this directory
@@ -180,7 +185,8 @@ if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEA
 			find ${RUNDIR}/_images -type f ! -name "TS_*" -delete
 			DEFO="MSBAS_LINEAR_RATE_GEOM_${Orbit}.bin"
 			cp -p $PATHFILEDEFO ${RUNDIR}/_images/${DEFO}
-			ln -s ${PATHFILEDEFO}.hdr ${RUNDIR}/_images/${DEFO}.hdr
+			#ln -s ${PATHFILEDEFO}.hdr ${RUNDIR}/_images/${DEFO}.hdr
+			cp -f ${PATHFILEDEFO}.hdr ${RUNDIR}/_images/${DEFO}.hdr
 			PATHFILEDEFO=${RUNDIR}/_images/${DEFO}
 
 			PATHFILECOH=$(echo "${PATHFILEDEFO//MSBAS_LINEAR_RATE/MSBAS_MASK}")
@@ -212,12 +218,24 @@ if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEA
 									LinkedFile=$(find ${RegionFolder}/Defo1/ -name "defo*deg" 2>/dev/null | head -1) 
 									if [ "${LinkedFile}" == "" ] 
 										then 
-											# There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
-											LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
+											#### There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
+											###LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
+
+											# There is no file in Defo1, search in first of Defo*1		
+											FirstDir=$(ls -d "${RegionFolder}"/Defo*1/ 2>/dev/null | head -1)
+											echo "  // This is a fancy deformation Dir. Please check yourself if evrything is OK... "
+											LinkedFile=$(find "$FirstDir" -type f -name "defo*deg" 2>/dev/null | head -1)
+											# for really exotic and fancy processings.... be carefull.... 
+											if [ "${LinkedFile}" == "" ] 
+												then 
+													echo "  // This is a very fancy deformation file. Please check yourself if evrything is OK... "
+													LinkedFile=$(find "$FirstDir" -type f -name "*defo*deg" 2>/dev/null | head -1)
+											fi
+
 											if [ "${LinkedFile}" == "" ] 
 												then 
 													# There is no file at all - can't make the fig with amplitude background
-													echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend]1. "
+													echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend][*]1. "
 													echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
 											fi
 									fi
@@ -256,8 +274,11 @@ if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEA
 			#echo ${AmpliPath}
 
  			#echo "Ampli file = ${AmpliFile}"
-			ln -s ${AmpliFolder}/${AmpliFile} ${RUNDIR}/_images/${AmpliFile}
-			ln -s ${AmpliFolder}/${AmpliFile}.hdr ${RUNDIR}/_images/${AmpliFile}.hdr
+			#ln -s ${AmpliFolder}/${AmpliFile} ${RUNDIR}/_images/${AmpliFile}
+			#ln -s ${AmpliFolder}/${AmpliFile}.hdr ${RUNDIR}/_images/${AmpliFile}.hdr
+			cp -f ${AmpliFolder}/${AmpliFile} ${RUNDIR}/_images/${AmpliFile}
+			cp -f ${AmpliFolder}/${AmpliFile}.hdr ${RUNDIR}/_images/${AmpliFile}.hdr
+
  			PATHFILEAMPLI=${RUNDIR}/_images/${AmpliFile}
 			echo "PATHFILEAMPLI = $PATHFILEAMPLI"
 			echo "PATHFILEDEFO = $PATHFILEDEFO"
@@ -294,8 +315,11 @@ echo ""
 echo "-----------> Start script to convert eps to jpeg file with crop, legend and interpretation of deformation: "
 
 rm -f ${RUNDIR}/_images/satview.jpg  	# allows to operate from different computers
-ln -s ${RegionFolder}/_CombiFiles/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
-ln -s ${RegionFolder}/_CombiFiles/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
+#ln -s ${RegionFolder}/_CombiFiles/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
+#ln -s ${RegionFolder}/_CombiFiles/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
+cp -f ${RegionFolder}/_CombiFiles/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
+cp -f ${RegionFolder}/_CombiFiles/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
+
 ${PATH_SCRIPTS}/SCRIPTS_MT/TimeSeriesInfo_HP.sh ${eps_file} ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ${RateResoSatView}  >> /dev/null 
 
 

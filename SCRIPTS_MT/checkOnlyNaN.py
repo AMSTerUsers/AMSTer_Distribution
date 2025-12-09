@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This scripts output the minimum value of a file ignoring NaN. 
 # If it the file contains ONLY NaN, it outputs nan. 
@@ -16,6 +16,8 @@
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240918:	- corr check nr of arguments
+# New in Distro V 4.0 20250813:	- launched from python3 venv
+#
 #
 # launch command : python thisscript.py param1 param2
 #

@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script computes the linear regression between DEM and deformation and 
 # save plot in current directory. DEM and DEFO must be of the same size.  
@@ -15,6 +15,8 @@
 # New in Distro V 2.1 20250121: DS	- Append file name, coefficients and r2 to output file name output.txt in current dir
 # 								DS	- Comment figure display and save as png 
 # New in Distro V 2.2 20250218: DS	- Reading dem data type from hdr
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2022 - could make better with more functions... when time.

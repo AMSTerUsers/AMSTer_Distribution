@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script computes a variogram of a velocity map provided as an Envi Harris image.
 # The semivairiance displayed in the plot is  a measure of the average squared difference
@@ -41,6 +41,8 @@
 # launch command : python thisscript.py param1 param2
 #
 # New in Distro V 1.0 20241024:	- set up
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024/01/16 - could make better with more functions... when time.

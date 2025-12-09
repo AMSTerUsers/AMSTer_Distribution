@@ -127,12 +127,23 @@
 #									  "Topographic phase component", "Model-based phase component file path" and "Correction phase component file path" if any
 #									- avoid error message in atempt to cp externalSlantRangeDEM_NoMask.txt when used with new managment of dems and masks 
 # New in Distro V 9.2.0 20250626:	- corr bug in RatioPix and RatioPixUnzoomed (was missing -l in bc command, leading to underestimate ML 1 for ENVISAT for instance)
-
+# New in Distro V 9.3.0 20250808:	- make use of ETAD products
+#									- remove unneeded unwrapped figures of ETAD correction files
+# New in Distro V 9.4 20250811:		- Compute combinations of ETAD corrections if ETADCOMBI is ETADCOMBIyes
+#									- typo in some deformationMap.flatt[t]ened.${PROJ}.${GEOPIXSIZENAME}.bil (remove 3rd t)
+# New in Distro V 9.4.1 20250826:	- quote ETAD variables
+# New in Distro V 9.4.2 20250908:	- If ETADCOMBIyes, set +ETAD in InSARProductsGeneration to compute a correction deformation map based on each correction phase used.
+# New in Distro V 9.4.3 20250925:	- Add ETAD also in ManageGeocoded for Mass processing, but allows only to keep the corrected and uncorrected defo maps. Not all the combinations like for SinglePair.sh
+# New in Distro V 9.4.4 20250930:	- Rename geocoded products with EATD extension 
+# New in Distro V 9.4.5 20251020:	- Debug moving geocoded products with EATD extension
+# New in Distro V 9.4.6 20251021:	- set ETADPROD in file names just before extention (or extention.ras)
+# New in Distro V 9.4.7 20251112:	- cosmetic: mute message while computing DEM if PIXSIZEAZ or PIXSIZERG not known
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V9.2.0 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 26, 2025"
+FCTVER="Distro V9.4.7 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov  12, 2025"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -1025,7 +1036,9 @@ function UpdateSlantRangeTXT()
 		fi	
 	# Reduction factor for DEM pix 
 		EchoTee " Pix size no ML : ${AZSAMP} x ${RGSAMP} meters (from SLCImageInfo.txt)"
-		EchoTee " ML Pix size : ${PIXSIZEAZ} x ${PIXSIZERG} meters."
+		if [ "${PIXSIZEAZ}" != "" ] && [ "${PIXSIZERG}" != "" ] ; then 
+			EchoTee " ML Pix size : ${PIXSIZEAZ} x ${PIXSIZERG} meters."
+		fi
 		EchoTee " A DEM reduction factor of 2 means : 1 point of DEM every 2 pixels of non ML image"
 		# Compute Rounded pix size for comp. Test the smallest pixel side : rg or az.
 		ROUNDEDAZSAMP=`echo ${AZSAMP} | xargs printf "%.*f\n" 0`  # (AzPixSize) rounded to 0th digits precision
@@ -1747,6 +1760,81 @@ function InSARprocess()
 			InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i  | tee -a ${LOGFILE}
 	fi
 
+	if [ ${SATDIR} == "S1" ]
+		then 
+			if [ "${CALIBSIGMA}" == "SIGMAYES" ] 
+				then 
+					SIGMATMP="-C"
+				else 
+					SIGMATMP=""
+			fi
+
+			case ${ETADPROD} in 
+				"ETADno") 
+						# compute sigma nought calibration, no ETAD correction
+						InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} | tee -a ${LOGFILE} ;; 
+				"ETAD"|"ETAD111") 
+						# compute sigma nought calibration, with Iono, Geo and Tropo ETAD correction
+						if [ "${ETADCOMBI}" == "ETADCOMBIyes" ] 
+							then 
+								# i.e. Will compute a correction deformation map based on each correction phase used.
+								# This allows to later add them to the deformation map in order to obtain other combiantions of corrections. 		 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} +ETAD  | tee -a ${LOGFILE} 
+							else 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} -ETAD  | tee -a ${LOGFILE} 
+						fi ;;
+				"ETAD100") 
+						# compute sigma nought calibration, with Iono ETAD correction
+						InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} -ETAD100 | tee -a ${LOGFILE} ;; 
+				"ETAD010") 
+						# compute sigma nought calibration, with Geo ETAD correction
+						InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} -ETAD010 | tee -a ${LOGFILE} ;; 
+				"ETAD001") 
+						# compute sigma nought calibration, with Tropo ETAD correction
+						InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} -ETAD001 | tee -a ${LOGFILE} ;; 
+				"ETAD110") 
+						# compute sigma nought calibration, with Iono and Geo ETAD correction 
+						if [ "${ETADCOMBI}" == "ETADCOMBIyes" ] 
+							then 
+								# i.e. Will compute a correction deformation map based on each correction phase used.
+								# This allows to later add them to the deformation map in order to obtain other combiantions of corrections. 		 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} +ETAD110  | tee -a ${LOGFILE}
+							else 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} -ETAD110  | tee -a ${LOGFILE}
+						fi ;;
+				"ETAD101") 
+						# compute sigma nought calibration, with Iono and Tropo ETAD correction
+						if [ "${ETADCOMBI}" == "ETADCOMBIyes" ] 
+							then 
+								# i.e. Will compute a correction deformation map based on each correction phase used.
+								# This allows to later add them to the deformation map in order to obtain other combiantions of corrections. 		 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} +ETAD101  | tee -a ${LOGFILE}
+							else 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} -ETAD101  | tee -a ${LOGFILE}
+						fi ;;
+				"ETAD011") 
+						# compute sigma nought calibration, with eo and Tropo ETAD correction
+						if [ "${ETADCOMBI}" == "ETADCOMBIyes" ] 
+							then 
+								# i.e. Will compute a correction deformation map based on each correction phase used.
+								# This allows to later add them to the deformation map in order to obtain other combiantions of corrections. 		 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} +ETAD011  | tee -a ${LOGFILE}
+							else 
+								InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} -ETAD011  | tee -a ${LOGFILE}
+						fi ;;
+				*)
+						# Do not understand the type of ETAD correction - performs no ETAD correction 
+						EchoTee " Do not understand which ETAD correction you want. "
+						EchoTee "   ETADPROD must be ETADno or ETADxyz, where x, y and z are Iono, Geo and Tropo correction respectively and take values 0 (not used) or 1 (used)"
+						EchoTee " NO ETAD CORRECTION APPLIED"
+						InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i ${SIGMATMP} | tee -a ${LOGFILE} 
+						;;							
+			esac
+		else 
+			InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i  | tee -a ${LOGFILE}
+	fi
+
+
 	# Need to filter residual interf before bias coh estimation otherwise it uses the wrong interf for bias coh estimation
 	# But here the filtering is applied on reduced image. Hence the filterig windows size MUST be the same in Rg and Az
 	# Change filter parameters 
@@ -1810,24 +1898,24 @@ function InSARprocess()
 		fi
 	
 		if [ -f "${TOPOPHASEFILE}" ] && [ -s "${TOPOPHASEFILE}" ] ; then
-			MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${TOPOPHASEFILE} 
-			mv ${TOPOPHASEFILE}.ras ${TOPOPHASEFILE}_wrapped.ras
-			mv ${TOPOPHASEFILE}.ras.sh ${TOPOPHASEFILE}_wrapped.ras.sh
-			${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${TOPOPHASEFILE}_wrapped.ras.sh
+			#MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${TOPOPHASEFILE} 
+			#mv ${TOPOPHASEFILE}.ras ${TOPOPHASEFILE}_wrapped.ras
+			#mv ${TOPOPHASEFILE}.ras.sh ${TOPOPHASEFILE}_wrapped.ras.sh
+			#${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${TOPOPHASEFILE}_wrapped.ras.sh
 			MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${TOPOPHASEFILE} 
 		fi
 		if [ -f "${MODELPHASEFILE}" ] && [ -s "${MODELPHASEFILE}" ] ; then
-			MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${MODELPHASEFILE} 
-			mv ${MODELPHASEFILE}.ras ${MODELPHASEFILE}_wrapped.ras
-			mv ${MODELPHASEFILE}.ras.sh ${MODELPHASEFILE}_wrapped.ras.sh
-			${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${MODELPHASEFILE}_wrapped.ras.sh
+			#MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${MODELPHASEFILE} 
+			#mv ${MODELPHASEFILE}.ras ${MODELPHASEFILE}_wrapped.ras
+			#mv ${MODELPHASEFILE}.ras.sh ${MODELPHASEFILE}_wrapped.ras.sh
+			#${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${MODELPHASEFILE}_wrapped.ras.sh
 			MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${MODELPHASEFILE} 
 		fi
 		if [ -f "${CORRPHASEFILE}" ] && [ -s "${CORRPHASEFILE}" ] ; then
-			MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${CORRPHASEFILE} 
-			mv ${CORRPHASEFILE}.ras ${CORRPHASEFILE}_wrapped.ras
-			mv ${CORRPHASEFILE}.ras.sh ${CORRPHASEFILE}_wrapped.ras.sh
-			${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${CORRPHASEFILE}_wrapped.ras.sh
+			#MakeFig ${ISARRG} 1.0 5.0 phase jet ${MLFIGSMALL1}/${MLFIGSMALL2} ci2 ${CORRPHASEFILE} 
+			#mv ${CORRPHASEFILE}.ras ${CORRPHASEFILE}_wrapped.ras
+			#mv ${CORRPHASEFILE}.ras.sh ${CORRPHASEFILE}_wrapped.ras.sh
+			#${PATHGNU}/gsed  -i 's/\.ras/_wrapped\.ras/' ${CORRPHASEFILE}_wrapped.ras.sh
 			MakeFigNoNorm ${ISARRG} normal jet ${MLFIG1}/${MLFIG2} r4 ${CORRPHASEFILE} 
 		fi
 	
@@ -2511,14 +2599,38 @@ function GeocUTM()
 	#   because we want to force all processing done for MSBAS with same geocoded grid. These info are
 	#   hence updated by the scripts based on parameters provided in ParametersFile.txt. 
 	#   Ensure that these are similar for each mode that you want to combine for MSBAS. 
+	if [ ${SATDIR} == "S1" ] && [ "${ETADGEOC}" == "ETADGEOCyes" ] 
+		then 
+			ETADGEOCTMP="-ETAD"
+		else 
+			ETADGEOCTMP=""
+	fi
+
 	if [ ${RADIUSMETHD} == "LetCIS" ] 
 		then
 			# Let CIS Choose what is the best radius, that is 2 times the distance to the nearest neighbor
-			geoProjection -rk ${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt	| tee -a ${LOGFILE}
+			geoProjection -rk ${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt ${ETADGEOCTMP}	| tee -a ${LOGFILE}
 		else 
 			# Force radius: force radius to RADIUSMETHD times the distance to the nearest neighbor. Default value (i.e. LetCIS) is 2)
-			geoProjection -rk -f=${RADIUSMETHD} ${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt	| tee -a ${LOGFILE}
+			geoProjection -rk -f=${RADIUSMETHD} ${RUNDIR}/i12/TextFiles/geoProjectionParameters.txt	${ETADGEOCTMP} | tee -a ${LOGFILE}
 	fi
+
+	}
+
+function PlotGeocETAD()
+	{
+	unset DEFOMAPETAD 
+	local DEFOMAPETAD=$1 
+
+	if [ "${DEFOMAPETAD}" != "" ] && [ -e ${DEFOMAPETAD}.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 ${DEFOMAPETAD}.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
+
+	}
+function PlotGeocETADinterpolated()
+	{
+	unset DEFOMAPETAD 
+	local DEFOMAPETAD=$1 
+
+	if [ "${DEFOMAPETAD}" != "" ] && [ -e ${DEFOMAPETAD}.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 ${DEFOMAPETAD}.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ; fi
 
 	}
 
@@ -2548,11 +2660,50 @@ function PlotGeoc()
 				else
 					# plot geocoded unwrapped defo 
 					MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil
-					if [ -e deformationMap.flatttened.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.flatttened.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
+					if [ -e deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
 					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
 					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
 					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ; fi
 					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ; fi
+
+					if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011)$ ]] && [ "${ETADCOMBI}" = "ETADCOMBIyes" ] ; then
+						# all deformationMap${INTERPOLSUFFIX}.igt
+							PlotGeocETAD "${DEFO_IONO_GEO_TROPO}"
+							PlotGeocETAD "${DEFO_IONO_GEO}"
+							PlotGeocETAD "${DEFO_IONO_TROPO}"
+							PlotGeocETAD "${DEFO_GEO_TROPO}"
+							PlotGeocETAD "${DEFO_IONO}"
+							PlotGeocETAD "${DEFO_GEO}"
+							PlotGeocETAD "${DEFO_TROPO}"
+							PlotGeocETAD "${DEFO_NOCORR}"
+						# equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.igt"
+							PlotGeocETAD "${DEFO_IONO_GEO_TROPO_DETREND}"
+							PlotGeocETAD "${DEFO_IONO_GEO_DETREND}"
+							PlotGeocETAD "${DEFO_IONO_TROPO_DETREND}"
+							PlotGeocETAD "${DEFO_GEO_TROPO_DETREND}"
+							PlotGeocETAD "${DEFO_IONO_DETREND}"
+							PlotGeocETAD "${DEFO_GEO_DETREND}"
+							PlotGeocETAD "${DEFO_TROPO_DETREND}"
+							PlotGeocETAD "${DEFO_NOCORR_DETREND}"
+						# all deformationMap${INTERPOLSUFFIX}.igt.interpolated
+							PlotGeocETADinterpolated "${DEFO_IONO_GEO_TROPO}"
+							PlotGeocETADinterpolated "${DEFO_IONO_GEO}"
+							PlotGeocETADinterpolated "${DEFO_IONO_TROPO}"
+							PlotGeocETADinterpolated "${DEFO_GEO_TROPO}"
+							PlotGeocETADinterpolated "${DEFO_IONO}"
+							PlotGeocETADinterpolated "${DEFO_GEO}"
+							PlotGeocETADinterpolated "${DEFO_TROPO}"
+							PlotGeocETADinterpolated "${DEFO_NOCORR}"
+						# equivalent to "deformationMap${INTERPOLSUFFIX}.flattened.igt.interpolated"
+							PlotGeocETADinterpolated "${DEFO_IONO_GEO_TROPO_DETREND}"
+							PlotGeocETADinterpolated "${DEFO_IONO_GEO_DETREND}"
+							PlotGeocETADinterpolated "${DEFO_IONO_TROPO_DETREND}"
+							PlotGeocETADinterpolated "${DEFO_GEO_TROPO_DETREND}"
+							PlotGeocETADinterpolated "${DEFO_IONO_DETREND}"
+							PlotGeocETADinterpolated "${DEFO_GEO_DETREND}"
+							PlotGeocETADinterpolated "${DEFO_TROPO_DETREND}"
+							PlotGeocETADinterpolated "${DEFO_NOCORR_DETREND}"
+					fi
 			fi
 	fi
 	if [ "${MASAMPL}" == "YES" ]
@@ -2807,11 +2958,58 @@ function ManageGeocoded()
 							PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
 							#PATHDEFOGEOMAP=deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated	
+#### v
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_NOCORR_DETREND}
+								fi
+
+#### ^
+
 						else 
 							EchoTee "Request interpolation after geocoding."
 							PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}   
 							#PATHDEFOGEOMAP=deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated	
+#### v
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO}
+									InterpoDefoInclETAD ${DEFO_GEO}
+									InterpoDefoInclETAD ${DEFO_TROPO}
+									InterpoDefoInclETAD ${DEFO_NOCORR}
+								fi
+##### ^
+
+
+
 				fi ;;
 			"BOTH")  
 				if [ ${REMOVEPLANE} == "DETREND" ] 
@@ -2820,11 +3018,57 @@ function ManageGeocoded()
 							PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
 							#PATHDEFOGEOMAP=deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated   
+#### v 
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_IONO_DETREND}
+									InterpoDefoInclETAD ${DEFO_GEO_DETREND}
+									InterpoDefoInclETAD ${DEFO_TROPO_DETREND}
+									InterpoDefoInclETAD ${DEFO_NOCORR_DETREND}
+								fi
+
+#### ^
+
 						else 
 							EchoTee "Request interpolation before and after geocoding."
 							PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil
 							fillGapsInImage ${RUNDIR}/i12/GeoProjection/${PATHDEFOGEOMAP} ${GEOPIXW} ${GEOPIXL}
 							#PATHDEFOGEOMAP=deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated   
+#### v 
+								if [ ${SATDIR} == "S1" ] && [ ${ETADCOMBI} == "ETADCOMBIyes" ] ; then 
+									function InterpoDefoInclETAD()
+										{
+										unset INPUTDEFOFILE
+										local INPUTDEFOFILE=$1 	
+										
+										if [ "${INPUTDEFOFILE}" != "" ] ; then fillGapsInImage ${RUNDIR}/i12/InSARProducts/${INPUTDEFOFILE}  ${GEOPIXW} ${GEOPIXL} ; fi
+	
+										}
+	
+									InterpoDefoInclETAD ${DEFO_IONO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO_GEO}
+									InterpoDefoInclETAD ${DEFO_IONO_TROPO}
+									InterpoDefoInclETAD ${DEFO_GEO_TROPO}
+									InterpoDefoInclETAD ${DEFO_IONO}
+									InterpoDefoInclETAD ${DEFO_GEO}
+									InterpoDefoInclETAD ${DEFO_TROPO}
+									InterpoDefoInclETAD ${DEFO_NOCORR}
+								fi
+
+#### ^
+
 				fi ;;
 			"BEFORE") 
 				EchoTee "Do not request interpolation after geocoding" 
@@ -2837,7 +3081,7 @@ function ManageGeocoded()
 
 	# rename all geocoded products as ${FILENOEXT}_${SATDIR}_${AD}${LOOK}_${TRKDIR}_${MAS}_${SLV}_${Bp}m_${HA}m_${BT}days_${HEADING}deg.${FILEEXT}	
 	GetSatOrbDetails
-	
+
  	RenameAllProducts 
 	
 # rename here Primary S1 STRIPMAP from MASDATE to MASNAME
@@ -2869,16 +3113,28 @@ function ManageGeocoded()
 	cd ${RUNDIR}/i12/GeoProjection
 
 	# postfix for geocoded images
-	POSTFIX=".UTM.${GEOPIXSIZENAME}.bil"
-	POLPOSTFIX=".${POLMAS}-${POLSLV}.UTM.${GEOPIXSIZENAME}.bil"
-	POLPOSTFIXFILT=".${POLMAS}-${POLSLV}.f.UTM.${GEOPIXSIZENAME}.bil"
+	#if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" == "" ]] # prefer if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011|ETAD001|ETAD010|ETAD100)$ ]] ; then
+	if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011|ETAD001|ETAD010|ETAD100)$ ]] 
+		then
+			POSTFIX=".UTM.${GEOPIXSIZENAME}.${ETADPROD}.bil"
+			POSTFIX2=".UTM.${GEOPIXSIZENAME}.bil.${ETADPROD}"						# needed for compatibility in fct below when using ETAD
+			
+			POLPOSTFIX=".${POLMAS}-${POLSLV}.UTM.${GEOPIXSIZENAME}.${ETADPROD}.bil"
+			POLPOSTFIXFILT=".${POLMAS}-${POLSLV}.f.UTM.${GEOPIXSIZENAME}.${ETADPROD}.bil"		
+		else 
+			POSTFIX=".UTM.${GEOPIXSIZENAME}.bil"
+			POSTFIX2="${POSTFIX}"						# needed for compatibility in fct below when using ETAD
+			
+			POLPOSTFIX=".${POLMAS}-${POLSLV}.UTM.${GEOPIXSIZENAME}.bil"
+			POLPOSTFIXFILT=".${POLMAS}-${POLSLV}.f.UTM.${GEOPIXSIZENAME}.bil"		
+	fi
 
-	if [ ! -f ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${MASNAME}.${POLMAS}.mod${POSTFIX}*.hdr ]
+	if [ ! -f ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${MASNAME}.${POLMAS}.mod${POSTFIX2}*.hdr ]
 		then 
 			MoveGeocRename ${MASNAME}.${POLMAS}.mod Ampli
 	fi	
 	
-	if [ ! -f ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${SLVNAME}.${POLSLV}.mod${POSTFIX}*.hdr ]
+	if [ ! -f ${MASSPROCESSPATHLONG}/Geocoded/Ampli/${SLVNAME}.${POLSLV}.mod${POSTFIX2}*.hdr ]
 		then 
 			MoveGeocRename ${SLVNAME}.${POLSLV}.mod Ampli
 	fi
@@ -2895,12 +3151,14 @@ function ManageGeocoded()
 			MoveGeocRename unwrappedPhase${POLPOSTFIX} UnwrapPhase
 		fi
 
+		# To check with ETAD and detrend without 1st interpolate : if fails to move, change ${POSTFIX} with ${POSTFIX2}
 		if [ -f ${RUNDIR}/i12/GeoProjection/deformationMap.flattened${POSTFIX}_*deg ] && [ -s ${RUNDIR}/i12/GeoProjection/deformationMap.flattened${POSTFIX}_*deg ]    # DefoDetrend
 			then 
 				mkdir -p ${MASSPROCESSPATHLONG}/GeocodedRasters/DefoDetrend
 				mkdir -p ${MASSPROCESSPATHLONG}/Geocoded/DefoDetrend
 				MoveGeocRename deformationMap.flattened${POSTFIX}_ DefoDetrend
 		fi
+
 		if [ -f ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated${POSTFIX}_*deg ] && [ -s ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated${POSTFIX}_*deg ]  # DefoInterpol
 			then 
 				mkdir -p ${MASSPROCESSPATHLONG}/GeocodedRasters/DefoInterpol
@@ -2913,17 +3171,19 @@ function ManageGeocoded()
 				mkdir -p ${MASSPROCESSPATHLONG}/Geocoded/DefoInterpolDetrend
 				MoveGeocRename deformationMap.interpolated.flattened${POSTFIX}_ DefoInterpolDetrend
 		fi
+
+		# To check with ETAD and 2x interpolate withoutdetrend : if fails to move, change ${POSTFIX} with ${POSTFIX2}
 		if [ -f ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated${POSTFIX}.interpolated_*deg ] && [ -s ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated${POSTFIX}.interpolated_*deg ]  # DefoInterpolx2
 			then 
 				mkdir -p ${MASSPROCESSPATHLONG}/GeocodedRasters/DefoInterpolx2
 				mkdir -p ${MASSPROCESSPATHLONG}/Geocoded/DefoInterpolx2
 				MoveGeocRename deformationMap.interpolated${POSTFIX}.interpolated_ DefoInterpolx2
 		fi
-		if [ -f ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated.flattened${POSTFIX}.interpolated_*deg ] && [ -s ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated.flattened${POSTFIX}.interpolated_*deg ]  # DefoInterpolx2Detrend
+		if [ -f ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated.flattened${POSTFIX2}.interpolated_*deg ] && [ -s ${RUNDIR}/i12/GeoProjection/deformationMap.interpolated.flattened${POSTFIX2}.interpolated_*deg ]  # DefoInterpolx2Detrend
 			then 
 				mkdir -p ${MASSPROCESSPATHLONG}/GeocodedRasters/DefoInterpolx2Detrend
 				mkdir -p ${MASSPROCESSPATHLONG}/Geocoded/DefoInterpolx2Detrend
-				MoveGeocRename deformationMap.interpolated.flattened${POSTFIX}.interpolated_ DefoInterpolx2Detrend
+				MoveGeocRename deformationMap.interpolated.flattened${POSTFIX2}.interpolated_ DefoInterpolx2Detrend
 		fi
 	fi
 	}
@@ -2975,24 +3235,75 @@ function RenameAllProducts()
 		FILEEXT=`echo "${FILE}" |  ${PATHGNU}/gawk -F'[.]' '{print $NF}'`
 		case ${FILEEXT} in 
 			"bil")
-				mv ${FILE} ${FILENOEXT}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg ;;
+				#if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" != "" ]]
+				if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011|ETAD001|ETAD010|ETAD100)$ ]] 
+					then
+						mv ${FILE} ${FILENOEXT}.${ETADPROD}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
+						#mv ${FILE} ${FILENOEXT}.bil${ETADPROD}_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
+					else
+						mv ${FILE} ${FILENOEXT}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
+				fi
+				;;
 			"ras")
-				if [ "${FIG}" == "FIGyes"  ] ; then mv ${FILE} ${FILENOEXT}_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.ras ; fi ;;
+				#if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" != "" ]]
+				if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011|ETAD001|ETAD010|ETAD100)$ ]] 
+					then
+						if [ "${FIG}" == "FIGyes"  ] ; then 
+							SECONDFILENOEXT=`echo "${FILENOEXT}" |  ${PATHGNU}/gawk '{gsub(/.*[/]|[.]{1}[^.]+$/, "", $0)} 1'`
+							SECONDEXT=`echo "${FILENOEXT}" |  ${PATHGNU}/gawk -F'[.]' '{print $NF}'`
+							mv ${FILE} ${SECONDFILENOEXT}.${ETADPROD}.${SECONDEXT}_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.ras 
+						fi
+					else
+						if [ "${FIG}" == "FIGyes"  ] ; then 
+							mv ${FILE} ${FILENOEXT}_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.ras	
+						fi
+				fi
+				;;
 			"hdr")
-				mv ${FILE} ${FILENOEXT}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr ;;
-			"interpolated")
-				mv ${FILE} ${FILENOEXT}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
-				# get any existing hdr and adapt it 
-				FORMERHDR=`ls *.hdr | head -1`
-				cp ${FORMERHDR} ${FILENOEXT}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
-				${PATHGNU}/gsed -i "/Description/c\Description = {${FILENOEXT}.interpolated" ${FILENOEXT}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr ;;
-			"flattened")
-				mv ${FILE} ${FILENOEXT}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
-				# get any existing hdr and adapt it 
-				FORMERHDR=`ls *.hdr | head -1`
-				cp ${FORMERHDR} ${FILENOEXT}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
-				${PATHGNU}/gsed -i "/Description/c\Description = {${FILENOEXT}.flattened" ${FILENOEXT}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr ;;
+				#if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" != "" ]]
+				if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011|ETAD001|ETAD010|ETAD100)$ ]] 
+					then
+						mv ${FILE} ${FILENOEXT}.${ETADPROD}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+						#mv ${FILE} ${FILENOEXT}.bil${ETADPROD}_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
 
+					else
+						mv ${FILE} ${FILENOEXT}.bil_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+				fi
+				;;
+			"interpolated")
+				#if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" != "" ]]
+				if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011|ETAD001|ETAD010|ETAD100)$ ]] 
+					then
+						mv ${FILE} ${FILENOEXT}.${ETADPROD}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
+						# get any existing hdr and adapt it 
+						FORMERHDR=`ls *.hdr | head -1`
+						cp ${FORMERHDR} ${FILENOEXT}.${ETADPROD}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+						${PATHGNU}/gsed -i "/Description/c\Description = {${FILENOEXT}.${ETADPROD}.interpolated" ${FILENOEXT}.${ETADPROD}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+					else
+						mv ${FILE} ${FILENOEXT}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
+						# get any existing hdr and adapt it 
+						FORMERHDR=`ls *.hdr | head -1`
+						cp ${FORMERHDR} ${FILENOEXT}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+						${PATHGNU}/gsed -i "/Description/c\Description = {${FILENOEXT}.interpolated" ${FILENOEXT}.interpolated_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+				fi
+				;;
+			"flattened")
+				#if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" != "" ]]
+				if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011|ETAD001|ETAD010|ETAD100)$ ]] 
+					then
+						mv ${FILE} ${FILENOEXT}.${ETADPROD}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
+						# get any existing hdr and adapt it 
+						FORMERHDR=`ls *.hdr | head -1`
+						cp ${FORMERHDR} ${FILENOEXT}.${ETADPROD}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+						${PATHGNU}/gsed -i "/Description/c\Description = {${FILENOEXT}.${ETADPROD}.flattened" ${FILENOEXT}.${ETADPROD}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+					else
+						mv ${FILE} ${FILENOEXT}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg
+						# get any existing hdr and adapt it 
+						FORMERHDR=`ls *.hdr | head -1`
+						cp ${FORMERHDR} ${FILENOEXT}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+						${PATHGNU}/gsed -i "/Description/c\Description = {${FILENOEXT}.flattened" ${FILENOEXT}.flattened_${SATDIR}_${TRKDIR}-${LOOK}deg_${MAS}_${SLV}_Bp${Bp}m_HA${HA}m_BT${BT}days_Head${HEADING}deg.hdr
+				fi
+				;;
 		esac		
 	done 
 	}

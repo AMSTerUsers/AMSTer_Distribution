@@ -1,6 +1,10 @@
+#!/opt/local/amster_python_env/bin/python
+#
 # Some functions for Check_images.py
 #
 # New in Distro V 1.1 20250212:   - Make events dfco optional
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 #
 #

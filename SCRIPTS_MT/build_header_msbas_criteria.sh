@@ -87,14 +87,15 @@
 # New in Distro V 9.5 20250114:	- avoid error message when incidence files etc from a mode do not exist 
 # New in Distro V 9.6 20250401:	- make grep search case insensitive for Samples and lines 
 #								- check if raster exist before creating link 
+# New in Distro V 9.7 20251202:	- skip PrepareModeI if no hdr file found 
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.6 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 01, 2025"
+VER="Distro V9.7 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -213,7 +214,7 @@ LinesInFile2NotInFile1()
 PrepareModeI()
 {
 	# Prepare j_th mode
-	local HDRMOD
+	#local HDRMOD	# already computed outside of fct 
 	local MODETOCP
 	local MASSPROCESSPATH
 	local NRFILES
@@ -239,7 +240,8 @@ PrepareModeI()
 	local NAN
 	local PAIRINTABLE
 
-	HDRMOD=`find ${PATHMODE} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info
+	#HDRMOD=`find ${PATHMODE} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info # aleeady computed outside of fct
+
 	#HDRMOD=`ls ${PATHMODE}/*.hdr | head -n 1`	# one envi header file for that mode to get some info 
 	MODETOCP=`echo $MODE${i}` 			# get only the name without path (that is Defo" and with index, i.e. Defo1)
 	MASSPROCESSPATH="$(dirname "$(dirname "$PATHMODE[${i}]")")"  # two levels up; needed for keeping track of possible pairs in table_BpMin_BpMax_Btmin_Btmax_AdditionalPairs.txt
@@ -619,6 +621,14 @@ do
 	PATHMODE[${i}]=${PATHMODE}			# same as before but named with an index for further call
 
 	echo "Start mode ${i}"
+
+	HDRMOD=`find ${PATHMODE[${i}]} -maxdepth 1 -type f -name "*.hdr"  | head -n 1`	# one envi header file for that mode to get some info
+	
+   	# Skip this mode if no .hdr file is found
+   	if [ -z "${HDRMOD}" ]; then
+   	    echo "  // No HDR file found for mode ${i}, skipping..."
+   	    continue  # skip the mode
+   	fi
 	PrepareModeI ${i} &
 
 done

@@ -345,3 +345,7 @@ echo "//____________________________"
 	fi
 	echo "Last AMSTer Engine version is ${LASTVERSIONMT}"
 	echo
+	
+NOW=$(date)
+echo "// Check performed on ${NOW}" 
+echo ""

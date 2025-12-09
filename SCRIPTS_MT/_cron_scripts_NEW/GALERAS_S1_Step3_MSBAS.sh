@@ -21,14 +21,15 @@
 # New in Distro V 1.0.2 20250429 :	- debug Coh threshold processing (S1ASCIW instead of S1ASC; same for DESC)
 # New in Distro V 1.0.2 20250429 :	- debug Coh threshold naming for Part1 and 2 TS 
 # New in Distro V 1.0.3 20250508 :	- debug Baselin Plots for part 1 & 2 w/o Coh Thresh and TS for part 1 & 2 w/o Coh Threshold
-#									
+# New in Distro V 1.2.0 20251125 :	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
+##									
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 8, 2025"
+VER="Distro V1.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 25, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -43,6 +44,9 @@ TODAY=`date`
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
 	# some parameters
 	#################
+
+		# Max number of threads (to avoid problem with openmp which is by default compiled for max 128)
+		MAXTHREADS=128
 		
 		# Max baselines (used for all the mode in present case but you can change)
 		SET1BP1=40
@@ -173,6 +177,25 @@ TODAY=`date`
 	CRONJOB2=GALERAS_S1_Step2_MassProc.sh
 	
 # ^^^^^^^^^^ Hard coded lines ^^^^^^^^^^^^
+
+# set the max number of threads to be used by MSBAS. 
+####################################################
+#Remember that OPENBLAS is pre-compiled for Ubuntu with max 128 threads
+	# Check OS
+	OS=`uname -a | cut -d " " -f 1 `
+
+	case ${OS} in 
+		"Linux") 
+			NTHR=$(nproc --all)	 ;;
+		"Darwin")
+			NTHR=$(sysctl -n hw.ncpu) 	;;
+		*)
+			echo "${MESSAGE}" 	;;
+	esac			
+
+	# get the number frm your hardware 
+	if [ ${NTHR} -gt ${MAXTHREADS} ] ; then NTHR=${MAXTHREADS} ; fi
+
 
 # Prepare directories
 #####################
@@ -352,7 +375,7 @@ TODAY=`date`
 		local MODE=$1
 		cd ${MSBASDIR}
 		cp -f ${MSBASDIR}/header_${MODE}.txt  header.txt 
-		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+		NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
 
 		cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 		# remove header line to avoid error message 
@@ -631,7 +654,7 @@ cd ${MSBASDIR}
 				echo "# Run MSBAS Without Coh Threshold. With Coh threshold will follow #"
 				echo "###################################################################"
 		 
-				${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+				NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
 		 
 				# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 				cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/
@@ -689,7 +712,7 @@ cd ${MSBASDIR}
 			echo "####################################"
  	fi
 
-	${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+	NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
 	
 	# test if MSBAS_log.txt contains "completed 100%" ; if not log error 
  	if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt
@@ -701,7 +724,7 @@ cd ${MSBASDIR}
   			_Check_bad_DefoInterpolx2Detrend.sh DefoInterpolx2Detrend2 ${PATH_3601}/SAR_MASSPROCESS &
   			wait 
   			
-  			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+  			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
   			if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt ; then echo "Solved after cleaning DefoInterpolx2Detrend's txt"; else  echo "!! MSBAS crashed on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt ; fi
   	fi
 	
@@ -826,7 +849,7 @@ cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt
 							echo "# Run MSBAS With Coh Threshold Part1; without will follow  #"
 							echo "############################################################"
  			 		
-							${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold ${TIMESERIESPTS}
+							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold ${TIMESERIESPTS}
 			 		
 							## Make baseline plot 
 								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDCOH1}
@@ -875,7 +898,7 @@ cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt
 							echo "# Run now MSBAS Without Coh Threshold Part1  #"
 							echo "##############################################"
 			 		
-							${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh ${TIMESERIESPTS}
+							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh ${TIMESERIESPTS}
 			 		
 							## Make baseline plot 
 								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDNOCOH1}
@@ -933,7 +956,7 @@ cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt
 						echo "# Run MSBAS part1 (Without Coh Threshold )  #"
 						echo "#############################################"
 		 	
-						${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1 ${TIMESERIESPTS}
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1 ${TIMESERIESPTS}
 
 						## Make baseline plot 
 							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANED1}
@@ -1030,7 +1053,7 @@ cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt
 							echo "############################################################"
 			 				
 			 				cd ${MSBASDIR}
-							${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold ${TIMESERIESPTS}
+							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold ${TIMESERIESPTS}
 			 		
 							## Make baseline plot 
 								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDCOH1}
@@ -1077,7 +1100,7 @@ cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt
 							echo "# Run now MSBAS Without Coh Threshold Part2  #"
 							echo "##############################################"
 			 		
-							${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh ${TIMESERIESPTS}
+							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh ${TIMESERIESPTS}
 			 		
 							## Make baseline plot 
 								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDNOCOH1}
@@ -1134,7 +1157,7 @@ cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt
 						echo "# Run MSBAS Part2 (Without Coh Threshold) #"
 						echo "###########################################"
 
-						${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2 ${TIMESERIESPTS}
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2 ${TIMESERIESPTS}
 			 	
 						## Make baseline plot 
 							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANED1}

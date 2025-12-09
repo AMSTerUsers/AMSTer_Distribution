@@ -23,8 +23,8 @@
 # Delphine Smittarello (c) 2024 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0 MasTer script utilities"
-AUT="Delphine Smittarello, (c)2016-2019, Last modified on Feb 09, 2024 by DS"
+VER="Distro V1.1 MasTer script utilities"
+AUT="Delphine Smittarello, (c)2016-2019, Last modified on Feb 07, 2025 by DS"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"

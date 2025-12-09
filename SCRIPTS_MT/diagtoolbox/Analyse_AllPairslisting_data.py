@@ -1,4 +1,5 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
+#
 # -----------------------------------------------------------------------------------------
 #This script analyzes pairs of SAR images in the table All_Pairs_listing.txt computed by Prepa_MSBAS.sh
 #
@@ -50,6 +51,8 @@
 #								- ajout startdate/enddate 
 # New in Distro V 2.3 20250128: - ajout optionnel date change for BPBT
 # New in Distro V 2.4 20250212: - Cosmetic and improve help
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

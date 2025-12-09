@@ -1,6 +1,8 @@
-#!/opt/local/bin/python3
+#!/opt/local/amster_python_env/bin/python
 # -----------------------------------------------------------------------------------------
 # This script is aiming at cropping a part of an interferogram
+#
+# New in Distro V 2.0 20250813:	- launched from python3 venv
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

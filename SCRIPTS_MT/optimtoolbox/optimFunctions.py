@@ -1,3 +1,4 @@
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This file contains the python3 functions of the optimFunctions module called by creategraphfromtable.py
 # 
@@ -5,6 +6,8 @@
 # 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Last modif  D. Smittarello April 20, 2021

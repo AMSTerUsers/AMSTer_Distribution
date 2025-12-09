@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The script aims at computing a linear regression through all the defo maps from the 
 # current directory and output a mean linear velocity, the stdv and the r2 maps. 
@@ -26,6 +26,8 @@
 #									is smaller than the one from the first part, the non  
 #									overlapping part will be filled with the constant offset 
 #									bewteen parts.   
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2024 - could make better with more functions... when time.

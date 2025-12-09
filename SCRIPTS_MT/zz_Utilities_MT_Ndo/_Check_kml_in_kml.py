@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script checks if an area provided as a kml file is included in another area
 # provided as a second kml file. 
@@ -13,6 +13,7 @@
 # Hard coded: - none
 # 
 # New in Distro V 1.0 20240208:	- new script
+# New in Distro V 2.0 20250813:	- launched from python3 venv
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.

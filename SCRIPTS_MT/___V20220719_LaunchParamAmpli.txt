@@ -9,8 +9,8 @@
 
 # OUTPUT PIX SHAPE AND SIZE
 ###########################
-3						# ML, multilooking factor 
-2						# ZOOM, zoom factor (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
+5						# ML, multilooking factor 
+1						# ZOOM, zoom factor (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
 ORIGINAL				# PIXFORM, shape of output pixel in radar geometry (SQUARE or ORIGINAL)
 
 # WINDOWING
@@ -27,6 +27,6 @@ NyigoCrater										# REGION, name of cropped region
 
 # Digital Elevation Model
 #########################
-${PATH_DataSAR}/SAR_AUX_FILES/DEM/SRTM30/ALL/GrandKivuAug2020_CorrGeoid					# DEM, path to DEM 
+/Volumes/DataSAR/SAR_AUX_FILES/DEM/SRTM30/ALL/ReunionCorrGeoid_fillgapLidar					# DEM, path to DEM 
 
 

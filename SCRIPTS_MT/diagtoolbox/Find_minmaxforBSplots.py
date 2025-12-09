@@ -1,9 +1,11 @@
-#! /opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # Function to find common time span to both table.txt files
 # It add a delay of 30day before the first date and after the last for plot purposes
 #
 # New in Distro V 1.0.1 20240209:  - Cosmetic
 # New in Distro V 1.0.2 20250207:  - replace delimiter \t by r'\s+'
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello (c) 2024/02/09 - could make better with more functions... when time.

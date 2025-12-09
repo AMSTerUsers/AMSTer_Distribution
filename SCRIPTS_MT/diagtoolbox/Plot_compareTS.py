@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 # -----------------------------------------------------------------------------------------
 # This script aims at displaying a comparison of EW, UD (and NS) timelines computed with multiple MSBAS processings.
 # 
@@ -9,6 +9,8 @@
 # New in 1.2 (20250210 - DS): - improve to check dir zz_UD_EW_NS* for 3D TS
 # New in 1.3 (20250213 - DS): - improve to plot NS when it exists
 # New in 2.0 (20250319 - DS): - Change to compare more than 2 dir + ajout plot events
+# New in Distro V 3.0 20250813:	- launched from python3 venv
+#
 #
 # This script is part of the AMSTer Toolbox
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

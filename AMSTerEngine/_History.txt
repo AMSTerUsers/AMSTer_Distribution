@@ -1,3 +1,97 @@
+/* AMSTerEngine20251114 (© DD & SAREOS) */
+/* ************************************ */
+Addition of AGPL licence header to every file.
+
+/* AMSTerEngine20251107 (© DD & SAREOS) */
+/* ************************************ */
+SBInSAR: Better management of two band dand split. 
+
+/* AMSTerEngine20251106 (© DD & SAREOS) */
+/* ************************************ */
+envi2cog: New tool to convert envi format files into Cloud Optimized Geotiff (COG) files simply calling gdal. 
+
+/* AMSTerEngine20251105 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Bug correction in InSAR parameters reading due to missing tracked amplitude lines in cohTracParameters.txt in AMSTerEngine versions prior to August 28, 2025.  
+
+/* AMSTerEngine20251031 (© DD & SAREOS) */
+/* ************************************ */
+ETADDataReader: Correction in .csl image selection with respect to requested start and end dates. 
+SBInSAR: Some adjustments to manage dual sub-band
+PolInSARProductsGeneration: Modification in coherence optimization to put it as a callable library function.
+
+/* AMSTerEngine20251023 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregregistration: Memory corruption bug correction in image concatenation after interpolation that occurred when slave image has a range width smaller than the master.
+
+/* AMSTerEngine20251003 (© DD & SAREOS) */
+/* ************************************ */
+Re-adding SRDEMWeightedAverage within available tools. 
+phaseUnwrapping: Bug correction in case branch cut is requested after detPhUn.
+
+/* AMSTerEngine20250924 (© DD & SAREOS) */
+/* ************************************ */
+ETADDataReader: correction of wrong initialization and management of start and end date.
+
+/* AMSTerEngine20250915 (© DD & SAREOS) */
+/* ************************************ */
+getStatForZoneInFile: Correction in UTM zone longitude index management. When the given kml is by chance in an adjacent zone with respect to the on of the given image, it is forced to the one of the image to be located correctly within this latter one. 
+
+/* AMSTerEngine20250903 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: For now, tracking is based on points for which a local max above connexion cleaning threshold is found without locating it using curve fitting. 
+	Addition of hidden -z option to perform coherence tracking on already existing coherence stack to allow changing seuilnet.
+
+/* AMSTerEngine20250902 (© DD & SAREOS) */
+/* ************************************ */
+Interpolation lib: Correction of a very very old allocation bug in case range transform is unitary. 
+cohTrack debugging.
+cohTrack full mapping addition. Full mapping is the default. If willing to make a cross mapping from the reference registration to reduce processng, use option -c. 
+
+/* AMSTerEngine20250901 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Debugging and correction of burst reramping to avoid introducing a phase ramp due to azimuth imposed shifts. 
+
+
+/* AMSTerEngine20250831 (© DD & SAREOS) */
+/* ************************************ */
+initInSAR: Bug correction in cohTrack parameter file creation. 
+lazInSAR: Bug correction introduced to the change made initInSAR returning now the *pInSAR structure in place of InSAR process path. 
+
+/* AMSTerEngine20250829 (© DD & SAREOS) */
+/* ************************************ */
+CohTrack developments up to tracking products generation. 
+	Detection of local coherence maximum through curve fitting still missing. 
+	Full 2D scanning ready but still to be unlocked. 
+	
+/* AMSTerEngine20250827 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack bugs correction. 
+cohTrack help text display improvement
+Restoring correct display of process steps in S1Coregistration. 
+
+/* AMSTerEngine20250826 (© DD & SAREOS) */
+/* ************************************ */
+Coherence tracking partial implementation up to recursive InSAR products generation.
+InSARProductGeneration: Now ETAD layers may be issued independently using the +ETAD keyword in place of -ETAD.
+Issued layers are expressed as phase terms. 
+
+/* AMSTerEngine20250811 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Removal of unused sub-swath stitching. This latter one is useless since one can use any kml.
+S1Coregistration: Internal management change to keep track of the original slave image in the InSARParameters.txt file. 
+
+
+/* AMSTerEngine20250808 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection : mismatch correction between -E and -ETAD command line parameters. Now, to get ESRI headers one must use the -ESRI option.
+ETADDataReader : Now it accepts a starting and an endong date as argument from which to search for ETAD data using additional command line parameter "from=YYYYMMDD" and/or "to=YYYYMMDD.
+
+/* AMSTerEngine20250805 (© DD & SAREOS) */
+/* ************************************ */
+NISARDataReader first release. 
+S1Coregistration: Correction of a very old mishandling of per-burst Doppler Centroid calculation. 
+
 /* AMSTerEngine20250730 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReaderLib: Correction of a bug recently introduced that might lead to crash in burst concatenation when range shift of interpolated slave image was negative. Shift variable was erroneously declared as unsigned. 

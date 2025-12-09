@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The script re-wrap a deformation image (provided as input param 1, float)
 # and save the rewrapped image as jpg if the width of the image 
@@ -15,6 +15,8 @@
 # Dependencies:	- numpy
 #
 # Hardcoded: 	- re-wrapping value (in m): e.g. mod_value = 0.1 means 10cm
+#
+# New in Distro V 2.0 20250813:	- launched from python3 venv
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

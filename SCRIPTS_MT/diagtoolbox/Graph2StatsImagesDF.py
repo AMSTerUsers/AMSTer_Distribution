@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 ######################################################################################
 # This script load a pickle file containing a graph dict  
 # then it compute some stats on all nodes(images)
@@ -9,6 +9,8 @@
 # Dependencies:	- python3.10 and modules below (see import)
 #
 # New in Distro V 1.0:	- Based on developpement version 
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+#
 #
 # launch command : python thisscript.py param1 param2
 #

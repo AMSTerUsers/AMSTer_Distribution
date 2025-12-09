@@ -53,14 +53,15 @@
 #								 - skip check image if its date is before first image of data set (cfr hardcoded FIRSTIMG for each dataset) or after sat death (cfr hardcoded satDEATH params)
 # New in Distro V 4.12 20250710: - if data not read in CSL format, check if RAW data overlaps the area of interest defined as a TARGET_KML variable in script
 # New in Distro V 4.13 20250805: - if not dirs in .UNZIP nor .UNZIP_FORMER, checks files in .ZIP and .ZIP_FORMER (providing that a corresponding dir is defined in params) - eg see Galeras
+# New in Distro V 4.14 20251112: - displays size of raw img and nr of bursts in CSL img
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.13 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+VER="Distro V4.14 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 12, 2025"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -414,21 +415,27 @@ esac
 									LAST1=`find ${PATHRAWZIP}_FORMER/_${LASTYEAR}/ -maxdepth 1 -type f -name "S1${SENSOR}*${LASTSIMG}T*" 2>/dev/null  | wc -l  | ${PATHGNU}/gsed "s/ //g"`
 									if [ ${LAST1} -eq 0 ] 
 										then 
-											LASTRAW="${reverse} missing       ${normal}" 
+											LASTRAW="${reverse} missing           ${normal}" 
 										else
-											LASTRAW="${LAST1} ZIP_FORMER f "
-											LASTRAW="${LAST1} f .ZIP_FORMER"
+											#SIZEDIR=$(${PATHGNU}/gfind "${PATHRAW}/" -maxdepth 1 \( -type d -o -type f \) -name "S1${SENSOR}*${LASTSIMG}T*" -exec ${PATHGNU}/gdu -sb {} + 2>/dev/null | ${PATHGNU}/gawk '{sum += $1} END {print sum}')	# sums the several hits
+											CheckSizeFilesOrDirs "${PATHRAW}"
+											LASTRAW="${LAST1} f .ZIP_FORMER\n ${SIZEDIR}"
 									fi
 									
 								else 	
-									LASTRAW="OK, ${LAST1} f in .ZIP"
+									#SIZEDIR=$(${PATHGNU}/gfind "${PATHRAWZIP}/" -maxdepth 1 \( -type d -o -type f \) -name "S1${SENSOR}*${LASTSIMG}T*" -exec ${PATHGNU}/gdu -sb {} + 2>/dev/null | ${PATHGNU}/gawk '{sum += $1} END {print sum}')	# sums the several hits
+									CheckSizeFilesOrDirs "${PATHRAWZIP}"
+									LASTRAW="OK, ${LAST1} f in .ZIP\n ${SIZEDIR}"
 							fi
 							
 						else 
-							LASTRAW="FORMER, ${LAST1} dirs "
+							#SIZEDIR=$(${PATHGNU}/gfind "${PATHRAW}_FORMER/_${LASTYEAR}/" -maxdepth 1 \( -type d -o -type f \) -name "S1${SENSOR}*${LASTSIMG}T*" -exec ${PATHGNU}/gdu -sb {} + 2>/dev/null | ${PATHGNU}/gawk '{sum += $1} END {print sum}')	# sums the several hits
+							CheckSizeFilesOrDirs "${PATHRAW}_FORMER/_${LASTYEAR}"
+							LASTRAW="FORMER, ${LAST1} dirs ${SIZEDIR}"
  					fi
 				else 
-					LASTRAW="OK, ${LAST1} dirs "
+					CheckSizeFilesOrDirs "${PATHRAW}"
+					LASTRAW="${LAST1} dirs ${SIZEDIR}"
  			fi
 
 			# check CSL:
@@ -446,13 +453,16 @@ esac
 								then
 									LASTCSL="${reverse} missing       ${normal}" 
 								else
-									LASTCSL="${yellow} Quarantained  ${normal}" 						
+									CheckNrBursts "${PATHCSLSHORT}/Quarantained"
+									LASTCSL="${yellow} Qrtined, ${NRBURSTS} bursts ${normal}" 						
 							fi
 						else
-							LASTCSL="${yellow} tmp qrtined   ${normal}" 
+							CheckNrBursts "${PATHCSL}/__TMP_QUARANTINE"
+							LASTCSL="${yellow} tmp Qrtined, ${NRBURSTS} bsts${normal}" 
 					fi
 				else 
-					LASTCSL="OK, ${LAST2} file "
+					CheckNrBursts "${PATHCSL}"
+					LASTCSL="${LAST2} img, ${NRBURSTS} bsts"
 					LAST21=2	# dummy value to avoid error in test further down
 					LAST211=2 	# dummy value to avoid error in test further down
 			fi
@@ -574,10 +584,10 @@ esac
 			if [ "${CONSISTENCY2}" == "" ]
 				then
 					# print on one line
-					printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n" "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
+					printf "%-9s | %-10s | %-19s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n" "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
 				else
 					# print second line for long CONSISTENCY message
-					printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n " "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
+					printf "%-9s | %-10s | %-19s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n " "$i" "${LASTSIMG}" "${LASTRAW}" "${LASTCSL}" "${LASTRESAMPL}" "${LASTMP}" "${LASTGEOC}" "${LASTMSBAS}" "${CONSISTENCY}" 
 					printf "%-132s %-50s\n" " " "${CONSISTENCY2}" 
 					if [ "${CONSISTENCY3}" != "" ]
 						then
@@ -850,7 +860,7 @@ function PrintHeader()
 	HD9="Remark"
 
 	echo ""
-	printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n"  "${underline}${bold} ${HD1}" "${HD2}" "${HD3}" "${HD4}" "${HD5}" "${HD6}" "${HD7}" "${HD8}" "${HD9}${normal}"
+	printf "%-9s | %-10s | %-19s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n"  "${underline}${bold} ${HD1}" "${HD2}" "${HD3}" "${HD4}" "${HD5}" "${HD6}" "${HD7}" "${HD8}" "${HD9}${normal}"
 	}	
 	
 function PrintHeaderCSK()
@@ -868,7 +878,36 @@ function PrintHeaderCSK()
 	echo ""
 	printf "%-9s | %-10s | %-15s | %-15s | %-15s | %-15s %-18s | %-15s | %-50s\n"  "${underline}${bold} ${HD1}" "${HD2}" "${HD3}" "${HD4}" "${HD5}" "${HD6}" "${HD7}" "${HD8}" "${HD9}${normal}"
 	}	
-	
+
+			
+# Check dir(s) or file(s) size
+	function CheckSizeFilesOrDirs()
+		{
+			local PATHTOCHECK=$1
+
+			SIZEDIR=$(${PATHGNU}/gfind "${PATHTOCHECK}" -maxdepth 1 \( -type d -o -type f \) -name "S1${SENSOR}*${LASTSIMG}T*" -exec ${PATHGNU}/gdu -sb {} + 2>/dev/null | ${PATHGNU}/gawk '{sum += $1} END {print sum}')	# sums the several hits
+			if [ -n "$SIZEDIR" ]; then
+				# Convert bytes to human-readable format
+				if [ "$SIZEDIR" -lt 1024 ]; then
+					    SIZEDIR="${SIZEDIR}B"
+					elif [ "$SIZEDIR" -lt $((1024*1024)) ]; then
+					    SIZEDIR="$((SIZEDIR/1024))KB"
+					elif [ "$SIZEDIR" -lt $((1024*1024*1024)) ]; then
+					    SIZEDIR="$((SIZEDIR/1024/1024))MB"
+					else
+					    SIZEDIR="$((SIZEDIR/1024/1024/1024))GB"
+					fi
+			fi
+		}
+
+# Check nr of bursts
+	function CheckNrBursts()
+		{
+			local PATHTOCHECK=$1
+
+			NRBURSTS=$(find ${PATHTOCHECK}/*${LASTSIMG}*/Info/PerBurstInfo -type f -name "SLCImageInfo.swath*.burst*.txt" 2>/dev/null | wc -l | ${PATHGNU}/gsed "s/ //g")
+		}
+
 # Let's go...
 
 
@@ -1210,7 +1249,7 @@ if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Karthala" ] ; then
 		PATHMSBAS=$PATH_3602/MSBAS/_Karthala_S1_Auto_150m_150days/
 		TARGET_KML=$PATH_1650/kml/Karthala/Karthala_Download_Polygon.kml
 	
-	echo "${bold}KARTHALA Sentinel-1 Asc 86; satellite A${normal}"
+	echo "${bold}KARTHALA Sentinel-1 SM Asc 86; satellite A${normal}"
 		PATHCSL=$PATH_1650/SAR_CSL/S1/KARTHALA_SM_A_86/NoCrop
 		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_A_86/SMCrop_SM_20220713_ComoresIsland_-11.94--11.34_43.22-43.53
 		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_A_86/SMCrop_SM_20220713_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
@@ -1225,7 +1264,7 @@ if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Karthala" ] ; then
 		done
 	
 		PrintHeader
-	echo "${bold}KARTHALA Sentinel-1 Desc 35; satellite A${normal}"
+	echo "${bold}KARTHALA Sentinel-1 SM Desc 35; satellite A${normal}"
 		PATHCSL=$PATH_1650/SAR_CSL/S1/KARTHALA_SM_D_35/NoCrop
 		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_D_35/SMCrop_SM_20241027_ComoresIsland_-11.94--11.34_43.22-43.53
 		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_D_35/SMCrop_SM_20241027_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
@@ -1239,6 +1278,27 @@ if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Karthala" ] ; then
 				CheckS1
 		done
 		
+	PrintHeader
+		PATHRAW=$PATH_3600/SAR_DATA/S1/S1-DATA-KARTHALA-SLC.UNZIP
+		PATHMSBAS=$PATH_3602/MSBAS/_Karthala_S1_Auto_150m_150days/
+		TARGET_KML=$PATH_1650/kml/Karthala/Karthala_Download_Polygon.kml
+	
+	echo "${bold}KARTHALA Sentinel-1 IW Asc 86; satellite A${normal}"
+		PATHCSL=$PATH_1650/SAR_CSL/S1/KARTHALA_A_86/NoCrop
+		PATHRESAMP=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_A_86/SMCrop_SM_		#20220713_ComoresIsland_-11.94--11.34_43.22-43.53
+		PATHMASSPROCESS=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMCrop_SM_	#20220713_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
+		PATHBASELINE=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set3/table				#_0_50_0_150_Till_20220501_0_150_0_150_After.txt
+		MSBASMODE=DefoInterpolx2Detrend3
+		FIRSTIMG=20250703  # YYYYMMDD
+		SENSOR=C
+		# Check the last images
+		for i in $(seq 1 ${OLD})			
+			do 
+				CheckS1
+		done
+	
+
+
 		echo	
 fi
 
@@ -1645,7 +1705,7 @@ if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Nepal" ] ; then
 	echo "${bold}Nepal Sentinel-1 Desc 92; satellite A${normal}"
 		PATHCSL=$PATH_3611/SAR_CSL/S1/Nepal_D_92/NoCrop
 		PATHRESAMP=$PATH_3610/SAR_SM/RESAMPLED/S1/NEPAL_D_92/SMNoCrop_SM_20220714
-		PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_19/SMNoCrop_SM_20220714_Zoom1_ML2
+		PATHMASSPROCESS=${PATH_3611}/SAR_MASSPROCESS/S1/NEPAL_D_92/SMNoCrop_SM_20220714_Zoom1_ML2
 		PATHBASELINE=${PATH_1660}/SAR_SM/MSBAS/NEPAL/set4/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
 		MSBASMODE=DefoInterpolx2Detrend4
 		FIRSTIMG=20141024  # YYYYMMDD

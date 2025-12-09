@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------------------
 # This script is aiming at checking unwrapping error in all triangles from a list computed with _Extract_Triangles.sh. 
 #
-# Parameters : - file with list of triangles
+# Parameters : - file with list of triangles (computed with Extract_Triangles.sh, eg .../SAR_SM/MSBAS/YourRegion/set1/_Triangles/List_Triangels.txt)
 # 			   - path to deformation files (e.g. /Volumes/hp-D3601-Data_RAID6/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_A_18/SMNoCrop_SM_20180512_Zoom1_ML4/Geocoded/DefoInterpolx2Detrend)
 #			   - path to kml of zone to check
 #			   - threshold to consider that there is no phase error
@@ -25,13 +25,16 @@
 # New in Distro V 1.5:  - replace if -s as -f -s && -f to be compatible with mac os if 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20251111:	- correct _Good_Pairs.txt and _Wrong_Pairs.txt (were not sorted and uniq because of hidden characters)
+#								- improve _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure.txt: keep only single occurrences
+#								Hence now _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure.txt really contains only the bad pairs
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 11, 2025"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -39,7 +42,7 @@ echo " "
 
 #source $HOME/.bashrc
 
-TRIANGLES=$1			# path to file with list of triangles
+TRIANGLES=$1			# path to file with list of triangles (e.g. .../SAR_SM/MSBAS/YourRegion/set1/_Triangles/List_Triangels.txt)
 PATHDEFO=$2				# path to deformation files (e.g. /Volumes/hp-D3601-Data_RAID6/SAR_MASSPROCESS/S1/ARG_DOMU_LAGUNA_A_18/SMNoCrop_SM_20180512_Zoom1_ML4/Geocoded/DefoInterpolx2Detrend)
 KML=$3					# kml of zone where one wants to check unwrapping errors
 LIMIT=$4				# threshold limit above which a triangle is considered as affected by unwrapping error
@@ -164,12 +167,37 @@ done < "${TRIANGLES}"
 #done < /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/ARGENTINE/set1/_Triangles/List_Triangels.txt 
 
 # select only the pairs, sort and uniq them:
-cat _Good_Closure.txt | cut -d : -f1 | ${PATHGNU}/gsed "s% - %\r%g" | sort |uniq > _Good_Pairs.txt
-cat _Wrong_Closure.txt | cut -d : -f1 | ${PATHGNU}/gsed "s% - %\r%g" | sort |uniq > _Wrong_Pairs.txt
+cat _Good_Closure.txt | cut -d : -f1 | ${PATHGNU}/gsed "s% - %\r%g" | sort |uniq > _Good_Pairs_tmp.txt
+cat _Wrong_Closure.txt | cut -d : -f1 | ${PATHGNU}/gsed "s% - %\r%g" | sort |uniq > _Wrong_Pairs_tmp.txt
+
+cat _Good_Pairs_tmp.txt \
+  | tr '\r' '\n' \
+  | ${PATHGNU}/gsed 's/[[:space:]]\+$//' \
+  | sort -u > _Good_Pairs.txt
+cat _Wrong_Pairs_tmp.txt \
+  | tr '\r' '\n' \
+  | ${PATHGNU}/gsed 's/[[:space:]]\+$//' \
+  | sort -u > _Wrong_Pairs.txt
+
+rm -f _Good_Pairs_tmp.txt _Wrong_Pairs_tmp.txt
+
 
 # select all pairs that are in Wrong but not in Good (to be removed from Modei.txt for instance using Remove_Pairs_From_BaselineOptimisation.sh)
 echo " Pairs listed in _Wrong_Closure.txt that are not in _Good_Closure.txt are saved in _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure.txt"
-${PATHGNU}/grep -Fv -f _Good_Pairs.txt _Wrong_Pairs.txt > _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure.txt
+${PATHGNU}/grep -Fv -f _Good_Pairs.txt _Wrong_Pairs.txt > _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure_tmp.txt
+
+# clean trailing hidden characters and ensure proper carriage return, sort and uniq even if pairs are inverted 
+cat _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure_tmp.txt \
+  | tr '\r' '\n' \
+  | ${PATHGNU}/gsed 's/[[:space:]]\+$//' \
+  | ${PATHGNU}/gawk -F'_' 'NF==2 {
+      if ($1 <= $2) print $1"_"$2;
+      else print $2"_"$1;
+    }' \
+  | sort -u > _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure.txt
+
+rm -f _Pairs_To_Clean_From_WrongClosure_NotIn_GoodClosure_tmp.txt
+
 
 #find . -maxdepth 1 -type f -name "*" -exec cp -n {} /${KMLNAME}_Thresold_${LIMIT}/ \;
 #cp _Good_Closure.txt ${KMLNAME}_Thresold_${LIMIT}/
