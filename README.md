@@ -27,6 +27,10 @@ Kompsat5, PAZ, SAOCOM, ICEYE, NISAR...).
 AMSTer Engine is optimised to fit the needs of the AMSTer Toolbox, which benefitted from some
 of its unique specificities.   
 
+AMSTer can now process the Sentinel1 ETAD data for 
+- applying Tropospheric and/or Ionospheric and/or Geodetic corrections to the interferometric products;
+- improving the geometric accuracy in Sentinel-1 images up to the centimetric-level at the geocoding step. 
+
 Geocoded amplitude, coherence, interferometric phase and deformation maps are computed 
 using AMSTer Engine, a command line InSAR processor derived from the Centre Spatial de 
 Liege (CSL) InSAR Suite (CIS)[Derauw, 1999; Derauw et al, 2019]. 
@@ -58,26 +62,38 @@ At least I can try on the best effort basis...
 
 **________**
 
-"AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series" © 2023 
-by Nicolas d'Oreye, Dominique Derauw, Sergey Samsonov, Delphine Smittarello, Maxime Jaspard and Gilles Celli 
-is licensed under CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike 4.0 International).
-http://creativecommons.org/licenses/by-nc-sa/4.0/
+"AMSTer: Automated SAR & InSAR Mass processing Software for Multidimensional Time series" 
+© 2023 by Nicolas d'Oreye, Dominique Derauw, Sergey Samsonov, Delphine Smittarello, 
+Maxime Jaspard and Gilles Celli is a free software: you can redistribute it and/or modify 
+it under the terms of the GNU Affero General Public (AGPL) License as published by the 
+Free Software Foundation, either version 3 of the License, or any later version. 
+See the GNU Affero General Public License at https://www.gnu.org/licenses/.
 
 
 You are free to:
-    Share — copy and redistribute the material in any medium or format
-    Adapt — remix, transform, and build upon the material
-    The licensor cannot revoke these freedoms as long as you follow the license terms.
+    Run, study, modify, and distribute the software, including for commercial purposes. 
+    However, a key requirement is that if you modify the software and make it available 
+    to users over a network, you must make the source code of your modifications 
+    available to those users as well. 
 
-Under the following terms:
-    Attribution - You must give appropriate credit , provide a link to the license, and indicate if changes were made . You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
-    NonCommercial - You may not use the material for commercial purposes.
-    ShareAlike - If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
-    No additional restrictions - You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+What is required
+	- Network-based access: If you modify the software and run it on a network server, 
+	  you must provide the source code of your modified version to the users of 
+	  that server.
+	- Source code sharing: When you distribute the software or make it available over 
+	  a network, you must include the complete source code for both the original 
+	  software and any modifications you have made.
+	- License compliance: All modified versions must be released under the AGPL, and 
+	  you cannot license the entire work under different terms.
+	- Attribution and notices: You must carry prominent notices indicating that you 
+	  have modified the work and state that it is released under the AGPL license. 
 
-Notices:
-  You do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation .
-  No warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material.
+What is not allowed: 
+	- Sublicensing: You cannot rework the code and then offer the modifications to 
+	  the public under a more restrictive, non-AGPL license.
+	- Closing off modifications: The "open source" nature of the original code follows 
+	  any update or addition you make, so you cannot keep your modifications private 
+	  if they are shared via a network. 
 
 Moreover, MSBAS is licensed to the https://open.canada.ca/en/open-government-licence-canada
 
@@ -129,19 +145,35 @@ The development of the AMSTer Software commenced in the early 2010s and leverage
 
 **________**
 
+- New in V 20251209:
+   1. AMSTer Engine 20251114:
+      - Change in licensing 
+      - Some bugs corrections (see History.txt in source file)
+      - Ready for coherence tracking
+   2. AMSTer Toolbox scripts:
+      - Change in licensing 
+      - Automated processing for ETAD data
+      - python3 is now installed in a virtual environment, 
+      - some new scripts and tools, e.g.: 
+      	+ add several examples of cron scripts; 
+      	+ new tool to create color kmz with legend
+      	+ new tool to transform an ENVI files in color Cloud optimized Geotiff 
+      	+ minor bugs corrections and changes to deal with "unusual cases""... 
+   3. Manual updated accordingly
+
 - New in V 20250807:
    1. AMSTer Engine 20250806:
       - Allows processing NISAR data
       - imporved/corrected S1, ENVISAT and ERS readers
       - new/imporved S1, S2 and ETAD data downloader
-   3. AMSTer Toolbox scripts:
+   2. AMSTer Toolbox scripts:
       - Automated processing for NISAR data
       - Cope with S1C (and ready for S1D) processing
       - New "diagtoolbox"
       - Allows asymetric zoom and geocoding (for single pair processing)
       - Several new tools for small maintenance/check/repair tasks
       - Some additional examples of cron scripts for automated processing, e.g. splitting the msbas inversion (freeze the unchanged beginning of the time series to speed processing time), coping with several acquisition modes etc... These new cron scripts are not documented in the manual. See scripts for info.   
-   5. Manual updated accordingly
+   3. Manual updated accordingly
  
       
 - New in V 20241203:
