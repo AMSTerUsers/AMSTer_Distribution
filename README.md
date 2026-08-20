@@ -132,6 +132,7 @@ https://doi.org/10.4095/313749
     Dominique Derauw [3,4] (AMSTer Engine)
     Sergey Samsonov [5] (MSBAS)
     Delphine Smittarello [1] (modules for pair selection optimisation, recursive unwrapping...)
+    Quentin Glaude [1] (ESD module and more)
     Maxime Jaspard [1] (web interface)
     Gilles Celli [1,2] (downloaders, compilation issues...)
 
