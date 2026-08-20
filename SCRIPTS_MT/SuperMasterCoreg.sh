@@ -76,13 +76,17 @@
 # New in Distro V 4.2 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
 #								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
 # New in Distro V 4.3 20250805:	- Cope with NISAR data (not tested yet)
+# New in Distro V 5.0 20260428:	- Allows coregistration of S1 on Global Primary (Super Master), providing that the 
+#								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
+# New in Distro V 5.1 20260703:	- allows S1coregistration with ESD option 
+# New in Distro V 5.2 20260729:	- Keep computing amplitude for S1 in WIDESWATH mode because it is needed in mass processing 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 29, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -158,9 +162,14 @@ ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
 PIXSHAPE=`GetParam "PIXSHAPE,"`				# PIXSHAPE, pix shape for products : SQUARE or ORIGINALFORM   
 CALIBSIGMA=`GetParam "CALIBSIGMA,"`			# CALIBSIGMA, if SIGMAYES it will output sigma nought calibrated amplitude file at the insar product generation step  
 
+ESD=`GetParam "ESD,"`						# ESD,For S1: applying Extended Spectral Density (ESDYes), or not (anything else than ESDYes)
+
 COH=`GetParam "COH,"`						# Coarse coregistration correlation threshold  
 CCOHWIN=`GetParam "CCOHWIN,"`     			# CCOHWIN, Coarse coreg window size (64 by default but may want less for very small crop)
 CCDISTANCHOR=`GetParam "CCDISTANCHOR,"`		# CCDISTANCHOR, Coarse registration range & az distance between anchor points [pix]
+
+S1COREGMODE=`GetParam "S1COREGMODE,"`		# S1COREGMODE,  For S1 only: either S1SM (for coregistering all the S1 on a given Super Master),
+											#  or S1ORBIT (or anything else than S1SM) to skip coreg and rely only on the S1 orbits. 
 
 FCOH=`GetParam "FCOH,"`						# Fine coregistration correlation threshold 
 FCOHWIN=`GetParam "FCOHWIN,"`				# FCOHWIN, Fine coregistration window size (size in az or rg is computed based on Az/Rg ratio) 
@@ -339,11 +348,17 @@ case ${SATDIR} in
 		S1ID=`GetParamFromFile "Scene ID" SAR_CSL_SLCImageInfo.txt`
 		S1MODE=`echo ${S1ID} | cut -d _ -f 2`	
 		# If S1 is strip map, it requires normal processing
-		if [ ${S1MODE} == "IW" ] || [ ${S1MODE} == "EW" ]
+		if [ "${S1MODE}" == "IW" ] || [ "${S1MODE}" == "EW" ]
 			then 
-				S1MODE="WIDESWATH"
-				EchoTee "S1 data do not require coregistration on a Global Primary (SuperMaster) for SuperMaster_MassProc.sh."
-				EchoTee "However, we will take this opportunity to compute DEM for each (New) S1 image."
+				if [ "${S1COREGMODE}" == "S1SM" ]
+					then
+						EchoTee "Shall coregister all S1 images on a Global Primary (SuperMaster)."
+						S1MODE="WSWATHSM"					
+					else				
+						S1MODE="WIDESWATH"
+						EchoTee "S1 data do not require coregistration on a Global Primary (SuperMaster) for SuperMaster_MassProc.sh."
+						EchoTee "However, we will take this opportunity to compute DEM for each (New) S1 image."
+				fi
 			else 
 				S1MODE="STRIPMAP"
 		fi
@@ -718,7 +733,7 @@ EchoTee "--------------------"
 EchoTee "--------------------"
 
 if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] ; then 
-	# Because S1 data can't be coregistered on a SUPERMASTER, we will need a DEM for each image 
+	# Because you choose to not coregister S1 data on a SUPERMASTER, we will need a DEM for each image 
 	EchoTee "Be sure of your choice of mask because it will be computed for each img."
 	if [ "${FORCES1DEM}" == "FORCE" ] ; then
 			EchoTee "You requested to recompute DEM (and mask) for each S1 image"
@@ -804,13 +819,15 @@ do
 	EchoTee "Amplitude images"					
 	EchoTee "--------------------------------"
 	EchoTee "--------------------------------"
-			if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]						
-			then	
-				EchoTee "Skip Amplitude generation because not needed for S1 coreg. "
+		if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WSWATHSM" ]	
+			then
+				# Must also compute amplitudes for S1 WideSwath with Super Master because it will be needed for Mass Processing.
+				# Hence S1MODE = WIDESWATH is not excluded here. 
+				EchoTee "Skip Amplitude generation because not needed for S1 coreg, even with coregistration on a Gloabl Primary. "
 				EchoTee "No need of _SUPERMASTER_Ampli_Img_Reduc nor ModulesForCoreg directories."
-				EchoTee " If want to run Amplitude generation anyway, ensure to have read S1 image with -b option"
 				cd ${RUNDIR}/i12
-			else
+			else 
+				
 				# Although TSX, TDX and ENVISAT may have orbits good enough to skip coarse coreg, we prefer to compute it here
 				mkdir -p  ${OUTPUTDATA}/ModulesForCoreg
 				# Compute (master and) SLV amplitudes
@@ -860,14 +877,29 @@ do
 				if [ ! -s ${PATHSLV} ] ; then
 					EchoTeeRed "  // Module file of Secondary is empty. May indicate that crop is outside of image or CSL image corrupted.  \n"
 				fi	
-			fi	
+		fi
+	
 	echo 
 	EchoTee "--------------------------------"	
 	EchoTee "Coregistration - resampling"	
 	EchoTee "--------------------------------"
 	EchoTee "--------------------------------"
-	if [ "${SATDIR}" == "S1" ]  && [ "${S1MODE}" == "WIDESWATH" ] ; then
-		EchoTee "S1Coregistration not needed - will be computed anyway for each pair at mass processing."
+
+	if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] ; then		# i.e. S1 with mode WIDESWATH without Super Master
+			EchoTee "S1Coregistration not requested - will be computed anyway for each pair at mass processing."
+
+	elif [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WSWATHSM" ] ; then 	# i.e. S1 with mode WIDESWATH with Super Master
+			EchoTee "S1Coregistration resquested on Global Primary."
+
+			# ADD/ADAPT BELOW WHEN S1Coregistration with ESD WILL BE OK ON A SUPER MASTER 
+			#if [ "${ESD}" == "ESDYes" ] 
+			#	then 
+			#		EchoTee "Perform ESD..."
+			#		S1Coregistration -e
+			#	else 
+			#		EchoTee "Do not perform ESD..."
+					S1Coregistration 
+			#fi
 	else
 		# Coarse Coregistration and quality testing
 

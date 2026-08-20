@@ -90,7 +90,7 @@ $PATH_SCRIPTS/SCRIPTS_MT/Read_All_Img.sh ${DIRSARDATA} ${DIRSARCSL}/NoCrop S1 ${
 ################################################
 # Asc ; bursts size and coordinates are obtained by running e.g.:  _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/ARG_DOMU_LAGUNA_A_18/NoCrop/S1B_18_20211210_A.csl Dummy
 #_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 -71.1264 -37.3038 -69.1902 -36.8461 -71.5447 -36.0797 -69.6394 -35.6292 &
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 ${KMLDOWNLOADFILE}
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 ${KMLDOWNLOADFILE} &
 
 # Desc ; bursts size and coordinates are obtained by running e.g.: _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/ARG_DOMU_LAGUNA_D_83/NoCrop/S1B_83_20211109_D.csl Dummy
 # Beware D83 with S1B after Jan 2020 are shorter on the Western side, hence check first with large coordinate, then check the images in __TMP_QUARANTINE with smaller coordinates. 
@@ -98,7 +98,7 @@ _Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 ${KMLDOWNLOADFIL
 
 # consistent with S1B before Jan 2020 
 #_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 -69.0318 -36.1361 -70.9962 -35.6524 -69.4497 -37.3619 -71.4464 -36.8704 &
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 ${KMLDOWNLOADFILE}
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 ${KMLDOWNLOADFILE} &
 
 wait 
 

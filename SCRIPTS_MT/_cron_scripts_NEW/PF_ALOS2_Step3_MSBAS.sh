@@ -45,14 +45,14 @@
 #									- change C_FLAG back to 10 
 #									- reject some pairs in 11D and 13D
 #									- corr bug in mkdir ghost LOS dir that contained tabs and spaces at the end of name
-
+# New in Distro V 1.9.0 2026730 :	- force msbasv4								
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.8.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 24, 2025"
+VER="Distro V1.9.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
 
 
 echo " "
@@ -854,7 +854,7 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 			else
 				cd "${MSBASDIR}"
 				cp -f "${MSBASDIR}/header_${MODE}.txt"  header.txt 
-				${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh "_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}" "${TIMESERIESPTS}"
+				${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh "_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}" "${TIMESERIESPTS}" --msbasv4
 		
 				cp "${TIMESERIESPTSDESCR}" "${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/"
 				# remove header line to avoid error message 
@@ -1747,7 +1747,7 @@ cd ${MSBASDIR}
 # 		${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend1.txt/DefoInterpolx2Detrend1_Full.txt/' ${MSBASDIR}/header.txt
 # 		${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend2.txt/DefoInterpolx2Detrend2_Full.txt/' ${MSBASDIR}/header.txt
 # 
-# 		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+# 		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS} --msbasv4
 # 
 # 		# Make baseline plot 
 # 		PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1_Full/DefoInterpolx2Detrend1_Full.txt
@@ -1829,7 +1829,7 @@ cd ${MSBASDIR}
 # 				_Check_bad_DefoInterpolx2Detrend.sh DefoInterpolx2Detrend2 ${PATHMASSPROCESS} &
 # 				wait 
 # 				
-# 				${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+# 				${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 # 				if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt ; then echo "Solved after cleaning DefoInterpolx2Detrend's txt"; else  echo "!! MSBAS crashed on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt ; fi
 # 		fi
 
@@ -2076,7 +2076,7 @@ cd ${MSBASDIR}
 
 	TIMESERIESPTS="${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts/List_DoubleDiff_EW_UD_${LABEL}.txt"
  	
- 	${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh "_Auto_${ORDER}_${LAMBDA}_${LABEL}" "${TIMESERIESPTS}"
+ 	${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh "_Auto_${ORDER}_${LAMBDA}_${LABEL}" "${TIMESERIESPTS}" --msbasv4
  	
  	# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 	cp "${TIMESERIESPTSDESCR}" "${MSBASDIR}"/"zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}"/

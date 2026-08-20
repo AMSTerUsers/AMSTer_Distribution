@@ -12,10 +12,10 @@
 # S1 and SAOCOM images of more than 6 months are moved to ${RAW}_FORMER/yyyy dirs
 #
 # Parameters : - path to dir with the raw archives to read.   
-#              - path to dir where images in csl format will be stored (usuallu must end with /NoCrop)
+#              - path to dir where images in csl format will be stored (usually must end with /NoCrop)
 #              - satellite (to know which dir naming format is used)
 #			   - kml file and path of footprint of zone of interest (optional but useful eg for S1 and manatory for SAOCOM)
-#			   - for S1, SAOCOM or ICEYE : force reading data in yyyy directories if this param is "ForceAllYears" 
+#			   - for S1, SAOCOM, ICEYE or NISAR : force reading data in yyyy directories if this param is "ForceAllYears" 
 #			   - for S1, if "-n": skip updating the orbits
 #			   - for S1: if orbits are updated, one must provide a path to where the RESAMPLED data are stored 
 #				  as well as the SAR_MASSPORCESS data are stored; these results will be removed and 
@@ -141,13 +141,18 @@
 # New in Distro V 5.13 20250304:	- harmless typo in reading option EXACTKML 
 # New in Distro V 5.14 20250401:	- Reads ERS file format that is like ENVISAT now 
 # New in Distro V 5.15 20250805:	- Reads NISAR data
+# New in Distro V 5.16 20260128:	- Deal with dual NISAR frequencies
+#									- replace readlink -f "${LINK}" which does not work on Mac OSX 
+# New in Distro V 5.17 20260316:	- allows selecting NISAR polarisation at reading
+# New in Distro V 5.18 20260318:	- allows selecting NISAR Freq at reading
+#									- name NISAR CSL dir with Frame, Orbit and Rge bandwidth
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.15 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2025"
+VER="Distro V5.18 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 18, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -159,10 +164,10 @@ CSL=$2					# path to dir where images in csl format will be stored (usuallu must
 SAT=$3					# satellite
 
 # vvv ----- Hard coded lines to check --- vvv
-source /$HOME/.bashrc
+source "/$HOME/.bashrc"
 # ^^^ ----- Hard coded lines to check --- ^^^
 
-RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
+RUNDATE=$(date "+ %m_%d_%Y_%Hh%Mm" | "${PATHGNU}/gsed" "s/ //g")
 RNDM1=`echo $(( $RANDOM % 10000 ))`
 LOGFILE=${CSL}/LogFile_ReadAll_${RUNDATE}.txt
 echo "" > ${LOGFILE}
@@ -210,6 +215,15 @@ if [ $# -gt 3 ]
 		        	fi
 
 		        	shift 1 ;;
+		        FreqA|FreqB)
+		        	if [[ "$1" == "FreqA" ]]
+		        		then
+		        			NISARFREQ="freq=A"
+		        		else
+				        	NISARFREQ="freq=B"
+				    fi
+		        	shift 1 ;;
+
 		        "EXACTKML")
 		        	# for S1 IW: EXACTKML force to read images with option -k, that is 
 		        	#   to read only brusts exactly overlapping the kml (rather than the circumscribed rectangle)
@@ -375,7 +389,7 @@ EchoTee "  // ${VER}"
 EchoTee ""
 
 # Path to original raw data
-if [ -d "${RAW}/" ]
+if [ -d "${RAW}" ]
 then
    EchoTee " OK: a directory exist where I guess raw data are stored."
    EchoTee "      I guess images are in ${RAW}."
@@ -504,8 +518,12 @@ function TestLink()
 	{
 	unset LINK
 	local LINK=$1
-	local TARGET=$(readlink -f "${LINK}")
+	#local TARGET=$(readlink -f "${LINK}")
+	
+	local TARGET
+	TARGET=$(cd "$(dirname "${LINK}")" && readlink "$(basename "${LINK}")")
 
+	
 	EchoTee ""
 	if [ -e "${TARGET}" ]
 		then
@@ -559,59 +577,139 @@ GetAMSTerEngineVersion
 case ${SAT} in
 	"NISAR")
 		# Use the bulk reader
-		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
+		PARENTCSL="$(dirname "${CSL}")"  # get the parent dir, one level up
 		REGION=`basename ${PARENTCSL}`
 		
-		# Check if there are any subfolders ending with ".csl"
-	    if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
-	      echo "Subfolders with '.csl' found in ${CSL}"
-	      echo "Check if the links are OK, eg. not from the wrong OS"
-          	FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
-	     	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
-	    else
-	      echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
-	    fi
-  
-		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/)
-		# if not, remove broken link
-		EchoTee "Remove possible broken links"
-		for LINKS in `ls -d *.csl 2>/dev/null`
-			do
-				find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken 
-		done
-			
-		if [ "${FAY}" == "ForceAllYears" ]
+		if [ "${NISARFREQ}" == "freq=A" ] || [ "${NISARFREQ}" == "" ] 
 			then 
-				EchoTeeYellow "Read all images in ${RAW}"
-				NISARDataReader ${RAW} ${CSL} -r
+				# Check if there are any subfolders in FrequencyA ending with ".csl"
+	    		if [ -d ./FrequencyA ] ; then
+	    			if find "./FrequencyA" -type f -name "*.csl" -print -quit | grep -q .; then
+	    			  echo "  // Subfolders with .csl found in ${CSL}/FrequencyA"
+	    			  echo "  //   Check if the links are OK, eg. not from the wrong OS"
+        			  FIRSTLINK=`find ./FrequencyA -maxdepth 1 -type f -name "*.csl" 2>/dev/null | head -1`		
+	    			  if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
+	    			else
+	    			  echo "  // No subfolders with .csl found in ${CSL}/FrequencyA, this is a first image reading"
+	    			fi
+ 				fi
+
+				# Check if links in ${CSL}/FrequencyA points toward files (must be in ${PARENTCSL}_FreqA_${MODE}_${TRK}_${INCID}deg/NoCrop/)
+				# if not, remove broken link
+				EchoTee "Remove possible broken links"
+				for LINKS in `ls -d ${CSL}/FrequencyA/*.csl 2>/dev/null`
+					do
+						find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken 
+				done
+ 		fi
+ 
+		if [ "${NISARFREQ}" == "freq=B" ] || [ "${NISARFREQ}" == "" ] 
+			then 
+ 				# Check if there are any subfolders in FrequencyB ending with ".csl"
+	    		if [ -d ./FrequencyB ] ; then
+	    			if find "./FrequencyB" -type f -name "*.csl" -print -quit | grep -q .; then
+	    			  echo "  // Subfolders with .csl found in ${CSL}/FrequencyB"
+	    			  echo "  //   Check if the links are OK, eg. not from the wrong OS"
+        			  	FIRSTLINK=`find ./FrequencyB -maxdepth 1 -type f -name "*.csl" 2>/dev/null | head -1`		
+	    			 	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
+	    			else
+	    			  echo "  // No subfolders with .csl found in ${CSL}/FrequencyB, this is a first image reading"
+	    			fi
+	    		fi
+ 
+ 				# Check if links in ${CSL}/FrequencyB points toward files (must be in ${PARENTCSL}_FreqB_${MODE}_${TRK}_${INCID}deg/NoCrop/)
+				# if not, remove broken link
+				EchoTee "Remove possible broken links"
+				for LINKS in `ls -d ${CSL}/FrequencyB/*.csl 2>/dev/null`
+					do
+						find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken 
+				done
+  		fi
+  		
+			
+		if [ "${FAY}" == "ForceAllYears" ]	# NOT FOR _FORMER etc... To do ! though ForceAllYears force re-reading all images
+			then 
+				EchoTeeYellow "Re-read all images in ${RAW}"
+				if [[ "${INITPOL}" == "ALLPOL" ]]
+					then
+						NISARDataReader ${RAW} ${CSL} -r ${NISARFREQ}
+					else
+						NISARDataReader ${RAW} ${CSL} -r P=${INITPOL} ${NISARFREQ}			
+				fi
 			else 
 				EchoTeeYellow "Read only new images in ${RAW} not yet in ${PARENTCSL}"
-				NISARDataReader ${RAW} ${CSL} 
+				if [[ "${INITPOL}" == "ALLPOL" ]]
+					then
+						NISARDataReader ${RAW} ${CSL} ${NISARFREQ}
+					else
+						NISARDataReader ${RAW} ${CSL} P=${INITPOL} ${NISARFREQ}	 			
+				fi
 		fi
 		EchoTee ""
-		EchoTee "All NISAR img read; now sorting them by mode, track and incidence "
+		EchoTee "All NISAR img read; now sorting them by freq (A or B), mode, track and incidence "
 		EchoTee ""
-		cd ${CSL}
-		for NISIMGPATH in `find ${CSL} -name "*.csl" -print`  # list actually the former links and the new dir if new images were read
-			do
-				NISIMG=`echo ${NISIMGPATH##*/}` 				# Trick to get only name without path
-				NISDATE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Acquisition date"` 					# Get date
-				NISMODE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Heading direction" | cut -c 1` 		# Get the orbit mode (Asc or Des)
-				#NISTYPE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Product ID"` 						# Stripmap or SpotlightHigh
-				NISLOOK=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Look direction" | cut -c 1` 		# L(eft) or R(ight)
-				NISINCID=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Incidence angle at median slant range" | $PATHGNU/gawk '{print int($1+0.5)}' ` 		# incidence angle (rounded)
-				#NISTRK=${NISTYPE}_${NISLOOK}L
-				NISTRK=${NISLOOK}L
-				mkdir -p ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop
-				if [ ! -d ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl ]
-					then
-						# There is no  ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl DIR yet, hence it is a new img; move new img there
-							mv ${NISIMG} ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl 
-							#and create a link
-							ln -s ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl ${CSL}/${NISIMG} 
-							echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl/Read_w_AMSTerEngine_V.txt
-				fi  
-		done
+		if [ -d ${CSL}/FrequencyA ] 
+			then 
+				cd ${CSL}/FrequencyA
+				for NISIMGPATH in `find ${CSL}/FrequencyA/ -name "*.csl" -print`  # list actually the former links and the new dir if new images were read
+					do
+						NISIMG=`echo ${NISIMGPATH##*/}` 				# Trick to get only name without path
+						NISDATE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Acquisition date"` 					# Get date
+						NISMODE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Heading direction" | cut -c 1` 		# Get the orbit mode (Asc or Des)
+						NISORB=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Relative orbit number" ` 			# Relative orbit 
+						NISFRAME=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Scene ID" | $PATHGNU/ggrep -oP 'Frame number : \K\d+' | $PATHGNU/gsed 's/^0*//' ` 			# Frame number without heading zeros
+
+						#NISTYPE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Product ID"` 						# Stripmap or SpotlightHigh
+						NISLOOK=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Look direction" | cut -c 1` 		# L(eft) or R(ight)
+						NISINCID=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Incidence angle at median slant range" | $PATHGNU/gawk '{print int($1+0.5)}' ` 		# incidence angle (rounded)
+						#NISTRK=${NISTYPE}_${NISLOOK}L
+						NISTRK=${NISLOOK}L
+						NISRGBW=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Range bandwidth" | cut -c 1-2` 		# Range bandwidth (in MHz)
+						NISRGBW="${NISRGBW}Mhz"
+						
+						mkdir -p ${PARENTCSL}_FreqA_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop
+						if [ ! -d ${PARENTCSL}_FreqA_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl ]
+							then
+								# There is no  ${PARENTCSL}_FreqA_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl DIR yet, hence it is a new img; move new img there
+									mv ${NISIMG} ${PARENTCSL}_FreqA_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl 
+									#and create a link
+									ln -s ${PARENTCSL}_FreqA_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl ${CSL}/FrequencyA/${NISIMG} 
+									echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_FreqA_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl/Read_w_AMSTerEngine_V.txt
+						fi  
+				done
+		fi
+
+		if [ -d ${CSL}/FrequencyB ] 
+			then 
+				cd ${CSL}/FrequencyB
+				for NISIMGPATH in `find ${CSL}/FrequencyB/ -name "*.csl" -print`  # list actually the former links and the new dir if new images were read
+					do
+						NISIMG=`echo ${NISIMGPATH##*/}` 				# Trick to get only name without path
+						NISDATE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Acquisition date"` 					# Get date
+						NISMODE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Heading direction" | cut -c 1` 		# Get the orbit mode (Asc or Des)
+						NISORB=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Relative orbit number" ` 			# Relative orbit 
+						NISFRAME=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Scene ID" | $PATHGNU/ggrep -oP 'Frame number : \K\d+' | sed 's/^0*//' ` 			# Frame number without heading zeros
+
+						#NISTYPE=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Product ID"` 						# Stripmap or SpotlightHigh
+						NISLOOK=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Look direction" | cut -c 1` 		# L(eft) or R(ight)
+						NISINCID=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Incidence angle at median slant range" | $PATHGNU/gawk '{print int($1+0.5)}' ` 		# incidence angle (rounded)
+						#NISTRK=${NISTYPE}_${NISLOOK}L
+						NISTRK=${NISLOOK}L
+						NISRGBW=`updateParameterFile ${NISIMGPATH}/Info/SLCImageInfo.txt "Range bandwidth" | cut -c 1-2 ` 		# Range bandwidth (in MHz)
+						NISRGBW="${NISRGBW}Mhz"
+						
+						mkdir -p ${PARENTCSL}_FreqB_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop
+						if [ ! -d ${PARENTCSL}_FreqB_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl ]
+							then
+								# There is no  ${PARENTCSL}_FreqB_${NISMODE}_${NISTRK}_${NISINCID}deg/NoCrop/${NISDATE}.csl DIR yet, hence it is a new img; move new img there
+									mv ${NISIMG} ${PARENTCSL}_FreqB_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl 
+									#and create a link
+									ln -s ${PARENTCSL}_FreqB_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl ${CSL}/FrequencyB/${NISIMG} 
+									echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${PARENTCSL}_FreqB_${NISMODE}${NISORB}_${NISTRK}_Frame${NISFRAME}_${NISRGBW}_${NISINCID}deg/NoCrop/${NISDATE}.csl/Read_w_AMSTerEngine_V.txt
+						fi  
+				done
+		fi
+
 		echo 		
 		;; 	
 	"SAOCOM")
@@ -621,14 +719,14 @@ case ${SAT} in
 
  		# Check if there are any subfolders ending with ".csl"
 	    if find "${CSL}" -name "*.csl" -print -quit | grep -q .; then
-	      EchoTee "Subfolder links with '.csl' found in ${CSL}"
+	      EchoTee "Subfolder links with .csl found in ${CSL}"
 	      if [ -n "$(find ${CSL} -type l)" ]  ; then
 	      	EchoTee "Check if these links are OK, that is pointing toward a valid directory (proving that these links were not made with another OS)"
           	FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
 	     	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	     	fi
 	    else
-	      EchoTee "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
+	      EchoTee "No subfolders with .csl found in ${CSL}, this is a first image reading"
 	    fi
  
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${TRK}/NoCrop/)
@@ -683,10 +781,10 @@ case ${SAT} in
 						if [[ "${INITPOL}" == "ALLPOL" ]]
 							then
 								# Read all polarisations
-								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1}
+								SAOCOMDataReader ${RAW}_FORMER ${CSL} ${KMLS1}
 							else
 								# Read only requested polarisation
-								SAOCOMDataReader ${RAW} ${CSL} ${KMLS1} P=${INITPOL}
+								SAOCOMDataReader ${RAW}_FORMER ${CSL} ${KMLS1} P=${INITPOL}
 						fi
 						cp ${CSL}/SAOCOMDataReaderLog.txt ${CSL}/SAOCOMDataReaderLog_Former.txt 2>/dev/null
 				fi
@@ -1066,12 +1164,12 @@ case ${SAT} in
 
 		# Check if there are any subfolders ending with ".csl"
 	    if find "${CSL}" -name "*.csl" -print -quit | grep -q .; then
-	      EchoTee "Subfolders with '.csl' found in ${CSL}"
+	      EchoTee "Subfolders with .csl found in ${CSL}"
 	      EchoTee "Check if the links are OK, eg. not from the wrong OS"
           FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
 	      if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	    else
-	      EchoTee "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
+	      EchoTee "No subfolders with .csl found in ${CSL}, this is a first image reading"
 	    fi
 
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${S1MODE}_${S1TRK}/NoCrop/)
@@ -1723,12 +1821,12 @@ case ${SAT} in
 		
 			# Check if there are any subfolders ending with ".csl"
 	    	if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
-	    	  echo "Subfolders with '.csl' found in $CSL}"
+	    	  echo "Subfolders with .csl found in $CSL}"
 	    	  echo "Check if the links are OK, eg. not from the wrong OS"
           	  FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
 	     	  if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	    	else
-	    	  echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
+	    	  echo "No subfolders with .csl found in ${CSL}, this is a first image reading"
 	    	fi
  	
 			# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_TX/NoCrop/  or ${PARENTCSL}_RX/NoCrop/ )
@@ -1875,12 +1973,12 @@ case ${SAT} in
 		
 		# Check if there are any subfolders ending with ".csl"
 	    if find "${CSL}" -type d -name "*.csl" -print -quit | grep -q .; then
-	      echo "Subfolders with '.csl' found in ${CSL}"
+	      echo "Subfolders with .csl found in ${CSL}"
 	      echo "Check if the links are OK, eg. not from the wrong OS"
           	FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
 	     	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
 	    else
-	      echo "No subfolders with '.csl' found in ${CSL}, this is a first image reading"
+	      echo "No subfolders with .csl found in ${CSL}, this is a first image reading"
 	    fi
   
 		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/)
@@ -1893,7 +1991,7 @@ case ${SAT} in
 			
 		if [ "${FAY}" == "ForceAllYears" ]
 			then 
-				EchoTeeYellow "Read all images in ${RAW}"
+				EchoTeeYellow "Re-read all images in ${RAW}"
 				ICEYEDataReader ${RAW} ${CSL} -r
 			else 
 				EchoTeeYellow "Read only new images in ${RAW} not yet in ${PARENTCSL}"

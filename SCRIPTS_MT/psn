@@ -302,7 +302,7 @@ echo "//________________________________________________________________________
 echo "// Check disks mounting"
 echo "//_____________________"
 # List of mount point variable names
-mount_vars=("PATH_1650" "PATH_3600" "PATH_3601" "PATH_3602" "PATH_1660" "PATH_3610" "PATH_3611" "PATH_DataSAR" )
+mount_vars=("PATH_1650" "PATH_3600" "PATH_3601" "PATH_3602" "PATH_1660" "PATH_3610" "PATH_3611" "PATH_3612"  "PATH_DataSAR" )
 
 for var in "${mount_vars[@]}"; do
     mount_point="${!var}"

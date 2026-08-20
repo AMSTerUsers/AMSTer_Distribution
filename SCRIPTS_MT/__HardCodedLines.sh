@@ -31,6 +31,9 @@
 # New in Distro V 3.6 20250917:	- find font depending on OSX for convert
 # New in Distro V 3.7 20251104:	- also replace if variable names are between {}
 #								- replace back quotes with $(), double quote some variable 
+# New in Distro V 3.8 20251215:	- Add new disk at ECGS D3612
+# New in Distro V 3.9 20251223:	- Add DataSAR in RenameVolNameToVariable, RenameMntToVol, RenamePathToMnt, RenamePathToVol, RenameInPlaceVotToMnt
+# New in Distro V 3.10 20260813: - Add array with the list of recognised atmospheric correction models 
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -75,6 +78,7 @@
 		PATH1660="${PATH_1660}" 
 		PATH3610="${PATH_3610}"				
 		PATH3611="${PATH_3611}"
+		PATH3612="${PATH_3612}"
 				
 		PATHSYNODATA="${PATH_SynoData}"
 		
@@ -112,6 +116,7 @@
 		echo "  12) = hp-1660"
 		echo "  13) = hp-D3610"
 		echo "  14) = hp-D3611"		
+		echo "  15) = D3612"		
 		}
 	
 	# Selection of disk where sessions of Splitxxx will be run. 
@@ -167,6 +172,9 @@
 				 ;;
 			"14") 
 				DISKPATH=/${PATH3611}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
+				 ;;
+			"15") 
+				DISKPATH=/${PATH3612}/PROCESS/AS/${SATDIR}_${TRKDIR}_Part_${i}
 				 ;;
 
 
@@ -275,20 +283,24 @@
 		{
 		ORIGINAL=$1
 		CHANGED=$2
-		"${PATHGNU}"/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g 
-							 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g 
-							 s%\/Volumes\/hp-D3601-Data_RAID6%\/\$PATH_3601%g 
+		"${PATHGNU}"/gsed -e 	"s%\/Volumes\/hp-1650-Data_Share1%\/\$PATH_1650%g
+							 s%\/Volumes\/hp-D3600-Data_Share1%\/\$PATH_3600%g
+							 s%\/Volumes\/hp-D3601-Data_RAID6%\/\$PATH_3601%g
 							 s%\/Volumes\/hp-D3602-Data_RAID5%\/\$PATH_3602%g
-							 s%\/Volumes\/hp1660%\/\$PATH_1660%g 
-							 s%\/Volumes\/D3610%\/\$PATH_3610%g 
-							 s%\/Volumes\/D3611%\/\$PATH_3611%g 
-							 s%\/mnt\/1650%\/\$PATH_1650%g 
-							 s%\/mnt\/3600%\/\$PATH_3600%g 
-							 s%\/mnt\/3601%\/\$PATH_3601%g 
+							 s%\/Volumes\/hp1660%\/\$PATH_1660%g
+							 s%\/Volumes\/D3610%\/\$PATH_3610%g
+							 s%\/Volumes\/D3611%\/\$PATH_3611%g
+							 s%\/Volumes\/D3612%\/\$PATH_3612%g
+							 s%\/Volumes\/DataSAR%\/\$PATH_DataSAR%g
+							 s%\/mnt\/1650%\/\$PATH_1650%g
+							 s%\/mnt\/3600%\/\$PATH_3600%g
+							 s%\/mnt\/3601%\/\$PATH_3601%g
 							 s%\/mnt\/3602%\/\$PATH_3602%g
-							 s%\/mnt\/1660%\/\$PATH_1660%g 
+							 s%\/mnt\/1660%\/\$PATH_1660%g
+							 s%\/mnt\/3612%\/\$PATH_3612%g
 							 s%\/mnt\/3611%\/\$PATH_3611%g
-							 s%\/mnt\/3610%\/\$PATH_3610%g " "${ORIGINAL}" > "${CHANGED}"
+							 s%\/mnt\/3610%\/\$PATH_3610%g
+							 s%\/mnt\/DataSAR%\/\$PATH_DataSAR%g" "${ORIGINAL}" > "${CHANGED}"
 		}
 
 # PlotTS.sh
@@ -327,8 +339,10 @@
 							 s%\/mnt\/3601%\/Volumes\/hp-D3601-Data_RAID6%g  
 							 s%\/mnt\/3602%\/Volumes\/hp-D3602-Data_RAID5%g
 							 s%\/mnt\/1660%\/Volumes\/hp1660%g  
+							 s%\/mnt\/3612%\/Volumes\/D3612%g
 							 s%\/mnt\/3611%\/Volumes\/D3611%g
-							 s%\/mnt\/3610%\/Volumes\/D3610%g" "${ORIGINAL}" > "${CHANGED}"
+							 s%\/mnt\/3610%\/Volumes\/D3610%g
+							 s%\/mnt\/DataSAR%\/\Volumes\/DataSAR%g" "${ORIGINAL}" > "${CHANGED}"
 		}
 
 
@@ -351,8 +365,10 @@
   								s%/\\\$\\{?PATH_3601\\}?%/mnt/3601%g
   								s%/\\\$\\{?PATH_3602\\}?%/mnt/3602%g
   								s%/\\\$\\{?PATH_1660\\}?%/mnt/1660%g
+  								s%/\\\$\\{?PATH_3612\\}?%/mnt/3612%g
   								s%/\\\$\\{?PATH_3611\\}?%/mnt/3611%g
-  								s%/\\\$\\{?PATH_3610\\}?%/mnt/3610%g" "${ORIGINAL}" > "${CHANGED}"  	# \\$: matches a literal $ and \\{? and \\}?: make braces optional
+  								s%/\\\$\\{?PATH_3610\\}?%/mnt/3610%g
+  								s%/\\\$\\{?PATH_DataSAR\\}?%/mnt/DataSAR%g" "${ORIGINAL}" > "${CHANGED}"  	# \\$: matches a literal $ and \\{? and \\}?: make braces optional
 		}
 		
 		
@@ -375,8 +391,10 @@
   								s%/\\\$\\{?PATH_3601\\}?%/Volumes/hp-D3601-Data_RAID6%g
   								s%/\\\$\\{?PATH_3602\\}?%/Volumes/hp-D3602-Data_RAID5%g
   								s%/\\\$\\{?PATH_1660\\}?%/Volumes/hp1660%g
+  								s%/\\\$\\{?PATH_3612\\}?%/Volumes/D3612%g
   								s%/\\\$\\{?PATH_3611\\}?%/Volumes/D3611%g
-  								s%/\\\$\\{?PATH_3610\\}?%/Volumes/D3610%g" "${ORIGINAL}" > "${CHANGED}"		# \\$: matches a literal $ and \\{? and \\}?: make braces optional
+  								s%/\\\$\\{?PATH_3610\\}?%/Volumes/D3610%g
+  								s%/\\\$\\{?PATH_DataSAR\\}?%/Volumes/DataSAR%g" "${ORIGINAL}" > "${CHANGED}"		# \\$: matches a literal $ and \\{? and \\}?: make braces optional
 		}
 
 
@@ -391,8 +409,10 @@
 						 		s%\/Volumes\/hp-D3601-Data_RAID6%\/mnt\/3601%g  
 						 		s%\/Volumes\/hp-D3602-Data_RAID5%\/mnt\/3602%g
 						 		s%\/Volumes\/hp1660%\/mnt\/1660%g  
+								s%\/Volumes\/D3612%\/mnt\/3612%g
 								s%\/Volumes\/D3611%\/mnt\/3611%g
-								s%\/Volumes\/D3610%\/mnt\/3610%g" "${INPUTFILE}"
+								s%\/Volumes\/D3610%\/mnt\/3610%g
+								s%\/Volumes\/DataSAR%\/mnt\/DataSAR%g" "${INPUTFILE}"
 		}
 	
 # Find a valid font
@@ -459,4 +479,14 @@
 		{
 		PATHAMSTERENGINE=${HOME}/SAR/AMSTer/AMSTerEngine
 		PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older
+		}
+
+
+# Atmo_model_removal.sh
+# Detrend_Geoc_CorrectedAtmo.sh
+###############################
+	# Array with the list of recognised atmospheric correction models
+	function ReadArrayAtmoModels()
+		{
+			AtmoCorrList=(MangoGAMIT MangoGIPSY MangoBERNESE GACOS GACOSIncidMapMEAN GACOSIncidMapMEDIAN GACOSIncidMapNoRef GACOSIncidValMEAN GACOSIncidValMEDIAN GACOSIncidValNoRef)
 		}

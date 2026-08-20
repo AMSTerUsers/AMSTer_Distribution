@@ -10,7 +10,9 @@
 #
 #
 # New in Distro V 1.0.0 20250411 :	- based on Guadeloupe processing
-#
+# New in Distro V 1.1.0 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
+#									- add wait at the end
+
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
@@ -60,15 +62,15 @@ TODAY=`date`
 
 
 # Check that GUADELOUPE_S1_Step1_Read_Coreg_Pairs.sh is finished
-CHECKREAD=`ps -eaf | ${PATHGNU}/grep "${STEP1}" | ${PATHGNU}/grep -v "grep " | wc -l`
+CHECKREAD=`ps -eaf | ${PATHGNU}/grep "${STEP1}" | ${PATHGNU}/grep -v "grep " | grep -v "Crons_1_2_3.sh"  | wc -l`
 
 if [ ${CHECKREAD} -eq 0 ] 
 	then 
 		# OK, no more GUADELOUPE_S1_Step1_Read_SMCoreg_Pairs.sh is running: 
 		# Check that no other SuperMaster automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
 
-		CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMASCNAME} | wc -l`
-		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMDESCNAME} | wc -l`
+		CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMASCNAME} | grep -v "Crons_1_2_3.sh"  | wc -l`
+		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMDESCNAME} | grep -v "Crons_1_2_3.sh"  | wc -l`
 
  		if [ ${CHECKASC} -lt 1 ] 
  			then 
@@ -96,3 +98,6 @@ if [ ${CHECKREAD} -eq 0 ]
 		exit 0
 fi
 
+
+#beware: the wait is mandatory to allow waiting for the end of cron2 before launching cron 3
+wait

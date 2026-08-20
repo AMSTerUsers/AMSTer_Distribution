@@ -26,6 +26,8 @@
 #				- Add_DefoMap_ToAllMapsInDir.py and Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py for splitting processing
 #				- Replot_EW_UD_DoubleDiff_TS_From_Cron_Step3.sh and Replot_LoS_DoubleDiff_TS_From_Cron_Step3.sh for splitting processing
 #				- Envi2ras.sh for splitting processing
+#				- Envi2ColorKmz.sh and CreateColorTable.py
+#				- Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
 #
 # New in Distro V 2.0:	- based on beta version used for VVP, Domuyo, Lux and PF processing at ECGS
 # New in Distro V 2.1:	- updated to use new PlotTS_all_comp.sh that computes as well the location and explanation tags etc...
@@ -61,13 +63,23 @@
 # New in Distro V 5.2.0 20251125 :	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
 #									- cp instead of link results in COMMON
 #									- rename recomputed R2 files and create rasters 
+# New in Distro V 5.3.0 20260116:	- in check running process, do not take into account Crons_1_2_3.sh 
+#									- check that flag file does not exist in SAR_MASSPROCESS (created from 385) to attest of running cron 1 or 2
+#									- test if another Step3 is running. If yes, stop to avoid overloading the computer
+# New in Distro V 5.3.1 20260202:	- create kmz for lin velocity of recombined part1 + 2
+#									- clean COMMON dir from defo maps at dates of parti before copying and merging the defo maps.
+#									  This to avoids having several occurrences of same defo map at slightly different 
+#									  time (cfr name) resulting from several inversions 
+# New in Distro V 6.4.1 20260205:	- Add security delete of duplicate msbas defo maps before recomputing mean velocity etc 
+#										using Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+# New in Distro V 6.5.0 2026730 :	- force msbasv4								
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 25, 2025"
+VER="Distro V6.5.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -83,6 +95,12 @@ DD=$(date +%d)
 YYYY=$(date +%Y)
 
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
+
+	# Variables to check that no other cron job step 1 or 2 is running from another computer
+	# in this case, crons 1 and 2 are launched from iMac27
+	TARGET="LUX"
+	PATH_DIR_FOR_FLAG="$PATH_3610/SAR_MASSPROCESS/S1/"
+
 
 	# Max number of threads (to avoid problem with openmp which is by default compiled for max 128)
 		MAXTHREADS=128
@@ -284,9 +302,11 @@ YYYY=$(date +%Y)
 		local TARGETDIR=$2	# e.g. ${COMMONLOS}
 		
 		FILENAMEONLY=$(basename $FILEPATH)
+		file_date_str=$(echo "$FILENAMEONLY" | grep -v LINEAR | ${PATHGNU}/gsed -E 's/MSBAS_([0-9]{8})T[0-9]{6}_LOS\.bin/\1/')
 		
-		rm -f "${TARGETDIR}/${FILENAMEONLY}"
-		rm -f "${TARGETDIR}/${FILENAMEONLY}.hdr"
+		#rm -f "${TARGETDIR}/${FILENAMEONLY}"
+		#rm -f "${TARGETDIR}/${FILENAMEONLY}.hdr"
+		rm -f "${TARGETDIR}"/*"${file_date_str}"*
 		
 		cp -f "$FILEPATH" "${TARGETDIR}/${FILENAMEONLY}"
 		cp -f "$FILEPATH.hdr" "${TARGETDIR}/${FILENAMEONLY}.hdr"
@@ -539,7 +559,7 @@ YYYY=$(date +%Y)
 							${PATHGNU}/gsed -i "s/${DEFOTXT}/${PART1MODELIST}/" ${MSBASDIR}/header.txt
 							# ${MSBASDIR}/header.txt makes use of only one DefoInterpolx2Detrend${MODENR}_Below${PART1END}.txt dataset for part 1 WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 			
-							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAP} #${TIMESERIESPTS} # Do not compute TS
+							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAP} --msbasv4 #${TIMESERIESPTS} # Do not compute TS
 							cp -f ${MSBASDIR}/header_${MODE}.txt header.txt
 							# back to ${MSBASDIR}/header.txt that makes use of only one DefoInterpolx2Detrendi.txt dataset WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 						
@@ -589,7 +609,7 @@ YYYY=$(date +%Y)
 					${PATHGNU}/gsed -i "s/${DEFOTXT}/${PART2MODELIST}/" ${MSBASDIR}/header.txt			
 					# ${MSBASDIR}/header.txt makes use of only one DefoInterpolx2Detrend${MODENR}_After${PART2START}.txt dataset for part 2 WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 	
-					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAP} #${TIMESERIESPTS} # Do not compute TS
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAP} --msbasv4 #${TIMESERIESPTS} # Do not compute TS
 					cp -f ${MSBASDIR}/header_${MODE}.txt header.txt
 					# back to ${MSBASDIR}/header.txt that makes use of only one DefoInterpolx2Detrendi.txt dataset WITH or WITHOUT coh threshold applied in these lists depending if IFCOH = YES or NO
 
@@ -637,13 +657,16 @@ YYYY=$(date +%Y)
 						fi
 					done
 
-					echo "***************************************************************"
-					echo " Rebuild LINEAR_RATE, STD and R2 maps of ${MODE} merged parts. "
-					echo "***************************************************************"
+					echo "*********************************************************************"
+					echo " Rebuild LINEAR_RATE, STD and R2 maps of ${MODE} merged parts + kmz. "
+					echo "*********************************************************************"
 					echo 
 						
 					# recompute mean velocity, stdv and R2 maps from merged defo maps 
 					cd ${COMMONLOS}
+						# Just in case: if multiple defo maps for same date, remove all but most recent files MSBAS_yyyymmddThhmmss*.bin and hdr
+						Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+
 					Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py
 
 					CreateRasAndMv ${COMMONLOS} LOS
@@ -653,9 +676,12 @@ YYYY=$(date +%Y)
 					# Prepare for plots
 					# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 	 				cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
+	 				
+	 				# Create kmz
+	 				Envi2ColorKmz.sh ${MSBASDIR}/zz_LOS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LINEAR_RATE_LOS.bin -l
 						
 				else 		
-					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 					
 					cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 					# remove header line to avoid error message 
@@ -677,15 +703,47 @@ YYYY=$(date +%Y)
 		# move all plots in same dir 
 		rm -f ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/*.jpg
 		mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Combi*.jpg ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-		# move all time series in dir 
-		#mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
 		}
 
+# Check that there is no other Step3 running
+#############################################
+	CHECKCRON3=`ps -Af | ${PATHGNU}/grep "Step3" | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
+	if [ ${CHECKCRON3} -gt 0 ] ; then 
+			REASON=" another Step3 is running, which may overload the computer; pause here" 
+			STOPRUN="YES"
+	fi
 
 # Check that there is no other cron (Step 2 or 3) or manual SuperMaster_MassProc.sh running
 ###########################################################################################
+
+	# Check that no other cron job step 1 or 2 is running, e.g from another computer
+	RUNDATE=$(date "+%m_%d_%Y_%Hh%Mm")
+	RNDM=$(( $RANDOM % 10000 ))
+	
+	# Create a Flag file that warns that crons are running for the target and make a trap to delete it when script ends or is stopped by ctrl-C (not if terminated by reboot or kill -9)
+	FLAGFILE="${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt"
+
+	cleanup() {
+	  rm -f "${FLAGFILE}" 
+	}
+
+	trap cleanup EXIT INT TERM
+	
+	if ! find "${PATH_DIR_FOR_FLAG}" -maxdepth 1 -name "Running_crons_${TARGET}*" -print -quit | grep -q .
+		then
+	    	echo "No running crons step 1 or 2 for ${TARGET} ; can run now"
+   			touch "${FLAGFILE}"
+   			
+    		echo "start cron 3 at $(date '+%Y-%m-%d %H:%M:%S')" >> "${FLAGFILE}"
+	    	
+	    else
+	    	echo "Another cron step 1 or 2 is running for ${TARGET}, see ${PATH_DIR_FOR_FLAG}/Running_crons_${TARGET}*.txt ; Do not run cron3 now"
+	    	exit 1
+	fi
+
+
 	# Check that no other cron job step 3 (MSBAS) or manual SuperMaster_MassProc.sh is running
-	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
 		#### For Debugging
 		# echo "ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v ${PATHGNU}/grep | ${PATHGNU}/grep -v /dev/null | wc -l" > CheckRun.txt
 		# echo ${CHECKMB} >> CheckRun.txt
@@ -696,14 +754,14 @@ YYYY=$(date +%Y)
 			STOPRUN="YES"
 		else
 			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
+			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
 			# For unknown reason it counts 1 even when no process is running
 			if [ ${CHECKASC} -ne 0 ] || [ ${CHECKDESC} -ne 0 ] ; then REASON="  SuperMaster_MassProc.sh in progress (probably manual)" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi  	
 	fi 
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
-	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
 	if [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	if [ "${STOPRUN}" == "YES" ] 
@@ -967,7 +1025,7 @@ cd ${MSBASDIR}
 								# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Full_Below${PART1END}.txt dataset, ie. part 1 with No coh threshold applied in these lists
 
 			
-								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS
+								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART1_OVERLAP_${MIDOVERLAPASC} --msbasv4	#${TIMESERIESPTS} # Do not compute TS
 								cp -f header_back.txt header.txt 
 								# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets with No coh threshold applied in these lists
 
@@ -1045,7 +1103,7 @@ cd ${MSBASDIR}
 						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART2MODE2LIST}/" ${MSBASDIR}/header.txt
 						# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Full_After${PART2START}.txt dataset, ie. part 2 with No coh threshold applied in these lists
 	
-						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh_PART2_OVERLAP_${MIDOVERLAPASC}  --msbasv4 #${TIMESERIESPTS} # Do not compute TS
 						# Now that fresh msbas was computed, remove tag file attesting of offset applied to defo maps 
 						rm -f ${UDTARGETDIR2}/_Offset_applied.txt  2>/dev/null
 						rm -f ${EWTARGETDIR2}/_Offset_applied.txt  2>/dev/null
@@ -1136,27 +1194,38 @@ cd ${MSBASDIR}
 							  fi
 							done
 
-						echo "***************************************************************"
-						echo " Rebuild LINEAR_RATE, STD and R2 maps of EW/UD merged parts. "
+						echo "*******************************************************************"
+						echo " Rebuild LINEAR_RATE, STD and R2 maps + Kmz of EW/UD merged parts. "
 						echo "    without Coh Threshold. "
 						echo " Processing with Coh Threshold will be performed after. "
-						echo "***************************************************************"
+						echo "*******************************************************************"
 						echo 
 
 						# recompute mean velocity, stdv and R2 maps from merged defo maps 
 							cd ${COMMONUD}
-							Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
+								# Just in case: if multiple defo maps for same date, remove all but most recent files MSBAS_yyyymmddThhmmss*.bin and hdr
+								Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+
+								Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
 							cd ${COMMONEW}
-							Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
+								# Just in case: if multiple defo maps for same date, remove all but most recent files MSBAS_yyyymmddThhmmss*.bin and hdr
+								Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+
+								Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
 							
 							wait
 
 							cd ${COMMONUD}
 							CreateRasAndMv ${COMMONUD} UD
+			 				# Create kmz
+			 				Envi2ColorKmz.sh ${COMMONUD}/MSBAS_LINEAR_RATE_UD.bin -l
+
 							
 							cd ${COMMONEW}
 							CreateRasAndMv ${COMMONEW} EW
-							
+			 				# Create kmz
+			 				Envi2ColorKmz.sh ${COMMONEW}/MSBAS_LINEAR_RATE_EW.bin -l
+					
 						cd ${MSBASDIR}	
 
 						# Prepare for plots
@@ -1169,7 +1238,7 @@ cd ${MSBASDIR}
 					${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend2.txt/DefoInterpolx2Detrend2_Full.txt/' ${MSBASDIR}/header.txt
 					# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Full.txt datasets and there is No coh threshold applied in these lists
 
-		 			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+		 			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS} --msbasv4
 
 					cp -f header_back.txt header.txt
 					# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets with No coh threshold applied in these lists
@@ -1248,7 +1317,7 @@ cd ${MSBASDIR}
 								${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART1MODE2LIST}/" ${MSBASDIR}/header.txt
 								# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_Below${PART1END}.txt datasets and there is No coh threshold applied in these lists
 			
-								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS
+								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC} --msbasv4	#${TIMESERIESPTS} # Do not compute TS
 								cp -f header_back.txt header.txt 
 								# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets with No coh threshold applied in these lists
 
@@ -1323,7 +1392,7 @@ cd ${MSBASDIR}
 						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART2MODE2LIST}/" ${MSBASDIR}/header.txt
 						# ${MSBASDIR}/header.txt makes use of DefoInterpolx2Detrendi_After${PART2START}.txt datasets and there is No coh threshold applied in these lists
 	
-						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  --msbasv4 #${TIMESERIESPTS} # Do not compute TS
 						# Now that fresh msbas was computed, remove tag file attesting of offset applied to defo maps 
 						rm -f ${UDTARGETDIR2}/_Offset_applied.txt  2>/dev/null
 						rm -f ${EWTARGETDIR2}/_Offset_applied.txt  2>/dev/null
@@ -1413,25 +1482,35 @@ cd ${MSBASDIR}
 							  fi
 							done
 
-						echo "***************************************************************"
-						echo " Rebuild LINEAR_RATE, STD and R2 maps of EW/UD merged parts. "
+						echo "*******************************************************************"
+						echo " Rebuild LINEAR_RATE, STD and R2 maps + kmz of EW/UD merged parts. "
 						echo "    without Coh Threshold. "
-						echo "***************************************************************"
+						echo "*******************************************************************"
 						echo 
 
 						# recompute mean velocity, stdv and R2 maps from merged defo maps 
 							cd ${COMMONUD}
-							Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
+								# Just in case: if multiple defo maps for same date, remove all but most recent files MSBAS_yyyymmddThhmmss*.bin and hdr
+								Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+
+								Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
 							cd ${COMMONEW}
-							Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
+								# Just in case: if multiple defo maps for same date, remove all but most recent files MSBAS_yyyymmddThhmmss*.bin and hdr
+								Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+
+								Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
 	
 							wait
 
 							cd ${COMMONUD}
 							CreateRasAndMv ${COMMONUD} UD
+		 					# Create kmz
+			 				Envi2ColorKmz.sh ${COMMONUD}/MSBAS_LINEAR_RATE_UD.bin -l
 
 							cd ${COMMONEW}
 							CreateRasAndMv ${COMMONEW} EW
+		 					# Create kmz
+			 				Envi2ColorKmz.sh ${COMMONUD}/MSBAS_LINEAR_RATE_UD.bin -l
 							
 						cd ${MSBASDIR}	
 
@@ -1439,7 +1518,7 @@ cd ${MSBASDIR}
 						# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 	 					cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 				else # i. no split
-					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 					# Make baseline plot 
 					PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1.txt
@@ -1533,7 +1612,7 @@ cd ${MSBASDIR}
 								${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART1MODE2LIST}/" ${MSBASDIR}/header.txt
 								# Now ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi_Below${PART1END}.txt datasets WITH coh threshold applied in these lists
 			
-								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC}	#${TIMESERIESPTS} # Do not compute TS
+								NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART1_OVERLAP_${MIDOVERLAPASC} --msbasv4	#${TIMESERIESPTS} # Do not compute TS
 								cp -f header_back.txt header.txt 
 								# back to ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi.txt datasets WITH coh threshold applied in these lists
 
@@ -1607,7 +1686,7 @@ cd ${MSBASDIR}
 						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${PART2MODE2LIST}/" ${MSBASDIR}/header.txt
 						# Now ${MSBASDIR}/header.txt which makes use of DefoInterpolx2Detrendi_After${PART2START}.txt datasets WITH coh threshold applied in these lists
 	
-						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  #${TIMESERIESPTS} # Do not compute TS
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_PART2_OVERLAP_${MIDOVERLAPASC}  --msbasv4 #${TIMESERIESPTS} # Do not compute TS
 						# Now that fresh msbas was computed, remove tag file attesting of offset applied to defo maps 
 						rm -f ${UDTARGETDIR2}/_Offset_applied.txt  2>/dev/null
 						rm -f ${EWTARGETDIR2}/_Offset_applied.txt  2>/dev/null
@@ -1698,27 +1777,37 @@ cd ${MSBASDIR}
 							  fi
 							done					
 
-						echo "***************************************************************"
-						echo " Rebuild LINEAR_RATE, STD and R2 maps of EW/UD merged parts. "
+						echo "*******************************************************************"
+						echo " Rebuild LINEAR_RATE, STD and R2 maps + kmz of EW/UD merged parts. "
 						echo "    with Coh Threshold. "
-						echo "***************************************************************"
+						echo "*******************************************************************"
 						echo 
 
 
 						# recompute mean velocity, stdv and R2 maps from merged defo maps 
 						# recompute mean velocity, stdv and R2 maps from merged defo maps 
+								# Just in case: if multiple defo maps for same date, remove all but most recent files MSBAS_yyyymmddThhmmss*.bin and hdr
+								Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+
 							cd ${COMMONUD}
-							Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
+								Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
 							cd ${COMMONEW}
-							Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
+								# Just in case: if multiple defo maps for same date, remove all but most recent files MSBAS_yyyymmddThhmmss*.bin and hdr
+								Remove_Duplicate_MSBAS_Maps_Except_MostRecent.sh
+
+								Compute_Velocity_Stdv_R2_maps_From_AllDefoMaps.py &
 	
 							wait
 
 							cd ${COMMONUD}
 							CreateRasAndMv ${COMMONUD} UD
+		 					# Create kmz
+			 				Envi2ColorKmz.sh ${COMMONUD}/MSBAS_LINEAR_RATE_UD.bin -l
 
 							cd ${COMMONEW}
 							CreateRasAndMv ${COMMONEW} EW
+		 					# Create kmz
+			 				Envi2ColorKmz.sh ${COMMONUD}/MSBAS_LINEAR_RATE_UD.bin -l
 
 						cd ${MSBASDIR}	
 
@@ -1727,7 +1816,7 @@ cd ${MSBASDIR}
 	 					cp -f ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 				else 
 					cd ${MSBASDIR}
-					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 		
 					# Make baseline plot 
 					PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1.txt
@@ -1791,5 +1880,8 @@ cd ${MSBASDIR}
 			echo "${LASTDESCTIME}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 		
 	#mv -f ${MSBASDIR}/${TIMESERIESPTSDESCR}.tmp ${MSBASDIR}/${TIMESERIESPTSDESCR}
+
+# Keep track of last successful run
+    cp -f "${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt" "${PATH_DIR_FOR_FLAG}"/"Last_Sucessful_Crons_${TARGET}.txt" 	
 
 # All done...

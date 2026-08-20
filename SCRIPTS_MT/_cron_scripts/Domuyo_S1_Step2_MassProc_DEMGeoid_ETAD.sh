@@ -17,6 +17,7 @@
 # New in Distro V 4.0.0 20240530:	- reprocessing with DEM referred to Geoid 
 # New in Distro V 4.1.0 20240624:	- enlarge BP2 (from back to 20220501) to cope with new S1 orbital tube from 05 2024
 # New in Distro V 6.1.0 20250924:	- Add ETAD data 
+# New in Distro V 6.1.1 20260408:	- corr mass process dir 
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -61,8 +62,8 @@ PARAMASCNAME=`basename ${PARAMPROCESSASC}`
 PARAMDESCNAME=`basename ${PARAMPROCESSDESC}`
 
 #mass Process dir
-MASSPROCESSASCDIR=$PATH_3602/SAR_MASSPROCESS_2_ETAD/S1/ARG_DOMU_LAGUNA_DEMGeoid_ETAD_A_18/SMNoCrop_SM_20180512_Zoom1_ML4
-MASSPROCESSDESCDIR=$PATH_3602/SAR_MASSPROCESS_2_ETAD/S1/ARG_DOMU_LAGUNA_DEMGeoid_ETAD_D_83/SMNoCrop_SM_20180222_Zoom1_ML4
+MASSPROCESSASCDIR=$PATH_3602/SAR_MASSPROCESS_2_ETAD/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_20180512_Zoom1_ML4
+MASSPROCESSDESCDIR=$PATH_3602/SAR_MASSPROCESS_2_ETAD/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCrop_SM_20180222_Zoom1_ML4
 
 
 # Name of step 1 cron script
@@ -84,14 +85,14 @@ TODAY=`date`
 # Check that Domuyo_S1_Step1_Read_SMCoreg_Pairs.sh is finished
 #CHECKREAD=`ps -eaf | ${PATHGNU}/grep Domuyo_S1_Step1_Read_SMCoreg_Pairs.sh | ${PATHGNU}/grep -v "grep " | wc -l`
 # below will be 0 if no run and 2 if script is running (3 if two runs are in preogress etc...) 
-CHECKREAD=`ps -eaf | ${PATHGNU}/grep ${CRONSTEP1} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "dev/null" | wc -l`
+CHECKREAD=`ps -eaf | ${PATHGNU}/grep ${CRONSTEP1} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
 
 if [ ${CHECKREAD} -eq 0 ] 
 	then 
 		# OK, no more Domuyo_S1_Step1_Read_SMCoreg_Pairs.sh is running: 
 		# Check that no other Global Primary (SuperMaster) automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-		CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMASCNAME} | wc -l`
-		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAME} | wc -l`
+		CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMASCNAME} | grep -v "Crons_1_2_3.sh"  | wc -l`
+		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAME} | grep -v "Crons_1_2_3.sh"  | wc -l`
 		if [ ${CHECKASC} -lt 1 ] 
 			then 
 				# No process running yet
@@ -117,4 +118,7 @@ if [ ${CHECKREAD} -eq 0 ]
 
 		exit 0
 fi
+
+#beware: the wait is mandatory to allow waiting for the end of cron2 before launching cron 3
+wait
 

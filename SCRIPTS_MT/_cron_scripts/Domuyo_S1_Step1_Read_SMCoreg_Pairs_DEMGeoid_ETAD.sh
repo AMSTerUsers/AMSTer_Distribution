@@ -23,7 +23,9 @@
 # New in Distro V 6.1.0 20240624:	- enlarge BP2 (from back to 20220501) to cope with new S1 orbital tube from 05 2024
 # New in Distro V 6.1.0 20250924:	- Add ETAD data ; compute baseline plots in seti dir with i = same as without ETAD +10 ; 
 #										no need to read nor resample again the data since ETAD plays no role at these steps 
-
+# New in Distro V 6.2.0 20260109:	- Download ETAD from last existing ETAD before reading them 
+# New in Distro V 6.2.1 20260112:	- debug FIRSTETADASC and FIRSTETADDESC
+# New in Distro V 6.2.2 20260408:	- corr mass process dir 
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -44,7 +46,8 @@ SMASC=20180512		# Asc 18
 SMDESC=20180222		# Desc 83
 
 # FIRST ETAD PROD
-FIRSTETAD=20230701		# atleast in Sept 2025, ESA did not provided with ETAD data before end of July 2023
+FIRSTETADASC=20230701		# atleast in Sept 2025, ESA did not provided with ETAD data before end of July 2023
+FIRSTETADDESC=20230701		# atleast in Sept 2025, ESA did not provided with ETAD data before end of July 2023
 
 # Main olarisation 
 POL=VV
@@ -58,6 +61,9 @@ DIRSARDATA=${PATH_3600}/SAR_DATA/S1/S1-DATA-DOMUYO-SLC.UNZIP
 DIRSARCSL=${PATH_1650}/SAR_CSL/S1/ARG_DOMU_LAGUNA_DEMGeoid
 
 # ETAD DIR
+ETADZIPASCDIR=$PATH_1650/SAR_ETAD.ZIP/ARG_DOMU_LAGUNA_DEMGeoid_A_18
+ETADZIPDESCDIR=$PATH_1650/SAR_ETAD.ZIP/ARG_DOMU_LAGUNA_DEMGeoid_D_83
+
 ETADASCDIR=$PATH_1650/SAR_ETAD.UNZIP/ARG_DOMU_LAGUNA_DEMGeoid_A_18
 ETADDESCDIR=$PATH_1650/SAR_ETAD.UNZIP/ARG_DOMU_LAGUNA_DEMGeoid_D_83
 
@@ -75,6 +81,8 @@ DIRSET=$PATH_1650/SAR_SM/MSBAS/ARGENTINE
 # Tracks (end of dir name where S1 images.csl are stored)
 TRKASC=A_18
 TRKDESC=D_83
+ORBNRASC=18
+ORBNRDESC=83
 
 # Where data will be resampled (on the Global Primary)
 NEWASCPATH=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_A_18/SMNoCrop_SM_${SMASC}
@@ -82,7 +90,7 @@ NEWDESCPATH=$PATH_1650/SAR_SM/RESAMPLED/S1/ARG_DOMU_LAGUNA_DEMGeoid_D_83/SMNoCro
 
 # Dir to clean  when orbits are updated (Reminder: latency of precise orbits = 20 days and ETAD = 14 days and maybe less in future) 
 RESAMDIR=${PATH_1650}/SAR_SM/RESAMPLED/
-MASSPRODIR=${PATH_3602}/SAR_MASSPROCESS_2/
+MASSPRODIR=${PATH_3602}/SAR_MASSPROCESS_2_ETAD/
 
 #Color table 
 #COLORTABLE=$PATH_SCRIPTS/SCRIPTS_MT/TemplatesForPlots/ColorTable_AAADDD.txt	# for 6 data sets
@@ -101,20 +109,30 @@ date >> ${DIRSARCSL}/Last_Run_Cron_Step1.txt
 
 # Read ETAD products
 ####################
+
 # Get last ETAD Data in each mode 
-	RUNDATE=$(${PATHGNU}/gdate "+%Y%m%d")
+LASTETADASC=$(printf "%s\n" "${ETADZIPASCDIR}"/*.zip | grep -oE '[0-9]{8}T[0-9]{6}' | cut -dT -f1 | sort -u | tail -n 1)
+LASTETADDESC=$(printf "%s\n" "${ETADZIPDESCDIR}"/*.zip | grep -oE '[0-9]{8}T[0-9]{6}' | cut -dT -f1 | sort -u | tail -n 1)
+TODAY=$(${PATHGNU}/gdate "+%Y%m%d")
+
+# download, unzip and store ETAD data from the last one to Today
+Download_ETAD_UNZIP_Add2CSL.sh ${LASTETADASC} ${TODAY} ${KMLFILE} ${ETADZIPASCDIR} ${ORBNRASC} ${DIRSARCSL}_${TRKASC}/NoCrop/ &
+Download_ETAD_UNZIP_Add2CSL.sh ${LASTETADDESC} ${TODAY} ${KMLFILE} ${ETADZIPDESCDIR} ${ORBNRDESC} ${DIRSARCSL}_${TRKDESC}/NoCrop/ &
+wait 
+
+## Read again last 100 days just in case some where missing before ?
 	X=100 # days
 	DATEMINUSX=$(${PATHGNU}/gdate -d "-${X} days" "+%Y%m%d") # ie. Today minus X days, here take about 3 months, i.e. 100 days  
-
 ReadETAD.sh ${DIRSARCSL}_${TRKASC}/NoCrop/ ${ETADASCDIR} ${DATEMINUSX} &
 ReadETAD.sh ${DIRSARCSL}_${TRKDESC}/NoCrop/ ${ETADDESCDIR} ${DATEMINUSX} &
 wait 
+
 
 # Check nr of bursts and coordinates of corners. If not as expected, move img in temp quatantine and log that. Check regularily: if not updated after few days, it means that image is bad or zip file not correctly downloaded
 ################################################
 # Asc ; bursts size and coordinates are obtained by running e.g.:  _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/ARG_DOMU_LAGUNA_A_18/NoCrop/S1B_18_20211210_A.csl Dummy
 #_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 -71.1264 -37.3038 -69.1902 -36.8461 -71.5447 -36.0797 -69.6394 -35.6292 &
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 ${KMLDOWNLOADFILE}
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 ${KMLDOWNLOADFILE} &
 
 # Desc ; bursts size and coordinates are obtained by running e.g.: _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/ARG_DOMU_LAGUNA_D_83/NoCrop/S1B_83_20211109_D.csl Dummy
 # Beware D83 with S1B after Jan 2020 are shorter on the Western side, hence check first with large coordinate, then check the images in __TMP_QUARANTINE with smaller coordinates. 
@@ -122,7 +140,7 @@ _Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_18/NoCrop 14 ${KMLDOWNLOADFIL
 
 # consistent with S1B before Jan 2020 
 #_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 -69.0318 -36.1361 -70.9962 -35.6524 -69.4497 -37.3619 -71.4464 -36.8704 &
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 ${KMLDOWNLOADFILE}
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_83/NoCrop 14 ${KMLDOWNLOADFILE} &
 
 wait 
 
@@ -151,7 +169,8 @@ _Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_${TRKDESC}/NoCrop/__TMP_QUARANT
 cd ${DIRSARCSL}_${TRKASC}/NoCrop/
 CheckETAD.sh 
 # take the most recent file
-CHECKETADASC=$(find . -maxdepth 1 -type f -name "_ETAD_All_OK_*_FROM_${FIRSTETAD}.txt" -printf "%T@ %f\n" | sort -n | tail -n 1 | cut -d' ' -f2-) 		# cfr _ETAD_All_OK_...
+CHECKETADASC=$(${PATHGNU}/find . -maxdepth 1 -type f -name "_ETAD_All_OK_*_FROM_${FIRSTETADASC}.txt" -printf "%T@ %f\n" | sort -n | tail -n 1 | cut -d' ' -f2-) 		# cfr _ETAD_All_OK_...
+
 # get only the list of dates - used to search images to link
 ${PATHGNU}/ggrep -oE '[0-9]{8}' ${CHECKETADASC} > List_ImgDate_All_ETAD.txt 
 # get only the list of names, that is S1x....cl - used for coregsitration
@@ -161,7 +180,7 @@ LISTETADASC="${DIRSARCSL}_${TRKASC}/NoCrop/List_ImgName_All_ETAD.txt"
 cd ${DIRSARCSL}_${TRKDESC}/NoCrop/
 CheckETAD.sh 
 # take the most recent file
-CHECKETADDESC=$(find . -maxdepth 1 -type f -name "_ETAD_All_OK_*_FROM_${FIRSTETAD}.txt" -printf "%T@ %f\n" | sort -n | tail -n 1 | cut -d' ' -f2-) 		# cfr _ETAD_All_OK_...
+CHECKETADDESC=$(${PATHGNU}/find . -maxdepth 1 -type f -name "_ETAD_All_OK_*_FROM_${FIRSTETADDESC}.txt" -printf "%T@ %f\n" | sort -n | tail -n 1 | cut -d' ' -f2-) 		# cfr _ETAD_All_OK_...
 # get only the list of dates - used to search images to link
 ${PATHGNU}/ggrep -oE '[0-9]{8}' ${CHECKETADDESC} > List_ImgDate_All_ETAD.txt 
 # get only the list of names, that is S1x....cl - used for coregsitration

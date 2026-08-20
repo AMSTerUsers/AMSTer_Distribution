@@ -36,17 +36,22 @@
 #									- Allows List of points per LOS and per combination  
 #									- Replace "< ${} | tail -n +2" with "< <(tail -n +2 "${}}")" for more stability
 # New in Distro V 1.8.0 20251125 :	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
-
+# New in Distro V 1.8.0 20260113 :	- some cleaning and cosmetic
+# New in Distro V 1.9.0 20260116:	- in check running process, do not take into account Crons_1_2_3.sh 
+#									- test if another Step3 is running. If yes, stop to avoid overloading the computer
+# New in Distro V 1.9.1 20260119:	- typo in arg PlotAllCombiModes ; add MODES in PlotAllLOS	
+# New in Distro V 1.10.0 2026730 :	- force msbasv4								
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.8 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 25, 2025"
+VER="Distro V1.10.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
+
 
 source $HOME/.bashrc
 
@@ -232,7 +237,7 @@ YYYY=$(date +%Y)
 	#################################################
 		# List of SINGLE points for plotting time series with error bars  
 		# unused
-		TIMESERIESPTSDESCR=${PATH_1650}/Data_Points/Points_TS_${LABEL}.txt
+		#TIMESERIESPTSDESCR=${PATH_1650}/Data_Points/Points_TS_${LABEL}.txt
 
 		TIMESERIESPTSDESCRASC1=${PATH_1650}/Data_Points/Points_TS_${LABEL}_A_85.txt
 		TIMESERIESPTSDESCRASC2=${PATH_1650}/Data_Points/Points_TS_${LABEL}_A_158.txt
@@ -251,7 +256,7 @@ YYYY=$(date +%Y)
 		# List of PAIRS of points for plotting double difference (i.e. without error bar) in EW and UD, ASC and Desc... 
 		# 	Note: if pixels are coherent in all modes, these can be the same list
 		# unused
-		DOUBLEDIFFPAIRSEWUD=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}.txt
+		#DOUBLEDIFFPAIRSEWUD=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}.txt
 		
 		DOUBLEDIFFPAIRSASC1=${PATH_1650}/Data_Points/List_DoubleDiff_${LABEL}_A_85.txt
 		DOUBLEDIFFPAIRSASC2=${PATH_1650}/Data_Points/List_DoubleDiff_${LABEL}_A_158.txt
@@ -314,16 +319,16 @@ YYYY=$(date +%Y)
 		# COMBI 6: A85_D19_D121	i.e. 1A 1D 3D
 		CROP_A85_D19_D121="5936, 7980, 1644, 5075"
 
-		## Unused CROP because too small overlap
-		########################################
-		# A85_A158_D92 	i.e. 1A 2A 2D
-		CROP_A85_A158_D92="1050, 1600, 0, 1213"
-
-		# A85_D92		i.e. 1A 2D
-		CROP_A85_D92="1090, 1630, 0, 1140"
-
-		# A85_D19_D92	i.e. 1A 1D 2D
-		CROP_A85_D19_D92="1040, 1660, 0, 1200"
+		### Unused CROP because too small overlap
+		#########################################
+		## A85_A158_D92 	i.e. 1A 2A 2D
+		#CROP_A85_A158_D92="1050, 1600, 0, 1213"
+		#
+		## A85_D92		i.e. 1A 2D
+		#CROP_A85_D92="1090, 1630, 0, 1140"
+		#
+		## A85_D19_D92	i.e. 1A 1D 2D
+		#CROP_A85_D19_D92="1040, 1660, 0, 1200"
 
 
 
@@ -354,34 +359,34 @@ YYYY=$(date +%Y)
 	# specific to NEPAL: 9 combinations of EW_UD:
 	#############################################
 		# A158_D19 i.e. 2A 1D 
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI01}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI01}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI01}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 	
 		# A158_D92 		i.e. 2A 2D
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE02A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE02A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE02A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI02}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI02}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI02}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
 		# A85_A158_D19 	i.e. 1A 2A 1D
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI03}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI03}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI03}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
 		# A85_D19 		i.e. 1A 1D
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI04}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI04}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI04}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
 		# A85_D121		i.e. 1A 3D
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI05}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI05}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI05}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
 		# A85_D19_D121	i.e. 1A 1D 3D
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI06}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI06}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${COMBI06}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
 		## Unused CROP because too small overlap
 		########################################
@@ -389,12 +394,12 @@ YYYY=$(date +%Y)
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-#
+		#
 		## A85_D92		i.e. 1A 2D
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-#
+		#
 		## A85_D19_D92	i.e. 1A 1D 2D
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
 		#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODE01A}_${MODE01D}_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
@@ -406,25 +411,25 @@ YYYY=$(date +%Y)
 	#mkdir -p ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
 	# Per mode
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_A_85_Auto_${ORDER}_${LAMBDA}_${LABEL}
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_A_85_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE01A}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE01A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_A_158_Auto_${ORDER}_${LAMBDA}_${LABEL}
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_A_158_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE02A}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE02A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_D_19_Auto_${ORDER}_${LAMBDA}_${LABEL}
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_D_19_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_D_92_Auto_${ORDER}_${LAMBDA}_${LABEL}
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_D_92_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_D_121_Auto_${ORDER}_${LAMBDA}_${LABEL}
-	mkdir -p ${MSBASDIR}/zz_LOS_TS_D_121_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
 	## All Asc and Desc
 	#mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	#mkdir -p ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-#
+	#
 	#mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	#mkdir -p ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
@@ -441,13 +446,13 @@ YYYY=$(date +%Y)
 # prepare points lists
 ######################
 	## unused
-		TIMESERIESPTNAME=$(basename "${TIMESERIESPTSDESCR}")
-		cp -f ${TIMESERIESPTSDESCR}  ${MSBASDIR}/${TIMESERIESPTNAME}
-		TIMESERIESPTSDESCR=${MSBASDIR}/${TIMESERIESPTNAME}
-		# Remove header and naming in 1st col from Pts list
-		${PATHGNU}/gsed '1d' "${TIMESERIESPTSDESCR}" > ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
-		${PATHGNU}/gsed  -i -r 's/(\s+)?\S+//1' ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
-		TIMESERIESPTS=${MSBASDIR}/Cln_${TIMESERIESPTNAME}
+	#	TIMESERIESPTNAME=$(basename "${TIMESERIESPTSDESCR}")
+	#	cp -f ${TIMESERIESPTSDESCR}  ${MSBASDIR}/${TIMESERIESPTNAME}
+	#	TIMESERIESPTSDESCR=${MSBASDIR}/${TIMESERIESPTNAME}
+	#	# Remove header and naming in 1st col from Pts list
+	#	${PATHGNU}/gsed '1d' "${TIMESERIESPTSDESCR}" > ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
+	#	${PATHGNU}/gsed  -i -r 's/(\s+)?\S+//1' ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
+	#	TIMESERIESPTS=${MSBASDIR}/Cln_${TIMESERIESPTNAME}
 
 	# Asc
 		TIMESERIESPTNAME=$(basename "${TIMESERIESPTSDESCRASC1}")
@@ -610,42 +615,39 @@ YYYY=$(date +%Y)
 #		echo ""
 #	}
 
-	function PlotAll()
-		{
-		unset X1 Y1 X2 Y2 DESCRIPTION
-		local X1=$1
-		local Y1=$2
-		local X2=$3
-		local Y2=$4
-		local DESCRIPTION=$5
-	
-		if [ "${EVENTS}" == "" ]
-			then
-				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g  # remove -f if does not want the linear fit
-			else
-				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g -events=${EVENTS}  # remove -f if does not want the linear fit			
-		fi
-		OLL=${ORDER}_${LAMBDA}_${LABEL}
-		COORDLABELNAME1=${X1}_${Y1}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		COORDLABELNAME2=${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-        COORDLABELNAME12=${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}		
-		
-		mv ${MSBASDIR}/timeLines_${COORDLABELNAME1}.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME1}.eps
-		mv ${MSBASDIR}/timeLines_${COORDLABELNAME2}.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME2}.eps
-
-		mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME12}.eps
-	
-#		# add map tag in fig
-#		convert -density 300 -rotate 90 -trim ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}.jpg
-#		convert ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}.jpg ${PATHLOCA}/Loca_${X1}_${Y1}_${X2}_${Y2}.jpg -gravity northwest -geometry +250+150 -composite ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_Combi.jpg
- 
-        rm -f ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_Combi.jpg
-		mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}_Combi.jpg ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_Combi.jpg
-		
-		mv ${MSBASDIR}/timeLine_UD_${COORDLABELNAME12}.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_UD_${COORDLABELNAME12}.txt
-		mv ${MSBASDIR}/timeLine_EW_${COORDLABELNAME12}.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_EW_${COORDLABELNAME12}.txt
-	
-		}
+# UNSUSED
+#	function PlotAll()
+#		{
+#		unset X1 Y1 X2 Y2 DESCRIPTION
+#		local X1=$1
+#		local Y1=$2
+#		local X2=$3
+#		local Y2=$4
+#		local DESCRIPTION=$5
+#	
+#		if [ "${EVENTS}" == "" ]
+#			then
+#				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g  # remove -f if does not want the linear fit
+#			else
+#				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g -events=${EVENTS}  # remove -f if does not want the linear fit			
+#		fi
+#		OLL=${ORDER}_${LAMBDA}_${LABEL}
+#		COORDLABELNAME1=${X1}_${Y1}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+#		COORDLABELNAME2=${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+#       COORDLABELNAME12=${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}		
+#		
+#		mv ${MSBASDIR}/timeLines_${COORDLABELNAME1}.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME1}.eps
+#		mv ${MSBASDIR}/timeLines_${COORDLABELNAME2}.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME2}.eps
+#
+#		mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME12}.eps
+#	
+#       rm -f ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_Combi.jpg
+#		mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}_Combi.jpg ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_Combi.jpg
+#		
+#		mv ${MSBASDIR}/timeLine_UD_${COORDLABELNAME12}.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_UD_${COORDLABELNAME12}.txt
+#		mv ${MSBASDIR}/timeLine_EW_${COORDLABELNAME12}.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}/${DESCRIPTION}_timeLines_EW_${COORDLABELNAME12}.txt
+#	
+#		}
 
 	function PlotAllCombiModes()
 		{
@@ -660,7 +662,7 @@ YYYY=$(date +%Y)
 			then
 				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh "_${MODES}_Auto_${ORDER}_${LAMBDA}_${LABEL}" ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g  # remove -f if does not want the linear fit
 			else
-				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh "_${MODES}_Auto_${ORDER}_${LAMBDA}_${LABEL} "${X1} ${Y1} ${X2} ${Y2} -f -r -t -g -events=${EVENTS}  # remove -f if does not want the linear fit			
+				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh "_${MODES}_Auto_${ORDER}_${LAMBDA}_${LABEL}" ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g -events=${EVENTS}  # remove -f if does not want the linear fit			
 		fi
 		OLL=${ORDER}_${LAMBDA}_${LABEL}
 		COORDLABELNAME1=${X1}_${Y1}_${MODES}_Auto_${ORDER}_${LAMBDA}_${LABEL}
@@ -684,50 +686,50 @@ YYYY=$(date +%Y)
 	
 		}
 
-	function PlotAllNoCoh()
-		{
-		unset X1 Y1 X2 Y2 DESCRIPTION
-		local X1=$1
-		local Y1=$2
-		local X2=$3
-		local Y2=$4
-		local DESCRIPTION=$5
-
-		if [ "${EVENTS}" == "" ]
-			then
-				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g   # remove -f if does not want the linear fit etc..
-			else
-				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g -events=${EVENTS}  # remove -f if does not want the linear fit etc..		
-		fi
-	
-#		rm plotTS*.gnu timeLines_*.png 
-		OLL=${ORDER}_${LAMBDA}_${LABEL}
-		COORDLABELNAME1=${X1}_${Y1}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-		COORDLABELNAME2=${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}
-        COORDLABELNAME12=${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}		
-	
-		if [ -f "${MSBASDIR}/timeLines_${COORDLABELNAME1}_NoCohThresh.eps" ] && [ -s "${MSBASDIR}/timeLines_${COORDLABELNAME1}_NoCohThresh.eps" ] ; then 
-			mv ${MSBASDIR}/timeLines_${COORDLABELNAME1}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME1}_NoCohThresh.eps
-		fi
-		if [ -f "${MSBASDIR}/timeLines_${COORDLABELNAME2}_NoCohThresh.eps" ] && [ -s "${MSBASDIR}/timeLines_${COORDLABELNAME2}_NoCohThresh.eps" ] ; then
-			mv ${MSBASDIR}/timeLines_${COORDLABELNAME2}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME2}_NoCohThresh.eps
-		fi 
- 
-		if [ -f "${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh.eps" ] && [ -s "${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh.eps" ] ; then
-			mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_NoCohThresh.eps
-
-#			# add map tag in fig
-#			convert -density 300 -rotate 90 -trim ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh.jpg
-#			# get location from dir with coh threshold (where it was added manually)
-#			convert ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh.jpg ${PATHLOCA}/Loca_${X1}_${Y1}_${X2}_${Y2}.jpg -gravity northwest -geometry +250+150 -composite ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_Combi_NoCohThresh.jpg
-
-            rm -f ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_NoCohThresh_Combi.jpg
-			mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh_Combi.jpg ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_NoCohThresh_Combi.jpg
-
-			mv ${MSBASDIR}/timeLine_UD_${COORDLABELNAME12}_NoCohThresh.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_UD_${COORDLABELNAME12}_NoCohThresh.txt
-			mv ${MSBASDIR}/timeLine_EW_${COORDLABELNAME12}_NoCohThresh.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_EW_${COORDLABELNAME12}_NoCohThresh.txt
-		fi
-		}
+#	function PlotAllNoCoh()
+#		{
+#		unset X1 Y1 X2 Y2 DESCRIPTION
+#		local X1=$1
+#		local Y1=$2
+#		local X2=$3
+#		local Y2=$4
+#		local DESCRIPTION=$5
+#
+#		if [ "${EVENTS}" == "" ]
+#			then
+#				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g   # remove -f if does not want the linear fit etc..
+#			else
+#				${PATH_SCRIPTS}/SCRIPTS_MT/PlotTS_all_comp.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${X1} ${Y1} ${X2} ${Y2} -f -r -t -g -events=${EVENTS}  # remove -f if does not want the linear fit etc..		
+#		fi
+#	
+##		rm plotTS*.gnu timeLines_*.png 
+#		OLL=${ORDER}_${LAMBDA}_${LABEL}
+#		COORDLABELNAME1=${X1}_${Y1}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+#		COORDLABELNAME2=${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+#        COORDLABELNAME12=${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}		
+#	
+#		if [ -f "${MSBASDIR}/timeLines_${COORDLABELNAME1}_NoCohThresh.eps" ] && [ -s "${MSBASDIR}/timeLines_${COORDLABELNAME1}_NoCohThresh.eps" ] ; then 
+#			mv ${MSBASDIR}/timeLines_${COORDLABELNAME1}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME1}_NoCohThresh.eps
+#		fi
+#		if [ -f "${MSBASDIR}/timeLines_${COORDLABELNAME2}_NoCohThresh.eps" ] && [ -s "${MSBASDIR}/timeLines_${COORDLABELNAME2}_NoCohThresh.eps" ] ; then
+#			mv ${MSBASDIR}/timeLines_${COORDLABELNAME2}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME2}_NoCohThresh.eps
+#		fi 
+# 
+#		if [ -f "${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh.eps" ] && [ -s "${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh.eps" ] ; then
+#			mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_NoCohThresh.eps
+#
+##			# add map tag in fig
+##			convert -density 300 -rotate 90 -trim ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh.eps ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh.jpg
+##			# get location from dir with coh threshold (where it was added manually)
+##			convert ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh.jpg ${PATHLOCA}/Loca_${X1}_${Y1}_${X2}_${Y2}.jpg -gravity northwest -geometry +250+150 -composite ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/${DESCRIPTION}_timeLines_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_Combi_NoCohThresh.jpg
+#
+#            rm -f ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_NoCohThresh_Combi.jpg
+#			mv ${MSBASDIR}/timeLines_${COORDLABELNAME12}_NoCohThresh_Combi.jpg ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_${COORDLABELNAME12}_NoCohThresh_Combi.jpg
+#
+#			mv ${MSBASDIR}/timeLine_UD_${COORDLABELNAME12}_NoCohThresh.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_UD_${COORDLABELNAME12}_NoCohThresh.txt
+#			mv ${MSBASDIR}/timeLine_EW_${COORDLABELNAME12}_NoCohThresh.txt ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${OLL}_NoCohThresh/${DESCRIPTION}_timeLines_EW_${COORDLABELNAME12}_NoCohThresh.txt
+#		fi
+#		}
 
 	function PlotAllLOS()
 		{
@@ -737,6 +739,7 @@ YYYY=$(date +%Y)
 		local X2=$3
 		local Y2=$4
 		local DESCRIPTION=$5
+		local MODE=$6
 	
 		cd ${MSBASDIR}/zz_LOS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 		mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
@@ -795,7 +798,7 @@ YYYY=$(date +%Y)
 			else
 				cd ${MSBASDIR}
 				cp -f ${MSBASDIR}/header_${MODE}.txt  header.txt 
-				NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+				NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 		
 				cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 				# remove header line to avoid error message 
@@ -827,11 +830,19 @@ YYYY=$(date +%Y)
 		fi
 		}
 
+# Check that there is no other Step3 running
+#############################################
+	CHECKCRON3=`ps -Af | ${PATHGNU}/grep "Step3" | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
+	if [ ${CHECKCRON3} -gt 0 ] ; then 
+			REASON=" another Step3 is running, which may overload the computer; pause here" 
+			STOPRUN="YES"
+	fi
+
 
 # Check that there is no other cron (Step 2 or 3) or manual SuperMaster_MassProc.sh running
 ###########################################################################################
 	# Check that no other cron job step 3 (MSBAS) or manual SuperMaster_MassProc.sh is running
-	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | wc -l`
+	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
 		#### For Debugging
 		# echo "ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v ${PATHGNU}/grep | ${PATHGNU}/grep -v /dev/null | wc -l" > CheckRun.txt
 		# echo ${CHECKMB} >> CheckRun.txt
@@ -842,14 +853,14 @@ YYYY=$(date +%Y)
 			STOPRUN="YES"
 		else
 			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
+			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
 			# For unknown reason it counts 1 even when no process is running
 			if [ ${CHECKASC} -ne 0 ] || [ ${CHECKDESC} -ne 0 ] ; then REASON="  SuperMaster_MassProc.sh in progress (probably manual)" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi  	
 	fi 
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
-	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
 	if [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	if [ "${STOPRUN}" == "YES" ] 
@@ -1155,19 +1166,19 @@ cd ${MSBASDIR}
 		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01A}' s/#SET = /SET = /'  | ${PATHGNU}/gsed ${LINENR01D}' s/#SET = /SET = /' | ${PATHGNU}/gsed ${LINENR03D}' s/#SET = /SET = /'> ${MSBASDIR}/header_${MODE01A}_${MODE01D}_${MODE03D}.txt
 		${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_A85_D19_D121}'/" ${MSBASDIR}/header_${MODE01A}_${MODE01D}_${MODE03D}.txt
 
-		# unused because not enough overlap
-		###################################
-		# A85_A158_D92 	i.e. 1A 2A 2D
-		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01A}' s/#SET = /SET = /' | ${PATHGNU}/gsed ${LINENR02A}' s/#SET = /SET = /'  | ${PATHGNU}/gsed ${LINENR02D}' s/#SET = /SET = /'> ${MSBASDIR}/header_${MODE01A}_${MODE02A}_${MODE02D}.txt
-		${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_A85_A158_D92}'/" ${MSBASDIR}/header_${MODE01A}_${MODE02A}_${MODE02D}.txt
-
-		# A85_D92		i.e. 1A 2D
-		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01A}' s/#SET = /SET = /'  | ${PATHGNU}/gsed ${LINENR02D}' s/#SET = /SET = /'> ${MSBASDIR}/header_${MODE01A}_${MODE02D}.txt
-		${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_A85_D92}'/" ${MSBASDIR}/header_${MODE01A}_${MODE02D}.txt
-
-		# A85_D19_D92	i.e. 1A 1D 2D
-		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01A}' s/#SET = /SET = /'  | ${PATHGNU}/gsed ${LINENR01D}' s/#SET = /SET = /' | ${PATHGNU}/gsed ${LINENR02D}' s/#SET = /SET = /'> ${MSBASDIR}/header_${MODE01A}_${MODE01D}_${MODE02D}.txt
-		${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_A85_D19_D92}'/" ${MSBASDIR}/header_${MODE01A}_${MODE01D}_${MODE02D}.txt
+		# # unused because not enough overlap
+		# ###################################
+		# # A85_A158_D92 	i.e. 1A 2A 2D
+		# cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01A}' s/#SET = /SET = /' | ${PATHGNU}/gsed ${LINENR02A}' s/#SET = /SET = /'  | ${PATHGNU}/gsed ${LINENR02D}' s/#SET = /SET = /'> ${MSBASDIR}/header_${MODE01A}_${MODE02A}_${MODE02D}.txt
+		# ${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_A85_A158_D92}'/" ${MSBASDIR}/header_${MODE01A}_${MODE02A}_${MODE02D}.txt
+		# 
+		# # A85_D92		i.e. 1A 2D
+		# cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01A}' s/#SET = /SET = /'  | ${PATHGNU}/gsed ${LINENR02D}' s/#SET = /SET = /'> ${MSBASDIR}/header_${MODE01A}_${MODE02D}.txt
+		# ${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_A85_D92}'/" ${MSBASDIR}/header_${MODE01A}_${MODE02D}.txt
+		# 
+		# # A85_D19_D92	i.e. 1A 1D 2D
+		# cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01A}' s/#SET = /SET = /'  | ${PATHGNU}/gsed ${LINENR01D}' s/#SET = /SET = /' | ${PATHGNU}/gsed ${LINENR02D}' s/#SET = /SET = /'> ${MSBASDIR}/header_${MODE01A}_${MODE01D}_${MODE02D}.txt
+		# ${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_A85_D19_D92}'/" ${MSBASDIR}/header_${MODE01A}_${MODE01D}_${MODE02D}.txt
 
  		# Prepare header files
 
@@ -1249,7 +1260,7 @@ cd ${MSBASDIR}
 #			${PATHGNU}/gsed -i 's/${DEFOMODE}4.txt/${DEFOMODE}4_Full.txt/' ${MSBASDIR}/header.txt
 #			${PATHGNU}/gsed -i 's/${DEFOMODE}5.txt/${DEFOMODE}5_Full.txt/' ${MSBASDIR}/header.txt
 #		 
-#		 	NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+#		 	NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS} --msbasv4
 #		
 #			# Make baseline plot 
 #	 		PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full.txt
@@ -1304,7 +1315,7 @@ cd ${MSBASDIR}
 
 					cd ${MSBASDIR}
 					cp -f  ${MSBASDIR}/header_${MODES}.txt  ${MSBASDIR}/header.txt
-					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODES}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODES}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 					# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 					cp ${TSDESCRFILE} ${MSBASDIR}/zz_${ALLCOMP}_TS_${MODES}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
@@ -1332,7 +1343,7 @@ cd ${MSBASDIR}
 
 			
 			#cp -f  ${MSBASDIR}/header_${MODE02A}_${MODE01D}.txt  ${MSBASDIR}/header.txt
-			#NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+			#NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE02A}_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 			# A158_D19 i.e. 2A 1D 
 			RunCombiEWUD ${COMBI01} ${TIMESERIESPTSDESCRCOMBI1} ${DOUBLEDIFFPAIRSCOMBI1}
@@ -1365,7 +1376,7 @@ cd ${MSBASDIR}
 
 
 #			
-#			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+#			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 #
 #			# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 #			cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
@@ -1422,7 +1433,7 @@ cd ${MSBASDIR}
 #			fi 
 #			
 #			cd ${MSBASDIR}
-#			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+#			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 #
 #			# Make baseline plot 
 #			PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${DEFOMODE}1.txt

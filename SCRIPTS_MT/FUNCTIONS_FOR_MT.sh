@@ -138,12 +138,24 @@
 # New in Distro V 9.4.5 20251020:	- Debug moving geocoded products with EATD extension
 # New in Distro V 9.4.6 20251021:	- set ETADPROD in file names just before extention (or extention.ras)
 # New in Distro V 9.4.7 20251112:	- cosmetic: mute message while computing DEM if PIXSIZEAZ or PIXSIZERG not known
+# New in Distro V 9.4.8 20260116:	- InSARprocess:remove duplicate computation of 	InSARProductsGeneration
+# New in Distro V 9.5.0 20260225:	- Events mask (if applicable) was not used in Detrending 
+# New in Distro V 9.5.1 20260312:	- if gmt does not exist, it invert defo map when SLV<MAS using new script Multiply_Minus_1.py
+# New in Distro V 10.0.0 20260428:	- Allows coregistration of S1 on Global Primary (Super Master), providing that the 
+#								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
+# New in Distro V 10.0.1 20260519:	- check if Geocoded dir exists before moving results 
+# New in Distro V 10.0.2 20260609:	- PlotGeoc adapted to CORRATMO files
+#									- add fct CheckAndMakeFigNoNorm
+#									- make MoveGeocRename slightly faster 
+# New in Distro V 10.0.3 20260714:	- fix path to Fiji for Mac ARM
+# New in Distro V 10.1.0 20260813:	- New fct MoveGeocRenameNoOverwrite: before mv file, check if already exist in target dir and is the same. 
+#										If yes, rename first existing one as file_before_${RUNDATE}_${RNDM1}.ext
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V9.4.7 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov  12, 2025"
+FCTVER="Distro V10.1.0 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2026"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -592,12 +604,26 @@ function MakeFigFiji()
 		# Check OS
 		OS=`uname -a | cut -d " " -f 1 `
 
-		case ${OS} in 
-			"Linux") 
-				${PATHFIJI}/imagej  --headless -batch ${FILE}FijiMacroFig.txt ;;
-			"Darwin")
-				${PATHFIJI}/ImageJ-macosx  --headless -batch ${FILE}FijiMacroFig.txt 	;;
-		esac			
+		# Pick the Fiji launcher: new Jaunch "fiji" or a legacy platform binary
+			if [ -x "${PATHFIJI}/fiji" ]; then
+			    FIJI="${PATHFIJI}/fiji"               # new Jaunch (Mac arm64, Linux, ...)
+			elif [ -x "${PATHFIJI}/ImageJ-linux64" ]; then
+			    FIJI="${PATHFIJI}/ImageJ-linux64"     # legacy Linux
+			elif [ -x "${PATHFIJI}/ImageJ-macosx" ]; then
+			    FIJI="${PATHFIJI}/ImageJ-macosx"      # legacy Intel Mac
+			else
+			    echo "ERROR: no Fiji/ImageJ launcher found in ${PATHFIJI}" >&2
+			    exit 1
+			fi
+
+		"${FIJI}" --headless -batch "${FILE}FijiMacroFig.txt" 
+		
+		#case ${OS} in 
+		#	"Linux") 
+		#		${PATHFIJI}/imagej  --headless -batch ${FILE}FijiMacroFig.txt ;;
+		#	"Darwin")
+		#		${PATHFIJI}/ImageJ-macosx  --headless -batch ${FILE}FijiMacroFig.txt 	;;
+		#esac			
 		# Keep script if one wants to change paramerters of the plot
 		#rm ${FILE}FijiMacroFig.txt 
 	fi
@@ -841,7 +867,7 @@ function ManageDEM()
 			fi
 	fi
  
-
+	# 20260203 this should be harmless; not sure if needed
 	if [ "${SATDIR}" == "S1" ]  && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOMONE}" == "No"  ] ; then 
 		IMGWITHDEM=${MASNAME}
 	fi
@@ -860,6 +886,7 @@ function ManageDEM()
 					EchoTee " But it does not exist in ${INPUTDATA}/${IMGWITHDEM}.csl/Data/externalSlantRangeDEM. "
 					EchoTee "  Recompute it here. "
 					
+					# 20260203 this seems useless because MasterDEM.sh ingests DATE or NAME 	
 					# If IMGWITHDEM is S1 name without .csl (from SuperMaster_MassProc.sh), add csl extension here then extract only date
 					if [[ ${IMGWITHDEM} == *"S1"* ]] && [[ ${IMGWITHDEM} != *".csl"* ]]; then IMGWITHDEM=${IMGWITHDEM}.csl ; IMGWITHDEM=`GetDateCSL ${IMGWITHDEM}` ; fi
 		
@@ -1285,7 +1312,8 @@ function SlantRangeExtDEM()
 
  			case ${APPLYMASK} in
 				"APPLYMASKyes")
-					if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
+					#if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
+					if [[ "${SATDIR}" == "S1" ]] && [[ "${ZOOM}" != "1" ]] && [[ "${S1MODE}" == "WIDESWATH" || "${S1MODE}" == "WSWATHSM" ]]
 						then 
 							# rename Mask with mask name and create link with default mask file 
 							mv -f ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Data/slantRangeMask ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Data/slantRangeMask_${MASKBASENAME}
@@ -1301,7 +1329,8 @@ function SlantRangeExtDEM()
 					fi
 					;;
 				"APPLYMASKno")
-					if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
+					#if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${ZOOM}" != "1" ] 
+					if [[ "${SATDIR}" == "S1" ]] && [[ "${ZOOM}" != "1" ]] && [[ "${S1MODE}" == "WIDESWATH" || "${S1MODE}" == "WSWATHSM" ]]
 						then 
 							cp -f ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Info/externalSlantRangeDEM.txt ${RUNDIR}/i12.NoZoom/InSARProducts/${IMGWITHDEM}.Z.csl/Info/externalSlantRangeDEM_NoMask.txt
 						else 
@@ -1680,7 +1709,21 @@ function CoregFiji()
 	echo "run('Extract SIFT Correspondences', 'source_image=${FILE1} target_image=${FILE2} initial_gaussian_blur=1.60 steps_per_scale_octave=3 minimum_image_size=64 maximum_image_size=1024 feature_descriptor_size=4 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 filter maximal_alignment_error=25 minimal_inlier_ratio=0.05 minimal_number_of_inliers=7 expected_transformation=Rigid');" >> FijiMacroTmp.txt
 	echo "run('Quit');"  >> FijiMacroTmp.txt
 	${PATHGNU}/gsed "s/'/\"/g" FijiMacroTmp.txt > FijiMacroTmp2.txt 
-	${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacroTmp2.txt >  Log_file1_file2.txt
+
+	 Pick the Fiji launcher: new Jaunch "fiji" or a legacy platform binary
+		if [ -x "${PATHFIJI}/fiji" ]; then
+		    FIJI="${PATHFIJI}/fiji"               # new Jaunch (Mac arm64, Linux, ...)
+		elif [ -x "${PATHFIJI}/ImageJ-linux64" ]; then
+		    FIJI="${PATHFIJI}/ImageJ-linux64"     # legacy Linux
+		elif [ -x "${PATHFIJI}/ImageJ-macosx" ]; then
+		    FIJI="${PATHFIJI}/ImageJ-macosx"      # legacy Intel Mac
+		else
+		    echo "ERROR: no Fiji/ImageJ launcher found in ${PATHFIJI}" >&2
+		    exit 1
+		fi
+	#${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacroTmp2.txt >  Log_file1_file2.txt
+	"${FIJI}" --headless -batch FijiMacroTmp2.txt >  Log_file1_file2.txt
+	
 	# rm FijiMacroTmp.txt 
    	}
    	
@@ -1752,13 +1795,13 @@ function InSARprocess()
 	#InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -s -i  | tee -a ${LOGFILE}
 	# No  need to compute phase and height estimated standard deviations (only for topo quality estimate)
 	
-	if [ ${CALIBSIGMA} == "SIGMAYES" ] && [ ${SATDIR} == "S1" ]
-		then 
-			# compute sigma nought calibration
-			InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i -C | tee -a ${LOGFILE}
-		else 
-			InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i  | tee -a ${LOGFILE}
-	fi
+	#if [ ${CALIBSIGMA} == "SIGMAYES" ] && [ ${SATDIR} == "S1" ]
+	#	then 
+	#		# compute sigma nought calibration
+	#		InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i -C | tee -a ${LOGFILE}
+	#	else 
+	#		InSARProductsGeneration ${RUNDIR}/i12/TextFiles/InSARParameters.txt -i  | tee -a ${LOGFILE}
+	#fi
 
 	if [ ${SATDIR} == "S1" ]
 		then 
@@ -2280,7 +2323,17 @@ function UnwrapAndPlot()
 					EchoTeeYellow "Multiply unwrapped defo phase of pair ${MAS}_${SLV} by -1"
 					EchoTee "Using something such as gmt gmtmath deformationMapToBeInverted -bsWIDTHOFFILE -1 MUL = deformationMapInverted"
 					mv ${RUNDIR}/i12/InSARProducts/deformationMap ${RUNDIR}/i12/InSARProducts/deformationMap.WrongSign
-					gmt gmtmath ${RUNDIR}/i12/InSARProducts/deformationMap.WrongSign -bs${UNRPSIZE} -1 MUL = ${RUNDIR}/i12/InSARProducts/deformationMap
+
+					type -t gmt  >/dev/null
+					if [ `echo $?` == "0" ]
+						then
+							# gmt exists
+							gmt gmtmath ${RUNDIR}/i12/InSARProducts/deformationMap.WrongSign -bs${UNRPSIZE} -1 MUL = ${RUNDIR}/i12/InSARProducts/deformationMap
+						else 
+							# gmt does not exist
+							Multiply_Minus_1.py ${RUNDIR}/i12/InSARProducts/deformationMap.WrongSign ${RUNDIR}/i12/InSARProducts/deformationMap
+					fi
+					
 				else 
 					EchoTee "Primary date is before Secondary date. No need to Multiply unwrappedd phase by -1"
 			fi
@@ -2634,6 +2687,15 @@ function PlotGeocETADinterpolated()
 
 	}
 
+function CheckAndMakeFigNoNorm()
+	{
+	unset DEFOMAPTOPLOT
+	local DEFOMAPTOPLOT=$1
+		
+	if [ -e "${DEFOMAPTOPLOT}" ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 "${DEFOMAPTOPLOT}" ; fi
+	}
+	
+	
 function PlotGeoc()
 	{
 	unset DEFOMAP MASAMPL SLVAMPL COHFILE INTERF FILTINTERF RESINTERF UNWPHASE
@@ -2659,12 +2721,21 @@ function PlotGeoc()
 					MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 ${PATHDEM}
 				else
 					# plot geocoded unwrapped defo 
-					MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil
-					if [ -e deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
-					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
-					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil ; fi
-					if [ -e deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ; fi
-					if [ -e deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ] ; then MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated ; fi
+					#MakeFigNoNorm ${GEOPIXW} normal jet 1/1 r4 "deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil"
+					CheckAndMakeFigNoNorm "deformationMap.${PROJ}.${GEOPIXSIZENAME}.bil"
+					CheckAndMakeFigNoNorm "deformationMap.flattened.${PROJ}.${GEOPIXSIZENAME}.bil" 
+					CheckAndMakeFigNoNorm "deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil"
+					CheckAndMakeFigNoNorm "deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil"
+					CheckAndMakeFigNoNorm "deformationMap.interpolated.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated" 
+					CheckAndMakeFigNoNorm "deformationMap.interpolated.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated"
+
+					# for atmospheric corrected files 
+						CheckAndMakeFigNoNorm "deformationMap_${ATMOCORR}.${PROJ}.${GEOPIXSIZENAME}.bil"
+						CheckAndMakeFigNoNorm "deformationMap_${ATMOCORR}.flattened.${PROJ}.${GEOPIXSIZENAME}.bil"
+						CheckAndMakeFigNoNorm "deformationMap.interpolated_${ATMOCORR}.${PROJ}.${GEOPIXSIZENAME}.bil"
+						CheckAndMakeFigNoNorm "deformationMap.interpolated_${ATMOCORR}.flattened.${PROJ}.${GEOPIXSIZENAME}.bil"
+						CheckAndMakeFigNoNorm "deformationMap.interpolated_${ATMOCORR}.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated"
+						CheckAndMakeFigNoNorm "deformationMap.interpolated_${ATMOCORR}.flattened.${PROJ}.${GEOPIXSIZENAME}.bil.interpolated"
 
 					if [ ${SATDIR} == "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011)$ ]] && [ "${ETADCOMBI}" = "ETADCOMBIyes" ] ; then
 						# all deformationMap${INTERPOLSUFFIX}.igt
@@ -2877,6 +2948,14 @@ function RemovePlane()
 			updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "Y dimension of the file to be corrected" ${YDIMTODETREND} > /dev/null
 			updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "Reference file path or NONE" "NONE" > /dev/null
 			updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "Threshold file" "NONE"  > /dev/null
+	
+			if [ "${PATHTODIREVENTSMASKS}" != "" ] 
+				then 
+					# Do not change Masking value: must be 0b00000101 for events mask
+					updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "Mask file" ${RUNDIR}/i12/InSARProducts/slantRangeMask > /dev/null
+					updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "X dimension of the mask file" ${XDIMTODETREND} > /dev/null
+					updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "Y dimension of the mask file" ${YDIMTODETREND} > /dev/null
+			fi
 	
 			bestPlaneRemoval2 ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt
 	
@@ -3196,20 +3275,206 @@ function MoveGeocRename()
 
 	# keep a link after moving, just in case... 
 	EnviToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg`
-	EnviHdrToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg.hdr`
-	RasToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg.ras`
-	mv -f ${EnviToBeCopied} ${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR} 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
-	#ln -s ${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR}/$(basename ${EnviToBeCopied}) ${RUNDIR}/i12/GeoProjection/$(basename ${EnviToBeCopied})
-	EchoTee "*${IMG}*deg copied to /Geocoded/${TARGETDIR}"
-	mv -f ${EnviHdrToBeCopied} ${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR} 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
-	#ln -s ${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR}/$(basename ${EnviHdrToBeCopied}) ${RUNDIR}/i12/GeoProjection/$(basename ${EnviHdrToBeCopied})
-	EchoTee "*${IMG}*deg.hdr copied to /Geocoded/${TARGETDIR}"
+	#EnviHdrToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg.hdr`
+	EnviHdrToBeCopied="${EnviToBeCopied}.hdr"
+	#RasToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg.ras`
+	RasToBeCopied="${EnviToBeCopied}.ras"
+	
+	TARGET_PATH="${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR}"
+	if [[ -d "${TARGET_PATH}" && -w "${TARGET_PATH}" ]] && stat "${TARGET_PATH}" >/dev/null 2>&1	# check availability of destination dir - may hang out if SMB session is broken
+		then 
+			mv -f "${EnviToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+			#ln -s ${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR}/$(basename ${EnviToBeCopied}) ${RUNDIR}/i12/GeoProjection/$(basename ${EnviToBeCopied})
+			EchoTee "*${IMG}*deg copied to /Geocoded/${TARGETDIR}"
+			mv -f "${EnviHdrToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+			#ln -s ${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR}/$(basename ${EnviHdrToBeCopied}) ${RUNDIR}/i12/GeoProjection/$(basename ${EnviHdrToBeCopied})
+			EchoTee "*${IMG}*deg.hdr copied to /Geocoded/${TARGETDIR}"
+		else 
+			EchoTee "*${IMG} NOT copied to /Geocoded/${TARGETDIR} because destination dir was not available"
+	fi
+	
 	if [ "${FIG}" == "FIGyes" ] 
 		then 
 			cp -f ${RasToBeCopied} ${MASSPROCESSPATHLONG}/GeocodedRasters/${TARGETDIR}
 			EchoTee "*${IMG}*deg.ras copied to /GeocodedRasters/${TARGETDIR}"
 	fi	
 	}
+
+
+function MoveGeocRenameNoOverwrite()
+	{
+	local IMG=$1 # MAS, SLV or BOTH
+	local TARGETDIR=$2 # where to store figs
+
+	# keep a link after moving, just in case... 
+	# Since this function is only used in Detrend_Geoc_CorrectedAtmo.sh for moving in a TMP dir, having more than 1 envi file in taget dir shouldn't happen 
+	EnviToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg`
+	#EnviHdrToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg.hdr`
+	EnviHdrToBeCopied="${EnviToBeCopied}.hdr"
+	#RasToBeCopied=`ls ${RUNDIR}/i12/GeoProjection/*${IMG}*deg.ras`
+	RasToBeCopied="${EnviToBeCopied}.ras"
+	
+	EnviFile=$(basename ${EnviToBeCopied})
+	
+	TARGET_PATH="${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR}"
+	TARGETRAS_PATH="${MASSPROCESSPATHLONG}/GeocodedRasters/${TARGETDIR}"
+	if [[ -d "${TARGET_PATH}" && -w "${TARGET_PATH}" ]] && stat "${TARGET_PATH}" >/dev/null 2>&1	# check availability of destination dir - may hang out if SMB session is broken
+		then 
+			# Check if file already exist in target dir
+			if [ -f "${TARGET_PATH}"/"${EnviFile}" ]  
+				then 
+					# Check if files differ
+					if cmp -s "${EnviToBeCopied}" "${TARGET_PATH}"/"${EnviFile}"
+						then
+							# Same: overwrite it to keep time stamp
+							EchoTee "${EnviFile} and ${TARGET_PATH}"/"${EnviFile} are identical. I overwrite it though."
+							mv -f "${EnviToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+							EchoTee "*${IMG}*deg overwritten to /Geocoded/${TARGETDIR}"
+
+							# Process the envi header file 
+							mv -f "${EnviHdrToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+							EchoTee "*${IMG}*deg.hdr overwritten to /Geocoded/${TARGETDIR}"
+
+							# Process the raster
+							if [ "${FIG}" == "FIGyes" ] 
+								then 
+									cp -f ${RasToBeCopied} ${MASSPROCESSPATHLONG}/GeocodedRasters/${TARGETDIR}
+									EchoTee "*${IMG}*deg.ras overwritten to /GeocodedRasters/${TARGETDIR}"
+							fi	
+
+						else
+							# Not the same: rename file in target dir first to keep track
+							EchoTee "I can't mv ${EnviFile} to ${TARGET_PATH}"/"${EnviFile} because a different file with the same name exist. "
+							EchoTee "Hence I rename first the target dir as _Before_${RUNDATE}_${RNDM1}" in target dir
+							# rename former envi
+								mv -f "${TARGET_PATH}"/"${EnviFile}"  "${TARGET_PATH}"/"${EnviFile}_Before_${RUNDATE}_${RNDM1}"
+								# get new envi
+								mv -f "${EnviToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+								EchoTee "*${IMG}*deg moved to /Geocoded/${TARGETDIR} after renaming existing same file. "
+							 
+							# rename former hdr
+								mv -f "${TARGET_PATH}"/"${EnviFile}.hdr"  "${TARGET_PATH}"/"${EnviFile}_Before_${RUNDATE}_${RNDM1}.hdr"
+								# get new  hdr
+								mv -f "${EnviHdrToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+								EchoTee "*${IMG}*deg.hdr moved to /Geocoded/${TARGETDIR} after renaming existing same file."
+
+							# rename former ras
+								if [ "${FIG}" == "FIGyes" ] 
+									then 
+										mv -f "${TARGETRAS_PATH}"/"${EnviFile}.ras"  "${TARGETRAS_PATH}"/"${EnviFile}_Before_${RUNDATE}_${RNDM1}.ras"
+										# get new  ras
+										cp -f ${RasToBeCopied} ${MASSPROCESSPATHLONG}/GeocodedRasters/${TARGETDIR}
+										EchoTee "*${IMG}*deg.ras copied to /GeocodedRasters/${TARGETDIR} after renaming existing same file."
+								fi
+					fi
+				else 
+					mv -f "${EnviToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+					EchoTee "*${IMG}*deg copied to /Geocoded/${TARGETDIR}"
+					
+					# Process the envi header file 
+					mv -f "${EnviHdrToBeCopied}" "${TARGET_PATH}" 2>/dev/null	#  mute possible complaining message that permission can't be preserved, as it may occur when moving from Mac to Linux or Windows 
+					EchoTee "*${IMG}*deg.hdr moved to /Geocoded/${TARGETDIR}"
+					
+					# Process the raster
+					if [ "${FIG}" == "FIGyes" ] 
+						then 
+							cp -f ${RasToBeCopied} ${MASSPROCESSPATHLONG}/GeocodedRasters/${TARGETDIR}
+							EchoTee "*${IMG}*deg.ras copied to /GeocodedRasters/${TARGETDIR}"
+					fi	
+			fi
+		else 
+			EchoTee "*${IMG} NOT copied to /Geocoded/${TARGETDIR} because destination dir was not available"
+	fi
+	
+	}
+
+### ---------------------------------------------------------------------------
+### DirIsUsable DIR
+###	true if DIR exists, is writable and answers (i.e. SMB session alive)
+### ---------------------------------------------------------------------------
+##function DirIsUsable()
+##	{
+##	local DIR="$1"
+##	[ -d "${DIR}" ] && [ -w "${DIR}" ] && ls "${DIR}" >/dev/null 2>&1
+##	}
+##
+### ---------------------------------------------------------------------------
+### StoreOneNoOverwrite FILE DESTDIR mv|cp
+###	Puts FILE in DESTDIR. If a file of the same name is already there:
+###		identical -> replaced, to refresh the time stamp
+###		different -> the existing one is first renamed _Before_${RUNDATE}_${RNDM1}
+###	Returns 0 if FILE ends up in DESTDIR, 1 otherwise (and says why).
+### ---------------------------------------------------------------------------
+##function StoreOneNoOverwrite()
+##	{
+##	local FILE="$1"
+##	local DESTDIR="$2"
+##	local ACTION="$3"			# mv or cp
+##	local BASE EXISTING MSG
+##
+##	[ -f "${FILE}" ] || { EchoTeeRed "	$(basename "${FILE}") does not exist - not stored" ; return 1 ; }
+##	DirIsUsable "${DESTDIR}" || { EchoTeeRed "	${DESTDIR} not available - $(basename "${FILE}") not stored" ; return 1 ; }
+##
+##	BASE=$(basename "${FILE}")
+##	EXISTING="${DESTDIR}/${BASE}"
+##
+##	if [ -f "${EXISTING}" ]
+##		then
+##			cmp -s "${FILE}" "${EXISTING}"
+##			case $? in
+##				0)	EchoTee "	${BASE} already in ${DESTDIR} and identical - replaced to refresh time stamp" ;;
+##				1)	EchoTee "	${BASE} already in ${DESTDIR} but differs - existing one kept as ${BASE}_Before_${RUNDATE}_${RNDM1}"
+##					if ! mv -f "${EXISTING}" "${EXISTING}_Before_${RUNDATE}_${RNDM1}"
+##						then EchoTeeRed "	could not rename ${EXISTING} - ${BASE} NOT stored" ; return 1
+##					fi ;;
+##				*)	EchoTeeRed "	could not compare ${BASE} with ${EXISTING} - ${BASE} NOT stored" ; return 1 ;;
+##			esac
+##	fi
+##
+##	# keep the reason instead of dropping it, but do not trust the exit status:
+##	# mv/cp may return non-zero just for failing to preserve permissions on SMB
+##	MSG=$("${ACTION}" -f "${FILE}" "${DESTDIR}/" 2>&1)
+##	if [ -f "${EXISTING}" ]
+##		then
+##			EchoTee "	${BASE} stored in ${DESTDIR}"
+##			[ -n "${MSG}" ] && EchoTee "	(${ACTION} warning ignored: ${MSG})"
+##			[ "${ACTION}" = "mv" ] && [ -e "${FILE}" ] && EchoTeeRed "	warning: ${BASE} still present in source dir"
+##			return 0
+##		else
+##			EchoTeeRed "	could not ${ACTION} ${BASE} to ${DESTDIR}: ${MSG}"
+##			return 1
+##	fi
+##	}
+##
+### ---------------------------------------------------------------------------
+### MoveGeocRenameNoOverwrite MAS|SLV|BOTH TARGETDIR
+### ---------------------------------------------------------------------------
+##function MoveGeocRenameNoOverwrite()
+##	{
+##	local IMG="$1"
+##	local TARGETDIR="$2"
+##	local ENVI GEOCDIR RASDIR
+##
+##	GEOCDIR="${MASSPROCESSPATHLONG}/Geocoded/${TARGETDIR}"
+##	RASDIR="${MASSPROCESSPATHLONG}/GeocodedRasters/${TARGETDIR}"
+##
+##	# glob rather than ls: safe with spaces, and the match can be counted
+##	# (IMG and TARGETDIR are already saved above, since set -- overwrites $1 $2)
+##	set -- "${RUNDIR}"/i12/GeoProjection/*"${IMG}"*deg
+##	if [ "$#" -ne 1 ] || [ ! -f "$1" ]			# unmatched glob stays literal, hence the -f test
+##		then EchoTeeRed "	expected exactly one *${IMG}*deg in ${RUNDIR}/i12/GeoProjection, found $# - nothing stored" ; return 1
+##	fi
+##	ENVI="$1"
+##
+##	# hdr only if the binary made it, to avoid an orphan header
+##	StoreOneNoOverwrite "${ENVI}" "${GEOCDIR}" mv && StoreOneNoOverwrite "${ENVI}.hdr" "${GEOCDIR}" mv
+##
+##	if [ "${FIG}" = "FIGyes" ]
+##		then StoreOneNoOverwrite "${ENVI}.ras" "${RASDIR}" cp
+##	fi
+##	}
+
+
 
 function MoveGeoc()
 	{

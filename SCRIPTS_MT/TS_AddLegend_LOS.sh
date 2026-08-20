@@ -15,7 +15,7 @@
 #
 # Dependencies:	- Fiji (ImageJ). 
 #				- gnu sed for more compatibility. 
-#				- Python + Numpy + script: CreateColorFrame.py, AmpDefo_map.sh, TimeSerieInfo_HP.sh
+#				- Python + Numpy + script: CreateColorFrame.py, AmpDefo_map.sh, TimeSerieInfo_HP.sh,AmpTif_map.sh
 #               - Parameter file must be present in "MSBAS/Region/_CombiFiles" to extract 'RateResoSatView' from it
 #               
 #
@@ -57,14 +57,31 @@
 # New in Distro V 3.6 20250916:	- Force to cp instead of link images
 # New in Distro V 3.7 20251105:	- if does not find LinkedFile in all dirs down to Defo1 dir, search for Defo*1. 
 #									This should allows coping with all type of exotic processings... 
+# New in Distro V 3.8 20260211:	- change  way to compare if file is older than another (only use mtime for display)
+# New in Distro V 3.9 20260323:	- create a dummy file to compare with cmp if no file exist yet
+#								- add options to define LOS mode for NISAR format, that is _LOS_Freq._x where x is A or D
+# New in Distro V 4.0 20260731:	- works with msbasv10 (and tif files). In that case, decoration is made of Defo and GoogleEarth only instead of AmpliDefoCoh and Google Earth
+#								- may use a second param "COMP" i.e. LOS, EW, UD or NS
+# New in Distro V 4.1 20260804:	- tif case: call AmpTif_map.sh with PATHFILEDEFO (AmpTif_map.sh wants the 
+#								  deformation tif; PATHFILEAMPLI only exists in the bin case) and test 
+#								  the result as in the bin case 
+#								- keep MSBAS_LINEAR_RATE_GEOM_*.${FILEXT} in the final cleanup, otherwise 
+#								  the tif was deleted and the map rebuilt at every run 
+#								- build the mask only in the bin case (AmpTif_map.sh makes its own with 
+#								  CreateColorFrame.py) 
+#								- limit the search of PATHFILEDEFO_done to _images itself and test it 
+#								  with -f/-s instead of wc -c 
+#								- delete with -exec rm -f and spare AMSTer.png, as TS_AddLegend_EW_UD.sh 
+# New in Distro V 4.2 20260804:	- spare Legend_*_scale.txt when cleaning _images, so that the 
+#								  colour bar limits survive the runs that reuse the velocity map 
+# 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.7 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 5, 2025"
-
+VER="Distro 4.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 04, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -74,22 +91,28 @@ echo " "
 source ${HOME}/.bashrc
 # ^^^ ----- Hard coded lines to check --- ^^^ 
 
-
 # Check OS
 OS=`uname -a | cut -d " " -f 1 `
 echo "Running on ${OS}"
 echo
 
 eps_file=$1
+COMP=$2		# optional LOS, EW, UD or NS
+
+case "${COMP}" in
+	LOS|EW|UD|NS) ;;          # valid, keep as is
+	*) COMP="" ;;             # anything else (incl. empty/unset) -> empty. Most probably run for LOS; will be assigned later based on RUNDIR 
+esac
 
 if [[ ${eps_file} != *".eps" ]]
 	then 
 		echo "!!!!!!!!!!!  Error:  No eps file valid   !!!!!!!!!"
-		exit
+		echo ""
+		exit 1
 fi
 
 RUNDIR=$(pwd)
-echo "Let's start creating LOS time series in the ${RUNDIR} folder'"
+echo "Let's start creating single component time series in the ${RUNDIR} folder'"
 
 RegionFolder=$(dirname ${RUNDIR})
 #ParamFile=${RegionFolder}/_CombiFiles/TS_parameters.txt
@@ -98,7 +121,13 @@ RegionFolder=$(dirname ${RUNDIR})
 mkdir -p ${RegionFolder}/_CombiFiles
 # ONLY COPY PARAM FILE IF IT DOES NOT EXIST TO PRESERVE POSSIBLE ADJUSTMENTS ALREADY PERFORMED TO PARAM FILE   
 #cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/ 2>/dev/null
-if [ ! -e "${RegionFolder}/_CombiFiles/" ] ; then cp "${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/*" "${RegionFolder}/_CombiFiles/" ; fi 
+#if [ ! -e "${RegionFolder}/_CombiFiles/" ] ; then cp "${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/*" "${RegionFolder}/_CombiFiles/" ; fi 
+for FILE in "${PATH_SCRIPTS}"/SCRIPTS_MT/TSCombiFiles/* ; do
+	[ -e "${FILE}" ] || continue
+	DEST="${RegionFolder}/_CombiFiles/$(basename "${FILE}")"
+	if [ ! -e "${DEST}" ] ; then cp -p "${FILE}" "${DEST}" ; fi
+done
+
 
 #if [ ! -e ${RUNDIR}/_images ]; then mkdir ${RUNDIR}/_images; fi
 # NdO Jan 25 2021
@@ -122,71 +151,118 @@ RateResoSatView=$(GetParam RateResoSatView)
 #Orbit=$(echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -o .[Ae]sc | cut -d '_' -f 2)	# Asc or Desc
 # NdO Jan 25 2021
 #if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "\_LOS\_"| wc -c` -gt 0 ] ; then Orbit=$(echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -o .[Ae]sc | cut -d '_' -f 2) ; OrbitMode="LOS" ; fi	 # Asc or Desc
-if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_LOS_"| wc -c` -gt 0 ] 
+if [ "${COMP}" == "" ] 
 	then 
-		Orbit=$(echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -o _.*sc.*_Auto | cut -d '_' -f 3) 
-		OrbitMode="LOS" 
-		if [ "${Orbit}" == "" ] ; then Orbit=LineOfSight ; fi
-fi	 # ${Mode}Asc or ${Mode}Desc
-if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_UD_" | wc -c` -gt 0 ] ; then Orbit="UD" ; fi	 # UD
-if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_EW_" | wc -c` -gt 0 ] ; then Orbit="EW" ; fi	 # EW
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_LOS_"| wc -c` -gt 0 ] 
+			then 
+				Orbit=$(echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -o _.*sc.*_Auto | cut -d '_' -f 3) 
+				OrbitMode="LOS" 
+				if [ "${Orbit}" == "" ] ; then Orbit=LineOfSight ; fi
+		fi	 # ${Mode}Asc or ${Mode}Desc
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_UD_" | wc -c` -gt 0 ] ; then Orbit="UD" ; fi	 # UD
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_EW_" | wc -c` -gt 0 ] ; then Orbit="EW" ; fi	 # EW
+		
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_A_Auto" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for ALOS2 type
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_D_Auto" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for ALOS2 type
+		
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_A_" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for Nepal area
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_D_" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for Nepal area
+		
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_Freq._A" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for NISAR
+		if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_Freq._D" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for NISAR
+		
+		if [ "${OrbitMode}" == "LOS" ] ; then TagOrbit="LOS" ; else TagOrbit="${Orbit}" ; fi		# for any unusual format
+	else 
+		case "${COMP}" in
+			EW|UD|NS) 
+				Orbit="${COMP}"
+				OrbitMode=""
+				TagOrbit="${COMP}"
+				;;          # valid, keep as is
+			LOS)  
+				BNAME=$(basename "${RUNDIR}")
+				case "${BNAME}" in
+					*_Asc_*|*_A_*)  Orbit="Asc" ;;
+					*_Desc_*|*_D_*) Orbit="Desc" ;;
+					*)              Orbit="LineOfSight" ;;
+				esac
+				OrbitMode="LOS"
+				TagOrbit="LOS"
+				;;             # anything else (incl. empty/unset) -> empty. Most probably run for LOS; will be assigned later based on RUNDIR 
+		esac
 
-if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_A_Auto" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for ALOS2 type
-if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "_D_Auto" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for ALOS2 type
-
-if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_A_" | wc -c` -gt 0 ] ; then Orbit="Asc" ; fi	 # Asc for Nepal area
-if [ `echo $(basename ${RUNDIR}) | ${PATHGNU}/grep -Eo "LOS_D_" | wc -c` -gt 0 ] ; then Orbit="Desc" ; fi	 # Asc for Nepal area
-
-
-if [ "${OrbitMode}" == "LOS" ] ; then TagOrbit="LOS" ; else TagOrbit="${Orbit}" ; fi
-	
+fi	
 echo "eps file to be decorated = ${eps_file}"
 echo "Orbit type: ${Orbit}"
 
 #ln -s ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images  >> /dev/null 2>&1
 cp -f ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images  >> /dev/null 2>&1
 
-
 # find deformation speed file in this directory
 #-----------------------------------------------
 #PATHFILEDEFO=$(find ${RUNDIR} -type f -name "MSBAS_LINEAR_RATE_LOS.bin")  # !!! remove * !!!
 # NdO Jan 25 2021 
+
 PATHFILEDEFO=$(find ${RUNDIR} -maxdepth 1 -type f -name "MSBAS_LINEAR_RATE_${TagOrbit}.bin")  # !!! remove * !!!	
+if [ -f "${PATHFILEDEFO}" ]
+	then 
+		echo "msbasv4 results"
+		FILEXT="bin"
+		TYPEAMPLI="Ampli-Defo-Coh"
+	else 
+		PATHFILEDEFO=$(find ${RUNDIR} -maxdepth 1 -type f -name "MSBAS_LINEAR_RATE_${TagOrbit}.tif") 
+		if [ -f "${PATHFILEDEFO}" ]
+			then 
+				echo "msbasv10 results"
+				FILEXT="tif"
+				TYPEAMPLI="Ampli"
+			else 
+				echo "Can't find the MSBAS_LINEAR_RATE_${TagOrbit}.bin nor .tif; exiting..."
+				exit 1
+		fi
+fi
 
 mtime=$(${PATHGNU}/gstat -c %y ${PATHFILEDEFO})
 mtime=${mtime:8:2}	#extract creation day
 echo "PATHFILEDEFO = $PATHFILEDEFO"
 # NdO Jan 25 2021
-echo "Last modification day of \"MSBAS_LINEAR_RATE_${TagOrbit}.bin\" file in MSBAS directory is ${mtime}"
+echo "Last modification day of \"MSBAS_LINEAR_RATE_${TagOrbit}.${FILEXT}\" file in MSBAS directory is ${mtime}"
 
 #PATHFILEDEFO_done=$(find ${RUNDIR}/_images -type f -name "MSBAS_LINEAR_RATE_LOS_${Orbit}.bin")  # !!! remove * !!!
 # NdO Jan 25 2021 - and replace everywhere here after LOS_${Orbit} with GEOM_${Orbit}
-PATHFILEDEFO_done=$(find ${RUNDIR}/_images -type f -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.bin")  # !!! remove * !!!
+PATHFILEDEFO_done=$(find ${RUNDIR}/_images -maxdepth 1 -type f -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.${FILEXT}")  # !!! remove * !!!
 echo "test max: ${PATHFILEDEFO_done}"
-if [ `echo ${PATHFILEDEFO_done} | wc -c` -gt 1 ] 
+if [ -f "${PATHFILEDEFO_done}" ] && [ -s "${PATHFILEDEFO_done}" ] 		# [ `echo ${PATHFILEDEFO_done} | wc -c` -gt 1 ] 
 	then 
 		mtime2=$(${PATHGNU}/gstat -c %y ${PATHFILEDEFO_done}) 
 		mtime2=${mtime2:8:2}	#extract creation day
-		echo "Last modification day of \"MSBAS_LINEAR_RATE_${TagOrbit}.bin\" file in our \"_images\" directory is ${mtime2}"
+		echo "Last modification day of \"MSBAS_LINEAR_RATE_${TagOrbit}.${FILEXT}\" file in our \"_images\" directory is ${mtime2}"
 	else 
-		echo "First time decoration of MSBAS_LINEAR_RATE_${TagOrbit}.bin"
+		echo "First time decoration of MSBAS_LINEAR_RATE_${TagOrbit}.${FILEXT}"
 		mtime2=0
+		touch "${RUNDIR}/dummy.tmp"
+		PATHFILEDEFO_done="${RUNDIR}/dummy.tmp"
+
 fi
 
 # Creation of new Velocity map only if a new one is available
 #---------------------------------------------------------------
-if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ] 
+# if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ] 
+if ! cmp -s ${PATHFILEDEFO} ${PATHFILEDEFO_done} || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ] 
 	then 
 			echo ""
-			echo "----------->   Prepare file for creating new Ampli-Defo-Coh jpeg file for GEOM_${Orbit}:"
+			echo "----------->   Prepare file for creating new ${TYPEAMPLI} jpeg file for GEOM_${Orbit}:"
 			echo ""
 			sleep 2
 			
-			find ${RUNDIR}/_images -type f ! -name "TS_*" -delete
-			DEFO="MSBAS_LINEAR_RATE_GEOM_${Orbit}.bin"
+			# prefer -exec rm -f to -delete to avoid ghost smb files, and keep the logo 
+			find ${RUNDIR}/_images -type f ! -name "TS_*" ! -name "AMSTer.png" -exec rm -f {} \;
+			DEFO="MSBAS_LINEAR_RATE_GEOM_${Orbit}.${FILEXT}"
 			cp -p $PATHFILEDEFO ${RUNDIR}/_images/${DEFO}
 			#ln -s ${PATHFILEDEFO}.hdr ${RUNDIR}/_images/${DEFO}.hdr
-			cp -f ${PATHFILEDEFO}.hdr ${RUNDIR}/_images/${DEFO}.hdr
+			if [ "${FILEXT}" == "bin" ] ; then 
+				cp -f ${PATHFILEDEFO}.hdr ${RUNDIR}/_images/${DEFO}.hdr
+			fi
 			PATHFILEDEFO=${RUNDIR}/_images/${DEFO}
 
 			PATHFILECOH=$(echo "${PATHFILEDEFO//MSBAS_LINEAR_RATE/MSBAS_MASK}")
@@ -194,120 +270,135 @@ if [[ ${mtime} != ${mtime2} ]] || [ ! -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEA
 			#echo "PATHFILECOH = $PATHFILECOH"
 
 
-			# Creation of the mask
-			#---------------------
-			${PATH_SCRIPTS}/SCRIPTS_MT/Mask_Builder.py ${PATHFILEDEFO} ${PATHFILECOH}   >> /dev/null 2>&1
-
 			# find the corresponding amplitude file
 			#-----------------------------------------------
+			if [ "${FILEXT}" == "bin" ] ; then 
 
-			#echo "RegionFolder = ${RegionFolder}"
-			LinkedFile=$(find ${RegionFolder}/DefoInterpolx2Detrend1/ -name "defo*deg" 2>/dev/null | head -1)
+				# Creation of the mask
+				#---------------------
+				${PATH_SCRIPTS}/SCRIPTS_MT/Mask_Builder.py ${PATHFILEDEFO} ${PATHFILECOH}   >> /dev/null 2>&1
 
-			if [ "${LinkedFile}" == "" ] 
-				then 
-					# There is no file in DefoInterpolx2Detrend1, search in DefoInterpolDetrend1
-					LinkedFile=$(find ${RegionFolder}/DefoInterpolDetrend1/ -name "defo*deg" 2>/dev/null | head -1) 
-					if [ "${LinkedFile}" == "" ] 
-						then 
-							# There is no file in DefoInterpolDetrend1, search in DefoInterpol1
-							LinkedFile=$(find ${RegionFolder}/DefoInterpol1/ -name "defo*deg" 2>/dev/null | head -1) 
-							if [ "${LinkedFile}" == "" ] 
-								then 
-									# There is no file in DefoInterpol1, search in Defo1
-									LinkedFile=$(find ${RegionFolder}/Defo1/ -name "defo*deg" 2>/dev/null | head -1) 
-									if [ "${LinkedFile}" == "" ] 
-										then 
-											#### There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
-											###LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
-
-											# There is no file in Defo1, search in first of Defo*1		
-											FirstDir=$(ls -d "${RegionFolder}"/Defo*1/ 2>/dev/null | head -1)
-											echo "  // This is a fancy deformation Dir. Please check yourself if evrything is OK... "
-											LinkedFile=$(find "$FirstDir" -type f -name "defo*deg" 2>/dev/null | head -1)
-											# for really exotic and fancy processings.... be carefull.... 
-											if [ "${LinkedFile}" == "" ] 
-												then 
-													echo "  // This is a very fancy deformation file. Please check yourself if evrything is OK... "
-													LinkedFile=$(find "$FirstDir" -type f -name "*defo*deg" 2>/dev/null | head -1)
-											fi
-
-											if [ "${LinkedFile}" == "" ] 
-												then 
-													# There is no file at all - can't make the fig with amplitude background
-													echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend][*]1. "
-													echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
-											fi
-									fi
-							fi
-					fi
-			fi
-
-
-			# Because the script may be launched on a computer with another OS than the one used to build ampli
-			# let's change beginning of path by the corresponding state variable if target file does not exists
-			AmpliPath=$(readlink ${LinkedFile})
-			#echo "AmpliPath = ${AmpliPath}"
-			
-			if [ ! -s ${AmpliPath} ] ; then 
-				AmpliDir=$(dirname ${AmpliPath})
-				# Disk nr
-				Server=$(echo ${AmpliPath} | cut -d "/" -f 3 | ${PATHGNU}/grep -o [0-9][0-9][0-9][0-9])
-				PathServer="PATH_${Server}"
-				# delete verythinh till disk server nr
-				AmpliRelPath=$(echo ${AmpliPath} | sed "s/^.*${Server}//")
-				# need also to delete trailing string from server name, i.e. till /
-				AmpliPathTmp=$(echo ${AmpliRelPath} | cut -d "/" -f2- )	
-				# replace by server state variable
-				AmpliPath=${!PathServer}/${AmpliPathTmp}
-			fi
+				#echo "RegionFolder = ${RegionFolder}"
+				LinkedFile=$(find ${RegionFolder}/DefoInterpolx2Detrend1/ -name "defo*deg" 2>/dev/null | head -1)
 	
-			#echo "AmpliPath = ${AmpliPath}"
-			AmpliFolder=$(dirname $(dirname ${AmpliPath}))/Ampli
-			AmpliFile=$(ls -t ${AmpliFolder} | ${PATHGNU}/grep deg$ | head -n 1)
-			
-			#echo "AmpliPath = ${AmpliPath}"
-			#echo "LinkedFile = ${LinkedFile}"
-			#echo "AmpliPath = ${AmpliPath}"
-			#echo ${Server}
-			#echo ${AmpliRelPath}
-			#echo ${AmpliPath}
+				if [ "${LinkedFile}" == "" ] 
+					then 
+						# There is no file in DefoInterpolx2Detrend1, search in DefoInterpolDetrend1
+						LinkedFile=$(find ${RegionFolder}/DefoInterpolDetrend1/ -name "defo*deg" 2>/dev/null | head -1) 
+						if [ "${LinkedFile}" == "" ] 
+							then 
+								# There is no file in DefoInterpolDetrend1, search in DefoInterpol1
+								LinkedFile=$(find ${RegionFolder}/DefoInterpol1/ -name "defo*deg" 2>/dev/null | head -1) 
+								if [ "${LinkedFile}" == "" ] 
+									then 
+										# There is no file in DefoInterpol1, search in Defo1
+										LinkedFile=$(find ${RegionFolder}/Defo1/ -name "defo*deg" 2>/dev/null | head -1) 
+										if [ "${LinkedFile}" == "" ] 
+											then 
+												#### There is no file in Defo1, search in DefoInterpolx2DetrendRmCo1										
+												###LinkedFile=$(find ${RegionFolder}/DefoInterpolx2DetrendRmCo1/ -name "defo*deg" 2>/dev/null | head -1) 
+	
+												# There is no file in Defo1, search in first of Defo*1		
+												FirstDir=$(ls -d "${RegionFolder}"/Defo*1/ 2>/dev/null | head -1)
+												echo "  // This is a fancy deformation Dir. Please check yourself if evrything is OK... "
+												LinkedFile=$(find "$FirstDir" -type f -name "defo*deg" 2>/dev/null | head -1)
+												# for really exotic and fancy processings.... be carefull.... 
+												if [ "${LinkedFile}" == "" ] 
+													then 
+														echo "  // This is a very fancy deformation file. Please check yourself if evrything is OK... "
+														LinkedFile=$(find "$FirstDir" -type f -name "*defo*deg" 2>/dev/null | head -1)
+												fi
+	
+												if [ "${LinkedFile}" == "" ] 
+													then 
+														# There is no file at all - can't make the fig with amplitude background
+														echo "  // I can't find a deformation file in ${RegionFolder}/Defo[Interpol][x2][Detrend][*]1. "
+														echo "  // Hence I can't find an Ampli dir where to find what I need to make an amplitude background" 
+												fi
+										fi
+								fi
+						fi
+				fi
 
- 			#echo "Ampli file = ${AmpliFile}"
-			#ln -s ${AmpliFolder}/${AmpliFile} ${RUNDIR}/_images/${AmpliFile}
-			#ln -s ${AmpliFolder}/${AmpliFile}.hdr ${RUNDIR}/_images/${AmpliFile}.hdr
-			cp -f ${AmpliFolder}/${AmpliFile} ${RUNDIR}/_images/${AmpliFile}
-			cp -f ${AmpliFolder}/${AmpliFile}.hdr ${RUNDIR}/_images/${AmpliFile}.hdr
+				# Because the script may be launched on a computer with another OS than the one used to build ampli
+				# let's change beginning of path by the corresponding state variable if target file does not exists
+				AmpliPath=$(readlink ${LinkedFile})
+				#echo "AmpliPath = ${AmpliPath}"
+				
+				if [ ! -s ${AmpliPath} ] ; then 
+					AmpliDir=$(dirname ${AmpliPath})
+					# Disk nr
+					Server=$(echo ${AmpliPath} | cut -d "/" -f 3 | ${PATHGNU}/grep -o [0-9][0-9][0-9][0-9])
+					PathServer="PATH_${Server}"
+					# delete verythinh till disk server nr
+					AmpliRelPath=$(echo ${AmpliPath} | sed "s/^.*${Server}//")
+					# need also to delete trailing string from server name, i.e. till /
+					AmpliPathTmp=$(echo ${AmpliRelPath} | cut -d "/" -f2- )	
+					# replace by server state variable
+					AmpliPath=${!PathServer}/${AmpliPathTmp}
+				fi
+		
+				#echo "AmpliPath = ${AmpliPath}"
+				AmpliFolder=$(dirname $(dirname ${AmpliPath}))/Ampli
+				AmpliFile=$(ls -t ${AmpliFolder} | ${PATHGNU}/grep deg$ | head -n 1)
+				
+				#echo "AmpliPath = ${AmpliPath}"
+				#echo "LinkedFile = ${LinkedFile}"
+				#echo "AmpliPath = ${AmpliPath}"
+				#echo ${Server}
+				#echo ${AmpliRelPath}
+				#echo ${AmpliPath}
+	
+ 				#echo "Ampli file = ${AmpliFile}"
+				#ln -s ${AmpliFolder}/${AmpliFile} ${RUNDIR}/_images/${AmpliFile}
+				#ln -s ${AmpliFolder}/${AmpliFile}.hdr ${RUNDIR}/_images/${AmpliFile}.hdr
+				cp -f ${AmpliFolder}/${AmpliFile} ${RUNDIR}/_images/${AmpliFile}
+				cp -f ${AmpliFolder}/${AmpliFile}.hdr ${RUNDIR}/_images/${AmpliFile}.hdr
+ 				PATHFILEAMPLI=${RUNDIR}/_images/${AmpliFile}
 
- 			PATHFILEAMPLI=${RUNDIR}/_images/${AmpliFile}
-			echo "PATHFILEAMPLI = $PATHFILEAMPLI"
+				echo "PATHFILEAMPLI = $PATHFILEAMPLI"
+				echo "PATHFILECOH = $PATHFILECOH"
+
+			fi
+
 			echo "PATHFILEDEFO = $PATHFILEDEFO"
-			echo "PATHFILECOH = $PATHFILECOH"
+
 			# Create the image (Amplitude-coherence-deformation) + creating a legend (AmpDefo_map.sh)
 			#----------------------------------------------------------------------------------------
 			echo ""
-			echo "-----------> Start script to create Ampli-Coherence-Deformation jpeg image "
+			echo "-----------> Start script to create ${TYPEAMPLI} jpeg image "
 			#echo "${PATH_SCRIPTS}/SCRIPTS_MT/AmpDefo_map.sh ${PATHFILEAMPLI} ${PATHFILECOH} ${PATHFILEDEFO} AMPLI_COH_MSBAS_LINEAR_RATE_LOS_${Orbit}"
-			${PATH_SCRIPTS}/SCRIPTS_MT/AmpDefo_map.sh ${PATHFILEAMPLI} ${PATHFILECOH} ${PATHFILEDEFO} AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit} >> /dev/null 
-			#find ${RUNDIR}/_images -type f -name "*_2.0" -delete
-			#find ${RUNDIR}/_images -type f -name "*.hdr" -delete
-			find ${RUNDIR}/_images -type f -name "*_2.0" -exec rm -f {} \; 	# prefer this way to delete to avoid ghost smb files 
-			find ${RUNDIR}/_images -type f -name "*.hdr" -exec rm -f {} \;
 
-			if [ -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ]
-							then 
-								echo "----------->  Succeeded "
-								echo ""
-							else
-								echo "----------->  failed "
-								echo ""
-							fi
+			if [ "${FILEXT}" == "bin" ]
+				then
+					${PATH_SCRIPTS}/SCRIPTS_MT/AmpDefo_map.sh ${PATHFILEAMPLI} ${PATHFILECOH} ${PATHFILEDEFO} AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit} >> /dev/null 
+					#find ${RUNDIR}/_images -type f -name "*_2.0" -delete
+					#find ${RUNDIR}/_images -type f -name "*.hdr" -delete
+					find ${RUNDIR}/_images -type f -name "*_2.0" -exec rm -f {} \; 	# prefer this way to delete to avoid ghost smb files 
+					find ${RUNDIR}/_images -type f -name "*.hdr" -exec rm -f {} \;
+		
+					if [ -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ]
+						then 
+							echo "----------->  Succeeded "
+							echo ""
+						else
+							echo "----------->  failed "
+							echo ""
+					fi
+				else 
+					${PATH_SCRIPTS}/SCRIPTS_MT/AmpTif_map.sh ${PATHFILEDEFO} AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit} >> /dev/null 
+					if [ -e ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ]
+						then echo "----------->  Succeeded " ; echo ""
+						else echo "----------->  failed "    ; echo ""
+					fi
+			fi
+	else
+		echo ""
+		echo "----------->  No need to rebuild Amplitude-Coherence-Deformation image "
+		echo ""
+fi
 
-		else
-			echo ""
-			echo "----------->  No need to rebuild Amplitude-Coherence-Deformation image "
-			echo ""
-	fi
+rm -f "${RUNDIR}/dummy.tmp" 2>/dev/null
 
 # Creation of time series illustrated with velocity legend + displacement interpretation
 #-----------------------------------------------------------------------------------------
@@ -320,7 +411,7 @@ rm -f ${RUNDIR}/_images/satview.jpg  	# allows to operate from different compute
 cp -f ${RegionFolder}/_CombiFiles/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
 cp -f ${RegionFolder}/_CombiFiles/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
 
-${PATH_SCRIPTS}/SCRIPTS_MT/TimeSeriesInfo_HP.sh ${eps_file} ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ${RateResoSatView}  >> /dev/null 
+${PATH_SCRIPTS}/SCRIPTS_MT/TimeSeriesInfo_HP.sh ${eps_file} ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ${RateResoSatView}  #>> /dev/null 
 
 
 
@@ -338,10 +429,12 @@ echo ""
 echo "delete extra files"
 #find ${RUNDIR}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.bin" \) -delete
 #find ${RUNDIR}/_images -type l ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.bin" \) -delete
-find ${RUNDIR}/_images -type f ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.bin" \) -exec rm -f {} \;
-find ${RUNDIR}/_images -type l ! \( -name "*.jpg" -o -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.bin" \) -exec rm -f {} \;
+# NdO Aug 04 2026: spare Legend_*_scale.txt as well. It holds the limits the colour bar was built 
+# with and is only rewritten when AmpTif_map.sh runs, i.e. NOT on the runs that reuse the existing 
+# velocity map; deleting it here would leave TimeSeriesInfo_HP.sh (SCALEFROM=LEGEND) without it. 
+find ${RUNDIR}/_images -type f ! \( -name "*.jpg" -o -name "*_scale.txt" -o -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.${FILEXT}" \) -exec rm -f {} \;
+find ${RUNDIR}/_images -type l ! \( -name "*.jpg" -o -name "*_scale.txt" -o -name "MSBAS_LINEAR_RATE_GEOM_${Orbit}.${FILEXT}" \) -exec rm -f {} \;
 
 echo ""
 echo "------------- end ------------"
 echo ""
-

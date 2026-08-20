@@ -4,6 +4,7 @@
 # It also creates a common baseline plot for  ascending and descending modes. 
 
 # New in Distro V 1.0.0 20250411 :	- based on Guadeloupe processing
+# New in Distro V 1.0.1 20260409 :	- allows checking Asc with smaller kml and only 3 bursts for S1C Asc
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -46,7 +47,9 @@ RESAMDIR=$PATH_3610/SAR_SM/RESAMPLED/
 MASSPRODIR=$PATH_3601/SAR_MASSPROCESS/
 
 #kml file
-KMLFILE=$PATH_1650/kml/Colombia/Read_Galeras.kml			# that is 4 bursts in Asc and 2 in Desc; slightly shorter to the South compared to provided AMSTer_Galeras.kml
+KMLFILE=$PATH_1650/kml/Colombia/Read_Galeras.kml			# For reading
+KMLFILEASC=$PATH_1650/kml/Colombia/Read_GalerasAsc.kml			# that is 3 bursts in Asc ; slightly shorter to the South compared to provided AMSTer_Galeras.kml
+KMLFILEDESC=$PATH_1650/kml/Colombia/Read_Galeras.kml		# that is 2 in Desc; slightly shorter to the South compared to provided AMSTer_Galeras.kml
 
 #Launch param files
 PARAMCOREGASC=$PATH_1650/Param_files/S1/GALERAS_A_120/LaunchMTparam_S1_IW_Galeras_A_Zoom1_ML2_Coreg.txt 
@@ -60,12 +63,18 @@ $PATH_SCRIPTS/SCRIPTS_MT/Read_All_Img.sh ${DIRSARDATA} ${DIRSARCSL}/NoCrop S1 ${
 
 # Check nr of bursts and coordinates of corners. If not as expected, move img in temp quatantine and log that. Check regularily: if not updated after few days, it means that image is bad or zip file not correctly downloaded
 ################################################
-## Asc 164 ; bursts size and coordinates are obtained by running e.g.:  _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/Region_Mode/NoCrop/S1A_an_image_A.csl Dummy
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_120/NoCrop 4 "${KMLFILE}" &
-
-
 ## Desc D_54; 
-_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_142/NoCrop 2 "${KMLFILE}" &
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_D_142/NoCrop 2 "${KMLFILEDESC}" &
+
+## Asc 164 ; bursts size and coordinates are obtained by running e.g.:  _Check_S1_SizeAndCoord.sh /Volumes/hp-1650-Data_Share1/SAR_CSL/S1/Region_Mode/NoCrop/S1A_an_image_A.csl Dummy
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_120/NoCrop 4 "${KMLFILEASC}" # valid for S1A
+# needed for S1C 
+_Check_ALL_S1_SizeAndCoord_InDir.sh ${DIRSARCSL}_A_120/NoCrop/__TMP_QUARANTINE 3 "${KMLFILEASC}"  # valid for S1C 
+	mv ${DIRSARCSL}_A_120/NoCrop/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_A_120/NoCrop/ 2>/dev/null
+	mv ${DIRSARCSL}_A_120/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE/*.csl ${DIRSARCSL}_A_120/NoCrop/__TMP_QUARANTINE/ 2>/dev/null
+	mv ${DIRSARCSL}_A_120/NoCrop/__TMP_QUARANTINE/*.txt ${DIRSARCSL}_A_120/NoCrop/ 2>/dev/null
+	rm -R ${DIRSARCSL}_A_120/NoCrop/__TMP_QUARANTINE/__TMP_QUARANTINE 2>/dev/null
+
 wait
 
 # Coregister all images on the super master 

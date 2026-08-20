@@ -3,6 +3,10 @@
 # $Id: flip_raster.py
 #
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20260216:	-  Silent Python exceptions 
+# New in Distro V 2.2 20260218:	-  replace the use of ReadAsArray and WriteArray 
+# 									with ReadRaster and WriteRaster, which are 
+#									pure GDAL methods and do not require gdal_array.
 #
 #
 # Purpose:  Module to flip a raster dataset on the y axis.
@@ -33,9 +37,12 @@
 # Adapted to python 3.10 by N. d'Oreye on July 7 2022. 
 #        Some doubts about lines 48-51 and 281-284. It seems to be OK though.   
 #
+#
+#
 ###############################################################################
 
 from osgeo import gdal
+gdal.DontUseExceptions()
 import sys
 
 #  depreciated since 2,7: 
@@ -58,8 +65,10 @@ def raster_flip( s_fh, s_xoff, s_yoff, s_xsize, s_ysize, s_band_n,
  
     # write out the first line from source file as the last line in the dest
     for line in range(s_ysize):
-        data_src = s_band.ReadAsArray( s_xoff, line, s_xsize, 1, t_xsize, 1 )
-        t_band.WriteArray( data_src, t_xoff, abs(line - t_ysize) -1  )                             
+        #data_src = s_band.ReadAsArray( s_xoff, line, s_xsize, 1, t_xsize, 1 )
+        #t_band.WriteArray( data_src, t_xoff, abs(line - t_ysize) -1  )   
+        data_src = s_band.ReadRaster( s_xoff, line, s_xsize, 1, t_xsize, 1, s_band.DataType )
+        t_band.WriteRaster( t_xoff, abs(line - t_ysize) -1, t_xsize, 1, data_src )                                    
     return 0
 
 

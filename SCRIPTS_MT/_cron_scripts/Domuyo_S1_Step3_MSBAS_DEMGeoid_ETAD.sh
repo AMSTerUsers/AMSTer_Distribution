@@ -26,14 +26,15 @@
 # New in Distro V 2.1 20251022:	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
 # New in Distro V 2.2.0 20251125 :	- crop empty lines before MSBAS inversion (hard coded limits)
 #									- _Check_bad_DefoInterpolx2Detrend.sh was applied to wrong dir (non ETAD) 
-# 
+# New in Distro V 2.3.0 20260218 :	- spec for run after Crons_1_2_3.sh and for ETAD
+# New in Distro V 2.4.0 2026730 :	- force msbasv4								
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 25, 2025"
+VER="Distro V2.4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -46,6 +47,13 @@ cd
 TODAY=`date`
 
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
+
+	# Variables to check that no other cron job step 1 or 2 is running from another computer
+	# in this case, crons 1 and 2 are launched from iMac27
+	TARGET="Domuyo"
+	PATH_DIR_FOR_FLAG="$PATH_3602/SAR_MASSPROCESS_2/S1/"
+
+
 	# some parameters
 	#################
 
@@ -140,7 +148,7 @@ TODAY=`date`
 		
 	# Coherence restriction
 	########################		
-		IFCOH="YES"		# YES or NO
+		IFCOH="YES"		# YES or NO  BEWARE: DO NOT RUN YES after NO or NO after YES without cleaning all the MSBAS dir before  
 
 		if [ ${IFCOH} == "YES" ] 
 			then 
@@ -179,7 +187,7 @@ TODAY=`date`
 	# Name of previous cron jobs for the automatic processing of that target (used to check that no other process is runing)
 	#########################################################################
 	PATHCRONJOB=${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts	# Reminder ; not used in this script
-	CRONJOB2=Domuyo_S1_Step2_MassProc_DEMGeoid.sh
+	CRONJOB2=Domuyo_S1_Step2_MassProc_DEMGeoid_ETAD.sh
 	
 # ^^^^^^^^^^ Hard coded lines ^^^^^^^^^^^^
 
@@ -369,11 +377,46 @@ TODAY=`date`
 		mv ${MSBASDIR}/zz_LOS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/timeLine${X1}_${Y1}_${X2}_${Y2}_Combi.jpg ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/${DESCRIPTION}_timeLine_${X1}_${Y1}_${X2}_${Y2}_Auto_${ORDER}_${LAMBDA}_${LABEL}_Combi_Desc.jpg
 		}
 
+# Check that there is no other Step3 running
+#############################################
+	CHECKCRON3=`ps -Af | ${PATHGNU}/grep "Step3" | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
+	if [ ${CHECKCRON3} -gt 0 ] ; then 
+			REASON=" another Step3 is running, which may overload the computer; pause here" 
+			STOPRUN="YES"
+	fi
+
 
 # Check that there is no other cron (Step 2 or 3) or manual SuperMaster_MassProc.sh running
 ###########################################################################################
+
+	# Check that no other cron job step 1 or 2 is running, e.g from another computer
+	RUNDATE=$(date "+%m_%d_%Y_%Hh%Mm")
+	RNDM=$(( $RANDOM % 10000 ))
+	
+	# Create a Flag file that warns that crons are running for the target and make a trap to delete it when script ends or is stopped by ctrl-C (not if terminated by reboot or kill -9)
+	FLAGFILE="${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt"
+
+	cleanup() {
+	  rm -f "${FLAGFILE}" 
+	}
+
+	trap cleanup EXIT INT TERM
+	
+	if ! find "${PATH_DIR_FOR_FLAG}" -maxdepth 1 -name "Running_crons_${TARGET}*" -print -quit | grep -q .
+		then
+	    	echo "No running crons step 1 or 2 for ${TARGET} ; can run now"
+   			touch "${FLAGFILE}"
+   			
+    		echo "start cron 3 at $(date '+%Y-%m-%d %H:%M:%S')" >> "${FLAGFILE}"
+	    	
+	    else
+	    	echo "Another cron step 1 or 2 is running for ${TARGET}, see ${PATH_DIR_FOR_FLAG}/Running_crons_${TARGET}*.txt ; Do not run cron3 now"
+	    	exit 1
+	fi
+
+
 	# Check that no other cron job step 3 (MSBAS) or manual SuperMaster_MassProc.sh is running
-	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | grep -v "Crons_1_2_3.sh"  | wc -l`
 		#### For Debugging
 		# echo "ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v ${PATHGNU}/grep | ${PATHGNU}/grep -v /dev/null | wc -l" > CheckRun.txt
 		# echo ${CHECKMB} >> CheckRun.txt
@@ -384,14 +427,14 @@ TODAY=`date`
 			STOPRUN="YES"
 		else
 			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
+			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l` 
+			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l` 
 			# For unknown reason it counts 1 even when no process is running
 			if [ ${CHECKASC} -ne 0 ] || [ ${CHECKDESC} -ne 0 ] ; then REASON="  SuperMaster_MassProc.sh in progress (probably manual)" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi  	
 	fi 
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
-	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
 	if [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	if [ "${STOPRUN}" == "YES" ] 
@@ -601,7 +644,7 @@ cd ${MSBASDIR}
 		${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend1.txt/DefoInterpolx2Detrend1_Full.txt/' ${MSBASDIR}/header.txt
 		${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend2.txt/DefoInterpolx2Detrend2_Full.txt/' ${MSBASDIR}/header.txt
 
-		NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+		NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}  --msbasv4
 
 		# Make baseline plot 
 		PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1_Full.txt
@@ -649,7 +692,7 @@ cd ${MSBASDIR}
 			fi 
 
 		cd ${MSBASDIR}
-		NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+		NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}  --msbasv4
 
 		# test if MSBAS_log.txt contains "completed 100%" ; if not log error 
 #		if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt 
@@ -706,7 +749,7 @@ cd ${MSBASDIR}
 			cd ${MSBASDIR}
 			cp -f header_Asc.txt header.txt 
 
-			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Asc_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Asc_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}  --msbasv4
 
 			cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_Asc_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 			while read -r DESCR X Y RX RY
@@ -732,7 +775,7 @@ cd ${MSBASDIR}
 			cd ${MSBASDIR}
 			cp -f header_Desc.txt header.txt 
 			
-			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Desc_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Desc_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}  --msbasv4
 
 			cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_Desc_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 			while read -r DESCR X Y RX RY
@@ -764,5 +807,10 @@ cd ${MSBASDIR}
 		echo "${LASTDESCTIME}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 		
 		#mv -f ${MSBASDIR}/${TIMESERIESPTSDESCR}.tmp ${MSBASDIR}/${TIMESERIESPTSDESCR}
+
+# Keep track of last successful run
+    cp -f "${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt" "${PATH_DIR_FOR_FLAG}"/"Last_Sucessful_Crons_${TARGET}.txt" 	
+# add note to tell that this run was for ETAD processing
+	echo "*** This porcess was with ETAD ***" >> "${PATH_DIR_FOR_FLAG}"/"Last_Sucessful_Crons_${TARGET}.txt" 
 
 # All done...

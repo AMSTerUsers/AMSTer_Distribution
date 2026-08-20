@@ -16,9 +16,9 @@ set terminal postscript eps enhanced color font 'Helvetica,10'
 set term post landscape "Helvetica" 9
 
 # some styles
-set style line 1 lc rgb "blue" lt 1 lw 2 pt 7 ps 1.2   # --- blue
-set style line 2 lc rgb "red" lt 1 lw 2 pt 5 ps 1.2   # --- red
-set style line 3 lc rgb "green" lt 1 lw 2 pt 4 ps 0.8   # --- green
+set style line 1 lc rgb "blue" lt 1 lw 2 pt 7 ps 0.7   # --- blue
+set style line 2 lc rgb "red" lt 1 lw 2 pt 5 ps 0.7   # --- red
+set style line 3 lc rgb "green" lt 1 lw 2 pt 4 ps 0.5   # --- green
 set style line 4 lc rgb "blue" lt 0 lw 2   # --- blue
 set style line 5 lc rgb "red" lt 0 lw 2   # --- red
 set style line 6 lc rgb "green" lt 0 lw 3   # --- green
@@ -75,8 +75,11 @@ a = 1
 b = 1e-8
 fit f(x) 'PATH_TO_EPS.txt' using 1:3 via a,b
 annualrate(b) = ( b * 3153600000. )
+annualrateErr(b)  = ( b_err  * 3153600000. )
 # ANNUALRATE
-#set label sprintf('Linear rate = %.2f cm/yr', annualrate(b) ) at  graph 0.84,0.02 
+#set label sprintf('Linear rate = %.2f cm/yr +/- %.2f cm\/yr', annualrate(b), annualrateErr(b) ) at  graph 0.84,0.02 
+
+
 
 
 timestamp = strftime("%Y-%m-%d %H:%M:%S", time(0))

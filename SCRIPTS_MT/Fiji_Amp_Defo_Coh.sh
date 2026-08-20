@@ -16,13 +16,14 @@
 # New in Distro V 1.0:	- Based on developpement version and Beta V1.2
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20260714:	- fix path to Fiji for Mac ARM
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 14, 2026"
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
 
@@ -96,16 +97,30 @@ echo "close();" >> FijiMacroDefo2Amp.txt
 
 ${PATHGNU}/gsed "s/'/\"/g" FijiMacroDefo2Amp.txt > FijiMacroDefo2Amp2.txt 
 
-case ${OS} in 
-	"Linux") 
-		${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacroDefo2Amp2.txt ;;
-	"Darwin")
-		${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacroDefo2Amp2.txt ;;
-	*)
-		echo "I can't figure out what is you opeating system. Please check"
-		exit 0
-		;;
-esac						
+# Pick the Fiji launcher: new Jaunch "fiji" or a legacy platform binary
+	if [ -x "${PATHFIJI}/fiji" ]; then
+	    FIJI="${PATHFIJI}/fiji"               # new Jaunch (Mac arm64, Linux, ...)
+	elif [ -x "${PATHFIJI}/ImageJ-linux64" ]; then
+	    FIJI="${PATHFIJI}/ImageJ-linux64"     # legacy Linux
+	elif [ -x "${PATHFIJI}/ImageJ-macosx" ]; then
+	    FIJI="${PATHFIJI}/ImageJ-macosx"      # legacy Intel Mac
+	else
+	    echo "ERROR: no Fiji/ImageJ launcher found in ${PATHFIJI}" >&2
+	    exit 1
+	fi
+
+"${FIJI}" --headless -batch "FijiMacroDefo2Amp2.txt"
+
+#case ${OS} in 
+#	"Linux") 
+#		${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacroDefo2Amp2.txt ;;
+#	"Darwin")
+#		${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacroDefo2Amp2.txt ;;
+#	*)
+#		echo "I can't figure out what is you opeating system. Please check"
+#		exit 0
+#		;;
+#esac						
 
 echo
 echo "Results AMPLI_COH_${DEFO}.tif "

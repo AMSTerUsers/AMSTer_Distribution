@@ -26,17 +26,23 @@
 #
 # New in Distro V 2.0 20240924:	- rebulit from 2D from same date 
 # New in Distro V 2.1 20240925:	- store  timeLine_NS_${COORDLABELNAME12}.txt in /zz_${ALLCOMP}_TS_Auto_${OLL}
-#
+# New in Distro V 2.2.0 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
+#									- check that flag file does not exist in SAR_MASSPROCESS (created from iMac27 ) to attest of running cron 1 or 2
+#									- test if another Step3 is running. If yes, stop to avoid overloading the computer
+									
+# New in Distro V 2.3.0 2026730 :	- force msbasv4								
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 24, 2024"
+VER="Distro V2.3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
+
 
 source $HOME/.bashrc
 
@@ -48,6 +54,12 @@ DD=$(date +%d)
 YYYY=$(date +%Y)
 
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
+
+	# Variables to check that no other cron job step 1 or 2 is running from another computer
+	# in this case, crons 1 and 2 are launched from iMac27
+	TARGET="Funu"
+	PATH_DIR_FOR_FLAG="$PATH_1660/SAR_MASSPROCESS/S1/"
+
 	# some parameters
 	#################
 		# Max baselines (used for all the mode in present case but you can change)
@@ -359,7 +371,7 @@ YYYY=$(date +%Y)
 		local MODE=$1
 		cd ${MSBASDIR}
 		cp -f ${MSBASDIR}/header_${MODE}.txt  header.txt 
-		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 		cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 		# remove header line to avoid error message 
@@ -389,11 +401,45 @@ YYYY=$(date +%Y)
 		#mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
 		}
 
+# Check that there is no other Step3 running
+#############################################
+	CHECKCRON3=`ps -Af | ${PATHGNU}/grep "Step3" | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
+	if [ ${CHECKCRON3} -gt 0 ] ; then 
+			REASON=" another Step3 is running, which may overload the computer; pause here" 
+			STOPRUN="YES"
+	fi
+
 
 # Check that there is no other cron (Step 2 or 3) or manual SuperMaster_MassProc.sh running
 ###########################################################################################
+
+	# Check that no other cron job step 1 or 2 is running, e.g from another computer
+	RUNDATE=$(date "+%m_%d_%Y_%Hh%Mm")
+	RNDM=$(( $RANDOM % 10000 ))
+	
+	# Create a Flag file that warns that crons are running for the target and make a trap to delete it when script ends or is stopped by ctrl-C (not if terminated by reboot or kill -9)
+	FLAGFILE="${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt"
+
+	cleanup() {
+	  rm -f "${FLAGFILE}" 
+	}
+
+	trap cleanup EXIT INT TERM
+	
+	if ! find "${PATH_DIR_FOR_FLAG}" -maxdepth 1 -name "Running_crons_${TARGET}*" -print -quit | grep -q .
+		then
+	    	echo "No running crons step 1 or 2 for ${TARGET} ; can run now"
+   			touch "${FLAGFILE}"
+   			
+    		echo "start cron 3 3D at $(date '+%Y-%m-%d %H:%M:%S')" >> "${FLAGFILE}"
+	    	
+	    else
+	    	echo "Another cron step 1 or 2 is running for ${TARGET}, see ${PATH_DIR_FOR_FLAG}/Running_crons_${TARGET}*.txt ; Do not run cron3 now"
+	    	exit 1
+	fi
+
 	# Check that no other cron job step 3 (MSBAS) or manual SuperMaster_MassProc.sh is running
-	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | wc -l`
+	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
 		#### For Debugging
 		# echo "ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v ${PATHGNU}/grep | ${PATHGNU}/grep -v /dev/null | wc -l" > CheckRun.txt
 		# echo ${CHECKMB} >> CheckRun.txt
@@ -404,18 +450,18 @@ YYYY=$(date +%Y)
 			STOPRUN="YES"
 		else
 			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
+			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
 			# For unknown reason it counts 1 even when no process is running
 			if [ ${CHECKASC} -ne 0 ] || [ ${CHECKDESC} -ne 0 ] ; then REASON="  SuperMaster_MassProc.sh in progress (probably manual)" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi  	
 	fi 
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
-	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
 	if [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	# Check that no other cron job step 3 2D (SuperMaster_MassProc.sh) is running
-	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2D} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2D} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
 	if [ ${CHECKMP} -ne 0 ] ; then REASON=" Same cron job step 3 though in 2D in progress (${CRONJOB3D})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 
@@ -635,7 +681,7 @@ cd ${MSBASDIR}
  			${PATHGNU}/gsed -i 's/${DEFOMODE}1.txt/${DEFOMODE}1_Full.txt/' ${MSBASDIR}/header.txt
  			${PATHGNU}/gsed -i 's/${DEFOMODE}2.txt/${DEFOMODE}2_Full.txt/' ${MSBASDIR}/header.txt
  		 
- 		 	${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+ 		 	${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS} --msbasv4
  		
  			# Make baseline plot 
  	 		PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full.txt
@@ -667,7 +713,7 @@ cd ${MSBASDIR}
  		 else
  			# i.e. without any coh threshold restriction
  			# -------------------------------------------
- 			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+ 			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
  
  			# Make baseline plot 
  			PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${DEFOMODE}1.txt
@@ -734,7 +780,7 @@ cd ${MSBASDIR}
  			fi 
  			
  			cd ${MSBASDIR}
- 			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+ 			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
  
  			# Make baseline plot 
  			PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${DEFOMODE}1.txt
@@ -804,6 +850,9 @@ cd ${MSBASDIR}
 
 				echo "${LASTASCTIME}" > ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 				echo "${LASTDESCTIME}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
+
+# Keep track of last successful run
+    cp -f "${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt" "${PATH_DIR_FOR_FLAG}"/"Last_Sucessful_Crons_${TARGET}.txt" 	
 
 # All done...
 

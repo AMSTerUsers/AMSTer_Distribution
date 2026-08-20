@@ -45,9 +45,10 @@
 # 						  Note that these tables MUST be in the form of "Name	Date" where date is YYYYMMDD and fields are separated by tab
 # 						  and were Name MUST be WHATEVER_Asc or WHATEVER_Desc to be detected as sat geometry and color coded accordingly
 #					-start=YYYYMMDD -stop=YYYYMMDD restricts the plot to corresponding time span 
+#					- -vel: for msbasv10: displays time series of *_vCOMP instead of *_COMP.tif
 #
 #
-# Dependencies : - function getLineThroughStack (AMSTer Engine utilities)
+# Dependencies : - function getLineThroughStack (AMSTer Engine utilities)at least version 20260730 if need to cope with tif files
 #                - gnuplot
 #                - gnu plot template plotTS_template.gnu or plotTS_template_fit.gnu 
 #				And for adding Legend with direction of deformation
@@ -96,17 +97,28 @@
 # New in Distro V 8.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 8.1 20231120:	- Change AMSTer text to spaces for AMSTer logo in plot timestamp only if TAG is asked (668)
+# New in Distro V 8.2 20260624:	- add stdev in linear rate legend
+# New in Distro V 9.0 20260803:	- works with msbasv10 (and tif files)
+# 								- with -vel the double difference eps is renamed as ..._vCOMP.eps after 
+#								  gnuplot, but -png and -t were still looking for ....vel.eps, hence no 
+#								  png and NO DECORATION AT ALL when -vel and -t are combined. Both now 
+#								  use DDSFX, which follows the rename. 
+# New in Distro V 9.1 20260804:	- for a single component (EW, UD or NS) do not take the sensor and 
+#								  the Heading from the msbas header: they describe only one of the 
+#								  contributing geometries and were tagging the plot title as Ascending 
+#								  or Descending, which is meaningless for a decomposed component. 
+#								  All the titles now use a single GEOMTAG variable. 
+#								- allows option -vel for msbasv10
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro 9.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 03, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
-
 
 # Check OS
 OS=`uname -a | cut -d " " -f 1 `
@@ -130,8 +142,8 @@ if [ ${TESTVAR} == "0" ]
 					PATHGNU=/usr/bin 		;;
 		esac
 fi
-PATH_SCRIPTS=/$HOME/SAR/AMSTer/
-PATHTOME=/$HOME/SAR/AMSTer/AMSTerEngine 
+PATH_SCRIPTS=${HOME}/SAR/AMSTer/
+PATHTOME=${HOME}/SAR/AMSTer/AMSTerEngine 
 
 source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
 
@@ -159,6 +171,7 @@ if [ $# -lt 2 ] ; then
 	echo "	-png : create png versions of some plots "	
 	echo " 	-events=PATH : path to ascii table of events to plot on figures, where PATH is e.g. ../EVENTS_TABLES/NAME/ and NAME is the name of area which is also in events table names"
 	echo "	-start=YYYYMMDD -stop=YYYYMMDD restricts the plot to corresponding time span "	
+	echo "	-vel : for msbasv10 only: displays time series of *_vCOMP instead of *_COMP.tif "
 	echo ""
 	exit
 fi
@@ -285,6 +298,22 @@ if [[ $4 =~ ^[0-9]+$ ]] ; then PIX2=$4 ; TWOPIXELS="YES" ; else TWOPIXELS="NO" ;
 			STOPSPAN=`echo "$@" | ${PATHGNU}/gsed  's/.*-stop=//'  | cut -d " " -f 1`	# get everything after -stop= and before next " "
 			STOPSPANSEC=`${PATHGNU}/gdate -d "${STOPSPAN}" +%s --utc`
 	fi
+
+	# check if -vel option (for msbasv10 only)
+	if [[ "${@#-vel}" = "$@" ]]
+		then
+			echo "Do not request msbasv10 vel time series"
+			VEL="NO"
+			VELSFX="" 
+		else
+			echo "Request msbasv10 vel time series"
+			VEL="YES"
+			VELSFX=".vel"
+	fi
+	# suffix of the DOUBLE DIFFERENCE eps; it is the same as VELSFX unless the plot is renamed 
+	# after gnuplot in the VEL case (see below) 
+	DDSFX="${VELSFX}"
+
 	if [ ${SPAN1} == "YES" ] || [ ${SPAN2} == "YES" ]
 		then 
 			SPAN="YES"
@@ -461,6 +490,83 @@ if [[ $4 =~ ^[0-9]+$ ]] ; then PIX2=$4 ; TWOPIXELS="YES" ; else TWOPIXELS="NO" ;
 		fi 
 		}
 
+
+function get_component() {
+    local dir="${1:-.}" f comp="" restore
+
+    restore=$(shopt -p nullglob)   # so an empty dir doesn't return the pattern itself
+    shopt -s nullglob
+
+    for f in "$dir"/*.tif; do
+        case "${f##*/}" in
+            *_vLOS.tif|*_LOS.tif) comp=LOS ;;
+            *_vEW.tif|*_EW.tif)   comp=EW  ;;
+            *_vUD.tif|*_UD.tif)   comp=UD  ;;
+            *_vNS.tif|*_NS.tif)   comp=NS  ;;
+            *) continue ;;                  # unrelated tif, keep looking
+        esac
+        break                               # first hit wins
+    done
+
+    eval "$restore"
+    [ -n "$comp" ] || return 1
+    printf '%s\n' "$comp"
+}
+
+		
+function ProcessTimeSeries()
+		{
+		unset LIN
+		unset PIX
+		unset PIXNR
+		LIN=$1		# pixel position : nr of line 
+		PIX=$2		# pixel position : nr of pix 
+		PIXNR=$3	# 1 or 2 times series 
+
+		if [ "${EXTIMG}" == "tif" ]
+			then  	
+				# search which COMP we are dealing with, i.e. LOS or UD, EW or even NS
+				COMP=$(get_component "${RUNDIR}") || { echo "No LOS/EW/UD/NS tif found" >&2; exit 1; }
+
+				TimeLineFileDispl=$(find . -maxdepth 1 -name "timeLine${LIN}_${PIX}_${COMP}.txt")
+				TimeLineFileVel=$(find . -maxdepth 1 -name "timeLine${LIN}_${PIX}_v${COMP}.txt")
+			else
+				TimeLineFileDispl=$(find . -maxdepth 1 -name "timeLine${LIN}_${PIX}.txt")
+		fi
+
+		if [ "${VEL}" == "YES" ] 
+			then 
+				TimeLineFileDisplNoExt="${TimeLineFileVel%.*}"
+				UnusedTimeLineFile="${TimeLineFileDispl}"
+				COMP="v${COMP}"
+			else	
+				TimeLineFileDisplNoExt="${TimeLineFileDispl%.*}"
+		fi 
+		
+		sort -n -u ${TimeLineFileDisplNoExt}.txt > ${TimeLineFileDisplNoExt}.tmp.txt
+		rm ${TimeLineFileDisplNoExt}.txt
+		mv ${TimeLineFileDisplNoExt}.tmp.txt ${TimeLineFileDisplNoExt}.txt
+	
+		# Get first and last date 
+		FIRSTDATE=`head -1 ${TimeLineFileDisplNoExt}.txt | cut -c 1-8`
+		LASTDATE=`tail -1 ${TimeLineFileDisplNoExt}.txt | cut -c 1-8`
+		echo "Full time series runs from ${FIRSTDATE} to ${LASTDATE}"
+		
+		#Get min max of values in col3
+		MINVAL=`${PATHGNU}/gawk '{print $3}' ${TimeLineFileDisplNoExt}.txt | tail -1`
+		MAXVAL=`${PATHGNU}/gawk '{print $3}' ${TimeLineFileDisplNoExt}.txt | head -1`
+		if [ "${MINVAL}" == "${MAXVAL}" ] ; then echo "Empty time series ${PIXNR}" ; exit 0 ; fi
+		if [ `echo "${MINVAL} > ${MAXVAL}" | bc` -eq 1 ]
+			then 
+				TMP="${MINVAL}"
+				MINVAL="${MAXVAL}"
+				MAXVAL=${TMP} 
+		fi
+		echo "Time series ${PIXNR} ${COMP} goes from ${MINVAL} to ${MAXVAL}"
+
+		}
+		
+
 # Define gnu plot template
 ##########################
 if [ ${LINFIT} == "YES" ] 
@@ -475,65 +581,164 @@ fi
 ###############
 # FIRST TIME SERIES
 ####################
-cd ${RUNDIR}
-HDR=`ls *.hdr | head -1` 
-if [ ! -s ${HDR} ] ; then echo "No hdr file - please check your dir."; exit; fi
+cd ${RUNDIR} 
+###HDR=$(ls *.hdr 2>/dev/null | head -1)
+####if [ ! -s ${HDR} ] ; then echo "No hdr file - please check your dir."; exit; fi
+###	if [ ! -s ${HDR} ] 
+###		then 
+###			echo "No hdr file."
+###			HDR=$(ls *.tif 2>/dev/null | head -1)
+###			if [ ! -s ${HDR} ] 
+###				then 
+###					echo "No tif file neither - please check your dir."
+###					exit 
+###			fi
+###	fi
 
+# Detect input format: ENVI (.hdr + .bin) or GeoTIFF (.tif)
+	EXTIMG=""
+	HDR=""
+	for EXT in hdr tif ; do
+		for FILE in ./*.${EXT} ; do
+			if [ -f "${FILE}" ] ; then
+				if [ "${EXT}" = "hdr" ] 
+					then 
+						EXTIMG="bin"
+						HDR="${FILE}" 
+						if [ "${VEL}" == "YES" ] ; then echo "Warning, can't process velocity plots for msbasv4" ; echo ; exit ; fi 
+						VEL="NO" 
+					else 
+						EXTIMG="tif" ; fi		# Disable VEL for no tif, just in case
+				break
+			fi
+		done
+		if [ -n "${EXTIMG}" ] ; then break ; fi
+	done
+	case "${EXTIMG}" in
+		bin)
+			echo "OK, let's use bin files."
+			
+			;;
+		tif)
+			echo "OK, let's use tif files. Probably running msbasv10 results"
+			;;
+		*)
+			echo "No hdr nor tif file - please check your dir." >&2
+			exit 1
+			;;
+	esac
+	
 # Get first time series 
 ${PATHTOME}/getLineThroughStack ${RUNDIR} ${LIN1} ${PIX1}
 
-sort timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
-rm timeLine${LIN1}_${PIX1}.txt
-mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine${LIN1}_${PIX1}.txt
+ProcessTimeSeries ${LIN1} ${PIX1} 1
+MINPIX1=${MINVAL}
+MAXPIX1=${MAXVAL} 
+timeLine1TXT="${TimeLineFileDisplNoExt}.txt"
+UnusedTimeLineFile1="${UnusedTimeLineFile}"
 
-# Get first and last date 
-FIRSTDATE=`head -1 timeLine${LIN1}_${PIX1}.txt | cut -c 1-8`
-LASTDATE=`tail -1 timeLine${LIN1}_${PIX1}.txt | cut -c 1-8`
-echo "Full time series runs from ${FIRSTDATE} to ${LASTDATE}"
+###sort timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
+###rm timeLine${LIN1}_${PIX1}.txt
+###mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine${LIN1}_${PIX1}.txt
+###
+#### Get first and last date 
+###FIRSTDATE=`head -1 timeLine${LIN1}_${PIX1}.txt | cut -c 1-8`
+###LASTDATE=`tail -1 timeLine${LIN1}_${PIX1}.txt | cut -c 1-8`
+###echo "Full time series runs from ${FIRSTDATE} to ${LASTDATE}"
+###
+####Get min max of values in col3
+###MINPIX1=`${PATHGNU}/gawk '{print $3}' timeLine${LIN1}_${PIX1}.txt | tail -1`
+###MAXPIX1=`${PATHGNU}/gawk '{print $3}' timeLine${LIN1}_${PIX1}.txt | head -1`
+###if [ "${MINPIX1}" == "${MAXPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
+###if [ `echo "${MINPIX1} > ${MAXPIX1}" | bc` -eq 1 ]
+###	then 
+###		TMP=${MINPIX1}
+###		MINPIX1=${MAXPIX1}
+###		MAXPIX1=${TMP} 
+###fi
+###echo "Time series 1 goes from ${MINPIX1} to ${MAXPIX1}"
 
-#Get min max of values in col3
-MINPIX1=`${PATHGNU}/gawk '{print $3}' timeLine${LIN1}_${PIX1}.txt | tail -1`
-MAXPIX1=`${PATHGNU}/gawk '{print $3}' timeLine${LIN1}_${PIX1}.txt | head -1`
-if [ "${MINPIX1}" == "${MAXPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
-if [ `echo "${MINPIX1} > ${MAXPIX1}" | bc` -eq 1 ]
-	then 
-		TMP=${MINPIX1}
-		MINPIX1=${MAXPIX1}
-		MAXPIX1=${TMP} 
-fi
-echo "Time series 1 goes from ${MINPIX1} to ${MAXPIX1}"
 
 # PLOT (without tags for events)
 
 # Set size in template 
 #IMGSAMPLES=`cat ${HDR} | ${PATHGNU}/grep "Samples" | ${PATHGNU}/grep -oP '\D+\K\d+' ` 
 #IMGLINES=`cat ${HDR} | ${PATHGNU}/grep "Lines" | ${PATHGNU}/grep -oP '\D+\K\d+' `
-SENSOR=`cat ${HDR} | ${PATHGNU}/grep "sensor" | cut -d = -f 3 `
-HEADING=`cat ${HDR} | ${PATHGNU}/grep "Heading" | cut -d = -f 2 | cut -d " " -f 2 `
-#MODE=`basename ${RUNDIR} | cut -d _ -f 2`
-MODE=`basename ${RUNDIR} | cut -d _ -f 2-3`
+
+# Which component is this msbas run about ? Take it from the dir name, i.e. zz_<COMP>_<REMARK>, 
+# because COMP is only set by get_component in the tif case (nothing to read in an ENVI hdr). 
+DIRCOMP=`basename ${RUNDIR} | ${PATHGNU}/gsed -E 's/^zz_([A-Za-z0-9]+)_.*/\1/'`
+echo "Component of ${RUNDIR} seen as ${DIRCOMP}"
+
+case "${DIRCOMP}" in
+	EW|UD|NS)
+		# Single component of a decomposition: it results from the combination of several 
+		# acquisition geometries, hence it has NO orbit direction. The sensor and Heading 
+		# stored in the msbas header describe only one of the contributing geometries and 
+		# would wrongly tag the plot as Ascending or Descending --> do not use them at all. 
+		SENSOR=""
+		HEADING=""
+		MODE=""
+		GEOMTAG="${DIRCOMP} comp."
+		;;
+	*)
+		# LOS (or any unusual naming): keep the historical tag 
+		if [ "${EXTIMG}" == "tif" ]
+			then  	
+				# With tif, no way to get info about sensor, leave it empty; get COMP from fct ProcessTimeSeries
+				SENSOR=""
+				HEADING="${COMP}"
+				MODE=`basename ${RUNDIR} | cut -d _ -f 2-3`	# similar as COMP though dir may contain the direction ... 
+			else
+				SENSOR=`cat ${HDR} | ${PATHGNU}/grep "sensor" | cut -d = -f 3 `
+				HEADING=`cat ${HDR} | ${PATHGNU}/grep "Heading" | cut -d = -f 2 | cut -d " " -f 2 `
+				#MODE=`basename ${RUNDIR} | cut -d _ -f 2`
+				MODE=`basename ${RUNDIR} | cut -d _ -f 2-3`
+		fi
+		GEOMTAG="${SENSOR} ${HEADING} ${MODE}"
+		;;
+esac
+echo "Geometry tag used in the plot titles: \"${GEOMTAG}\""
 
 cp ${GNUTEMPLATE} plotTS_${LIN1}_${PIX1}.gnu
+if [ "${VEL}" == "YES" ] ; then
+    ${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" plotTS_${LIN1}_${PIX1}.gnu
+fi
 
 # Change title
 if [ "${LINFIT}" == "YES" ]
 	then
 		${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'1.log"' plotTS_${LIN1}_${PIX1}.gnu
-		TITLE="Ground displacement ${SENSOR} ${HEADING} ${MODE} and linear fit; pixel ${LIN1} ${PIX1} - Last date is ${LASTDATE} "
+		if [ "${VEL}" == "YES" ] 
+			then 
+				TITLE="Ground displacement velocity (mean vel over interval) ${GEOMTAG} and linear fit; pixel ${LIN1} ${PIX1} - Last date is ${LASTDATE} "
+			else	
+				TITLE="Ground displacement ${GEOMTAG} and linear fit; pixel ${LIN1} ${PIX1} - Last date is ${LASTDATE} "
+		fi 
 		CMD_LINE=`echo "plot 'PATH_TO_EPS.txt' u 1: 3 with linespoints ls 1 title 'Comp', f(x) ls 4 title 'Lin Fit' "`
 					
 		if [ ${LINRATE} == "YES" ] ; then
-			${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f cm\/yr', annualrate(b) ) at  graph 0.84,0.02 front /" plotTS_${LIN1}_${PIX1}.gnu
+			if [ "${VEL}" == "YES" ] 
+				then 
+					${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f +\/- %.2f cm\/yr2', annualrate(b), annualrateErr(b) ) at  graph 0.84,0.02 front /" plotTS_${LIN1}_${PIX1}.gnu
+				else 
+					${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f +\/- %.2f cm\/yr', annualrate(b), annualrateErr(b) ) at  graph 0.84,0.02 front /" plotTS_${LIN1}_${PIX1}.gnu
+			fi 
 		fi
 
 	else 
-		TITLE="Ground displacement ${SENSOR} ${HEADING} ${MODE}; pixel ${LIN1} ${PIX1} - Last date is ${LASTDATE} "
+		if [ "${VEL}" == "YES" ] 
+			then 
+				TITLE="Ground displacement velocity (mean vel over interval) ${GEOMTAG}; pixel ${LIN1} ${PIX1} - Last date is ${LASTDATE} "
+			else	
+				TITLE="Ground displacement ${GEOMTAG}; pixel ${LIN1} ${PIX1} - Last date is ${LASTDATE} "
+		fi 
 		CMD_LINE=`echo "plot 'PATH_TO_EPS.txt' u 1: 3 with linespoints ls 1 "`
 fi	
 ${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN1}_${PIX1}.gnu
 
 # Change input time series txt name
-${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLine${LIN1}_${PIX1}%" plotTS_${LIN1}_${PIX1}.gnu
+${PATHGNU}/gsed -i "s%PATH_TO_EPS%${TimeLineFileDisplNoExt}%" plotTS_${LIN1}_${PIX1}.gnu
 
 # Change title
 ${PATHGNU}/gsed -i "s%TITLE%${TITLE}%" plotTS_${LIN1}_${PIX1}.gnu
@@ -554,49 +759,73 @@ ${PATHGNU}/gnuplot plotTS_${LIN1}_${PIX1}.gnu
 ##############################
 if [ ${TWOPIXELS} == "YES" ] ; then 
 
-	getLineThroughStack ${RUNDIR} ${LIN2} ${PIX2}
+	${PATHTOME}/getLineThroughStack ${RUNDIR} ${LIN2} ${PIX2}
 
-	sort timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
-	rm timeLine${LIN2}_${PIX2}.txt
-	mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine${LIN2}_${PIX2}.txt
-
-	#Get min max of values in col3
-	MINPIX2=`${PATHGNU}/gawk '{print $3}' timeLine${LIN2}_${PIX2}.txt | tail -1`
-	MAXPIX2=`${PATHGNU}/gawk '{print $3}' timeLine${LIN2}_${PIX2}.txt | head -1`
-	if [ "${MINPIX2}" == "${MAXPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
-	if [ `echo "${MINPIX2} > ${MAXPIX2}" | bc` -eq 1 ]
-		then 
-			TMP=${MINPIX2}
-			MINPIX2=${MAXPIX2}
-			MAXPIX2=${TMP} 
-	fi
-	echo "Time series 2 goes from ${MINPIX2} to ${MAXPIX2}"
+	ProcessTimeSeries ${LIN2} ${PIX2} 2
+	MINPIX2=${MINVAL}
+	MAXPIX2=${MAXVAL} 
+	timeLine2TXT="${TimeLineFileDisplNoExt}.txt"	
+	UnusedTimeLineFile2="${UnusedTimeLineFile}"
+	
+	###sort timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
+	###rm timeLine${LIN2}_${PIX2}.txt
+	###mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine${LIN2}_${PIX2}.txt
+	###
+	####Get min max of values in col3
+	###MINPIX2=`${PATHGNU}/gawk '{print $3}' timeLine${LIN2}_${PIX2}.txt | tail -1`
+	###MAXPIX2=`${PATHGNU}/gawk '{print $3}' timeLine${LIN2}_${PIX2}.txt | head -1`
+	###if [ "${MINPIX2}" == "${MAXPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
+	###if [ `echo "${MINPIX2} > ${MAXPIX2}" | bc` -eq 1 ]
+	###	then 
+	###		TMP=${MINPIX2}
+	###		MINPIX2=${MAXPIX2}
+	###		MAXPIX2=${TMP} 
+	###fi
+	###echo "Time series 2 goes from ${MINPIX2} to ${MAXPIX2}"
 
 
 	# PLOT SERIE 2 (without tags for events)
 
 	cp ${GNUTEMPLATE} plotTS_${LIN2}_${PIX2}.gnu
-
+	if [ "${VEL}" == "YES" ] ; then
+	    ${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" plotTS_${LIN2}_${PIX2}.gnu
+	fi
 		# Change title
 		if [ "${LINFIT}" == "YES" ]
 			then
 				${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'2.log"' plotTS_${LIN2}_${PIX2}.gnu
-				TITLE="Ground displacement ${SENSOR} ${HEADING} ${MODE} and linear fit; pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE} "
+				if [ "${VEL}" == "YES" ] 
+					then 
+						TITLE="Ground displacement velocity (mean vel over interval) ${GEOMTAG} and linear fit; pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE} "
+					else	
+						TITLE="Ground displacement ${GEOMTAG} and linear fit; pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE} "
+				fi 
+
 				CMD_LINE=`echo "plot 'PATH_TO_EPS.txt' u 1: 3 with linespoints ls 1 title 'Comp', f(x) ls 4 title 'Lin Fit ' "`
 							
 				if [ ${LINRATE} == "YES" ] ; then
-					${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f cm\/yr', annualrate(b) ) at  graph 0.84,0.02 front /" plotTS_${LIN2}_${PIX2}.gnu
+					if [ "${VEL}" == "YES" ] 
+						then 
+							${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f +\/- %.2f cm\/yr2', annualrate(b), annualrateErr(b) ) at  graph 0.84,0.02 front /" plotTS_${LIN2}_${PIX2}.gnu
+						else 
+							${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f +\/- %.2f cm\/yr', annualrate(b), annualrateErr(b) ) at  graph 0.84,0.02 front /" plotTS_${LIN2}_${PIX2}.gnu
+					fi 
 				fi
 
 			else 
-				TITLE="Ground displacement ${SENSOR} ${HEADING} ${MODE} ; pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE} "
+				if [ "${VEL}" == "YES" ] 
+					then 
+						TITLE="Ground displacement velocity (mean vel over interval) ${GEOMTAG}; pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE} "
+					else	
+						TITLE="Ground displacement ${GEOMTAG} ; pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE} "
+				fi 
 				CMD_LINE=`echo "plot 'PATH_TO_EPS.txt' u 1: 3 with linespoints ls 1 "`
 		fi	
 		${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN2}_${PIX2}.gnu
 
 
 	# Change input time series txt name
-	${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLine${LIN2}_${PIX2}%" plotTS_${LIN2}_${PIX2}.gnu
+	${PATHGNU}/gsed -i "s%PATH_TO_EPS%${TimeLineFileDisplNoExt}%" plotTS_${LIN2}_${PIX2}.gnu
 
 	# Change title
 	${PATHGNU}/gsed -i "s%TITLE%${TITLE}%" plotTS_${LIN2}_${PIX2}.gnu
@@ -629,25 +858,45 @@ if [ ${TWOPIXELS} == "YES" ] ; then
 	if [ ${ADDEVENTS} == "YES" ] ; then GNUNAME=plotTS_${LIN1}_${PIX1}_${LIN2}_${PIX2}_events.gnu ; else GNUNAME=plotTS_${LIN1}_${PIX1}_${LIN2}_${PIX2}.gnu ; fi 
 
 	cp ${GNUTEMPLATE} ${GNUNAME}
+	if [ "${VEL}" == "YES" ] ; then
+	    ${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" ${GNUNAME}
+	fi
 
 	#merge line by lines the two txt files
-	paste timeLine${LIN1}_${PIX1}.txt timeLine${LIN2}_${PIX2}.txt > timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}.txt
+	paste "${timeLine1TXT}" "${timeLine2TXT}" > timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}${VELSFX}.txt
 
 	if [ "${LINFIT}" == "YES" ] 
 		then
 			${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'3.log"' ${GNUNAME}			
-			TITLE="Ground displacement and linear fit ${SENSOR} ${HEADING} ${MODE} ; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE}"
+			if [ "${VEL}" == "YES" ] 
+				then 
+					TITLE="Ground displacement velocity (mean vel over interval) and linear fit ${GEOMTAG} ; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE}"
+				else	
+					TITLE="Ground displacement and linear fit ${GEOMTAG} ; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE}"
+			fi 
+
 			# Add events
 			PlotEvents
 
 			CMD_LINE=`echo "plot 'PATH_TO_EPS.txt' u 1:3 with linespoints ls 1 title 'Comp', f(x) ls 4 title 'Lin Fit '"`
 
-			if [ ${LINRATE} == "YES" ] ; then
-				${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f cm\/yr', annualrate(b) ) at  graph 0.82,0.02 front /" ${GNUNAME}
+			if [ ${LINRATE} == "YES" ] ; then			
+				if [ "${VEL}" == "YES" ] 
+					then 
+						${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f +\/- %.2f cm\/yr2', annualrate(b), annualrateErr(b) ) at  graph 0.70,0.02 front /" ${GNUNAME}
+					else 
+						${PATHGNU}/gsed -i "s/# ANNUALRATE/set label sprintf('Linear rate = %.2f +\/- %.2f cm\/yr', annualrate(b), annualrateErr(b) ) at  graph 0.70,0.02 front /" ${GNUNAME}
+				fi 
 			fi
 
 		else 
-			TITLE="Ground displacement ${SENSOR} ${HEADING} ${MODE} ; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE}"
+			if [ "${VEL}" == "YES" ] 
+				then 
+					TITLE="Ground displacement velocity (mean vel over interval) ${GEOMTAG}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE}"
+				else	
+					TITLE="Ground displacement ${GEOMTAG} ; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} - Last date is ${LASTDATE}"
+			fi 
+
 			# Add events
 			PlotEvents
 						
@@ -674,7 +923,7 @@ if [ ${TWOPIXELS} == "YES" ] ; then
 
 
 	# Change output name
-	${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}%" ${GNUNAME}
+	${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}${VELSFX}%" ${GNUNAME}
 
 	# Change time span
 	if [ ${SPAN} == "YES" ]
@@ -682,16 +931,26 @@ if [ ${TWOPIXELS} == "YES" ] ; then
 			${PATHGNU}/gsed -i "s%# XRANGE%set xrange [${STARTSPANSEC}:${STOPSPANSEC}]%" ${GNUNAME}
 	fi
 
-	gnuplot ${GNUNAME}
+	${PATHGNU}/gnuplot ${GNUNAME}
+
+	if [ "${VEL}" == "YES" ] 
+		then 
+			# Rename Plot
+			mv timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}${VELSFX}.eps timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}_${COMP}.eps 
+			# tell -png and -t about the new name; COMP still holds the leading v at this stage 
+			DDSFX="_${COMP}"
+	fi 
+
+
 
 fi   # end of if for 2 pixels
 
 # Some optional cleaning 
 ########################
 # Cleaning text files with individual TS values
-if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f timeLine${LIN1}_${PIX1}.txt timeLine${LIN2}_${PIX2}.txt ; fi
+if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f "${timeLine1TXT}" "${timeLine2TXT} ${UnusedTimeLineFile1} ${UnusedTimeLineFile2}" ; fi
 # Cleaning text files with Double Difference TS values
-if [ ${DELDDVAL} == "YES" ] ; then rm -f timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}.txt ; fi
+if [ ${DELDDVAL} == "YES" ] ; then rm -f timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}${VELSFX}.txt ; fi
 # Cleaning gnuplot scripts 
 if [ ${DELGNU} == "YES" ] ; then rm -f plotTS_${LIN1}_${PIX1}.gnu plotTS_${LIN2}_${PIX2}.gnu ${GNUNAME} ; fi
 
@@ -701,7 +960,7 @@ rm -f ${RUNDIR}/fit_${RNDM}1.log  ${RUNDIR}/fit_${RNDM}2.log ${RUNDIR}/fit_${RND
 #########################
 if [ ${PNGPLOT} == "YES" ]
 	then 
-		EPSLIST=`echo "timeLine${LIN1}_${PIX1}.eps timeLine${LIN2}_${PIX2}.eps timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}.eps"`
+		EPSLIST=`echo "timeLine${LIN1}_${PIX1}${VELSFX}.eps timeLine${LIN2}_${PIX2}${VELSFX}.eps timeLine${LIN1}_${PIX1}_${LIN2}_${PIX2}${DDSFX}.eps"`
 		for EPSFILE in ${EPSLIST}
 		do 
 			if [ -f "${EPSFILE}" ] && [ -s "${EPSFILE}" ] ; then 
@@ -715,9 +974,9 @@ fi
 ##############################################################
 #------------   Add by Maxime Jaspard 20200114 --------------#
 # if double diff and if last param contains a t, it means that you want a double difference and a tag to explain direction of displacments 
+COMP="${COMP#v}"
 if  [ ${TWOPIXELS} == "YES" ] && [ ${TAG} == "YES" ] ; then
-	EPSFILE=$(find . -type f -name "*${LIN1}_${PIX1}_${LIN2}_${PIX2}.eps")
-	${PATH_SCRIPTS}/SCRIPTS_MT/TS_AddLegend_LOS.sh ${EPSFILE}
+	EPSFILE=$(find . -maxdepth 1 -type f -name "*${LIN1}_${PIX1}_${LIN2}_${PIX2}${DDSFX}.eps")
+	${PATH_SCRIPTS}/SCRIPTS_MT/TS_AddLegend_LOS.sh ${EPSFILE} ${COMP}
 fi
 #-------------                 end              --------------#
-

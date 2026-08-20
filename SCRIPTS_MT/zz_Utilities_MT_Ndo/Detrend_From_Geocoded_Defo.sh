@@ -5,16 +5,24 @@
 #  although they will be missing the first interpolation (i.e. before geocoding)
 #
 # Parameters : 	- Source dir where Defo geocoded files are, i.e. SAR_MASSPROCESS/Geocoded/Defo
+#				- Optional: MASKDETRENDyes if masking with events mask at detrending, (or default = MASKDETRENDno or nothing)
+#
+# Hard coded:	- depending on the defo mode, adapt the name of the files to rename in line 54
+#
+# WARNING: run a test before operate on full scale to bee sure that the naming and renaming fits your needs. 
 #
 # This script was needed after a mistake that caused the loss of all the  Geocoded Products after Defo
 #
-# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# New in Distro V 2.0 20260225:	- allows masking with events mask (if any; must be provided as second parameter) at detrending
 #
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # I know, it is a bit messy and can be improved.. when time. But it works..
 # N.d'Oreye, v 1.0 2019/10/10 -                         
 ######################################################################################
 
-SOURCEDIR=$1  # i.e. SAR_MASSPROCESS/Geocoded/Defo
+SOURCEDIR=$1  	# i.e. SAR_MASSPROCESS/Geocoded/DefoInterpol
+EVENTSMASKS=$2	# optional: MASKDETRENDyes if masking with events mask at detrending, (or default = MASKDETRENDno or nothing)
+
 
 function RemovePlane()
 	{
@@ -32,6 +40,15 @@ function RemovePlane()
 	updateParameterFile ${SOURCEDIR}/bestPlaneRemoval.txt "Reference file path or NONE" "NONE"
 	updateParameterFile ${SOURCEDIR}/bestPlaneRemoval.txt "Threshold file" "NONE" 
 	
+	if [ "${EVENTSMASKS}" == "MASKDETRENDyes" ] 
+		then 
+			# Do not change Masking value: must be 0b00000101 for events mask
+			updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "Mask file" ${RUNDIR}/i12/InSARProducts/slantRangeMask > /dev/null
+			updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "X dimension of the mask file" ${XDIMTODETREND} > /dev/null
+			updateParameterFile ${RUNDIR}/i12/InSARProducts/bestPlaneRemoval.txt "Y dimension of the mask file" ${YDIMTODETREND} > /dev/null
+	fi
+
+
 	bestPlaneRemoval2 ${SOURCEDIR}/bestPlaneRemoval.txt
 	
 	# rename according to conventions

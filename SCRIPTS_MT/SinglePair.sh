@@ -108,13 +108,17 @@
 # New in Distro V 8.3 20250808:	- Make use of ETAD products
 # New in Distro V 8.4 20250811:	- Compute combinations of ETAD corrections if ETADCOMBI is ETADCOMBIyes
 # New in Distro V 8.5 20251124 (A. Dille):	- check path to kml when crop must be based on kml 
+# New in Distro V 8.6 20260702:	- allows S1coregistration with ESD option 
+# New in Distro V 9.1 20260703:	- Allows coregistration of S1 on Global Primary (Super Master), providing that the 
+#								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 24, 2025"
+VER="Distro V9.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 03, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -193,9 +197,14 @@ ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
 PIXSHAPE=`GetParam "PIXSHAPE,"`				# PIXSHAPE, pix shape for products : SQUARE or ORIGINALFORM   
 CALIBSIGMA=`GetParam "CALIBSIGMA,"`			# CALIBSIGMA, if SIGMAYES it will output sigma nought calibrated amplitude file at the insar product generation step  
 
+ESD=`GetParam "ESD,"`						# ESD,For S1: applying Extended Spectral Density (ESDYes), or not (anything else than ESDYes)
+
 COH=`GetParam "COH,"`						# Coarse coregistration correlation threshold  
 CCOHWIN=`GetParam "CCOHWIN,"`     			# CCOHWIN, Coarse coreg window size (64 by default but may want less for very small crop)
 CCDISTANCHOR=`GetParam "CCDISTANCHOR,"`		# CCDISTANCHOR, Coarse registration range & az distance between anchor points [pix]
+
+S1COREGMODE=`GetParam "S1COREGMODE,"`		# S1COREGMODE,  For S1 only: either S1SM (for coregistering all the S1 on a given Super Master),
+											#  or S1ORBIT (or anything else than S1SM) to skip coreg and rely only on the S1 orbits. 
 
 FCOH=`GetParam "FCOH,"`						# Fine coregistration correlation threshold 
 FCOHWIN=`GetParam "FCOHWIN,"`				# FCOHWIN, Fine coregistration window size (size in az or rg is computed based on Az/Rg ratio) 
@@ -360,8 +369,17 @@ case ${SATDIR} in
 		S1MODE=`echo ${S1ID} | cut -d _ -f 2`	
 		if [ ${S1MODE} == "IW" ] || [ ${S1MODE} == "EW" ]
 			then 
-				S1MODE="WIDESWATH"
-				CROPDIR=/NoCrop
+				if [ "${S1COREGMODE}" == "S1SM" ]
+					then
+						#EchoTeeRed "Wideswath S1  coregistered on a SUPERMASTER for SuperMaster_MassProc.sh."
+						S1MODE="WSWATHSM"					
+						#SUPERMASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SUPERMASTER} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
+					else				
+						S1MODE="WIDESWATH"
+						CROPDIR=/NoCrop
+				fi
+
+
 			else 
 				S1MODE="STRIPMAP"
 		fi
@@ -783,7 +801,8 @@ fi
             				  EchoTee "KML file not found: ${CROP}. Checked paths: ${CROP} and ${INPUTDATA}/${CROP}"
             				  exit 1
             			fi
-						CROPKML=${CROP}
+						# 20260211 this should be commented since if above
+						#CROPKML=${CROP}
 					elif  [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ] ; then	
 						EchoTee "Option for crop with kml not tested yet for non S1 IW images; Check scripts and test..."
 						exit 0
@@ -1000,7 +1019,14 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 			then 
 				EchoTeeRed "Coregister Sentinel data with zoom factor not 1." 
 				cd ${RUNDIR}/i12.NoZoom
-				S1Coregistration -n
+				if [ "${ESD}" == "ESDYes" ] 
+					then 
+						EchoTee "Perform ESD..."
+						S1Coregistration -n -e
+					else 
+						EchoTee "Do not perform ESD..."
+						S1Coregistration -n
+				fi
 				# should now have a master and a slave interpolated i12/InSARProducts => need apply cut and zoom
 				
 				# the master
@@ -1102,7 +1128,16 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 				RATIOREAL=`echo "scale=5; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l` # with 5 digits 
 				EchoTee "that is ${RATIO} (rounded) or ${RATIOREAL} (as Real number)"
 			else 
-				S1Coregistration
+				#S1Coregistration
+				if [ "${ESD}" == "ESDYes" ] 
+					then 
+						EchoTee "Perform ESD..."
+						S1Coregistration -e
+					else 
+						EchoTee "Do not perform ESD..."
+						S1Coregistration 
+				fi
+
 		fi
 	else
 		# Coarse Coregistration and quality testing

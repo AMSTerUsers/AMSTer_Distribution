@@ -49,14 +49,18 @@
 #								- test if RUNDIR contains a dir named i12. If not, you are most probably not in the right dir and exit
 #								- test if requested ge-geocoding defo map before atempting detrend to avoid possible error msg
 # New in Distro V 5.4 20250804:	- Correct checking unchanged zoom factor  
+# New in Distro V 5.5 20260211:	- Correct checking ZOOMEDRGSAMP zoom factor (spotted by A. Dille)
+#								  Beware slant range sampling has not the same label in 
+#									InSARParameters.txt (Slant range sampling [m]) and 
+#									SLCImageInfo.txt (Range sampling [m]) !!!
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 04, 2025"
+VER="Distro V5.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 11, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -74,8 +78,8 @@ source ${PATH_SCRIPTS}/SCRIPTS_MT/FUNCTIONS_FOR_MT.sh
 #FILESTOGEOC="YES YES YES YES NO YES YES YES YES"
 # All but ampl
 #FILESTOGEOC="YES NO NO YES NO YES YES YES YES"
-FILESTOGEOC="YES YES YES YES YES YES YES YES YES"
-#FILESTOGEOC="NO NO NO YES NO NO NO NO NO"
+#FILESTOGEOC="YES YES YES YES YES YES YES YES YES"
+FILESTOGEOC="YES YES YES YES NO NO NO NO"
 # ^^^ ----- Hard coded lines to check --- ^^^ 
 
 # Function to extract parameters from config file: search for it and remove tab and white space
@@ -417,7 +421,7 @@ cd  ${RUNDIR}/i12/TextFiles
 
 	# May want to check that zoom factor has not changed in Param file and former processing: 
 		ZOOMEDAZSAMP=`GetParamFromFile "Azimuth sampling [m]" InSARParameters.txt`
-		ZOOMEDRGSAMP=`GetParamFromFile "Range sampling [m]" InSARParameters.txt`
+		ZOOMEDRGSAMP=`GetParamFromFile "Slant range sampling [m]" InSARParameters.txt`
 
 		if [ "${S1WSZOOM}" == "Yes" ]
 			then 

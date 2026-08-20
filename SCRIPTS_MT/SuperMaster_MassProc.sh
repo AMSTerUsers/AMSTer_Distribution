@@ -122,13 +122,18 @@
 #							      Interfero may be smaller than MAS because of overlap with SLV.
 #								  Note that the 85% is arbitrary chosen and may be changed in script (see variable SIZEPERCENT)
 # New in Distro V 4.10 20251027: - typo in echoed message (no closing }) 
+# New in Distro V 5.0 20260522:	- Allows coregistration of S1 on Global Primary (Super Master), providing that the 
+#								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
+#								- mute error while atempting to rm ExistingPairs_.. file if does not exist yet (at first run)
+# New in Distro V 5.1 20260703:	- allows S1coregistration with ESD option 
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.10 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 27, 2025"
+VER="Distro V5.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 03, 2026"
 
 
 echo " "
@@ -142,7 +147,7 @@ PARAMFILE=$2				# File with the parameters needed for the run
 LISTOFPROCESSED=$3			# if -f, it forces to create the list of existing pairs based on the files in Geocoded/DefoInterpolx2Detrend 
 							# if -list=filename, it forces to compute only pairs in provided list (file MUST be in the form of list of PRM_SCD dates)
 
-if [ $# -lt 2 ] ; then echo “Usage $0 PAIRS_FILE PARAMETER_FILE ”; exit; fi
+if [ $# -lt 2 ] ; then echo "Usage $0 PAIRS_FILE PARAMETER_FILE"; exit; fi
 
 #if [ $# -eq 3 ] ; then LISTOFPROCESSED=YES ; else LISTOFPROCESSED=NO ; fi 
 if [ $# -eq 3 ]
@@ -231,9 +236,14 @@ ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
 PIXSHAPE=`GetParam "PIXSHAPE,"`				# PIXSHAPE, pix shape for products : SQUARE or ORIGINALFORM   
 CALIBSIGMA=`GetParam "CALIBSIGMA,"`			# CALIBSIGMA, if SIGMAYES it will output sigma nought calibrated amplitude file at the insar product generation step  
 
+ESD=`GetParam "ESD,"`						# ESD,For S1: applying Extended Spectral Density (ESDYes), or not (anything else than ESDYes)
+
 COH=`GetParam "COH,"`						# Coarse coregistration correlation threshold  
 CCOHWIN=`GetParam "CCOHWIN,"`     			# CCOHWIN, Coarse coreg window size (64 by default but may want less for very small crop)
 CCDISTANCHOR=`GetParam "CCDISTANCHOR,"`		# CCDISTANCHOR, Coarse registration range & az distance between anchor points [pix]
+
+S1COREGMODE=`GetParam "S1COREGMODE,"`		# S1COREGMODE,  For S1 only: either S1SM (for coregistering all the S1 on a given Super Master),
+											#  or S1ORBIT (or anything else than S1SM) to skip coreg and rely only on the S1 orbits. 
 
 FCOH=`GetParam "FCOH,"`						# Fine coregistration correlation threshold 
 FCOHWIN=`GetParam "FCOHWIN,"`				# FCOHWIN, Fine coregistration window size (size in az or rg is computed based on Az/Rg ratio) 
@@ -422,15 +432,22 @@ case ${SATDIR} in
 		S1MODE=`echo ${S1ID} | cut -d _ -f 2`	
 		if [ ${S1MODE} == "IW" ] || [ ${S1MODE} == "EW" ]
 			then 
-				S1MODE="WIDESWATH"
-				EchoTeeRed "Wideswath S1 data can't be coregistered on a SUPERMASTER for SuperMaster_MassProc.sh."
-				EchoTeeRed " Pairs will be processed separately and compared to each other after geocoding."
-				SUPERMASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SUPERMASTER} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
+				if [ "${S1COREGMODE}" == "S1SM" ]
+					then
+						EchoTeeRed "Wideswath S1  coregistered on a SUPERMASTER for SuperMaster_MassProc.sh."
+						S1MODE="WSWATHSM"					
+						SUPERMASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SUPERMASTER} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
+					else				
+						S1MODE="WIDESWATH"
+						EchoTeeRed "Wideswath S1 not coregistered on a SUPERMASTER for SuperMaster_MassProc.sh."
+						EchoTeeRed " Pairs will be processed separately and compared to each other after geocoding."
+						SUPERMASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SUPERMASTER} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
+				fi
 			else 
 				S1MODE="STRIPMAP"
 				SUPERMASNAME=`echo ${MASDIR} | cut -d. -f1`		
 		fi
-		echo "Processing S1 images in mode ${S1MODE}" 
+		echo "Processing S1 images in mode ${S1MODE}"  # WIDESWATH or (WSWATHSM or STRIPMAP)
 		
 		# Creates an empty file .../SAR_CSL/S1/REGION/NoCrop/DoNotUpdateProducts_Date_RNDM.txt to let ReadAll_Img.sh to know
 		# that it can't remove the processed products of S1 data of the same mode as the one under progress to avoid prblms
@@ -685,7 +702,7 @@ case ${LISTOFPROCESSED} in
 				fi
 
 				# force to build the list of existing pairs based on the files in Geocoded/DefoMode
-				rm -f ExistingPairs_${RUNDATE}_${RNDM1}.txt
+				rm -f ExistingPairs_${RUNDATE}_${RNDM1}.txt 2>/dev/null
 				for GEOCODEDPAIR in `find ${MASSPROCESSPATHLONG}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg"` ; do 
 					echo "${GEOCODEDPAIR}" | ${PATHGNU}/grep -Eo "[0-9]{8}_[0-9]{8}">> ExistingPairs_${RUNDATE}_${RNDM1}.txt # select date_date where date is 8 numbers
 				done ;;
@@ -808,78 +825,77 @@ MAINRUNDIR=${RUNDIR}			# keep this as RUNDIR will be renamed for each pair
 
 # DEM
 if [ "${SATDIR}" != "S1" ] || [ "${S1MODE}" != "WIDESWATH" ]
-then
-	IMGWITHDEM=${SUPERMASNAME} 	# When computed during SinglePair with SuperMaster (or during mass processing)
-
-	if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
-		then 
-# Not tested below till 784
-			# CHECK THAT MASK IS SIMILAR TO POSSIBLE FORMER RUN
-			FORMERMASKDIR=`ls -d ${MASSPROCESSPATHLONG}/* | head -1`
-			if [ -f "${FORMERMASKDIR}/slantRange.txt" ] && [ -s "${FORMERMASKDIR}/slantRange.txt" ]
-				then 
-					# Search for mask in V <20241015
-					if [ "${PATHTOMASK}" != "" ]
-						then 
-							FORMERMASK=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Georeferenced mask file path"`
-							if  [ "${FORMERMASK}" != "${PATHTOMASK}" ] 
-								then 
-									EchoTeeRed " Mask request is not the same as former processing. Please check"
-									SpeakOut " Mask request is not the same as former processing. Please check."
-							fi 
-					fi
-
-					# Search for mask in V >20241015
-					if [ "${PATHTOMASKGEOC}" != "" ] || [ "${PATHTOMASKCOH}" != "" ] || [ "${PATHTOMASKDETREND}" != "" ] 
-						then 
-							FORMERMASKGEOC=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 1: Geographical mask (water bodies, ...)"`
-							FORMERMASKCOH=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 2: Thresholded coherence mask"`
-							FORMERMASKDETREND=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 3: Detrend masked areas"`
-							if  [ "${FORMERMASKGEOC}" != "${PATHTOMASKGEOC}" ] || [ "${FORMERMASKCOH}" !=  "${PATHTOMASKCOH}" ] || [ "${FORMERMASKDETREND}" != "${PATHTOMASKDETREND}" ] 
-								then 
-									EchoTeeRed " Masks request are not the same as former processing. Please check"
-									SpeakOut " Masks request are not the same as former processing. Please check."
-							fi 
-					fi
-			fi
-	fi 	# i.e. "NoMask" or "mask file name without ext" from Param file
-
-
-	# Need this for ManageDEM
-	PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
-	PIXSIZERG=`echo "${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-
-	ManageDEM
-else 
-	# select in ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt only_the_masters  
-
-	rm -f only_the_masters_tmp.txt
-	for PAIRTOCHECK in `cat -s ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt`
-		do
-		echo ${PAIRTOCHECK} | cut -d _ -f 1 >> only_the_masters_tmp.txt
-	done
-	sort only_the_masters_tmp.txt | uniq > only_the_masters.txt
-	rm -f only_the_masters_tmp.txt
-
-	if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
-		then 
-			EchoTeeRed " If not the first mass processing run for this mode, it is your responsability to check that the mask is the same as the one used for pairs already processed. Please check."
-			SpeakOut " If not the first mass processing run for this mode, it is your responsability to check that the mask is the same as the one used for pairs already processed."
-	fi
-
-	for MASONLY in `cat -s only_the_masters.txt`
-		do
-		# check if DEM and filter exist	
-		MASONLYNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${MASONLY} | cut -d . -f 1 `  				# Must get here the whole S1 name as in ${INPUTDATA}/${IMGWITHDEM}.csl but csl extension is added in MangeDEM
-		IMGWITHDEM=${MASONLYNAME} 	# When computed during SinglePair with SuperMaster (or during mass processing)
-
+	then
+		IMGWITHDEM=${SUPERMASNAME} 	# When computed during SinglePair with SuperMaster (or during mass processing)
+	
+		if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
+			then 
+				# CHECK THAT MASK IS SIMILAR TO POSSIBLE FORMER RUN
+				FORMERMASKDIR=`ls -d ${MASSPROCESSPATHLONG}/* | head -1`
+				if [ -f "${FORMERMASKDIR}/slantRange.txt" ] && [ -s "${FORMERMASKDIR}/slantRange.txt" ]
+					then 
+						# Search for mask in V <20241015
+						if [ "${PATHTOMASK}" != "" ]
+							then 
+								FORMERMASK=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Georeferenced mask file path"`
+								if  [ "${FORMERMASK}" != "${PATHTOMASK}" ] 
+									then 
+										EchoTeeRed " Mask request is not the same as former processing. Please check"
+										SpeakOut " Mask request is not the same as former processing. Please check."
+								fi 
+						fi
+	
+						# Search for mask in V >20241015
+						if [ "${PATHTOMASKGEOC}" != "" ] || [ "${PATHTOMASKCOH}" != "" ] || [ "${PATHTOMASKDETREND}" != "" ] 
+							then 
+								FORMERMASKGEOC=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 1: Geographical mask (water bodies, ...)"`
+								FORMERMASKCOH=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 2: Thresholded coherence mask"`
+								FORMERMASKDETREND=`updateParameterFile ${FORMERMASKDIR}/slantRange.txt "Mask file path 3: Detrend masked areas"`
+								if  [ "${FORMERMASKGEOC}" != "${PATHTOMASKGEOC}" ] || [ "${FORMERMASKCOH}" !=  "${PATHTOMASKCOH}" ] || [ "${FORMERMASKDETREND}" != "${PATHTOMASKDETREND}" ] 
+									then 
+										EchoTeeRed " Masks request are not the same as former processing. Please check"
+										SpeakOut " Masks request are not the same as former processing. Please check."
+								fi 
+						fi
+				fi
+		fi 	# i.e. "NoMask" or "mask file name without ext" from Param file
+	
+	
 		# Need this for ManageDEM
 		PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
 		PIXSIZERG=`echo "${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
-
+	
 		ManageDEM
-	done
-	rm -f only_the_masters.txt
+	else 
+		# select in ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt only_the_masters  
+	
+		rm -f only_the_masters_tmp.txt
+		for PAIRTOCHECK in `cat -s ${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt`
+			do
+			echo ${PAIRTOCHECK} | cut -d _ -f 1 >> only_the_masters_tmp.txt
+		done
+		sort only_the_masters_tmp.txt | uniq > only_the_masters.txt
+		rm -f only_the_masters_tmp.txt
+	
+		if [ "${APPLYMASK}" == "APPLYMASKyes" ] 
+			then 
+				EchoTeeRed " If not the first mass processing run for this mode, it is your responsability to check that the mask is the same as the one used for pairs already processed. Please check."
+				SpeakOut " If not the first mass processing run for this mode, it is your responsability to check that the mask is the same as the one used for pairs already processed."
+		fi
+	
+		for MASONLY in `cat -s only_the_masters.txt`
+			do
+			# check if DEM and filter exist	
+			MASONLYNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${MASONLY} | cut -d . -f 1 `  				# Must get here the whole S1 name as in ${INPUTDATA}/${IMGWITHDEM}.csl but csl extension is added in MangeDEM
+			IMGWITHDEM=${MASONLYNAME} 	# When computed during SinglePair with SuperMaster (or during mass processing)
+	
+			# Need this for ManageDEM
+			PIXSIZEAZ=`echo "${AZSAMP} * ${INTERFML}" | bc`  # size of ML pixel in az (in m) 
+			PIXSIZERG=`echo "${RGSAMP} * ${INTERFML}" | bc`  # size of ML pixel in range (in m) 
+	
+			ManageDEM
+		done
+		rm -f only_the_masters.txt
 fi
 
 # Get date of last AMSTer Engine source dir (require FCT file sourced above)
@@ -941,7 +957,8 @@ do
 				# Store date of last AMSTer Engine source dir
 				echo "Last created AMSTer Engine source dir suggest Mass Porcessing with AE version: ${LASTVERSIONMT}" > ${RUNDIR}/Processing_Pair_w_AMSTerEngine_V.txt
 
-				if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ] && [ "${CROPKML}" != "" ] 
+				if [[ "${SATDIR}" == "S1" ]] && [[ "${S1MODE}" == "WIDESWATH" ||  "${S1MODE}" == "WSWATHSM"  ]] && [[ "${CROPKML}" != "" ]] 
+				
 						then # pseudo crop based on kml file for S1 images
 							initInSAR ${INPUTDATA}/${MASDIR} ${INPUTDATA}/${SLVDIR} ${RUNDIR}/i12 ${CROPKML} P=${INITPOL}
 						else 
@@ -963,7 +980,7 @@ do
 						EchoTee "--------------------------------"
 						EchoTee "--------------------------------"
 
-						if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]		# FLAG 1				
+						if [[ ${SATDIR} == "S1" ]] && [[ "${S1MODE}" == "WIDESWATH" ]]		# FLAG 1				
 							then	
 								EchoTee "Skip Amplitude generation because not needed for S1 coreg"
 								EchoTee " If want to run it anyway, ensure to have read S1 image with -b option"
@@ -973,7 +990,7 @@ do
 								# Check if master and slave were already used as master in OUTDATA and get the required info:
 								# Copy files that can be needed. Attention, one must COPY and not LINK the files because they are changed during processing
 								# The function below also update InSARParameters.txt
-								if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ]		# FLAG 2
+								if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ]		# FLAG 2 
 									then 
 										EchoTee "Skip module image and Coarse Coregistration computation for S1 because orbits are good enough." 
 										EchoTee "Ensure that InitInSAR was informed of the Global Primary (SuperMaster) orbitography"
@@ -1006,15 +1023,33 @@ do
 						EchoTee "Coregistration - resampling"	
 						EchoTee "--------------------------------"
 						EchoTee "--------------------------------"
-						if [ "${SATDIR}" == "S1" ]  && [ "${S1MODE}" == "WIDESWATH" ] 
+						if [[ "${SATDIR}" == "S1" ]]  &&  [[ "${S1MODE}" == "WIDESWATH" || "${S1MODE}" == "WSWATHSM" ]]
 							then
 								# Performing zoom with S1 wide swath is possible if images are coreg with option -d
 								if [ "${ZOOM}" != "1" ] 
 									then 
 										EchoTeeRed "Coregister Sentinel data with zoom factor not 1." 
-										S1Coregistration -d
+										#S1Coregistration -d
+										if [ "${ESD}" == "ESDYes" ] 
+											then 
+												EchoTee "Perform ESD..."
+												S1Coregistration -d -e
+											else 
+												EchoTee "Do not perform ESD..."
+												S1Coregistration -d
+										fi
+
 									else 
-										S1Coregistration
+										#S1Coregistration
+										if [ "${ESD}" == "ESDYes" ] 
+											then 
+												EchoTee "Perform ESD..."
+												S1Coregistration -e
+											else 
+												EchoTee "Do not perform ESD..."
+												S1Coregistration
+										fi
+
 								fi
 							else
 								cd ${RUNDIR}/i12
@@ -1082,9 +1117,11 @@ do
 	# must get the file
 						# Copy files that can be needed. Attention, one must COPY and not LINK the files because they are changed during processing
 						# The function below also update InSARParameters.txt
-						if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ]
+						if [ ${SATDIR} == "S1" ] 
 							then 
-								GetImgMod ${MASNAME} master  
+								if  [ "${S1MODE}" == "STRIPMAP" ] ; then 
+									GetImgMod ${MASNAME} master  
+								fi
 							else 
 								GetImgMod ${MAS} master  
 						fi
@@ -1272,7 +1309,7 @@ do
 		
 				
 						# Because for S1 STRIPMAP images masters are in the form of a date, one must rename the files as (super)master-name 	
-						if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "STRIPMAP" ] ; then 
+						if [[ ${SATDIR} == "S1" ]] && [[ "${S1MODE}" == "STRIPMAP" || "${S1MODE}" == "WSWATHSM" ]]; then 
 							cp ${RUNDIR}/i12/InSARProducts/${MAS}.${POLMAS}.mod ${RUNDIR}/i12/InSARProducts/${MASNAME}.${POLMAS}.mod 2>/dev/null
 						fi			
 			
@@ -1298,7 +1335,8 @@ do
 		fi # end of if [ pair to process does not exist ]		
 		
 		# See line 819 "may be a problem later ? "; one must now get back to proper naming
-		if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ] && [ "${SUPERMASNAMEBAK}" != "" ] 
+		#if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" != "WIDESWATH" ] && [ "${SUPERMASNAMEBAK}" != "" ] 
+		if [ ${SATDIR} == "S1" ] && [ "${S1MODE}" == "STRIPMAP" ] && [ "${SUPERMASNAMEBAK}" != "" ] 
 			then 
 				SUPERMASNAME=${SUPERMASNAMEBAK}  # For not being a problem later  
 				SUPERMASNAMEBAK=""

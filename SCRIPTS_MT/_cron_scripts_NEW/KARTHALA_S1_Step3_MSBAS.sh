@@ -41,13 +41,17 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20231925:	- Set Mode as variable DEFOMODE, store simple Time series .txt and .pdf at appropriate place 
 # New in Distro V 5.0 20241112:	- add descending orbit (available since request in October)
+# New in Distro V 5.1 20260114:	- Add IW (Asc) - BEWARE: Coh threshold not set up
+# New in Distro V 5.2 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
+#								- test if another Step3 is running. If yes, stop to avoid overloading the computer
+# New in Distro V 5.3.0 2026730 :	- force msbasv4								
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V5.3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -64,6 +68,11 @@ TODAY=`date`
 		# Max baselines (used for all the mode in present case but you can change)
 		BP=150			# max perpendicular baseline 
 		BT=150			# max temporal baseline
+
+		BPIW=50			# max perpendicular baseline 
+		BTIW=150			# max temporal baseline
+
+
 		# note that one part is processed with max 50 m and the other with 150 m... To take into account the whole set of data with both sets 
 		# of baseline criteria, one must take here the largest of each Bp and Bt 
 		
@@ -83,6 +92,7 @@ TODAY=`date`
 		SMASC=20220713
 		SMDESC=20241027
 	
+		SMASCIW=20250727
 		
 	# some files and PATH for each mode
 	###################################
@@ -91,14 +101,20 @@ TODAY=`date`
 		S1ASCSM=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_A_86/SMCrop_SM_${SMASC}_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
 		S1DESCSM=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_D_35/SMCrop_SM_${SMDESC}_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5
 		# IW
-#		S1ASCIW=$PATH_3601/SAR_MASSPROCESS/S1/PF_IW_A_144/SMNoCrop_SM_20180831_Zoom1_ML2
+		S1ASCIW=$PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_SM_${SMASCIW}_Zoom1_ML2
 #		S1DESCIW=$PATH_3601/SAR_MASSPROCESS/S1/PF_IW_D_151/SMNoCrop_SM_20200622_Zoom1_ML2
 
 		# Path to dir where list of compatible pairs files are computed (need one for each mode)
 		SET1=${PATH_1650}/SAR_SM/MSBAS/KARTHALA/set1
 		SET2=${PATH_1650}/SAR_SM/MSBAS/KARTHALA/set2
-#		SET3=${PATH_1650}/SAR_SM/MSBAS/PF/set3
-#		SET4=${PATH_1650}/SAR_SM/MSBAS/PF/set4
+		SET3=${PATH_1650}/SAR_SM/MSBAS/KARTHALA/set5
+#		SET4=${PATH_1650}/SAR_SM/MSBAS/KARTHALA/set6
+
+
+		# Path to tables
+		TABLE1=${SET1}/table_0_50_0_150_Till_20220501_0_150_0_150_After_WITHHEADER.txt
+		TABLE2=${SET2}/table_0_150_0_150.txt
+		TABLE3=${SET3}/table_0_50_0_150.txt
 
 		# WARNING: 	build_header_msbas_criteria.sh requires all table files with the same Bp and Bt names, hence one MUST link 
 		#			SM table using 50m 50 days as tables named with 70m 70 days baselines
@@ -111,7 +127,7 @@ TODAY=`date`
 		LAUNCHPARAMASCSM=LaunchMTparam_S1_SM_Karthala_Asc_Zoom1_ML5_MassProc.txt
 		LAUNCHPARAMDESCSM=LaunchMTparam_S1_SM_Karthala_Desc_Zoom1_ML5_MassProc.txt
 		# IW
-#		LAUNCHPARAMASCIW=LaunchMTparam_S1_IW_Reunion_Asc_Zoom1_ML2_MassProc.txt
+		LAUNCHPARAMASCIW=LaunchMTparam_S1_Karthala_Asc_Zoom1_ML2_MassProc.txt
 #		LAUNCHPARAMDESCIW=LaunchMTparam_S1_IW_Reunion_Desc_Zoom1_ML2_MassProc.txt
 
 	# Events tables
@@ -162,11 +178,13 @@ TODAY=`date`
 		# List of PAIRS of points for plotting double difference (i.e. without error bar) in EW and UD, ASC and Desc... 
 		# 	Note: if pixels are coherent in all modes, these can be the same list
 		DOUBLEDIFFPAIRSEWUD=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}.txt
+
 		DOUBLEDIFFPAIRSASCSM=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}.txt
  		DOUBLEDIFFPAIRSDESCSM=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}.txt
-# 		DOUBLEDIFFPAIRSASCIW=${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts/List_DoubleDiff_EW_UD_${LABEL}.txt
+
+ 		DOUBLEDIFFPAIRSASCIW=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}.txt
 # 		DOUBLEDIFFPAIRSDESCIW=${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts/List_DoubleDiff_EW_UD_${LABEL}.txt
-# 		DOUBLEDIFFPAIRSASCSMIW=${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts/List_DoubleDiff_EW_UD_${LABEL}.txt
+ 		DOUBLEDIFFPAIRSASCSMIW=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}.txt
 # 		DOUBLEDIFFPAIRSDESCSMIW=${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts/List_DoubleDiff_EW_UD_${LABEL}.txt
 		
 		
@@ -191,20 +209,21 @@ TODAY=`date`
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+
  	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}
  	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
  	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-# 
-# 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}
-# 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-# 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+ 
+ 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}
+ 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+ 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 # 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 # 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 # 	mkdir -p ${MSBASDIR}/zz_LOS_TS_IWDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 
-#	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}
-#	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-#	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
 #	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 #	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 #	mkdir -p ${MSBASDIR}/zz_LOS_TS_SMIWDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
@@ -368,7 +387,7 @@ TODAY=`date`
 		local MODE=$1
 		cd ${MSBASDIR}
 		cp -f ${MSBASDIR}/header_${MODE}.txt  header.txt 
-		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+		${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 		cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 		# remove header line to avoid error message 
@@ -398,11 +417,19 @@ TODAY=`date`
 		#mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
 		}
 
+# Check that there is no other Step3 running
+#############################################
+	CHECKCRON3=`ps -Af | ${PATHGNU}/grep "Step3" | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
+	if [ ${CHECKCRON3} -gt 0 ] ; then 
+			REASON=" another Step3 is running, which may overload the computer; pause here" 
+			STOPRUN="YES"
+	fi
+
 
 # Check that there is no other cron (Step 2 or 3) or manual SuperMaster_MassProc.sh running
 ###########################################################################################
 	# Check that no other cron job step 3 (MSBAS) or manual SuperMaster_MassProc.sh is running
-	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | wc -l`
+	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
 		#### For Debugging
 		# echo "ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v ${PATHGNU}/grep | ${PATHGNU}/grep -v /dev/null | wc -l" > CheckRun.txt
 		# echo ${CHECKMB} >> CheckRun.txt
@@ -413,10 +440,10 @@ TODAY=`date`
 			STOPRUN="YES"
 		else
 			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-			CHECKASCSM=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASCSM} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-			CHECKDESCSM=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESCSM} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-#			CHECKASCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-#			CHECKDESCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
+			CHECKASCSM=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASCSM} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKDESCSM=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESCSM} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+#			CHECKASCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+#			CHECKDESCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
 	
 	
 			# For unknown reason it counts 1 even when no process is running
@@ -426,9 +453,9 @@ TODAY=`date`
 	fi 
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
-#	CHECKMPIW=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
-#	CHECKMPSM=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2SM} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
-	CHECKMPSM=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+#	CHECKMPIW=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
+#	CHECKMPSM=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2SM} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
+	CHECKMPSM=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
 
 #	if [ ${CHECKMPIW} -ne 0 ] || [ ${CHECKMPSM} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2} or ${CRONJOB2SM})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 	if [ ${CHECKMPSM} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2} or ${CRONJOB2SM})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
@@ -451,8 +478,8 @@ TODAY=`date`
 	Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh &
  	cd ${S1DESCSM}
  	Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh &
-# 	cd ${S1ASCIW}
-# 	Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh &
+ 	cd ${S1ASCIW}
+ 	Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh &
 # 	cd ${S1DESCIW}
 # 	Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh &
 	wait
@@ -465,6 +492,8 @@ TODAY=`date`
 	LASTASCSM=`find ${S1ASCSM}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'` 
 	LASTDESCSM=`find ${S1DESCSM}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'` 
 
+	LASTASCIW=`find ${S1ASCIW}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`  
+
 #	LASTDESCSM=`ls -lt ${S1DESCSM}/Geocoded/${DEFOMODE} | head -n 2 | tail -n 1 | sed 's/.* //'`
 #	LASTASCIW=`ls -lt ${S1ASCIW}/Geocoded/${DEFOMODE} | head -n 2 | tail -n 1 | sed 's/.* //'` # may be messing up if txt files are created for any other purpose in the dir... 
 #	LASTDESCIW=`ls -lt ${S1DESCIW}/Geocoded/${DEFOMODE} | head -n 2 | tail -n 1 | sed 's/.* //'`
@@ -472,6 +501,9 @@ TODAY=`date`
 	# get date in sec of last available processed pairs in each MODE
 	LASTASCTIMESM=`stat -c %Y ${LASTASCSM}`
 	LASTDESCTIMESM=`stat -c %Y ${LASTDESCSM}`
+	
+	LASTASCTIMEIW=`stat -c %Y ${LASTASCIW}`
+	
 #	LASTDESCTIMESM=`stat -c %Y ${S1DESCSM}/Geocoded/${DEFOMODE}/${LASTDESCSM}`
 #	LASTASCTIMEIW=`stat -c %Y ${S1ASCIW}/Geocoded/${DEFOMODE}/${LASTASCIW}`
 #	LASTDESCTIMEIW=`stat -c %Y ${S1DESCIW}/Geocoded/${DEFOMODE}/${LASTDESCIW}`
@@ -486,11 +518,11 @@ TODAY=`date`
 			FORMERLASTASCTIMESM=`head -1 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt`
 			FORMERLASTDESCTIMESM=`head -2 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1` # tail -1 ok also but this is ready for case where more than 2 lines are present in _Last_MassProcessed_Pairs_Time.txt
 
-#			FORMERLASTASCTIMEIW=`head -3 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
+			FORMERLASTASCTIMEIW=`head -3 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
 #			FORMERLASTDESCTIMEIW=`tail -1 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt`
 
 			
-			if [ ${FORMERLASTASCTIMESM} -eq ${LASTASCTIMESM} ]  && [ ${FORMERLASTDESCTIMESM} -eq ${LASTDESCTIMESM} ] #&&  [ ${FORMERLASTASCTIMEIW} -eq ${LASTASCTIMEIW} ] && [ ${FORMERLASTDESCTIMEIW} -eq ${LASTDESCTIMEIW} ]  # if no more recent file is available since the last cron processing
+			if [ ${FORMERLASTASCTIMESM} -eq ${LASTASCTIMESM} ]  && [ ${FORMERLASTDESCTIMESM} -eq ${LASTDESCTIMESM} ] &&  [ ${FORMERLASTASCTIMEIW} -eq ${LASTASCTIMEIW} ] #&& [ ${FORMERLASTDESCTIMEIW} -eq ${LASTDESCTIMEIW} ]  # if no more recent file is available since the last cron processing
 				then
 					echo "MSBAS finished on ${TODAY} without new pairs to process"  >>  ${MSBASDIR}/_last_MSBAS_process.txt
 					echo "MSBAS finished on ${TODAY} without new pairs to process"
@@ -499,9 +531,11 @@ TODAY=`date`
 				else 
 					echo "Last Asc time in ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt is : ${FORMERLASTASCTIMESM}"
 					echo "Last Desc time in ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt is : ${FORMERLASTDESCTIMESM}"
-
+					echo "Last Asc IW time in ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt is : ${FORMERLASTASCTIMEIW}"
+					
 					echo "Time of last file ${S1ASCSM}/Geocoded/DefoInterpolx2Detrend/${LASTASCSM} is : ${LASTASCTIMESM} "
 					echo "Time of last file ${S1DESCSM}/Geocoded/DefoInterpolx2Detrend/${LASTDESCSM} is : ${LASTDESCTIMESM} "
+					echo "Time of last file ${S1ASCIW}/Geocoded/DefoInterpolx2Detrend/${LASTASCIW} is : ${LASTASCTIMEIW} "
 
 					echo " => not the same, hence compute MSBAS"
 			fi
@@ -517,7 +551,7 @@ TODAY=`date`
 		echo "Remove Broken Links and Clean txt file in existing ${MSBASDIR}/${DEFOMODE}"
 		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}1 &
  		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}2 &
-# 		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}3 &
+ 		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}3 &
 # 		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}4 &
 		wait
 		echo "Possible broken links in former existing MODEi dir are cleaned"
@@ -527,6 +561,7 @@ TODAY=`date`
 		if [ ${IFCOH} == "YES" ] ; then 
 			Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}1_Full &
 			Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}2_Full &
+			Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}3_Full &
 			wait
 			echo "Possible broken links in former existing MODEi_Full dir are cleaned"
 			echo ""
@@ -541,14 +576,14 @@ cd ${MSBASDIR}
 	if [ "${FIRSTRUN}" == "NO" ] ; then 
 		mv ${DEFOMODE}1.txt ${DEFOMODE}1_all4col.txt
  		mv ${DEFOMODE}2.txt ${DEFOMODE}2_all4col.txt
-# 		mv ${DEFOMODE}3.txt ${DEFOMODE}3_all4col.txt
+ 		mv ${DEFOMODE}3.txt ${DEFOMODE}3_all4col.txt
 # 		mv ${DEFOMODE}4.txt ${DEFOMODE}4_all4col.txt	
 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}1_all4col.txt > ${DEFOMODE}1.txt 
  		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}2_all4col.txt > ${DEFOMODE}2.txt 
-# 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3.txt 
+ 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3.txt 
 # 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}4_all4col.txt > ${DEFOMODE}4.txt 
 	
-		rm -f ${DEFOMODE}1_all4col.txt ${DEFOMODE}2_all4col.txt #${DEFOMODE}3_all4col.txt ${DEFOMODE}4_all4col.txt
+		rm -f ${DEFOMODE}1_all4col.txt ${DEFOMODE}2_all4col.txt ${DEFOMODE}3_all4col.txt #${DEFOMODE}4_all4col.txt
 		echo "All lines in former existing MODEi.txt have 4 columns"
 		echo ""
 
@@ -556,9 +591,11 @@ cd ${MSBASDIR}
 		if [ ${IFCOH} == "YES" ] ; then 
 			mv ${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full.txt ${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full_all4col.txt
 			mv ${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full.txt ${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full_all4col.txt
+			mv ${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full.txt ${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full_all4col.txt
 			${PATHGNU}/gawk 'NF>=4' ${MSBASDIR}/${DEFOMODE}1_Full/D${DEFOMODE}1_Full_all4col.txt > ${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full.txt 
 			${PATHGNU}/gawk 'NF>=4' ${MSBASDIR}/${DEFOMODE}2_Full/D${DEFOMODE}2_Full_all4col.txt > ${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full.txt 
-			rm -f ${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full_all4col.txt ${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full_all4col.txt
+			${PATHGNU}/gawk 'NF>=4' ${MSBASDIR}/${DEFOMODE}3_Full/D${DEFOMODE}3_Full_all4col.txt > ${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full.txt 
+			rm -f ${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full_all4col.txt ${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full_all4col.txt ${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full_all4col.txt
 			echo "All lines in former existing MODEi_Full.txt have 4 columns"
 			echo ""
 		fi
@@ -568,7 +605,7 @@ cd ${MSBASDIR}
 		echo "Remove lines in existing MSBAS/MODEi.txt file associated to possible broken links or duplicated lines"
 		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}1 ${PATH_3601}/SAR_MASSPROCESS &
  		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}2 ${PATH_3601}/SAR_MASSPROCESS &
-# 		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}3 ${PATH_3601}/SAR_MASSPROCESS &
+ 		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}3 ${PATH_3601}/SAR_MASSPROCESS &
 # 		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}4 ${PATH_3601}/SAR_MASSPROCESS &
 		wait
 		echo "All lines in former existing MODEi.txt are ok"
@@ -578,6 +615,7 @@ cd ${MSBASDIR}
 		if [ ${IFCOH} == "YES" ] ; then 
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}1_Full ${PATH_3601}/SAR_MASSPROCESS &
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}2_Full ${PATH_3601}/SAR_MASSPROCESS &
+			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}3_Full ${PATH_3601}/SAR_MASSPROCESS &
 			wait
 			echo "All lines in former existing MODEi_Full.txt are ok"
 			echo ""	
@@ -587,8 +625,10 @@ cd ${MSBASDIR}
 
 # Prepare MSBAS
 ###############
-	${PATH_SCRIPTS}/SCRIPTS_MT/build_header_msbas_criteria.sh ${DEFOMODE} 2 ${BP} ${BT} ${S1ASCSM} ${S1DESCSM} #${S1ASCIW} ${S1DESCIW}
-
+	# replace with Tables to cope with different Bp
+	#####${PATH_SCRIPTS}/SCRIPTS_MT/build_header_msbas_criteria.sh ${DEFOMODE} 3 ${BP} ${BT} ${S1ASCSM} ${S1DESCSM} ${S1ASCIW} #${S1DESCIW}
+	${PATH_SCRIPTS}/SCRIPTS_MT/build_header_msbas_Tables.sh ${DEFOMODE} 3 ${TABLE1} ${TABLE2} ${TABLE3} ${S1ASCSM} ${S1DESCSM} ${S1ASCIW} 
+	
 	# update here the R_FLAG if needed
 	#${PATHGNU}/gsed -i "s/R_FLAG = 2, 0.02/R_FLAG = ${ORDER}, ${LAMBDA}/"  ${MSBASDIR}/header.txt
 	${PATHGNU}/gsed -i "s/^R_FLAG.*/R_FLAG = ${ORDER}, ${LAMBDA}/"  ${MSBASDIR}/header.txt
@@ -602,24 +642,25 @@ cd ${MSBASDIR}
 		# ensure that format is ok, that is with 4 columns 
 		mv ${DEFOMODE}1.txt ${DEFOMODE}1_all4col.txt
  		mv ${DEFOMODE}2.txt ${DEFOMODE}2_all4col.txt
-# 		mv ${DEFOMODE}3.txt ${DEFOMODE}3_all4col.txt
+ 		mv ${DEFOMODE}3.txt ${DEFOMODE}3_all4col.txt
 # 		mv ${DEFOMODE}4.txt ${DEFOMODE}4_all4col.txt
 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}1_all4col.txt > ${DEFOMODE}1.txt 
  		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}2_all4col.txt > ${DEFOMODE}2.txt 
-# 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3.txt 
+ 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3.txt 
 # 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}4_all4col.txt > ${DEFOMODE}4.txt 
 		# keep track of prblms
 		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}1_all4col.txt > ${DEFOMODE}1_MissingCol.txt 
  		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}2_all4col.txt > ${DEFOMODE}2_MissingCol.txt 
-# 		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3_MissingCol.txt 
+ 		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3_MissingCol.txt 
 # 		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}4_all4col.txt > ${DEFOMODE}4_MissingCol.txt 
-		rm -f ${DEFOMODE}1_all4col.txt #${DEFOMODE}2_all4col.txt ${DEFOMODE}3_all4col.txt ${DEFOMODE}4_all4col.txt
+		rm -f ${DEFOMODE}1_all4col.txt ${DEFOMODE}2_all4col.txt ${DEFOMODE}3_all4col.txt #${DEFOMODE}4_all4col.txt
 		
 		# Need again to check for duplicated lines with different Bp in Col 2 resulting from orbit update 
 		if [ ${IFCOH} == "YES" ] ; then 
 			echo "Remove lines in newly created MSBAS/MODEi.txt file associated to possible broken links or duplicated lines"
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}1 ${PATH_3601}/SAR_MASSPROCESS &
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}2 ${PATH_3601}/SAR_MASSPROCESS &
+			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}3 ${PATH_3601}/SAR_MASSPROCESS &
 			wait
 			echo "All lines in new MODEi.txt should be ok"
 			echo ""	
@@ -653,31 +694,39 @@ cd ${MSBASDIR}
 					# one must merge the newly created MODEi dir and MODEi.txt with former _Full ones
 					sort ${MSBASDIR}/DefoInterpolx2Detrend1.txt | uniq > ${MSBASDIR}/DefoInterpolx2Detrend1_tmp.txt
 					sort ${MSBASDIR}/DefoInterpolx2Detrend2.txt | uniq > ${MSBASDIR}/DefoInterpolx2Detrend2_tmp.txt
+					sort ${MSBASDIR}/DefoInterpolx2Detrend3.txt | uniq > ${MSBASDIR}/DefoInterpolx2Detrend3_tmp.txt
 				
 					sort ${MSBASDIR}/DefoInterpolx2Detrend1_Full/DefoInterpolx2Detrend1_Full.txt | uniq > ${MSBASDIR}/DefoInterpolx2Detrend1_Full_tmp.txt
 					sort ${MSBASDIR}/DefoInterpolx2Detrend2_Full/DefoInterpolx2Detrend2_Full.txt | uniq > ${MSBASDIR}/DefoInterpolx2Detrend2_Full_tmp.txt
+					sort ${MSBASDIR}/DefoInterpolx2Detrend3_Full/DefoInterpolx2Detrend3_Full.txt | uniq > ${MSBASDIR}/DefoInterpolx2Detrend3_Full_tmp.txt
 				
 					cat ${MSBASDIR}/DefoInterpolx2Detrend1_tmp.txt ${MSBASDIR}/DefoInterpolx2Detrend1_Full_tmp.txt | sort | uniq >  ${MSBASDIR}/DefoInterpolx2Detrend1_Full.txt
 					cat ${MSBASDIR}/DefoInterpolx2Detrend2_tmp.txt ${MSBASDIR}/DefoInterpolx2Detrend2_Full_tmp.txt | sort | uniq >  ${MSBASDIR}/DefoInterpolx2Detrend2_Full.txt
+					cat ${MSBASDIR}/DefoInterpolx2Detrend3_tmp.txt ${MSBASDIR}/DefoInterpolx2Detrend3_Full_tmp.txt | sort | uniq >  ${MSBASDIR}/DefoInterpolx2Detrend3_Full.txt
 				
 					cp -R -n ${MSBASDIR}/DefoInterpolx2Detrend1 ${MSBASDIR}/DefoInterpolx2Detrend1_Full
 					cp -R -n ${MSBASDIR}/DefoInterpolx2Detrend2 ${MSBASDIR}/DefoInterpolx2Detrend2_Full
+					cp -R -n ${MSBASDIR}/DefoInterpolx2Detrend3 ${MSBASDIR}/DefoInterpolx2Detrend3_Full
 					cp -f ${MSBASDIR}/DefoInterpolx2Detrend1_Full.txt ${MSBASDIR}/DefoInterpolx2Detrend1_Full/DefoInterpolx2Detrend1_Full.txt
 					cp -f ${MSBASDIR}/DefoInterpolx2Detrend2_Full.txt ${MSBASDIR}/DefoInterpolx2Detrend2_Full/DefoInterpolx2Detrend2_Full.txt
+					cp -f ${MSBASDIR}/DefoInterpolx2Detrend3_Full.txt ${MSBASDIR}/DefoInterpolx2Detrend3_Full/DefoInterpolx2Detrend3_Full.txt
 				
 					rm -f ${MSBASDIR}/DefoInterpolx2Detrend1_tmp.txt ${MSBASDIR}/DefoInterpolx2Detrend1_Full_tmp.txt 
 					rm -f ${MSBASDIR}/DefoInterpolx2Detrend2_tmp.txt ${MSBASDIR}/DefoInterpolx2Detrend2_Full_tmp.txt
+					rm -f ${MSBASDIR}/DefoInterpolx2Detrend3_tmp.txt ${MSBASDIR}/DefoInterpolx2Detrend3_Full_tmp.txt
 					;;	
 			esac
 			# trick the header file						
 			${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend1.txt/DefoInterpolx2Detrend1_Full.txt/' ${MSBASDIR}/header.txt
 			${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend2.txt/DefoInterpolx2Detrend2_Full.txt/' ${MSBASDIR}/header.txt
+			${PATHGNU}/gsed -i 's/DefoInterpolx2Detrend3.txt/DefoInterpolx2Detrend3_Full.txt/' ${MSBASDIR}/header.txt
 		 
-		 	${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+		 	${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS} --msbasv4
 		
 			# Make baseline plot 
 	 		PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1_Full/DefoInterpolx2Detrend1_Full.txt
 	 		PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/DefoInterpolx2Detrend2_Full/DefoInterpolx2Detrend2_Full.txt
+	 		PlotBaselineGeocMSBASmodeTXT.sh ${SET3} ${MSBASDIR}/DefoInterpolx2Detrend3_Full/DefoInterpolx2Detrend3_Full.txt
 
 			# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 	 		cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/
@@ -705,11 +754,12 @@ cd ${MSBASDIR}
 		 else
 			# i.e. without any coh threshold restriction
 			# -------------------------------------------
-			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 			# Make baseline plot 
 			PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1.txt
 			PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/DefoInterpolx2Detrend2.txt
+			PlotBaselineGeocMSBASmodeTXT.sh ${SET3} ${MSBASDIR}/DefoInterpolx2Detrend3.txt
 
 			# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 			cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
@@ -744,6 +794,7 @@ cd ${MSBASDIR}
 			# run restrict_msbas_to_Coh.sh         
 			restrict_msbas_to_Coh.sh DefoInterpolx2Detrend1 ${COHRESTRICT} ${KMLCOH} ${S1ASC}/Geocoded/Coh
 			restrict_msbas_to_Coh.sh DefoInterpolx2Detrend2 ${COHRESTRICT} ${KMLCOH} ${S1DESC}/Geocoded/Coh
+			restrict_msbas_to_Coh.sh DefoInterpolx2Detrend2 ${COHRESTRICT} ${KMLCOH} ${S1ASCIW}/Geocoded/Coh
 		
 			# Force pair exclusion 
 			if [ ${EXCLUDE1} == "YES" ] ; then 
@@ -752,13 +803,17 @@ cd ${MSBASDIR}
 			if [ ${EXCLUDE2} == "YES" ] ; then 
 				${PATH_SCRIPTS}/SCRIPTS_MT/zz_Utilities_MT/Exclude_Pairs_From_Mode.txt.sh ${MSBASDIR}/DefoInterpolx2Detrend2
 			fi 
-			
+			if [ ${EXCLUDE3} == "YES" ] ; then 
+				${PATH_SCRIPTS}/SCRIPTS_MT/zz_Utilities_MT/Exclude_Pairs_From_Mode.txt.sh ${MSBASDIR}/DefoInterpolx2Detrend3
+			fi 
+				
 			cd ${MSBASDIR}
-			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+			${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 			# Make baseline plot 
 			PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/DefoInterpolx2Detrend1.txt
 			PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/DefoInterpolx2Detrend2.txt
+			PlotBaselineGeocMSBASmodeTXT.sh ${SET3} ${MSBASDIR}/DefoInterpolx2Detrend3.txt
 		
 			# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 			cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
@@ -792,24 +847,24 @@ cd ${MSBASDIR}
 		#   search for line nr of each SET mode definition
  		LINENRSMASC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | head -1 | cut -d: -f1)
  		LINENRSMDESC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | head -2 | tail -1 | cut -d: -f1)
-# 		LINENRIWASC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | head -3 | tail -1 | cut -d: -f1)
+ 		LINENRIWASC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | head -3 | tail -1 | cut -d: -f1)
 # 		LINENRIWDESC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | tail -1 | cut -d: -f1)
  		#   Change "SET = " with "#SET = " in each line of header
 		cat ${MSBASDIR}/header.txt | ${PATHGNU}/gsed "s/SET = /#SET = /g" > ${MSBASDIR}/header_none.txt
 		#   Change "#SET = " with "SET = " for only the mode one wants to keep 
 		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENRSMASC}' s/#SET = /SET = /' > ${MSBASDIR}/header_SMAsc.txt
 		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENRSMDESC}' s/#SET = /SET = /' > ${MSBASDIR}/header_SMDesc.txt
-#		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENRIWASC}' s/#SET = /SET = /' > ${MSBASDIR}/header_IWAsc.txt
+		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENRIWASC}' s/#SET = /SET = /' > ${MSBASDIR}/header_IWAsc.txt
 #		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENRIWDESC}' s/#SET = /SET = /' > ${MSBASDIR}/header_IWDesc.txt
 
-#		cat ${MSBASDIR}/header_SMasc.txt | ${PATHGNU}/gsed ${LINENRIWASC}' s/#SET = /SET = /' > ${MSBASDIR}/header_SMIWAsc.txt
+		cat ${MSBASDIR}/header_SMasc.txt | ${PATHGNU}/gsed ${LINENRIWASC}' s/#SET = /SET = /' > ${MSBASDIR}/header_SMIWAsc.txt
 #		cat ${MSBASDIR}/header_SMdesc.txt | ${PATHGNU}/gsed ${LINENRIWDESC}' s/#SET = /SET = /' > ${MSBASDIR}/header_SMIWDesc.txt
 
 		rm -f ${MSBASDIR}/header_none.txt
 
 		# SM & IW ASC
-# 				FILEPAIRS=${DOUBLEDIFFPAIRSASCSMIW}
-# 				MSBASmode SMIWasc
+ 				FILEPAIRS=${DOUBLEDIFFPAIRSASCSMIW}
+ 				MSBASmode SMIWasc
   		
 		# SM @ IW DESC
 # 				FILEPAIRS=${DOUBLEDIFFPAIRSDESCSMIW}
@@ -825,8 +880,8 @@ cd ${MSBASDIR}
 				MSBASmode SMDesc
 
  		# IW ASC
-#				FILEPAIRS=${DOUBLEDIFFPAIRSASCIW}
-#				MSBASmode IWAsc
+				FILEPAIRS=${DOUBLEDIFFPAIRSASCIW}
+				MSBASmode IWAsc
  		
  
  		# IW DESC
@@ -840,8 +895,8 @@ cd ${MSBASDIR}
 				echo "MSBAS finished on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt
 
 				echo "${LASTASCTIMESM}" > ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
-#				echo "${LASTDESCTIMESM}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
-#				echo "${LASTASCTIMEIW}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
+				echo "${LASTDESCTIMESM}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
+				echo "${LASTASCTIMEIW}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 #				echo "${LASTDESCTIMEIW}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 
 # 						

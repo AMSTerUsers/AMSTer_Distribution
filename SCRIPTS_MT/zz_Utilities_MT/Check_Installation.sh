@@ -54,13 +54,31 @@
 # New in Distro V 4.13 20250902:- do not test python gdal as it is not there anymore 
 #								- test if GDAL has JP2 support
 # New in Distro V 4.14 20250910:- test if normalized_mount_point is a directroy 
+# New in Distro V 4.15 20260217:- test nomacs (tool to open raster for Linux) 
+#								- test osgeo (gdal for python)
+# New in Distro V 4.16 20260224:- osgeo is not used anymore 
+# New in Distro V 4.17 20260225:- corr check build-essential for Linux
+# New in Distro V 4.18 20260311:- remove white space in dir name when checking ${normalized_mount_point}
+# New in Distro V 4.19 20260701:- Mac: detect Homebrew vs MacPorts (matches AMSTer_install.sh V6.21+)
+#								- CheckLibMAC now dispatches to CheckLibBrew or CheckLibMACPorts depending on OS version
+#								- GIMP check also dispatches between Homebrew (cask) and MacPorts
+# New in Distro V 4.20 20260701:- add nomacs check for Mac (manual/DMG install, checks /Applications/nomacs.app)
+# New in Distro V 4.21 20260702:- audit vs AMSTer_install.sh: add pyproj, postgresql17, Xcode CLT checks (installed but never verified)
+#								- generalize hardcoded msbasv4_3D PATH check into a loop covering any msbasv*_3D variant (now needed for msbasv10_3D)
+# New in Distro V 4.22 20260702:- fix CheckLibMACPorts: was checking "port list" (entire MacPorts catalog) instead of
+#								  "port installed" (actually installed ports) - reported false "passed" for any valid
+#								  port name regardless of real install status, on every single Mac library check
+#New in Distro V 4.23 20260714:	- fix path to Fiji for Mac ARM
+#								- mute possible message complaining "Unknown locale, assumin C" 
+#								- check ghostscript
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 4.14 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Sept 10, 2025"
+VER="version 4.23 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Jul 14, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -79,6 +97,30 @@ echo "Running on ${OS}"
 OSX_VER=$(sw_vers -productVersion)
 OSX_MAJOR=$(echo $OSX_VER | cut -d. -f1)
 OSX_MINOR=$(echo $OSX_VER | cut -d. -f2)
+
+# Mac package manager used by AMSTer_install.sh: Homebrew from macOS Tahoe (26) onward, MacPorts before that.
+unset PKGMGR
+unset BREWPREFIX
+if [ "${OS}" == "Darwin" ] ; then
+	if [ "${OSX_MAJOR}" -ge 26 ] 
+		then 
+			PKGMGR="brew"
+		else 
+			PKGMGR="port"
+	fi
+	# Locate Homebrew (if any) so brew-based checks work even if not yet on PATH in this shell
+	if command -v brew &> /dev/null 
+		then 
+			BREWPREFIX=$(brew --prefix 2>/dev/null)
+		elif [ -x /opt/homebrew/bin/brew ] 
+			then 
+				BREWPREFIX="/opt/homebrew" ; eval "$(/opt/homebrew/bin/brew shellenv)"
+		elif [ -x /usr/local/bin/brew ] 
+			then 
+				BREWPREFIX="/usr/local" ; eval "$(/usr/local/bin/brew shellenv)"
+	fi
+	echo "Mac package manager expected: ${PKGMGR}$( [ "${BREWPREFIX}" != "" ] && echo " (Homebrew prefix: ${BREWPREFIX})" )"
+fi
 echo
 
 
@@ -92,6 +134,8 @@ function EchoInverted()
 
 function TestVariable()
 	{
+	export LC_ALL=C   # avoid "Unknown locale, assuming C" from man on macOS
+	
 	# PROVIDE WWITH GNU VERSION FIRST
 	unset VARTOTEST1
 	unset VARTOTEST2
@@ -326,6 +370,24 @@ function TestPythonModulePip()
     fi
 }
 
+function TestPythonModuleOsgeo()
+{
+    MODULE=osgeo
+    local VER=$(/opt/local/amster_python_env/bin/python -c "from osgeo import gdal; print(gdal.__version__)")
+
+    if [[ -n "$VER" ]]; then
+        local LABEL="${MODULE}: passed"
+        printf "%-25s %-10s %s\n" \
+            "${MODULE}:" \
+            "$(tput setaf 2)passed$(tput sgr0)" \
+            "	Version $(tput setaf 2)${VER}$(tput sgr0)"
+    else
+       printf "%-25s %-10s\n" \
+       	"${MODULE}:" \
+       	"$(tput setaf 1)$(tput setab 7)missing$(tput sgr0)"
+    fi
+}
+
 function TestPythonModuleQt()
 	{
 		unset MODULE
@@ -402,6 +464,30 @@ function CheckLib3()
 				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
 		fi
 	}
+
+function CheckLib3()
+	{
+		unset LIBTOTEST
+		unset LIB
+		unset EXT1
+		unset VER
+
+		local LIBTOTEST=$1	
+		
+		LIB=`echo ${LIBTOTEST} | cut -d - -f1`
+		EXT1=`echo ${LIBTOTEST} | cut -d - -f2`
+						
+		if dpkg -s ${LIBTOTEST} >/dev/null 2>&1
+			then 
+				VER=$(dpkg -s ${LIBTOTEST} | ${PATHGNU}/grep Version | ${PATHGNU}/gawk '{ print $2 }' | head -1)			# if more than one version, take only the first one... 
+				#echo "--> ${LIBTOTEST}-${EXT1}:$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VERHD}$(tput sgr 0)"
+				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+			else
+				#echo "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}-${EXT1} : failed$(tput sgr 0)"	
+				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
+		fi
+	}
+
 function CheckLib2()
 	{
 		unset LIBTOTEST
@@ -443,7 +529,14 @@ function CheckLib1()
 				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
 			else
 				#echo "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}-${EXT1} : failed$(tput sgr 0)"	
-				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
+				
+				if [ "${LIBTOTEST}" == "gfortran" ]
+					then 
+						printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed but not mandatory$(tput sgr 0)"
+					else
+						printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
+				fi
+
 		fi
 	}
 
@@ -466,16 +559,62 @@ function CheckPkg()
 
 
 
+function MapPortNameToBrew()
+	{
+	# Translate a MacPorts package name into its closest Homebrew equivalent(s), mirroring the
+	# exact same table used in AMSTer_install.sh so both scripts agree on what to look for.
+	# Sets global BREWNAMES (space separated list of formula/cask names, possibly empty)
+	# and BREWCASK (yes/no).
+	unset BREWNAMES
+	local INNAME="$1"
+	BREWCASK="no"
+
+	case "${INNAME}" in
+		"gimp2") 						BREWNAMES="gimp" ; BREWCASK="yes" ;;
+		"GraphicsMagick") 				BREWNAMES="graphicsmagick" ;;
+		"gmt6") 						BREWNAMES="gmt" ;;
+		"gsed") 						BREWNAMES="gnu-sed" ;;
+		"tiff") 						BREWNAMES="libtiff" ;;
+		"fftw-3-long"|"fftw-3-single"|"fftw-3"|"fftw") 
+										BREWNAMES="fftw" ;;	# Homebrew's fftw formula builds single + double + long-double in one go
+		"ImageMagick") 					BREWNAMES="imagemagick" ;;
+		clang-*|"clang") 				BREWNAMES="llvm" ;;	# Homebrew installs the latest llvm/clang rather than numbered releases
+		jdk*|openjdk*) 					BREWNAMES="openjdk" ;;
+		"postgresql17") 				BREWNAMES="postgresql@17" ;;
+		"gdal-netcdf"|"gdal-hdf5"|"gdal-openjpeg") 
+										BREWNAMES="" ;;	# already built-in with Homebrew's gdal formula, nothing to check separately
+		*) 								BREWNAMES="${INNAME}" ;;	# same name in most other cases
+	esac
+	}
+
 function CheckLibMAC()
+	{
+	# Dispatcher: MacPorts on older macOS, Homebrew on macOS Tahoe (26) and later.
+	local LIBTOTEST=$1
+	if [ "${PKGMGR}" == "brew" ] 
+		then 
+			CheckLibBrew "${LIBTOTEST}"
+		else 
+			CheckLibMACPorts "${LIBTOTEST}"
+	fi
+	}
+
+function CheckLibMACPorts()
 	{
 		unset LIBTOTEST
 		unset VER
+		unset INSTALLEDLINE
 
 		local LIBTOTEST=$1	
 		
-		if [ `port list 2>/dev/null | ${PATHGNU}/grep ${LIBTOTEST} | wc -l` -gt 0 ] 
+		# NOTE: "port list" shows the ENTIRE MacPorts catalog (every port that exists
+		# and could be installed), not what's actually installed on this machine - it
+		# was reporting "passed" for any valid port name regardless of real install
+		# status. "port installed <name>" reports actual installed state instead.
+		INSTALLEDLINE=$(port installed "${LIBTOTEST}" 2>/dev/null | ${PATHGNU}/grep -E "^ *${LIBTOTEST} @")
+		if [ "${INSTALLEDLINE}" != "" ] 
 			then 
-				VER=$(port info "${LIBTOTEST}" 2>/dev/null | ${PATHGNU}/grep " @" | ${PATHGNU}/gawk '{ print $2 }' )
+				VER=$(echo "${INSTALLEDLINE}" | ${PATHGNU}/gawk '{ print $2 }' | ${PATHGNU}/gsed 's/^@//' | ${PATHGNU}/gsed 's/+.*//')
 				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
 			else
 				if [ " ${LIBTOTEST}" == "clang-20" ]
@@ -491,6 +630,55 @@ function CheckLibMAC()
 						printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
 				fi
 		fi
+	}
+
+function CheckLibBrew()
+	{
+	# Homebrew equivalent of CheckLibMACPorts: translate the MacPorts-style name via
+	# MapPortNameToBrew, then check with "brew list --versions" (works for both formulae
+	# and, with --cask, casks), which reports the INSTALLED version directly, or nothing
+	# if not installed.
+	unset LIBTOTEST
+	unset VER
+	local LIBTOTEST=$1
+	local BNAME
+	local FOUND="no"
+
+	MapPortNameToBrew "${LIBTOTEST}"
+
+	if [ "${BREWNAMES}" == "" ] ; then
+		printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)(bundled with gdal, nothing separate to check)$(tput sgr 0)"
+		return
+	fi
+
+	for BNAME in ${BREWNAMES} ; do
+		if [ "${BREWCASK}" == "yes" ] 
+			then 
+				VER=$(brew list --cask --versions "${BNAME}" 2>/dev/null | awk '{print $2}')
+			else 
+				VER=$(brew list --versions "${BNAME}" 2>/dev/null | awk '{print $2}')
+		fi
+		if [ "${VER}" != "" ] 
+			then 
+				FOUND="yes"
+				printf "%-60s%-20s\n" "--> ${LIBTOTEST} (brew: ${BNAME}):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+		fi
+	done
+
+	if [ "${FOUND}" == "no" ] ; then
+		if [[ "${LIBTOTEST}" == clang-* ]] || [ "${LIBTOTEST}" == "clang" ]
+			then 
+				CLANGVER=`clang --version 2>/dev/null`
+				echo "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST} (brew: llvm) : failed$(tput sgr 0)"	
+				if [ `clang --version 2>/dev/null  | wc -w ` -gt 0 ] 
+					then 
+						echo " Although the following (Apple/system) clang exists:"
+						clang --version
+				fi
+			else
+				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST} (brew: ${BREWNAMES}):" "failed$(tput sgr 0)"
+		fi
+	fi
 	}
 
 function ListPluginsInTable()
@@ -744,13 +932,21 @@ echo "Directories in \$PATH in bashrc:"
 		fi
 	done  
 
-	WHICHMSBAS3D=$(dirname $(which msbasv4_3D)  2>/dev/null)
-	TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHMSBAS3D  2>/dev/null | wc -l)
-	if [ $TMP -ge 1 ] 
-		then 
-			printf "%-60s%-20s\n" "--> msbasv4_3D in \$PATH:" "$(tput setaf 2)passed	($WHICHMSBAS3D)$(tput sgr 0)"
-		else 
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> msbasv4_3D  in \$PATH:" "not installed, which is normal unless you have high diversity of looking geometries to invert $(tput sgr 0)"
+	for i in `seq 1 20` ; do
+		WHICHMSBAS3D=$(dirname $(which msbasv${i}_3D) 2>/dev/null)
+		if [ "${WHICHMSBAS3D}" != "" ] ; then
+			TMP=$(echo $PATH | ${PATHGNU}/grep $WHICHMSBAS3D 2>/dev/null | wc -l)
+			if [ $TMP -ge 1 ] 
+				then 
+					printf "%-60s%-20s\n" "--> msbasv${i}_3D in \$PATH:" "$(tput setaf 2)passed	($WHICHMSBAS3D)$(tput sgr 0)"
+				else 
+					printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> msbasv${i}_3D  in \$PATH:" "found but not in \$PATH $(tput sgr 0)"
+			fi
+		fi
+	done
+	if [ "$(which msbasv4_3D 2>/dev/null)" == "" ] && [ "$(which msbasv10_3D 2>/dev/null)" == "" ]
+		then
+			printf "%-60s%-20s\n" "--> msbasv*_3D:" "not installed, which is normal unless you have high diversity of looking geometries to invert"
 	fi
 
 	TMP=$(echo $PATH | ${PATHGNU}/grep "/SAR/EXEC"| wc -l)
@@ -941,6 +1137,7 @@ if [ "${TSTMODULES}" == "YES" ]
 		TestPythonModulePip matplotlib
 		TestPythonModulePip utm
 		#TestPythonModulePip osgeo	# osgeo Python module comes with GDAL’s Python bindings.
+		#TestPythonModuleOsgeo	
 		TestPythonModulePip pip
 		TestPythonModulePip networkx
 		TestPythonModulePip PyQt6
@@ -951,6 +1148,7 @@ if [ "${TSTMODULES}" == "YES" ]
 		TestPythonModulePip pandas
 		#TestPythonModulePip argparse # argparseis part of Python’s standard library since Python 2.7 and Python 3.2
 		TestPythonModulePip glob2
+		TestPythonModulePip pyproj		# Mac-specific: installed based on OSX_MAJOR (see AMSTer_install.sh)
 
 		#if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -lt 15 ]]; then
 		#    echo "⚠️ macOS $OSX_MAJOR.$OSX_MINOR detected (< Catalina)."
@@ -1026,11 +1224,11 @@ case ${OS} in
 		
 		# check that both are not installed 
 		if [ `dpkg  -l | ${PATHGNU}/grep graphicsmagick | wc -l` -gt 0 ] && [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] ; then 
-			printf "%-55s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "Beware: Both GraphicsMagick and ImageMagick are installed. Possible conflict for usage of functions like convert.$(tput sgr 0)"
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "The first is more performant than the other and do not need setup of policy.xml to manage max height/width or allow permissions to read/write PS, EPS or PDF files. $(tput sgr 0)"
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "However, graphicsmagick may be less compatible. For instance, permissions to read/write PS, EPS or PDF files might need to be managed by ghostscript.$(tput sgr 0)"
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "In case of problem, unsintall one or the other, or manage the priority with update-alternatives.$(tput sgr 0)"
-			printf "%-60s%-20s\n" "$(tput setaf 1)$(tput setab 7)" "Example: 'sudo update-alternatives --config convert' will let you pick whether /usr/bin/convert points to ImageMagick or GraphicsMagick.$(tput sgr 0)"
+			printf "%-55s%-20s\n" "$(tput setaf 3)" "Beware: Both GraphicsMagick and ImageMagick are installed. Possible conflict for usage of functions like convert.$(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 3)" "The first is more performant than the other and do not need setup of policy.xml to manage max height/width or allow permissions to read/write PS, EPS or PDF files. $(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 3)" "However, graphicsmagick may be less compatible. For instance, permissions to read/write PS, EPS or PDF files might need to be managed by ghostscript.$(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 3)" "In case of problem, uninstall one or the other, or manage the priority with update-alternatives.$(tput sgr 0)"
+			printf "%-60s%-20s\n" "$(tput setaf 3)" "Example: 'sudo update-alternatives --config convert' will let you pick whether /usr/bin/convert points to ImageMagick or GraphicsMagick.$(tput sgr 0)"
 		fi
 
 		CheckPkg "ffmpeg"	
@@ -1062,6 +1260,17 @@ case ${OS} in
 				#echo "$(tput setaf 1)$(tput setab 7)--> g++ : failed$(tput sgr 0)"	
 				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> g++:" "failed$(tput sgr 0)"
 		fi
+
+		if [ `gs --version 2>/dev/null | wc -l` -gt 0 ] 
+			then 
+				VER=$(gs --version)
+				#echo "--> g++:$(tput setaf 2)	  passed$(tput sgr 0)		Version	$(tput setaf 2)${VERLPK}$(tput sgr 0)"
+				printf "%-60s%-20s\n" "--> gs:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+			else
+				#echo "$(tput setaf 1)$(tput setab 7)--> g++ : failed$(tput sgr 0)"	
+				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> gs:" "failed$(tput sgr 0)"
+		fi
+
 	
 		echo ""		
 		echo "Testing specific Linux features:"
@@ -1078,6 +1287,7 @@ case ${OS} in
 		CheckLibMAC "openjpeg"
 		CheckLibMAC "proj"
 		CheckLibMAC "geos"
+		CheckLibMAC "postgresql17"
 		CheckLibMAC "gmt6"
 		CheckLibMAC "GraphicsMagick"
 		CheckLibMAC "ffmpeg"
@@ -1098,9 +1308,26 @@ case ${OS} in
 		CheckLibMAC "gsl"
 		CheckLibMAC "parallel"		
 		CheckLibMAC "ImageMagick"		
+		if [ `gs --version 2>/dev/null | wc -l` -gt 0 ] 
+			then 
+				VER=$(gs --version)
+				#echo "--> g++:$(tput setaf 2)	  passed$(tput sgr 0)		Version	$(tput setaf 2)${VERLPK}$(tput sgr 0)"
+				printf "%-60s%-20s\n" "--> gs:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+			else
+				#echo "$(tput setaf 1)$(tput setab 7)--> g++ : failed$(tput sgr 0)"	
+				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> gs:" "failed$(tput sgr 0)"
+		fi
+
 	
 		echo ""
 		echo "Testing specific Mac features:"
+		XCODEVER=$(pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | ${PATHGNU}/grep version)
+		if [ "${XCODEVER}" != "" ] 
+			then 
+				printf "%-60s%-20s\n" "--> Xcode Command Line Tools:" "$(tput setaf 2)passed$(tput sgr 0)	${XCODEVER}$(tput sgr 0)"
+			else 
+				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> Xcode Command Line Tools:" "failed$(tput sgr 0)"
+		fi
 		TestVariableShort "osascript"
 		TestVariableShort "say"
 
@@ -1299,8 +1526,8 @@ GITVER=`gitkraken --version 2>/dev/null`
 GITVER2=`/Applications/GitKraken.app/Contents/MacOS/GitKraken --version 2>/dev/null` 
 if [ "${GITVER}" == "" ] && [ "${GITVER2}" == "" ] 
 	then 
-		#echo "$(tput setaf 3)--> Gitkraken  : failed (or insdtalled in unconventional place), though it is not mnadatory$(tput sgr 0)"	
-		printf "%-60s%-20s\n" "$(tput setaf 3)--> Gitkraken:" "failed (or insdtalled in unconventional place), though it is not mnadatory$(tput sgr 0)"
+		#echo "$(tput setaf 3)--> Gitkraken  : failed (or installed in unconventional place), though it is not mnadatory$(tput sgr 0)"	
+		printf "%-60s%-20s\n" "$(tput setaf 3)--> Gitkraken:" "failed (or installed in unconventional place), though it is not mnadatory$(tput sgr 0)"
 	else 
 		#echo "--> Gitkraken :$(tput setaf 2)		passed$(tput sgr 0)		Version	$(tput setaf 2)${GITVER}${GITVER2}$(tput sgr 0)"
 		printf "%-60s%-20s\n" "--> Gitkraken:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GITVER}${GITVER2}$(tput sgr 0)"
@@ -1311,14 +1538,18 @@ if [ "${GIMPVER}" == "" ]
 	then 
 		if [ "${OS}" == "Darwin" ]	
 			then 
-				if [ `port list 2>/dev/null | ${PATHGNU}/grep gimp2 | wc -l` -gt 0 ] 
+				if [ "${PKGMGR}" == "brew" ] && [ $(brew list --cask gimp 2>/dev/null | wc -l) -gt 0 ]
 					then 
-						GIMPVER=$(port info 'gimp2' 2>/dev/null | ${PATHGNU}/grep " @" | ${PATHGNU}/gawk '{ print $2 }' )
-						#echo "--> GIMP (gimp2):$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
-						printf "%-60s%-20s\n" "--> GIMP (gimp2):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
-					else
-						#echo "$(tput setaf 1)$(tput setab 7)--> GIMP (gimp2) : failed , though it is not mnadatory(tput sgr 0)"	
-						printf "%-60s%-20s\n" "$(tput setaf 3)--> GIMP (gimp2):" "failed, though it is not mnadatory$(tput sgr 0)"
+						GIMPVER=$(brew info --cask gimp 2>/dev/null | ${PATHGNU}/grep -m1 "gimp:" | ${PATHGNU}/gawk '{ print $3 }' )
+						printf "%-60s%-20s\n" "--> GIMP (brew: gimp):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
+					elif [ "${PKGMGR}" == "port" ] && [ `port list 2>/dev/null | ${PATHGNU}/grep gimp2 | wc -l` -gt 0 ] 
+						then 
+							GIMPVER=$(port info 'gimp2' 2>/dev/null | ${PATHGNU}/grep " @" | ${PATHGNU}/gawk '{ print $2 }' )
+							#echo "--> GIMP (gimp2):$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
+							printf "%-60s%-20s\n" "--> GIMP (gimp2):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
+						else
+							#echo "$(tput setaf 1)$(tput setab 7)--> GIMP (gimp2) : failed , though it is not mnadatory(tput sgr 0)"	
+							printf "%-60s%-20s\n" "$(tput setaf 3)--> GIMP:" "failed, though it is not mnadatory$(tput sgr 0)"
 				fi	
 			else 
 				#echo "$(tput setaf 3)--> GIMP  : 		failed, though it is not mnadatory$(tput sgr 0)"	
@@ -1328,6 +1559,30 @@ if [ "${GIMPVER}" == "" ]
 		#echo "--> GIMP :$(tput setaf 2)		passed$(tput sgr 0)		Version	$(tput setaf 2)${GIMPVER} $(tput sgr 0)"
 		printf "%-60s%-20s\n" "--> GIMP:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
 fi
+#nomacs
+case ${OS} in 
+	"Linux") 
+			NOMACSVER=$(apt show nomacs 2>/dev/null | grep Version)
+			if [ "${NOMACSVER}" == "" ] 
+			then 
+				#echo "$(tput setaf 3)--> GIMP  : 		failed, though it is not mnadatory$(tput sgr 0)"	
+				printf "%-60s%-20s\n" "$(tput setaf 3)--> nomacs:" "failed, though it is not mnadatory$(tput sgr 0)"
+			else 
+				#echo "--> GIMP :$(tput setaf 2)		passed$(tput sgr 0)		Version	$(tput setaf 2)${GIMPVER} $(tput sgr 0)"
+				printf "%-60s%-20s\n" "--> nomacs:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${NOMACSVER}$(tput sgr 0)"
+		fi
+		;;
+	"Darwin") 
+			# nomacs is a manual (DMG) install on Mac - no MacPorts/Homebrew formula, mirrors AMSTer_install.sh's own check
+			if [ -d "/Applications/nomacs.app" ]
+				then 
+					NOMACSVER=$(defaults read /Applications/nomacs.app/Contents/Info CFBundleShortVersionString 2>/dev/null)
+					printf "%-60s%-20s\n" "--> nomacs:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${NOMACSVER}$(tput sgr 0)"
+				else 
+					printf "%-60s%-20s\n" "$(tput setaf 3)--> nomacs:" "failed, though it is not mnadatory$(tput sgr 0)"
+			fi
+		;;
+esac
 #Java
 JAVAVER=`java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.version'  | grep -v ".date" | head -1 `
 if [ "${JAVAVER}" == "" ] 
@@ -1341,6 +1596,9 @@ if [ "${JAVAVER}" == "" ]
 fi
 # Fiji
 FIJIVERMAC=`${PATHFIJI}/ImageJ-macosx --headless -h 2>&1 > /dev/null | grep launcher`
+if [ "${FIJIVERMAC}" == "" ] ; then 
+	FIJIVERMAC=$("${PATHFIJI}/fiji" --headless -- -eval 'print("IJVERSION=" + IJ.getFullVersion());' 2>/dev/null | sed -n 's/^IJVERSION=//p')
+fi
 FIJIVERLNX=`${PATHFIJI}/ImageJ-linux64 --headless -h 2>&1 > /dev/null | grep launcher`
 
 if [ "${FIJIVERMAC}" == "" ] && [ "${FIJIVERLNX}" == "" ]
@@ -1489,7 +1747,7 @@ echo "9) Summary of all mounted hard disk (just for your info...):"
 echo "------------------------------------------------------------"  # For Mac and Linux
 echo "------------------------------------------------------------" 
 
-mount_vars=("PATH_1650" "PATH_3600" "PATH_3601" "PATH_3602" "PATH_1660" "PATH_3610" "PATH_3611" "PATH_DataSAR" )
+mount_vars=("PATH_1650" "PATH_3600" "PATH_3601" "PATH_3602" "PATH_1660" "PATH_3610" "PATH_3611" "PATH_3612" "PATH_DataSAR" )
 
 for var in "${mount_vars[@]}"; do
     mount_point="${!var}"
@@ -1506,7 +1764,7 @@ for var in "${mount_vars[@]}"; do
     if mount | grep -q "on ${normalized_mount_point} "; then
         echo "✅ $var ($mount_point) is mounted."
     else
-        if [ -d " ${normalized_mount_point}" ]; then
+        if [ -d "${normalized_mount_point}" ]; then
 			    echo "✅ $var (${normalized_mount_point}) is a mounted or is a valid directroy."
 			else
 			    echo "❌ $var ($mount_point) is NOT mounted or is not a valid directory."

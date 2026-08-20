@@ -43,6 +43,7 @@
 # New in Distro V 2.1 2024022:	- If image is good and was in TMP_QUARANTINE, remove it from that dir
 # New in Distro V 3.0 20250226:	- can also be compared against a kml  
 #								- some cosmetic and correction of messages displayed when incorrect input provided
+# New in Distro V 3.1 20260519:	- corr bug that was duplicating files in __TMP_QUARANTINE/IMG
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -133,7 +134,7 @@ case ${CHECKTYPE} in
 							_Check_S1_SizeAndCoord.sh ${IMGNAME} ${EXPECTEDNRBURSTS} ${EXPECTEDMINRGMINAZLONG} ${EXPECTEDMINRGMINAZLAT} ${EXPECTEDMAXRGMINAZLONG} ${EXPECTEDMAXRGMINAZLAT} ${EXPECTEDMINRGMAXAZLONG} ${EXPECTEDMINRGMAXAZLAT} ${EXPECTEDMAXRGMAXAZLONG} ${EXPECTEDMAXRGMAXAZLAT} >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
 							IMG=`basename ${IMGNAME}`
 							mkdir -p __TMP_QUARANTINE
-							mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG}
+							if [[ ! -d "__TMP_QUARANTINE/${IMG}" ]] ; then mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG} ; fi
 							 ;;
 						"OK")
 							echo "${IMGNAME} has good nr of bursts and corners are in expected range. Image is logged in __Good_Images.txt" 
@@ -173,7 +174,7 @@ case ${CHECKTYPE} in
 							Check_burst_coverage_kml.py "${EXPECTEDMINRGMINAZLONG}" "${IMGNAME}/Info/PerBurstInfo" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
 							IMG=`basename ${IMGNAME}`
 							mkdir -p __TMP_QUARANTINE
-							mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG}
+							if [[ ! -d "__TMP_QUARANTINE/${IMG}" ]] ; then mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG} ; fi
 						else 
 							echo "${IMGNAME} has the expected nr of bursts: ${EXPECTEDNRBURSTS}. " 
 							if [ ${STATUS} -eq 0 ]
@@ -197,7 +198,7 @@ case ${CHECKTYPE} in
 									Check_burst_coverage_kml.py "${EXPECTEDMINRGMINAZLONG}" "${IMGNAME}/Info/PerBurstInfo" >> __Wrong_Images_${RUNDATE}_${RNDM1}.txt
 									IMG=`basename ${IMGNAME}`
 									mkdir -p __TMP_QUARANTINE
-									mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG}
+									if [[ ! -d "__TMP_QUARANTINE/${IMG}" ]] ; then mv -f ${IMGNAME} __TMP_QUARANTINE/${IMG} ; fi
 							fi
 					fi
 				done

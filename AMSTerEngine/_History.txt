@@ -1,3 +1,351 @@
+/* AMSTerEngine20260813 (© DD @SAREOS & al.)*/
+/* **************************************** */
+INSARProductsGeneration: option -i generates two incidence files; the geoidal one given in degrees and the local one given in radian.
+
+/* AMSTerEngine20260812 (© DD @SAREOS & al.)*/
+/* **************************************** */
+SentinelDataDownloader: bug correction in case upper right corner area of interest is at an integer lattitude or longitude.
+		Now, a slight reduction of the area of interest used for building OData request is imposed to avoid downloading useless periferic tiles that in turn induced wrong tile building of issued AMSTer DEM.
+
+/* AMSTerEngine20260803 (© DD @SAREOS & al.)*/
+/* **************************************** */
+getLineThroughStack: Integration of mofification made by Q. Glaude & N. d'Oreye to manage geotiff file in input. 
+
+/* AMSTerEngine20260731 (© DD @SAREOS & al.)*/
+/* **************************************** */
+SentinelDataDownloader: Bug correction of command line parameters management preventing Sentinel2 data selection.
+initInSAR: Now, full access path to processed files is systematically generated and written into the InSARPArameter in case destination path given at command line starts with "./".
+
+/* AMSTerEngine20260729 (© DD @SAREOS & al.)*/
+/* **************************************** */
+geoProj.c: Still other weighting correction in AVG method. 
+			And bug corrections in omp loops management
+
+/* AMSTerEngine20260728 (© DD @SAREOS & al.)*/
+/* **************************************** */
+S1Coregistration: Correction of a bug leading to a bad memory addressing in the assembling of images. 
+geoProj.c: still a refinement in the very old error leading to wrong weighted average of interpolated value.
+
+/* AMSTerEngine20260727 (© DD @SAREOS & al.)*/
+/* **************************************** */
+geoProj.c: Correction of a ~15 years-old error in TRI resampling leading to a completely wrong weighted averaged resampled value on borders of NOVALUE zones.
+S1Coregistration: Correction of an error introduced when adding super master management. 
+	This error lead to systematic coregistration of all polarisation layers in place of limiting process to selected ones.
+	Correction of an error leading to recalculation of the baseline but considering the area of interest of last managed burst area of interest. 
+
+
+/* AMSTerEngine20260720 (© DD @SAREOS & al.)*/
+/* **************************************** */
+makefile changes with respect to N. d'Oreye request to cope with brew install and llvm "Modern C" diagnostic confirming I am becoming quite old. 
+slantRangeDEMLib.c: Correction of the non-casted pointer leading to an error wile compiling with llvm. Consequently, flag -Wincompatible-pointer-types might be removed. 
+S1Coregistration: Integration of re-developped ESD by Q. Glaude. Integration is done through additional ESDLib.c and ESDLib.h files in sake of clarity. Not tested. 
+S1InfoImage.c: Integration of change proposed by D. Smitarello to cope with S1C orbital plane change in order to calulate correctly S1C relative orbital number after June 2026 manoeuvre. 
+Changes in OMP management in different files to correct errors detected by N.d'Oreye (mail dated 20260714).
+
+/* AMSTerEngine20260617 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductsGeneration: Bug correction in slant range files resampling (option -r). A wrong checking of slant range file avaibility was leading to systematic crash. 
+slantRangeDEM: Bug correction of external float files slant range projection. In case of providing external files in ENVI format, data wasn't flipped as it should be. 
+
+/* AMSTerEngine20260604 (© DD & SAREOS) */
+/* ************************************ */
+fff: floatFileFiltering
+	Small utility to filter a float file by a moving average or a moving median window of given size. 
+	Both filters manage NaN numbers exluding them from the filtering. An additional other no-data value can also be used.
+
+90: Happy birthday Mum!
+
+tileToolLib: Correction of a wrong tile update when a single tile dimension is larger than the corresponding dimension of the input image.
+
+/* AMSTerEngine20260602 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: flags changes and help update correspondingly: 
+Usage:
+cohTrack [/pathTo/InSARParametersFile.txt] [-fcz] [ [dXMin : dXStep : dXMax] [ [dYMin : dYStep : dYMax] ] ] 
+
+cohTrack performs successive slave image interpolations with requested shifts 
+with respect to computed coregistration transform. 
+If not done, the reference interpolation is first conducted. 
+It then compute stacked interferometric products to compute range and azimuth 
+shifts leading to optimum coherence on a pixel-by-pixel basis.
+
+cohTrack is to be launched within an InSAR working directory 
+or giving it the path to an InSAR parameter file.
+In which case, the cohTrack parameter file located in the same directory will be used.
+If cohTrackParameters.txt file does not exist a default one will be created 
+and used with default parameters [-1 : 0.2 : -1] in both dimensions.
+
+Optional processing parameters can be given in the form [dXMin : dXStep : dXMax] (with brackets)
+to superseeds those founds in cohTrack paremeter file.
+If only one set of parameters is given, it will be used for both range and azimuth coregistration shifts
+If a set of parameters has a step of value 0, no shifts will be applied in the corresponding dimension. 
+
+(col ; raw) location of coherence maximum is found if average value in that col (raw) is above given coherence threshold 
+and if max value in that col (raw) minus background value is greater than the given visibility value.
+background value is computed as the average coherence on border values of the mapping.
+By default, fine shifts values are determined by simple quadratic interpolation using the two neighbour values of the found coherence value at col (raw) position.
+Fine position values are converted in meters. 
+If an external DEM was available at reference InSAR processing time, an "incidence" file was created (InSARProductsGeneration -i).
+In which case, fine range shits values are projected on the local DEM slope
+
+Options are:
+--all: Force re-processing the whole stack from scratch.
+       Reference and shift interpolations will be reprocessed followed by sequential InSAR processing
+--InSAR: Re-process InSAR products on an existing stack of shifted slave images.
+--opt: Performs the coherence tracking on existing processing, avoiding to reprocess the whole interferometric stack.
+
+-c: Limit coherence tracking processing performing a cross mapping in place of a full mapping on defined interval.
+-s: Issue along range and along azimuth coherence and interferogram sequences.
+-W: Locate max coh by weighted average on surrounding values in place of finding it by quadratic interpolation.
+-C: Locate max coh by centroidization on the whole mapping.
+-M: Locate max coh by simply selecting max coherence value.
+-P: Disable metric conversion to keep fine shifts in pixels. 
+
+
+/* AMSTerEngine20260601 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Conversion in metric values tacking local slope into account is activated by -p flag. 
+		-i flag is used to force recomputing InSAR products stacks, taking updated InSARParameters.txt into account.
+
+/* AMSTerEngine20260531 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductsGeneration: Now, if requesting to issue the local incidence angle, it is computed taking local slope into account and is issued in radian. 
+		Sine of the so-computed incidence angle (with respect to the local normal) is used as normalization value for calibration in sigma0.
+		It can also be used as normalization value to convert range displacement measured in pixels by coherence tracking into metric value.
+cohTrack: Tracked shift values are now converted in metric values.
+		If using flag -i, conversion takes the local slope into account provided local incidence file is available in reference InSAR processing. 
+
+/* AMSTerEngine20260527 (© DD & SAREOS) */
+/* ************************************ */
+InSARProductsGeneration: Addition of the resampling of slant range projected float files with respect to InSAR processing.
+		External float files can be projected in slant range with respect to the master image using slantRangeDEM. 
+		These files are saved with the extension .slantRange within the master image. 
+		These .slantRange files are then resampled at end of InSARProductsGeneration like the externalDEM, so to have the same dimensions and sampling tahn any other InSAR products. 
+		If willing to make this resampling based on an existing InSAR processing without recalculating the existing InSAR products, just use option -r.
+
+/* AMSTerEngine20260526 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Tuning. In cohTrack through centroidization, only mapping points with coherence above coherence treshold are considered. 
+		No other selection criterion is considered. 
+
+/* AMSTerEngine20260522 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Addition of tracking by centroidization (option -C) and tracking on max coh value (option -M).
+
+/* AMSTerEngine20260520 (© DD & SAREOS) */
+/* ************************************ */
+basicFilter.c: development of a median filter accepting NaN or another excluding value. 
+InSARProductsGeneration: Use of this median filter can be activated for coherence through InSARParameters.txt file under key value pair "Median filter size [pix]" under coherence parameter section. 
+cohTrack: addition of option -i to recompute interferometric products on existing interpolated stack.
+		Addition of transfer of InSAR product generation parameters to stack processing to cope with -i flag. 
+
+/* AMSTerEngine20260514 (© DD & SAREOS) */
+/* ************************************ */
+SentinelDataDownloader: Correction of an error recently introduced: End date was not taken into account any more. 
+
+/* AMSTerEngine20260513 (© DD & SAREOS) */
+/* ************************************ */
+initInSAR and InSARProductGeneration: Corrections and modifications in kml management. Now, if a kml is given in input, area of interest is correctly computed at initialisation
+		and is correctly updated in InSARParameters.txt file. In the same way, aoi is recomputed at each call of InSARProductsGeneration 
+		taking kml given in InSARParameters.txt file into account if available. This allows changing kml at will at each processing. 
+
+/* AMSTerEngine20260512 (© DD & SAREOS) */
+/* ************************************ */
+SentinelDataDownloader: Modification to cope with COPERNICUS new distribution policy and collection name change for public Copernicus Contributing Mission data to allow getting COPERNICUS DEM. 
+cohTrack: modification in the way to calculate the range. Previously, it was calculated as the difference between the max and the min value on a line by line and a column by column basis. 
+	Therefore, a very good column or line with smooth curve with a maximum could rejected having a low range since the minimum for this line or column could be close to the max in case sampling does not go far enough from the max location. 
+	Now, a background coherence value is computed as the mean of the coherence values on the border of the maping and range is computed as the difference between the column or line maximum and this background. 
+
+/* AMSTerEngine20260511 (© DD & SAREOS) */
+/* ************************************ */
+Modification of kml projection in slant range. Now, if read height value in external DEM is a NaN, a default value is used. This default value is 0 or the scene average height if present. 
+
+/* AMSTerEngine20260504 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: bug correction / modification of parameter file reading. Missing brackets in sampling parameters lead to pimmediat program crash. 
+		Now, sampling parameters can be given with or without brackets in parameter file. 
+		Brackets are still mandatory if given as command line parameters. 
+		Addition of differential phase management. Tracked differential phase is now also issued. 
+		No tested. Should work but might crash. 
+		May the fourth be with you and cross the fingers. 
+
+/* AMSTerEngine20260429 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: Correction of relative orbit calculation to cope with S1D relative orbital shift.
+cutAndZoom: Correction of a bug in the calculation of heights at kml polygon summits. An infinite loop could be initiate due to wrong name in function call. 
+	 + Simplification of function openExternalDEMFile call. 
+
+/* AMSTerEngine20260428 (© DD & SAREOS) */
+/* ************************************ */
+Addition of a float file filter tool named fff able to handle NaN values as missing values. 
+For now, fff is only able to perform median filtering. 
+
+/* AMSTerEngine20260422 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Addition of some lines to extract ETAD range and azimuth differential shifts. Those lines stays commented. Might be interesting to add this capability at user's choice. 
+
+/* AMSTerEngine20260417 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Previous version not fully working as any very first version...
+	Bug correction in parameters reading and in cohTrack directories naming. 
+
+/* AMSTerEngine20260415 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: First fully working version. 
+	Addition of parameter for NaN masking of non computed shifts in place of setting them to zero.
+
+/* AMSTerEngine20260413 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Bug correction in the determination of the integer location of the max.
+		Addition of a quadratic interpolation of the phase to issue the tracked interferogram.
+
+/* AMSTerEngine20260409 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: Correction of nearest neighbour quadratic fit. Addition of parametrization tuning. 
+
+/* AMSTerEngine20260403 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: stats modifications. Re-organization. Test of quadratic fit. To be checked. 
+
+/* AMSTerEngine20260402 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: stats modifications. 
+
+
+/* AMSTerEngine20260325 (© DD & SAREOS) */
+/* ************************************ */
+slantRangeDEM: Bug correction in recursive handling of float files to be projected in slant range. 
+
+/* AMSTerEngine20260325 (© DD & SAREOS) */
+/* ************************************ */
+S1DataReader: correction of two bugs recently introduced: 
+		Polarization scheme was not read at frameInfoImage creation step (not transferd from read polarization mode) 
+		Burst files were not initially created due to a change recently introduced to avoid recreating empty burst files when those ones were trashed because not usefull anymore. 
+geoProjection: Correction of a bug introduced recently leading to wrong interferometric file name determination. 
+
+
+/* AMSTerEngine20260318 (© DD & SAREOS) */
+/* ************************************ */
+geoProjection: Now, filtered products are automatically projected if present. 
+			Also, if a requested file is not found, e.g. coherence.VV-VV, all files containing the word "coherence" will be projected. 
+			The same for files with name containing "interf" and "residualPhase". This to allow modifying names before projection without having to change names within InSARParameters.txt file.
+
+/* AMSTerEngine20260318 (© DD & SAREOS) */
+/* ************************************ */
+NISARDataReader: Addition of frequency and / or polarization selection. Selection can be activated through parameters P=XY and freq=A|B.
+
+/* AMSTerEngine20260316 (© DD & SAREOS) */
+/* ************************************ */
+SRDEMweighted average: Small bug correction in listing of available InSAR processing. Some additional prompted messages. 
+Cut and zoom: Addition of cropped kml saving. 
+
+/* AMSTerEngine20260311 (© DD & SAREOS) */
+/* ************************************ */
+NISARDataReader: Correction in listing RSLC .h5 images in input directory. 
+S1Coregistration: Modification in infoImage management and merging to correctly take into account requested polarization scheme.
+		Wrong merging of frameInfo could lead to requesting non available polarization, which in turn lead to errors in master image concatenation. 
+		Correction in burst file management: In case burst were previously trashed, file pointer are not initialized to avoid creating useless empty burst files. 
+
+/* AMSTerEngine20260310 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Bug correction in master concatenation in case of coregistration on super master. Master image was not reinitialized with interpolated one. 
+
+/* AMSTerEngine20260304 (© DD & SAREOS) */
+/* ************************************ */
+NISARDataReader : Sub selection of .h5 image to read only slc images avoiding trying to read QA_STATS files.
+slantRangeDem : Addition of the slant range projection of any float files georeferenced on WGS84 in lon lat found in a given directtory.
+		Directory under concern is given through key /* External float files directory */ in the parameter file.
+
+
+/* AMSTerEngine20260302 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration : addition of an option in initInSAR_GEO function to avoid recomputing common superposition of images. 
+			This because we need to keep it as given  of on-super master coregistration and / or to respect user's choice.
+
+/* AMSTerEngine20260228 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack : bug corrections induced by changes made in S1Coregistration for coregistration on super master. 
+
+/* AMSTerEngine20260224 (© DD & SAREOS) */
+/* ************************************ */
+S1OrbitManagement : Correction of a specific error (Nicolas's rare ability to point such ones) 
+					that may occurre when dealing with a kml limiting the acquisition time which in turn
+					induce considering the wrong orbit file. 
+					Now, orbit file determination is strictly determined with respect to initial image time.
+					Not from image time cut out considering kml. 
+
+/* AMSTerEngine20260223 (© DD & SAREOS) */
+/* ************************************ */
+SentinelDataDownloader: bug correction: non initialized "Collection" pointer lead to systematic crash. 
+		correction : ETAD downloading was erroneously dissabled when introducing modification to allow DEM download. 
+cohTrack : implementation of stats calculation. To be continued. 
+
+/* AMSTerEngine20260213 (© DD & SAREOS) */
+/* ************************************ */
+geoidal2EllipsoidalDEM: small bug correction to consider egm96-5.pgm file if present. File name was misspelled. 
+	Correct expected files names are now displayed if none are found. 
+SentinelDataDownloader: Correction of the usage message. It was still mentioning EGM96 while  using EGM2008 only. 
+
+/* AMSTerEngine20260212 (© DD & SAREOS) */
+/* ************************************ */
+S1Coregistration: Bug correction in case master image must be copied within InSARProducts (due to burst selection or if using -n option (no reramping)).
+Sentinel1DataDownloader: Now, only EGM2008 is considered if downloading COPERNICUS DEM. If EGM2008 is not available, DEM is downloaded and saved uncorrected. 
+		Bug correction: EGM was flipped vertically tile by tile. 
+geoidal2EllipsoidalDEM: DEMS are corrected with EGM dépending on DEM origin which is determined from associated text file. 
+		
+
+/* AMSTerEngine20260204 (© DD & SAREOS) */
+/* ************************************ */
+EGMLib : creation of EGMLib to manage Earth Gravific Models 96 and 2008. Each gravific model must be saved in a directory named following EGM year. 
+EGM's can be downloaded from https://geographiclib.sourceforge.io/C++/doc/geoid.html\n
+If both EGM96 and EGM2008 are present, EGM2008 prevails. 
+
+/* AMSTerEngine20260128 (© DD & SAREOS) */
+/* ************************************ */
+SentinelDataDownloader: Addition of correct management of DTED DEM above 50 degrees latitude. 
+geoidal2EllipsoidalDEM: Addition of small specific tool previously present in agregateSRTMTiles tool to convert existing DEMS from geodal to ellipsoidal DEMS adding Earth Gravific Model ondulation.
+
+/* AMSTerEngine20260126 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: addition of coherence max localization through local gaussian interpolation like in old fineCoregistration approach. 
+
+/* AMSTerEngine20260126 (© DD & SAREOS) */
+/* ************************************ */
+NISARDataReader: Bug correction in case of dual frequency acquisition.
+SentinelDataDownloader: bug correction in negative values interpretation of DTED2 COPERNICUS DEM. 
+
+/* AMSTerEngine20260125 (© DD & SAREOS) */
+/* ************************************ */
+NISARDataReader: Bug correction in case of dual frequency acquisition.
+
+/* AMSTerEngine20260123 (© DD & SAREOS) */
+/* ************************************ */
+cohTrack: corrections in stripmap image management. 
+
+/* AMSTerEngine20260120 (© DD & SAREOS) */
+/* ************************************ */
+Basic correction in path expension. Now, ~/ is recognized as a valid path. 
+Leak correction in slantRangeDEM.
+SentinelDataDownloader: Correction of data orientation in DTED DEM management.
+
+/* AMSTerEngine20260119 (© DD & SAREOS) */
+/* ************************************ */
+SentinelDataDownloader: Addition of option -DEM to download the COPERNICUS DTE_30 DEM as the original SRTM one is not available anymore on previous server.
+	getSRTMDEM is thus removed. Preferable to avoid being dependent on US servers.  
+
+/* AMSTerEngine20260109 (© DD & SAREOS) */
+/* ************************************ */
+First implementation of S1Coregistration on super master.
+
+/* AMSTerEngine20260109 (© DD & SAREOS) */
+/* ************************************ */
+Big reorganization of header files. Loads of warning corrections. 
+
+/* AMSTerEngine20251223 (© DD & SAREOS) */
+/* ************************************ */
+interferogramFiltering: Organization correction. Now, in combined filtering, adaptative filtering is effectivelly applied to the classically filtered version. Previously it was working in the reverse way. Addition of option -c to allow filtering classically both the coherence and the interferogram. Activating option -c deactivate option -d.
+Power spectrum filtering factor is now taken into account. 1 is the classical Goldstein adaptative filter. Lower or higher values can be used to filter more or less. 
+
 /* AMSTerEngine20251114 (© DD & SAREOS) */
 /* ************************************ */
 Addition of AGPL licence header to every file.

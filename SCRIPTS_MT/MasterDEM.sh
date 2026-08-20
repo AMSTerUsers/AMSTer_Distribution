@@ -45,13 +45,17 @@
 # New in Distro V 5.2 20241202:	- take mask(s) basename only if exist  
 # New in Distro V 5.3 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
 # New in Distro V 5.4 20250806:	- Add test to check if externalSlantRangeDEM exists before claiming that it worked
+# New in Distro V 5.4.1 20260318:	- add quotes at testsing S1 mode to avoid error msg 
+# New in Distro V 6.0.0 20260428:	- Allows coregistration of S1 on Global Primary (Super Master), providing that the 
+#								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 06, 2025"
+VER="Distro V6,0,0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr28, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -122,6 +126,9 @@ CALIBSIGMA=`GetParam "CALIBSIGMA,"`			# CALIBSIGMA, if SIGMAYES it will output s
 COH=`GetParam "COH,"`						# Coarse coregistration correlation threshold  
 CCOHWIN=`GetParam "CCOHWIN,"`     			# CCOHWIN, Coarse coreg window size (64 by default but may want less for very small crop)
 CCDISTANCHOR=`GetParam "CCDISTANCHOR,"`		# CCDISTANCHOR, Coarse registration range & az distance between anchor points [pix]
+
+S1COREGMODE=`GetParam "S1COREGMODE,"`		# S1COREGMODE,  For S1 only: either S1SM (for coregistering all the S1 on a given Super Master),
+											#  or S1ORBIT (or anything else than S1SM) to skip coreg and rely only on the S1 orbits. 
 
 FCOH=`GetParam "FCOH,"`						# Fine coregistration correlation threshold 
 FCOHWIN=`GetParam "FCOHWIN,"`				# FCOHWIN, Fine coregistration window size (size in az or rg is computed based on Az/Rg ratio) 
@@ -276,10 +283,16 @@ if [ "${SATDIR}" == "S1" ]
 	then 
 		S1ID=`GetParamFromFile "Scene ID" SAR_CSL_SLCImageInfo.txt`
 		S1MODE=`echo ${S1ID} | cut -d _ -f 2`	
-		if [ ${S1MODE} == "IW" ] || [ ${S1MODE} == "EW" ]
+		if [ "${S1MODE}" == "IW" ] || [ "${S1MODE}" == "EW" ]
 			then 
-				S1MODE="WIDESWATH"
-				CROPDIR=/NoCrop
+				if [ "${S1COREGMODE}" == "S1SM" ]
+					then
+						S1MODE="WSWATHSM"					
+						CROPDIR=/NoCrop
+					else				
+						S1MODE="WIDESWATH"
+						CROPDIR=/NoCrop
+				fi
 			else 
 				S1MODE="STRIPMAP"
 		fi
@@ -287,6 +300,7 @@ if [ "${SATDIR}" == "S1" ]
 	else 
 		S1MODE="DUMMY"
 fi
+
 
 # Define Dir where data are/will be cropped
 INPUTDATA=${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}
@@ -411,7 +425,7 @@ SUPERMASDIR=${MASDIR}
 	EchoTee "Crop CSL"	
 	EchoTee "--------------------------------"
 	
-	if [ ${CROP} == "CROPyes" ] && [ "${S1MODE}" != "WIDESWATH" ]
+	if [ ${CROP} == "CROPyes" ] && [ "${S1MODE}" != "WIDESWATH" ] && [ "${S1MODE}" != "WSWATHSM" ]
 		then
 			# Create Crop Dir on archive disk
 			if [ ! -d "${INPUTDATA}/${MASDIR}" ]; then  # i.e. ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}

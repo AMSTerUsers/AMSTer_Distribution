@@ -46,9 +46,10 @@
 #						  Note that it does not plot that for the double difference because it would be too messy in the plot.
 #						  The nr of pairs used for coherence statistics is color coded as squared points at y=0.
 #						  This may be a very slow uption when run for first time. Faster after because it is incremental. 
+#					- -vel: for msbasv10: displays time series of *_vCOMP instead of *_COMP.tif
 #
 #
-# Dependencies : - function getLineThroughStack (AMSTer Engine utilities)
+# Dependencies : - function getLineThroughStack (AMSTer Engine utilities) at least version 20260730 if need to cope with tif files
 #                - gnuplot
 #                - gnu plot template  plotTS_template_multi.gnu or  plotTS_template_multi_fit.gnu
 #				And for adding Legend with direction of deformation
@@ -102,13 +103,16 @@
 #								  (i.e. to cope with changes operated in file handling some time ago...)
 # New in Distro V 9.2 20240123:	- Rename rep ENU as DEM to avoid clash with some scripts 
 #								  searching for comp dir with similar name 
+# New in Distro V 9.3 20260624:	- add stdev in linear rate legend
+# New in Distro V 10.0 20260730:	- works with msbasv10 (and tif files)
+# New in Distro V 10.1 20260803:	- allows option -vel for msbasv10
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jan 23, 2024"
+VER="Distro V10.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 03, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -141,6 +145,7 @@ if [ $# -lt 3 ] ; then
 	echo " 	-events=PATH : path to ascii table of events to plot on figures, where PATH is e.g. ../EVENTS_TABLES/NAME/ and NAME is the name of area which is also in events table names"
 	echo "	-start=YYYYMMDD -stop=YYYYMMDD restricts the plot to corresponding time span "	
 	echo "  -coh=option : add coh as error bars and/or boxes (lagrer is the best!); option is either avgavg, avgmin, avgminmax or avgavgminmax to plot data +- Mean and/or Min and/or Max coh. Coh is /100 for scaling"
+	echo "	-vel : for msbasv10 only: displays time series of *_vCOMP instead of *_COMP.tif "
 	echo ""
 	exit
 fi
@@ -247,6 +252,19 @@ if [[ $5 =~ ^[0-9]+$ ]] ; then PIX2=$5 ; TWOPIXELS="YES" ; else TWOPIXELS="NO" ;
 			PNGPLOT="YES"
 	fi
 
+	# check if -vel option (for msbasv10 only)
+	if [[ "${@#-vel}" = "$@" ]]
+		then
+			echo "Do not request msbasv10 vel time series"
+			VEL="NO"
+			VELSFX="" 
+		else
+			echo "Request msbasv10 vel time series"
+			VEL="YES"
+			VELSFX=".vel"
+	fi
+
+
 	# check if need restricting time span
 	if [[ "${@#-start=}" = "$@" ]] 
 		then
@@ -269,6 +287,7 @@ if [[ $5 =~ ^[0-9]+$ ]] ; then PIX2=$5 ; TWOPIXELS="YES" ; else TWOPIXELS="NO" ;
 			STOPSPAN=`echo "$@" | ${PATHGNU}/gsed  's/.*-stop=//'  | cut -d " " -f 1`	# get everything after -stop= and before next " "
 			STOPSPANSEC=`${PATHGNU}/gdate -d "${STOPSPAN}" +%s --utc`
 	fi
+
 	if [ ${SPAN1} == "YES" ] || [ ${SPAN2} == "YES" ]
 		then 
 			SPAN="YES"
@@ -284,6 +303,8 @@ if [[ $5 =~ ^[0-9]+$ ]] ; then PIX2=$5 ; TWOPIXELS="YES" ; else TWOPIXELS="NO" ;
 			ERR="NO"
 		else
 			echo "Request coh as error bars. Beware: it can be very slow at first run ! Process is incremental and do not recompute coh when already present though"
+			echo " It is not intended to work with results from msbasv10 inversions though. "
+			echo " Also deformation maps MUST be named as Defo*"
 			ERR="YES"
 			OPTERR=`echo "$@" | ${PATHGNU}/gsed  's/.*-coh=//'  | cut -d " " -f 1`  # get everything after -coh= and before next " ", either avgavg, avgmin, avgminmax or avgavgminmax
 			# list all coh dirs ; one per mode
@@ -540,7 +561,7 @@ fi
 									RECOMP="YES"
 								else
 									echo "${EACHDATE} already in zzz_coh_per_pixels/coh_${LINB}_${PIXB}${REMARKDIR}.txt; skip computing avg "
-									RCOMP="NO"
+									RECOMP="NO"
 							fi
 						else
 							RECOMP="NO"	
@@ -765,6 +786,61 @@ fi
 		esac
 		}
 
+
+	function ProcessTimeSeries()
+		{
+		unset COMP 
+		unset LIN
+		unset PIX
+		unset PIXNR
+		COMP=$1		# EW, UD, NS or LOS
+		LIN=$2		# pixel position : nr of line 
+		PIX=$3		# pixel position : nr of pix 
+		PIXNR=$4	# 1 or 2 times series 
+
+		if [ "${EXTIMG}" == "tif" ]
+			then  	
+				TimeLineFileDispl=$(find . -maxdepth 1 -name "timeLine${LIN}_${PIX}_${COMP}.txt")
+				TimeLineFileVel=$(find . -maxdepth 1 -name "timeLine${LIN}_${PIX}_v${COMP}.txt")
+			else
+				TimeLineFileDispl=$(find . -maxdepth 1 -name "timeLine${LIN}_${PIX}.txt")
+		fi
+
+		if [ "${VEL}" == "YES" ] 
+			then 
+				TimeLineFileDisplNoExt="${TimeLineFileVel%.*}"
+				COMP="v${COMP}"
+			else	
+				TimeLineFileDisplNoExt="${TimeLineFileDispl%.*}"
+		fi 
+
+		#TimeLineFileDisplNoExt="${TimeLineFileDispl%.*}"
+
+		#sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
+		sort -n -u ${TimeLineFileDisplNoExt}.txt > ${TimeLineFileDisplNoExt}.tmp.txt
+		rm ${TimeLineFileDisplNoExt}.txt
+		mv ${TimeLineFileDisplNoExt}.tmp.txt timeLine_${COMP}_${LIN}_${PIX}${REMARKDIR}.txt
+	
+		# Get first and last date 
+		FIRSTDATE=`head -1 timeLine_${COMP}_${LIN}_${PIX}${REMARKDIR}.txt | cut -c 1-8`
+		LASTDATE=`tail -1 timeLine_${COMP}_${LIN}_${PIX}${REMARKDIR}.txt | cut -c 1-8`
+		echo "Full time series runs from ${FIRSTDATE} to ${LASTDATE}"
+		
+		#Get min max of values in col3
+		MINVAL=`${PATHGNU}/gawk '{print $3}' timeLine_${COMP}_${LIN}_${PIX}${REMARKDIR}.txt | tail -1`
+		MAXVAL=`${PATHGNU}/gawk '{print $3}' timeLine_${COMP}_${LIN}_${PIX}${REMARKDIR}.txt | head -1`
+		if [ "${MINVAL}" == "${MAXVAL}" ] ; then echo "Empty time series ${PIXNR}" ; exit 0 ; fi
+		if [ `echo "${MINVAL} > ${MAXVAL}" | bc` -eq 1 ]
+			then 
+				TMP="${MINVAL}"
+				MINVAL="${MAXVAL}"
+				MAXVAL=${TMP} 
+		fi
+		echo "Time series ${PIXNR} ${COMP} goes from ${MINVAL} to ${MAXVAL}"
+
+		}
+
+
 # Define gnu plot template
 ##########################
 if [ ${LINFIT} == "YES" ] 
@@ -785,33 +861,96 @@ fi
 # FIRST TIME SERIES
 ####################
 cd zz_EW${REMARKDIR}
-	HDR=`ls *.hdr | head -1` 
-	if [ ! -s ${HDR} ] ; then echo "No hdr file - please check your dir."; exit; fi
+	###HDR=$(ls *.hdr 2>/dev/null | head -1)
+	###if [ ! -s ${HDR} ] 
+	###	then 
+	###		echo "No hdr file."
+	###		HDR=$(ls *.tif 2>/dev/null | head -1)
+	###		if [ ! -s ${HDR} ] 
+	###			then 
+	###				echo "No tif file neither - please check your dir."
+	###				exit 
+	###			else 
+	###				echo "OK, let's use tif files. Probably running msbasv10 results"
+	###				EXTIMG="tif"
+	###		fi
+	###	else 
+	###		echo "OK, let's use bin files."
+	###		EXTIMG="bin"
+	###fi
+
+	# Detect input format: ENVI (.hdr + .bin) or GeoTIFF (.tif)
+	EXTIMG=""
+	for EXT in hdr tif ; do
+		for FILE in ./*.${EXT} ; do
+			if [ -f "${FILE}" ] ; then
+				if [ "${EXT}" = "hdr" ] 
+					then 
+						EXTIMG="bin"
+						HDR="${FILE}" 
+						if [ "${VEL}" == "YES" ] ; then echo "Warning, can't process velocity plots for msbasv4" ; echo ; exit ; fi 
+						VEL="NO" 
+					else 
+						EXTIMG="tif" ; fi		# Disable VEL for no tif, just in case
+				break
+			fi
+		done
+		if [ -n "${EXTIMG}" ] ; then break ; fi
+	done
+
+	case "${EXTIMG}" in
+		bin)
+			echo "OK, let's use bin files."
+			;;
+		tif)
+			echo "OK, let's use tif files. Probably running msbasv10 results"
+			;;
+		*)
+			echo "No hdr nor tif file - please check your dir." >&2
+			exit 1
+			;;
+	esac
+
 
 	# Get first time series 
 	RUNDIREW=`pwd`
 	getLineThroughStack ${RUNDIREW} ${LIN1} ${PIX1}
-
-	sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
-	rm timeLine${LIN1}_${PIX1}.txt
-	mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt
-
-	# Get first and last date 
-	FIRSTDATE=`head -1 timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt | cut -c 1-8`
-	LASTDATE=`tail -1 timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt | cut -c 1-8`
-	echo "Full time series runs from ${FIRSTDATE} to ${LASTDATE}"
 	
-	#Get min max of values in col3
-	MINEWPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt | tail -1`
-	MAXEWPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt | head -1`
-	if [ "${MINEWPIX1}" == "${MAXEWPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
-	if [ `echo "${MINEWPIX1} > ${MAXEWPIX1}" | bc` -eq 1 ]
-		then 
-			TMP=${MINEWPIX1}
-			MINEWPIX1=${MAXEWPIX1}
-			MAXEWPIX1=${TMP} 
-	fi
-	echo "Time series 1 EW goes from ${MINEWPIX1} to ${MAXEWPIX1}"
+	ProcessTimeSeries "EW" "${LIN1}" "${PIX1}" 1
+	MINEWPIX1=${MINVAL}
+	MAXEWPIX1=${MAXVAL} 
+
+	####if [ "${EXTIMG}" == "tif" ]
+	####	then  	
+	####		TimeLineFileDispl=$(find . -maxdepth 1 -name "timeLine${LIN1}_${PIX1}_EW.txt")
+	####		TimeLineFileVel=$(find . -maxdepth 1 -name "timeLine${LIN1}_${PIX1}_vEW.txt")
+	####		
+	####	else
+	####		TimeLineFileDispl=$(find . -maxdepth 1 -name "timeLine${LIN1}_${PIX1}.txt")
+	####fi
+	####TimeLineFileDisplNoExt="${TimeLineFileDispl%.*}"
+	####
+	####	#sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
+	####	sort -n -u ${TimeLineFileDisplNoExt}.txt > ${TimeLineFileDisplNoExt}.tmp.txt
+	####	rm ${TimeLineFileDisplNoExt}.txt
+	####	mv ${TimeLineFileDisplNoExt}.tmp.txt ${TimeLineFileDisplNoExt}${REMARKDIR}.txt
+	####
+	####	# Get first and last date 
+	####	FIRSTDATE=`head -1 ${TimeLineFileDisplNoExt}${REMARKDIR}.txt | cut -c 1-8`
+	####	LASTDATE=`tail -1 ${TimeLineFileDisplNoExt}${REMARKDIR}.txt | cut -c 1-8`
+	####	echo "Full time series runs from ${FIRSTDATE} to ${LASTDATE}"
+	####	
+	####	#Get min max of values in col3
+	####	MINEWPIX1=`${PATHGNU}/gawk '{print $3}' ${TimeLineFileDisplNoExt}${REMARKDIR}.txt | tail -1`
+	####	MAXEWPIX1=`${PATHGNU}/gawk '{print $3}' ${TimeLineFileDisplNoExt}${REMARKDIR}.txt | head -1`
+	####	if [ "${MINEWPIX1}" == "${MAXEWPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
+	####	if [ `echo "${MINEWPIX1} > ${MAXEWPIX1}" | bc` -eq 1 ]
+	####		then 
+	####			TMP=${MINEWPIX1}
+	####			MINEWPIX1=${MAXEWPIX1}
+	####			MAXEWPIX1=${TMP} 
+	####	fi
+	####	echo "Time series 1 EW goes from ${MINEWPIX1} to ${MAXEWPIX1}"
 
 	# Get infos
 	#SENSOR=`cat ${HDR} | ${PATHGNU}/grep "sensor" | cut -d = -f 3 `
@@ -821,60 +960,92 @@ cd ..
 if [ "${ENU}" == "YES" ] ; then
 	cd zz_NS${REMARKDIR}
 
-		HDR=`ls *.hdr | head -1` 
-		if [ ! -s ${HDR} ] ; then echo "No hdr file - please check your dir."; exit; fi
+		####HDR=`ls *.hdr | head -1` 
+		#####if [ ! -s ${HDR} ] ; then echo "No hdr file - please check your dir."; exit; fi
+		####if [ ! -s ${HDR} ] 
+		####	then 
+		####		echo "No hdr file."
+		####		HDR=`ls *.tif | head -1` 
+		####		if [ ! -s ${HDR} ] 
+		####			then 
+		####				echo "No tif file neither - please check your dir."
+		####				exit 
+		####		fi
+		####fi
 
 		# Get first time series 
 		RUNDIRNS=`pwd`
 		getLineThroughStack ${RUNDIRNS} ${LIN1} ${PIX1}
 
-		sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
-		rm timeLine${LIN1}_${PIX1}.txt
-		mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt
+		ProcessTimeSeries "NS" "${LIN1}" "${PIX1}" 1
+		MINNSPIX1=${MINVAL}
+		MAXNSPIX1=${MAXVAL} 
 
-		#Get min max of values in col3
-		MINNSPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt | tail -1`
-		MAXNSPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt | head -1`
-		if [ "${MINNSPIX1}" == "${MAXNSPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
-		if [ `echo "${MINNSPIX1} > ${MAXNSPIX1}" | bc` -eq 1 ]
-			then 
-				TMP=${MINNSPIX1}
-				MINNSPIX1=${MAXNSPIX1}
-				MAXNSPIX1=${TMP} 
-		fi
-		echo "Time series 1 NS goes from ${MINNSPIX1} to ${MAXNSPIX1}"
+
+		###sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
+		###rm timeLine${LIN1}_${PIX1}.txt
+		###mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt
+		###
+		####Get min max of values in col3
+		###MINNSPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt | tail -1`
+		###MAXNSPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt | head -1`
+		###if [ "${MINNSPIX1}" == "${MAXNSPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
+		###if [ `echo "${MINNSPIX1} > ${MAXNSPIX1}" | bc` -eq 1 ]
+		###	then 
+		###		TMP=${MINNSPIX1}
+		###		MINNSPIX1=${MAXNSPIX1}
+		###		MAXNSPIX1=${TMP} 
+		###fi
+		###echo "Time series 1 NS goes from ${MINNSPIX1} to ${MAXNSPIX1}"
 	cd .. 
 fi
 
 cd zz_UD${REMARKDIR}
 
-	HDR=`ls *.hdr | head -1` 
-	if [ ! -s ${HDR} ] ; then echo "No hdr file - please check your dir."; exit; fi
+	###HDR=`ls *.hdr | head -1` 
+	####if [ ! -s ${HDR} ] ; then echo "No hdr file - please check your dir."; exit; fi
+	###if [ ! -s ${HDR} ] 
+	###	then 
+	###		echo "No hdr file."
+	###		HDR=`ls *.tif | head -1` 
+	###		if [ ! -s ${HDR} ] 
+	###			then 
+	###				echo "No tif file neither - please check your dir."
+	###				exit 
+	###		fi
+	###fi
 
 	# Get first time series 
 	RUNDIRUD=`pwd`
 	getLineThroughStack ${RUNDIRUD} ${LIN1} ${PIX1}
 
-	sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
-	rm timeLine${LIN1}_${PIX1}.txt
-	mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt
+	ProcessTimeSeries "UD" "${LIN1}" "${PIX1}" 1
+	MINUDPIX1=${MINVAL}
+	MAXUDPIX1=${MAXVAL} 
 
-	#Get min max of values in col3
-	MINUDPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt | tail -1`
-	MAXUDPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt | head -1`
-	if [ "${MINUDPIX1}" == "${MAXUDPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
-	if [ `echo "${MINUDPIX1} > ${MAXUDPIX1}"  | bc` -eq 1  ]
-		then 
-			TMP=${MINUDPIX1}
-			MINUDPIX1=${MAXUDPIX1}
-			MAXUDPIX1=${TMP} 
-	fi
-	echo "Time series 1 UD goes from ${MINUDPIX1} to ${MAXUDPIX1}"
+
+	###sort -n -u timeLine${LIN1}_${PIX1}.txt > timeLine${LIN1}_${PIX1}.tmp.txt
+	###rm timeLine${LIN1}_${PIX1}.txt
+	###mv timeLine${LIN1}_${PIX1}.tmp.txt timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt
+	###
+	####Get min max of values in col3
+	###MINUDPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt | tail -1`
+	###MAXUDPIX1=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt | head -1`
+	###if [ "${MINUDPIX1}" == "${MAXUDPIX1}" ] ; then echo "Empty time series 1" ; exit 0 ; fi
+	###if [ `echo "${MINUDPIX1} > ${MAXUDPIX1}"  | bc` -eq 1  ]
+	###	then 
+	###		TMP=${MINUDPIX1}
+	###		MINUDPIX1=${MAXUDPIX1}
+	###		MAXUDPIX1=${TMP} 
+	###fi
+	###echo "Time series 1 UD goes from ${MINUDPIX1} to ${MAXUDPIX1}"
 	echo ""
 cd .. 
 
+
 # get coh as error bars if requested 
-if [ "${ERR}" == "YES" ] 
+
+if [ "${ERR}" == "YES" ] && [ "${EXTIMG}" == "bin" ]		# no err for tif files 
 	then
 		# for each date
 		if [ ${TWOPIXELS} == "YES" ] 
@@ -885,19 +1056,25 @@ if [ "${ERR}" == "YES" ]
 		fi
 		# prepare file for plot
 		# remove header (FNR >1), modifies coh as (coh)/100 and keep date, avg, min, max and nr (with same coh transfo, that is /100) 
-		${PATHGNU}/gawk 'FNR >1 { print $1, $2/100, $5/100, $8/100, $9 }' <${RUNDIR}/zzz_coh_per_pixels/coh_${LIN}_${PIX}${REMARKDIR}.txt >${RUNDIR}/zzz_coh_per_pixels/coh_${LIN}_${PIX}${REMARKDIR}_NoHeader.txt
-		sort -n -u -o ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN}_${PIX}${REMARKDIR}_NoHeader.txt ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN}_${PIX}${REMARKDIR}_NoHeader.txt
+		${PATHGNU}/gawk 'FNR >1 { print $1, $2/100, $5/100, $8/100, $9 }' <${RUNDIR}/zzz_coh_per_pixels/coh_${LIN1}_${PIX1}${REMARKDIR}.txt >${RUNDIR}/zzz_coh_per_pixels/coh_${LIN1}_${PIX1}${REMARKDIR}_NoHeader.txt
+		sort -n -u -o ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN1}_${PIX1}${REMARKDIR}_NoHeader.txt ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN1}_${PIX1}${REMARKDIR}_NoHeader.txt
 		# add EW sisplacement; ie. get DATE HHMMSS EW DATE AVGcoh MINcoh MAXcoh NRcoh		
 		sort -n -u -o ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt
-		paste ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN}_${PIX}${REMARKDIR}_NoHeader.txt -d " " > ${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN1}_${PIX1}${REMARKDIR}.txt
-		rm -f ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN}_${PIX}${REMARKDIR}_NoHeader.txt
+		paste ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN1}_${PIX1}${REMARKDIR}_NoHeader.txt -d " " > ${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN1}_${PIX1}${REMARKDIR}.txt
+		rm -f ${RUNDIR}/zzz_coh_per_pixels/coh_${LIN1}_${PIX1}${REMARKDIR}_NoHeader.txt
 		# Search for nan or 0 AVG, MAX or MIN coh and repalce by extreme value
 		${PATHGNU}/gsed -i "s% nan % 999999999 %g" ${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN1}_${PIX1}${REMARKDIR}.txt # this will create a hughe bar in plot pointing out to the erroneous date
 		${PATHGNU}/gsed -i "s% 0 % 999999999 %g" ${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN1}_${PIX1}${REMARKDIR}.txt   # this will create a hughe bar in plot pointing out to the erroneous date
 
 		EWFILETOPLOT=${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN1}_${PIX1}${REMARKDIR}
 	else 
-		EWFILETOPLOT=${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}
+		if [ "${VEL}" == "YES" ] 
+			then 
+				EWFILETOPLOT=${RUNDIREW}/timeLine_vEW_${LIN1}_${PIX1}${REMARKDIR}
+			else	
+				EWFILETOPLOT=${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}
+		fi 
+
 fi
 
 # PLOT (without tags for events)
@@ -909,7 +1086,7 @@ if [ "${LINFIT}" == "YES" ]
 		${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'1.log"' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 		
 		# if coh as error bars if requested 
-		if [ "${ERR}" == "YES" ] 
+		if [ "${ERR}" == "YES" ] && [ "${EXTIMG}" == "bin" ]		# no err for tif files 
 			then
 			
 				# set the titme and command line
@@ -919,7 +1096,17 @@ if [ "${LINFIT}" == "YES" ]
 				${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 
 			else			
-				TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				if [ "${VEL}" == "YES" ] 
+					then 
+						TITLE="Ground displacement velocity (mean vel over interval) ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+						# also change axis label
+						#${PATHGNU}/gsed -i "s|set ylabel 'DISPLACEMENT (m)'|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+						${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+
+					else	
+						TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				fi 
+				
 				if [ "${ENU}" == "YES" ] 
 					then
 						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
@@ -930,20 +1117,33 @@ if [ "${LINFIT}" == "YES" ]
 		fi
 
 		if [ ${LINRATE} == "YES" ] ; then
-			if [ "${ENU}" == "YES" ] 
-				then
-					${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.06 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-					${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f cm\/yr', annualrateNS(d) ) at  graph 0.82,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-					${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(f) ) at  graph 0.82,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-				else 
-					${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-					${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(d) ) at  graph 0.82,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-			fi
+			if [ "${VEL}" == "YES" ] 
+				then 
+					if [ "${ENU}" == "YES" ] 
+						then
+							${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.06 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+							${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateNS(d), annualrateNSerr(d) ) at  graph 0.70,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+							${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateUD(f), annualrateUDerr(f) ) at  graph 0.70,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+						else 
+							${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+							${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateUD(d), annualrateUDerr(d) ) at  graph 0.70,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+					fi
+				else	
+					if [ "${ENU}" == "YES" ] 
+						then
+							${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.06 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+							${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f +\/- %.2f cm\/yr', annualrateNS(d), annualrateNSerr(d) ) at  graph 0.70,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+							${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr', annualrateUD(f), annualrateUDerr(f) ) at  graph 0.70,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+						else 
+							${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.04 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+							${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr', annualrateUD(d), annualrateUDerr(d) ) at  graph 0.70,0.02 front /" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+					fi
+			fi 
 		fi
 
 	else 
 		
-		if [ "${ERR}" == "YES" ] 
+		if [ "${ERR}" == "YES" ]  && [ "${EXTIMG}" == "bin" ]		# no err for tif files 
 			then
 				# set the titme and command line
 				TitleCmdLineMeanCohAtPixNoFit ${LIN1} ${PIX1}
@@ -952,7 +1152,16 @@ if [ "${LINFIT}" == "YES" ]
 				${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 
 			else			
-				TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				if [ "${VEL}" == "YES" ] 
+					then 
+						TITLE="Ground displacement velocity (mean vel over interval) ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+						# also change axis label
+						${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+
+					else	
+						TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				fi 
+				
 				if [ "${ENU}" == "YES" ] 
 					then
 						CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
@@ -968,15 +1177,28 @@ fi
 ${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 #fi
 # Change output name
-${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}${REMARKDIR}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+if [ "${VEL}" == "YES" ] 
+	then 
+		${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}${REMARKDIR}.vel%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+	else	
+		${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}${REMARKDIR}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+fi 
+
 
 # Change input time series txt name
-#${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${EWFILETOPLOT}\/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 ${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${EWFILETOPLOT}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
-if [ "${ENU}" == "YES" ] ; then
-	${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu	
-fi
-${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+if [ "${VEL}" == "YES" ] 
+	then 
+		if [ "${ENU}" == "YES" ] ; then
+			${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_vNS_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu	
+		fi
+		${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_vUD_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+	else	
+		if [ "${ENU}" == "YES" ] ; then
+			${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu	
+		fi
+		${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}%g" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
+fi 
 
 ${PATHGNU}/gsed -i "s%TITLE%${TITLE}%" plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu
 
@@ -998,23 +1220,28 @@ if [ ${TWOPIXELS} == "YES" ] ; then
 
 	cd zz_EW${REMARKDIR}
 		getLineThroughStack ${RUNDIREW} ${LIN2} ${PIX2}
+		
+		ProcessTimeSeries "EW" "${LIN2}" "${PIX2}" 2
+		MINEWPIX2=${MINVAL}
+		MAXEWPIX2=${MAXVAL} 
 
-		sort -n -u timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
-		rm timeLine${LIN2}_${PIX2}.txt
-		mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt
 
-		#Get min max of values in col3
-		MINEWPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt | tail -1`
-		MAXEWPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt | head -1`
-		# If INFIT requested, must first ensure that time series is not null.
-		if [ "${MINEWPIX2}" == "${MAXEWPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
-		if [ `echo "${MINEWPIX2} > ${MAXEWPIX2}" | bc` -eq 1  ]
-			then 
-				TMP=${MINEWPIX2}
-				MINEWPIX2=${MAXEWPIX2}
-				MAXEWPIX2=${TMP} 
-		fi
-		echo "Time series 2 EW goes from ${MINEWPIX2} to ${MAXEWPIX2}"
+		###sort -n -u timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
+		###rm timeLine${LIN2}_${PIX2}.txt
+		###mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt
+		###
+		####Get min max of values in col3
+		###MINEWPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt | tail -1`
+		###MAXEWPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt | head -1`
+		#### If INFIT requested, must first ensure that time series is not null.
+		###if [ "${MINEWPIX2}" == "${MAXEWPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
+		###if [ `echo "${MINEWPIX2} > ${MAXEWPIX2}" | bc` -eq 1  ]
+		###	then 
+		###		TMP=${MINEWPIX2}
+		###		MINEWPIX2=${MAXEWPIX2}
+		###		MAXEWPIX2=${TMP} 
+		###fi
+		###echo "Time series 2 EW goes from ${MINEWPIX2} to ${MAXEWPIX2}"
 
 	cd .. 
 
@@ -1023,21 +1250,26 @@ if [ ${TWOPIXELS} == "YES" ] ; then
 			RUNDIRNS=`pwd`
 			getLineThroughStack ${RUNDIRNS} ${LIN2} ${PIX2}
 
-			sort -n -u timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
-			rm timeLine${LIN2}_${PIX2}.txt
-			mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt
+			ProcessTimeSeries "NS" "${LIN2}" "${PIX2}" 2
+			MINNSPIX2=${MINVAL}
+			MAXNSPIX2=${MAXVAL} 
 
-			#Get min max of values in col3
-			MINNSPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt | tail -1`
-			MAXNSPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt | head -1`
-			if [ "${MINNSPIX2}" == "${MAXNSPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
-			if [ `echo "${MINNSPIX2} > ${MAXNSPIX2}"  | bc` -eq 1  ]
-				then 
-					TMP=${MINNSPIX2}
-					MINNSPIX2=${MAXNSPIX2}
-					MAXNSPIX2=${TMP} 
-			fi
-			echo "Time series 2 NS goes from ${MINNSPIX2} to ${MAXNSPIX2}"
+
+			###sort -n -u timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
+			###rm timeLine${LIN2}_${PIX2}.txt
+			###mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt
+			###
+			####Get min max of values in col3
+			###MINNSPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt | tail -1`
+			###MAXNSPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt | head -1`
+			###if [ "${MINNSPIX2}" == "${MAXNSPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
+			###if [ `echo "${MINNSPIX2} > ${MAXNSPIX2}"  | bc` -eq 1  ]
+			###	then 
+			###		TMP=${MINNSPIX2}
+			###		MINNSPIX2=${MAXNSPIX2}
+			###		MAXNSPIX2=${TMP} 
+			###fi
+			###echo "Time series 2 NS goes from ${MINNSPIX2} to ${MAXNSPIX2}"
 			echo ""
 		cd .. 
 	fi
@@ -1045,26 +1277,30 @@ if [ ${TWOPIXELS} == "YES" ] ; then
 	cd zz_UD${REMARKDIR}
 		getLineThroughStack ${RUNDIRUD} ${LIN2} ${PIX2}
 
-		sort -n -u timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
-		rm timeLine${LIN2}_${PIX2}.txt
-		mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt
+		ProcessTimeSeries "UD" "${LIN2}" "${PIX2}" 2
+		MINUDPIX2=${MINVAL}
+		MAXUDPIX2=${MAXVAL} 
 
-		#Get min max of values in col3
-		MINUDPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt | tail -1`
-		MAXUDPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt | head -1`
-		if [ "${MINUDPIX2}" == "${MAXUDPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
-		if [ `echo "${MINUDPIX2} > ${MAXUDPIX2}" | bc` -eq 1  ]
-			then 
-				TMP=${MINUDPIX2}
-				MINUDPIX2=${MAXUDPIX2}
-				MAXUDPIX2=${TMP} 
-		fi
-		echo "Time series 2 UD goes from ${MINUDPIX2} to ${MAXUDPIX2}"
+		###sort -n -u timeLine${LIN2}_${PIX2}.txt > timeLine${LIN2}_${PIX2}.tmp.txt
+		###rm timeLine${LIN2}_${PIX2}.txt
+		###mv timeLine${LIN2}_${PIX2}.tmp.txt timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt
+		###
+		####Get min max of values in col3
+		###MINUDPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt | tail -1`
+		###MAXUDPIX2=`${PATHGNU}/gawk '{print $3}' timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt | head -1`
+		###if [ "${MINUDPIX2}" == "${MAXUDPIX2}" ] ; then echo "Empty time series 2" ; exit 0 ; fi
+		###if [ `echo "${MINUDPIX2} > ${MAXUDPIX2}" | bc` -eq 1  ]
+		###	then 
+		###		TMP=${MINUDPIX2}
+		###		MINUDPIX2=${MAXUDPIX2}
+		###		MAXUDPIX2=${TMP} 
+		###fi
+		###echo "Time series 2 UD goes from ${MINUDPIX2} to ${MAXUDPIX2}"
 		echo ""
 
 	cd .. 
 
-if [ "${ERR}" == "YES" ] 
+if [ "${ERR}" == "YES" ] && [ "${EXTIMG}" == "bin" ]		# no err for tif files 
 	then
 		# for each date
 		#GetMeanCohAtPix is already performed at the time of PIX1
@@ -1083,7 +1319,13 @@ if [ "${ERR}" == "YES" ]
 
 		EWFILETOPLOT=${RUNDIR}/zzz_coh_per_pixels/timeLine_EW_COH_${LIN2}_${PIX2}${REMARKDIR}
 	else 
-		EWFILETOPLOT=${RUNDIREW}/timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}
+		if [ "${VEL}" == "YES" ] 
+			then 
+				EWFILETOPLOT=${RUNDIREW}/timeLine_vEW_${LIN2}_${PIX2}${REMARKDIR}
+			else	
+				EWFILETOPLOT=${RUNDIREW}/timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}
+		fi 
+
 fi
 
 	# PLOT (without tags for events)
@@ -1095,7 +1337,7 @@ fi
 			${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'2.log"' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 	
 			# if coh as error bars if requested 
-			if [ "${ERR}" == "YES" ] 
+			if [ "${ERR}" == "YES" ]  && [ "${EXTIMG}" == "bin" ]		# no err for tif files 
 				then
 					# set the titme and command line
 					TitleCmdLineMeanCohAtPix ${LIN2} ${PIX2}
@@ -1103,8 +1345,17 @@ fi
 					${PATHGNU}/gsed -i '12 i set palette model RGB defined (0 \"red\",1 \"blue\", 2 \"green\")' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 					${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
-				else			
-					TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+				else							
+					if [ "${VEL}" == "YES" ] 
+						then 
+							TITLE="Ground displacement velocity (mean vel over interval) ${MULTIMODTITLE} and linear fit; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							# also change axis label
+							${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+
+						else	
+							TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+					fi 
+					
 					if [ "${ENU}" == "YES" ] 
 						then
 							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
@@ -1115,20 +1366,33 @@ fi
 			fi
 
 			if [ ${LINRATE} == "YES" ] ; then
-				if [ "${ENU}" == "YES" ] 
-					then
-						${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.06 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-						${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f cm\/yr', annualrateNS(d) ) at  graph 0.82,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-						${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(f) ) at  graph 0.82,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+				if [ "${VEL}" == "YES" ] 
+					then 
+						if [ "${ENU}" == "YES" ] 
+							then
+								${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.06 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+								${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateNS(d), annualrateNSerr(d) ) at  graph 0.70,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+								${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateUD(f), annualrateUDerr(f) ) at  graph 0.70,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+							else 
+								${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+								${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateUD(d), annualrateUDerr(d) ) at  graph 0.70,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+						fi
 					else 
-						${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-						${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(d) ) at  graph 0.82,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+						if [ "${ENU}" == "YES" ] 
+							then
+								${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.06 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+								${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f +\/- %.2f cm\/yr', annualrateNS(d), annualrateNSerr(d) ) at  graph 0.70,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+								${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr', annualrateUD(f), annualrateUDerr(f) ) at  graph 0.70,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+							else 
+								${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.04 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+								${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr', annualrateUD(d), annualrateUDerr(d) ) at  graph 0.70,0.02 front /" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+						fi
 				fi
 			fi
 
 		else 
 
-			if [ "${ERR}" == "YES" ] 
+			if [ "${ERR}" == "YES" ]  && [ "${EXTIMG}" == "bin" ]		# no err for tif files 
 				then
 					# set the titme and command line
 					TitleCmdLineMeanCohAtPixNoFit ${LIN2} ${PIX2}
@@ -1137,7 +1401,15 @@ fi
 					${PATHGNU}/gsed -i '13 i set cblabel \"Nr of n pairs used for coherence statistics\" font \"Helvetica, 8\"  rotate by -90' plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 	
 				else			
-					TITLE="Ground displacement EW+UD; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+					if [ "${VEL}" == "YES" ] 
+						then 
+							TITLE="Ground displacement velocity (mean vel over interval) EW+UD; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							# also change axis label
+							${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+						else	
+							TITLE="Ground displacement EW+UD; pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+					fi 
+					
 					if [ "${ENU}" == "YES" ] 
 						then
 							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3"`
@@ -1152,20 +1424,32 @@ fi
 	${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
 	# Change output name
-	${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN2}_${PIX2}${REMARKDIR}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+	if [ "${VEL}" == "YES" ] 
+		then 
+			${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN2}_${PIX2}${REMARKDIR}.vel%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+		else	
+			${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN2}_${PIX2}${REMARKDIR}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+	fi 
 
 	# Change input time series txt name
 	${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%${EWFILETOPLOT}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-	if [ "${ENU}" == "YES" ] ; then
-		${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu	
+	if [ "${VEL}" == "YES" ] 
+		then 
+			if [ "${ENU}" == "YES" ] ; then
+				${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_vNS_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu	
+			fi
+			${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_vUD_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
+		else	
+			if [ "${ENU}" == "YES" ] ; then
+				${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%${RUNDIRNS}\/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu	
+			fi
+			${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 	fi
-	${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%${RUNDIRUD}\/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}%g" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
 	${PATHGNU}/gsed -i "s%TITLE%${TITLE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
 
 	# Change INSTITUTE name 
 	${PATHGNU}/gsed -i "s%INSTITUTE%${INSTITUTE}%" plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu
-
 
 	# Change time span
 	if [ ${SPAN} == "YES" ]
@@ -1197,37 +1481,78 @@ fi
 			cp ${GNUTEMPLATE} ${GNUNAME}
 
 			#merge line by lines the two txt files
-			paste ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIREW}/timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_EW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
-			paste ${RUNDIRUD}/timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRUD}/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_UD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+			if [ "${VEL}" == "YES" ] 
+				then 
+					paste ${RUNDIREW}/timeLine_vEW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIREW}/timeLine_vEW_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_vEW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+					paste ${RUNDIRUD}/timeLine_vUD_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRUD}/timeLine_vUD_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_vUD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+				else	
+					paste ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIREW}/timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_EW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+					paste ${RUNDIRUD}/timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRUD}/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_UD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+			fi 
 
 			if [ "${ENU}" == "YES" ] 
 				then
-					paste ${RUNDIRNS}/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRNS}/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+					if [ "${VEL}" == "YES" ] 
+						then 
+							paste ${RUNDIRNS}/timeLine_vNS_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRNS}/timeLine_vNS_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_vNS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+						else	
+							paste ${RUNDIRNS}/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRNS}/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt > timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt
+					fi 
 
 					if [ "${LINFIT}" == "YES" ] 
 						then
 							${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'3.log"' ${GNUNAME}
-							TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							
+							if [ "${VEL}" == "YES" ] 
+								then 
+									TITLE="Ground displacement velocity (mean vel over interval) ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+									# also change axis label
+									${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" ${GNUNAME}
+								else	
+									TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							fi 
+
 							# Add events
 							PlotEvents
 
 							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW', 'PATH_TO_NS_EPS.txt' u 1:3 with linespoints title 'NS' ls 2, g(x) ls 5 title 'Lin Fit NS', 'PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, h(x) ls 6 title 'Lin Fit UD'"`
 
-							if [ ${LINRATE} == "YES" ] ; then
-								${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.06 front /" ${GNUNAME}
-								${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f cm\/yr', annualrateNS(d) ) at  graph 0.82,0.04 front /" ${GNUNAME}
-								${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(f) ) at  graph 0.82,0.02 front /" ${GNUNAME}
-							fi
-
+							if [ "${VEL}" == "YES" ] 
+								then 
+									if [ ${LINRATE} == "YES" ] ; then
+										${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.06 front /" ${GNUNAME}
+										${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateNS(d), annualrateNSerr(d) ) at  graph 0.70,0.04 front /" ${GNUNAME}
+										${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateUD(f), annualrateUDerr(f) ) at  graph 0.70,0.02 front /" ${GNUNAME}
+									fi
+								else	
+									if [ ${LINRATE} == "YES" ] ; then
+										${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.06 front /" ${GNUNAME}
+										${PATHGNU}/gsed -i "s/# ANNUALRATENS/set label sprintf('NS Linear rate = %.2f +\/- %.2f cm\/yr', annualrateNS(d), annualrateNSerr(d) ) at  graph 0.70,0.04 front /" ${GNUNAME}
+										${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr', annualrateUD(f), annualrateUDerr(f) ) at  graph 0.70,0.02 front /" ${GNUNAME}
+									fi
+							fi 
 
 						else 
-							TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							if [ "${VEL}" == "YES" ] 
+								then 
+									TITLE="Ground displacement velocity (mean vel over interval) ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+									# also change axis label
+									${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" ${GNUNAME}
+								else	
+									TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							fi 
+
 							# Add events
 							PlotEvents		
 		
 							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1: 3 with linespoints title 'EW' ls 1,'PATH_TO_NS_EPS.txt' u 1: 3 with linespoints title 'NS' ls 2,'PATH_TO_UD_EPS.txt' u 1: 3 with linespoints title 'UD' ls 3"`
 							${PATHGNU}/gsed -i "s%CMD_LINE%${CMD_LINE}%" ${GNUNAME}
-							${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+							if [ "${VEL}" == "YES" ]
+							    then 
+							    	${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_vNS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+							    else 
+							    	${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+							fi
 					fi
 
 
@@ -1235,19 +1560,43 @@ fi
 					if [ "${LINFIT}" == "YES" ] 
 						then
 							${PATHGNU}/gsed -i '1i set fit logfile "'${RUNDIR}'/fit_'${RNDM}'3.log"' ${GNUNAME}
-							TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							if [ "${VEL}" == "YES" ] 
+								then 
+									TITLE="Ground displacement velocity (mean vel over interval) ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+									# also change axis label
+									${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" ${GNUNAME}
+								else	
+									TITLE="Ground displacement ${MULTIMODTITLE} and linear fit; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							fi 
+
 							# Add events
 							PlotEvents
 
 							CMD_LINE=`echo "plot 'PATH_TO_EW_EPS.txt' u 1:3 with linespoints title 'EW' ls 1, f(x) ls 4 title 'Lin Fit EW','PATH_TO_UD_EPS.txt' u 1:3 with linespoints title 'UD' ls 3, g(x) ls 6 title 'Lin Fit UD'"`
 
-							if [ ${LINRATE} == "YES" ] ; then
-								${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f cm\/yr', annualrateEW(b) ) at  graph 0.82,0.04 front /" ${GNUNAME}
-								${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f cm\/yr', annualrateUD(d) ) at  graph 0.82,0.02 front /" ${GNUNAME}
-							fi
+							if [ "${VEL}" == "YES" ] 
+								then 
+									if [ ${LINRATE} == "YES" ] ; then
+										${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.04 front /" ${GNUNAME}
+										${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr2', annualrateUD(d), annualrateUDerr(d) ) at  graph 0.70,0.02 front /" ${GNUNAME}
+									fi
+								else	
+									if [ ${LINRATE} == "YES" ] ; then
+										${PATHGNU}/gsed -i "s/# ANNUALRATEEW/set label sprintf('EW Linear rate = %.2f +\/- %.2f cm\/yr', annualrateEW(b), annualrateEWerr(b) ) at  graph 0.70,0.04 front /" ${GNUNAME}
+										${PATHGNU}/gsed -i "s/# ANNUALRATEUD/set label sprintf('UD Linear rate = %.2f +\/- %.2f cm\/yr', annualrateUD(d), annualrateUDerr(d) ) at  graph 0.70,0.02 front /" ${GNUNAME}
+									fi
+							fi 
 
 						else 
-							TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							if [ "${VEL}" == "YES" ] 
+								then 
+									TITLE="Ground displacement velocity (mean vel over interval) ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+									# also change axis label
+									${PATHGNU}/gsed -i "s|^set ylabel .*|set ylabel 'MEAN VELOCITY OVER TIME INTERVAL (m/yr)'|g" ${GNUNAME}
+								else	
+									TITLE="Ground displacement ${MULTIMODTITLE}; pixel ${LIN1} ${PIX1} - pixel ${LIN2} ${PIX2} as in ${REMARKDIR} - Last date is ${LASTDATE}"
+							fi 
+
 							# Add events
 							PlotEvents
 						
@@ -1268,15 +1617,29 @@ fi
 			# Change INSTITUTE name 
 			${PATHGNU}/gsed -i "s%INSTITUTE%${INSTITUTE}%" ${GNUNAME}
 
-			# Change output name
-			${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+			# Change output name			
+			if [ "${VEL}" == "YES" ] 
+				then 
+					${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.vel%" ${GNUNAME}
+				else	
+					${PATHGNU}/gsed -i "s%PATH_TO_EPS%timeLines_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+			fi 
 
 			# Change input time series txt name
-			${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%timeLine_EW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
-			if [ "${ENU}" == "YES" ] ; then
-				${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}	
-			fi
-			${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%timeLine_UD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+			if [ "${VEL}" == "YES" ] 
+				then 
+					${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%timeLine_vEW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+					if [ "${ENU}" == "YES" ] ; then
+						${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_vNS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}	
+					fi
+					${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%timeLine_vUD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+				else	
+					${PATHGNU}/gsed -i "s%PATH_TO_EW_EPS%timeLine_EW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+					if [ "${ENU}" == "YES" ] ; then
+						${PATHGNU}/gsed -i "s%PATH_TO_NS_EPS%timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}	
+					fi
+					${PATHGNU}/gsed -i "s%PATH_TO_UD_EPS%timeLine_UD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}%" ${GNUNAME}
+			fi 
 
 			# Change time span
 			if [ ${SPAN} == "YES" ]
@@ -1301,8 +1664,13 @@ fi  # end of if for 2 pixels
 if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f ${RUNDIREW}/timeLine_EW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIREW}/timeLine_EW_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
 if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f ${RUNDIRUD}/timeLine_UD_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRUD}/timeLine_UD_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
 if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f ${RUNDIRNS}/timeLine_NS_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRNS}/timeLine_NS_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
+if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f ${RUNDIREW}/timeLine_vEW_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIREW}/timeLine_vEW_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
+if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f ${RUNDIRUD}/timeLine_vUD_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRUD}/timeLine_vUD_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
+if [ ${DELPIXVAL} == "YES" ] || [ ${DELDDVAL} == "YES" ] ; then rm -f ${RUNDIRNS}/timeLine_vNS_${LIN1}_${PIX1}${REMARKDIR}.txt ${RUNDIRNS}/timeLine_vNS_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
+
 # Cleaning text files with Double Difference TS values
 if [ ${DELDDVAL} == "YES" ] ; then rm -f timeLine_EW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt timeLine_UD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt timeLine_NS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
+if [ ${DELDDVAL} == "YES" ] ; then rm -f timeLine_vEW_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt timeLine_vUD_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt timeLine_vNS_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.txt ; fi
 # Cleaning gnuplot scripts 
 if [ ${DELGNU} == "YES" ] ; then rm -f plotTS_${LIN1}_${PIX1}_multi${REMARKDIR}.gnu plotTS_${LIN2}_${PIX2}_multi${REMARKDIR}.gnu ${GNUNAME} ; fi
 
@@ -1312,7 +1680,7 @@ rm -f ${RUNDIR}/fit_${RNDM}1.log  ${RUNDIR}/fit_${RNDM}2.log ${RUNDIR}/fit_${RND
 #########################
 if [ ${PNGPLOT} == "YES" ]
 	then 
-		EPSLIST=`echo "timeLines_${LIN1}_${PIX1}${REMARKDIR}.eps timeLines_${LIN2}_${PIX2}${REMARKDIR}.eps timeLines_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.eps"`
+		EPSLIST=`echo "timeLines_${LIN1}_${PIX1}${REMARKDIR}${VELSFX}.eps timeLines_${LIN2}_${PIX2}${REMARKDIR}${VELSFX}.eps timeLines_${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}${VELSFX}.eps"`
 		for EPSFILE in ${EPSLIST}
 		do 
 			if [ -f "${EPSFILE}" ] && [ -s "${EPSFILE}" ] ; then 
@@ -1327,7 +1695,7 @@ fi
 #------------   Add by Maxime Jaspard 20200114 --------------#
 # if double diff and if last param contains a t, it means that you want a double difference and a tag to explain direction of displacments 
 if  [ ${TWOPIXELS} == "YES" ] && [ ${TAG} == "YES" ] ; then
-	EPSFILE=$(find . -maxdepth 1 -type f -name "*${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}.eps")
+	EPSFILE=$(find . -maxdepth 1 -type f -name "*${LIN1}_${PIX1}_${LIN2}_${PIX2}${REMARKDIR}${VELSFX}.eps")
 	${PATH_SCRIPTS}/SCRIPTS_MT/TS_AddLegend_EW_UD.sh ${REMARKDIR} ${EPSFILE}
 fi
 #-------------                 end              --------------#

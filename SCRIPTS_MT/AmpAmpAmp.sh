@@ -16,6 +16,7 @@
 # New in Distro V 1.0:	- Based on AmpDefo_map.sh V1.4.2
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+#New in Distro V 2.1 20260714:	- fix path to Fiji for Mac ARM
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -28,8 +29,8 @@ source ${HOME}/.bashrc
 
 
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2022, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2022, Last modified on Jul 14, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -112,16 +113,28 @@ echo "close();" >> FijiMacro_${Random}.txt
 
 ${PATHGNU}/gsed "s/'/\"/g" FijiMacro_${Random}.txt > FijiMacro_${Random}2.txt 
 
-
+# Pick the Fiji launcher: new Jaunch "fiji" or a legacy platform binary
+	if [ -x "${PATHFIJI}/fiji" ]; then
+	    FIJI="${PATHFIJI}/fiji"               # new Jaunch (Mac arm64, Linux, ...)
+	elif [ -x "${PATHFIJI}/ImageJ-linux64" ]; then
+	    FIJI="${PATHFIJI}/ImageJ-linux64"     # legacy Linux
+	elif [ -x "${PATHFIJI}/ImageJ-macosx" ]; then
+	    FIJI="${PATHFIJI}/ImageJ-macosx"      # legacy Intel Mac
+	else
+	    echo "ERROR: no Fiji/ImageJ launcher found in ${PATHFIJI}" >&2
+	    exit 1
+	fi
 
 case ${OS} in 
 	"Linux") 
 		export DISPLAY=:10
 		# since imageJ V1.53c, option -b must be repalced by --headless
 		#${PATHFIJI}/ImageJ-linux64 -b ./FijiMacro_${Random}2.txt ;;
-		${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacro_${Random}2.txt ;;
+		#${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacro_${Random}2.txt ;;
+		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
 	"Darwin")
-		${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacro_${Random}2.txt ;;
+		#${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacro_${Random}2.txt ;;
+		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
 	*)
 		echo "I can't figure out what is you opeating system. Please check"
 		exit 0

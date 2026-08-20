@@ -11,7 +11,9 @@
 #
 # Hard coded:	- path to Fiji is defined in .bashrc but the name of the software may differ. See at the end of script
 #
-# Dependencies:	- Fiji (ImageJ). (!!! /etc/ImageMagick-6/policy.xml --> increase value to 8GiB at line <policy domain="resource" name="disk" value="1GiB"/>)
+# Dependencies:	- __ImageMagickFcts.sh (sourced: sets IMCONVERT and FONT_OPT, same as TimeSeriesInfo_HP.sh)
+#				- ImageMagick 6 or 7, or GraphicsMagick
+#				- Fiji (ImageJ). (!!! /etc/ImageMagick-6/policy.xml --> increase value to 8GiB at line <policy domain="resource" name="disk" value="1GiB"/>)
 #				- gnu sed for more compatibility. 
 #				- python3.8 + Numpy + script: CreateColorFrame.py
 #				- a parameter file ${PATHFILEDEFO})/TS_parameters.txt with crop size etc...(to be updated manually depending on target)
@@ -46,6 +48,13 @@
 # New in Distro V 4.1 20231213:	- Calculate IJAmpMin and IJAmpMax with "gdalinfo -stats" instead of hard coded value
 # New in Distro V 4.2 20240221:	- Add sleep of 5 seconds after the call of 'CreateColorFrame.py' to ensure new files are well created
 # New in Distro V 4.3 20240701:	- Replace 'LOS' by 'GEOM' at line 293 (elif [ ${Direction} = 'GEOM' ]) because direction info was not written anymore
+# New in Distro V 4.4 20260714:	- fix path to Fiji for Mac ARM
+# New in Distro V 4.5 20260804:	- change the way to define Direction 
+# New in Distro V 4.6 20260804:	- source __ImageMagickFcts.sh and call ${IMCONVERT} instead of convert, 
+#								  so that ImageMagick 6, ImageMagick 7 and GraphicsMagick are all 
+#								  supported as in TimeSeriesInfo_HP.sh 
+#								- use ${FONT_OPT} instead of a hard coded Helvetica/FreeSans, which 
+#								  recent convert versions may not know 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -54,12 +63,18 @@
 
 # vvv ----- Hard coded lines to check --- vvv 
 source ${HOME}/.bashrc
+
+source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh
+	# needed to get FONT_OPT, i.e. the -font option that convert can honour on this machine
+source ${PATH_SCRIPTS}/SCRIPTS_MT/__ImageMagickFcts.sh
+	# sets TOOL and IMCONVERT (convert / magick / gm convert), sets FONT_OPT if it is not
+	# already defined, and defines do_composite
 # See Fiji command and options at the end
 # ^^^ ----- Hard coded lines to check -- ^^^ 
 
 PRG=`basename "$0"`
-VER="Distro V4.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on Jul 1, 2024"
+VER="Distro V4.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on Aug 04, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -202,18 +217,32 @@ echo "close();" >> FijiMacro_${Random}.txt
 
 ${PATHGNU}/gsed "s/'/\"/g" FijiMacro_${Random}.txt > FijiMacro_${Random}2.txt 
 
+# Pick the Fiji launcher: new Jaunch "fiji" or a legacy platform binary
+	if [ -x "${PATHFIJI}/fiji" ]; then
+	    FIJI="${PATHFIJI}/fiji"               # new Jaunch (Mac arm64, Linux, ...)
+	elif [ -x "${PATHFIJI}/ImageJ-linux64" ]; then
+	    FIJI="${PATHFIJI}/ImageJ-linux64"     # legacy Linux
+	elif [ -x "${PATHFIJI}/ImageJ-macosx" ]; then
+	    FIJI="${PATHFIJI}/ImageJ-macosx"      # legacy Intel Mac
+	else
+	    echo "ERROR: no Fiji/ImageJ launcher found in ${PATHFIJI}" >&2
+	    exit 1
+	fi
 
 case ${OS} in 
 	"Linux") 
 		export DISPLAY=:10
-		font="FreeSans"
+		#font="FreeSans"		# NdO Aug 04 2026: now handled by FONT_OPT
 		# since imageJ V1.53c, option -b must be repalced by --headless
 		#${PATHFIJI}/ImageJ-linux64 -b ./FijiMacro_${Random}2.txt ;;
-		${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacro_${Random}2.txt ;;
+		#${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacro_${Random}2.txt ;;
+		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
 
 	"Darwin")
-		font="Helvetica"
-		${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacro_${Random}2.txt ;;	
+		#font="Helvetica"	# NdO Aug 04 2026: now handled by FONT_OPT
+		#${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacro_${Random}2.txt ;;	
+		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
+
 	*)
 		echo "I can't figure out what is you opeating system. Please check"
 		exit 0
@@ -223,7 +252,7 @@ esac
 echo
 echo "Results ${PATHFILES}/${FILEOUTPUT}.tif "
 echo " is store in ${PATHFILES}"
-echo "font = ${font}"
+echo "font option = ${FONT_OPT}"
 
 rm FijiMacro_${Random}.txt 
 rm FijiMacro_${Random}2.txt 
@@ -256,9 +285,9 @@ LegAdjMax=$(GetParam LegAdjMax)
 LegAdjLOS=$(GetParam LegAdjLOS)
 LegAdjUnit=$(GetParam LegAdjUnit)
 
-convert ${PATHFILES}/${FILEOUTPUT}.tif -draw "fill black stroke black stroke-width 2 line ${PosLeft},${MarkUp} ${PosLeft},${MarkDown}" ${PATHFILES}/${FILEOUTPUT}.tif
-convert ${PATHFILES}/${FILEOUTPUT}.tif -draw "fill black stroke black stroke-width 2 line ${PosZero},${MarkUp} ${PosZero},${MarkDown}" ${PATHFILES}/${FILEOUTPUT}.tif	
-convert ${PATHFILES}/${FILEOUTPUT}.tif -draw "fill black stroke black stroke-width 2 line ${PosRight},${MarkUp} ${PosRight},${MarkDown}" ${PATHFILES}/${FILEOUTPUT}.tif
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -draw "fill black stroke black stroke-width 2 line ${PosLeft},${MarkUp} ${PosLeft},${MarkDown}" ${PATHFILES}/${FILEOUTPUT}.tif
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -draw "fill black stroke black stroke-width 2 line ${PosZero},${MarkUp} ${PosZero},${MarkDown}" ${PATHFILES}/${FILEOUTPUT}.tif	
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -draw "fill black stroke black stroke-width 2 line ${PosRight},${MarkUp} ${PosRight},${MarkDown}" ${PATHFILES}/${FILEOUTPUT}.tif
 
 # Change the position to center the value under the vertical lines
 # Define a poistion for the units information
@@ -274,26 +303,33 @@ MaxVal=$(bc -l <<<"scale=2; ${MaxVal}/1")  #Tronquer a 2 decimal et ajouter 15 a
 
 
 
-convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosZero},${LegValPosH} '0'" ${PATHFILES}/${FILEOUTPUT}.tif	
-convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosLeft},${LegValPosH} '${MinVal}'" ${PATHFILES}/${FILEOUTPUT}.tif	
-convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosRight},${LegValPosH} '${MaxVal}'" ${PATHFILES}/${FILEOUTPUT}.tif	
-convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosUnit},${LegUnitPosH} '[cm/year]'" ${PATHFILES}/${FILEOUTPUT}.tif
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosZero},${LegValPosH} '0'" ${PATHFILES}/${FILEOUTPUT}.tif	
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosLeft},${LegValPosH} '${MinVal}'" ${PATHFILES}/${FILEOUTPUT}.tif	
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosRight},${LegValPosH} '${MaxVal}'" ${PATHFILES}/${FILEOUTPUT}.tif	
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosUnit},${LegUnitPosH} '[cm/year]'" ${PATHFILES}/${FILEOUTPUT}.tif
 
 # Write just above the legend the information of the direction (Up, Down, East, West )
-Direction=$(echo ${FILEOUTPUT} | cut -d '_' -f 6)
+#Direction=$(echo ${FILEOUTPUT} | cut -d '_' -f 6)
+case "${FILEOUTPUT}" in
+	*_EW) Direction="EW" ;;
+	*_UD) Direction="UD" ;;
+	*_NS) Direction="NS" ;;
+	*)    Direction="GEOM" ;;
+esac
+
 echo $Direction
 if [ ${Direction} = 'EW' ]
 	then
-		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosLeft},${LegTxtPosH} 'West '" ${PATHFILES}/${FILEOUTPUT}.tif
-		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosRight},${LegTxtPosH} 'East'" ${PATHFILES}/${FILEOUTPUT}.tif
+		${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosLeft},${LegTxtPosH} 'West '" ${PATHFILES}/${FILEOUTPUT}.tif
+		${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosRight},${LegTxtPosH} 'East'" ${PATHFILES}/${FILEOUTPUT}.tif
 elif [ ${Direction} = 'UD' ]
 	then
-		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosLeft},${LegTxtPosH} 'Down '" ${PATHFILES}/${FILEOUTPUT}.tif
-		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosRight},${LegTxtPosH} 'Up'" ${PATHFILES}/${FILEOUTPUT}.tif
+		${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosLeft},${LegTxtPosH} 'Down '" ${PATHFILES}/${FILEOUTPUT}.tif
+		${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosRight},${LegTxtPosH} 'Up'" ${PATHFILES}/${FILEOUTPUT}.tif
 elif [ ${Direction} = 'GEOM' ]
 	then
-		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosLeft},${LegTxtPosH} 'Backward sat.'" ${PATHFILES}/${FILEOUTPUT}.tif
-		convert ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} -font ${font} -draw "text ${PosRight_bis},${LegTxtPosH} 'Toward sat.'" ${PATHFILES}/${FILEOUTPUT}.tif
+		${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosLeft},${LegTxtPosH} 'Backward sat.'" ${PATHFILES}/${FILEOUTPUT}.tif
+		${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -pointsize ${LegendTxtSize} ${FONT_OPT} -draw "text ${PosRight_bis},${LegTxtPosH} 'Toward sat.'" ${PATHFILES}/${FILEOUTPUT}.tif
 fi
 
 
@@ -305,11 +341,11 @@ LegendHeight=$(GetParam LegendHeight)
 CropH=$((${LegendWidth}+${Margin}+${Margin}))
 CropV=${LegendHeight}
 
-convert ${PATHFILES}/${FILEOUTPUT}.tif -crop ${Crop_L}x${Crop_H}+${Crop_X}+${Crop_Y} ${PATHFILES}/${FILEOUTPUT}.jpg
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -crop ${Crop_L}x${Crop_H}+${Crop_X}+${Crop_Y} ${PATHFILES}/${FILEOUTPUT}.jpg
 # Crop the image and convert to jpg
 
 #draw a black rectangle on the legend to make it invisble
-convert ${PATHFILES}/${FILEOUTPUT}.jpg -draw "fill black rectangle 0,0 ${CropH},${CropV}" ${PATHFILES}/${FILEOUTPUT}.jpg
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.jpg -draw "fill black rectangle 0,0 ${CropH},${CropV}" ${PATHFILES}/${FILEOUTPUT}.jpg
 #Keep the entire image in this case
 
 echo $DEFO
@@ -319,5 +355,5 @@ echo $DEFO
 Legend=$(echo "${DEFO//MSBAS_LINEAR_RATE/Legend}")
 Legend=$(echo "${Legend//.bin_2.0/.jpg}")
 # Extract the legend area from the composite file (will be use in "TimeSerieInfo.sh")
-convert ${PATHFILES}/${FILEOUTPUT}.tif -crop ${CropH}x${CropV}+0+0 ${PATHFILES}/${Legend}
+${IMCONVERT} ${PATHFILES}/${FILEOUTPUT}.tif -crop ${CropH}x${CropV}+0+0 ${PATHFILES}/${Legend}
 rm ${PATHFILES}/${FILEOUTPUT}.tif

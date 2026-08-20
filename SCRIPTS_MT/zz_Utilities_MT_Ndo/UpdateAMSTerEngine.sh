@@ -31,6 +31,9 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 7.1 20250417:	- Get date where to store source from file name instead of 2nd param if source is named AMSTerEngineYYYYMMDDi.tar.xz where i may be a letter
 #								  If not named like taht a second parameter remains mandatory for archiving the source 
+# New in Distro V 7.2 20260702:	- ParalleliseME now passes PKGMGR to make, so InSAR/sources and MSBASTools/sources
+#								  makefiles can select Homebrew (macOS Tahoe/26+) vs MacPorts on Darwin
+#								 (requires updated InSAR/sources/makefile and MSBASTools/sources/makefile with the new PKGMGR branch)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -96,12 +99,10 @@ while true; do
 		esac	
 	done					
 
-# Check OS
-OS=`uname -a | cut -d " " -f 1 `
-echo "Running on ${OS}"
-echo
+
 
 # Functions 
+###########
 function ParalleliseME()
 	{
 		SEARCHSTRING=$1 	# YES or NO
@@ -111,27 +112,163 @@ function ParalleliseME()
  			then
  				if [ "${SEARCHSTRING}" == "YES" ]
 					then 
-						echo " using the parallelistaion option"
+						echo " using the parallelisation option"
 						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = YES
 						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = YES"'/' makefile
-						make USEOPENMP=YES
+						make USEOPENMP=YES PKGMGR=${PKGMGR}
 					else 
-						echo " without using the parallelistaion option"
+						echo " without using the parallelisation option"
 						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = NO
 						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = NO"'/' makefile
-						make
+						make PKGMGR=${PKGMGR}
 				fi
 			else
 			    if [ "${SEARCHSTRING}" == "YES" ]
 			    	then 
-			  			echo "The parallelistaion option line doesn't exist in the makefile ? It must have a line like this: "
+			  			echo "The parallelisation option line doesn't exist in the makefile ? It must have a line like this: "
 			    		echo "USEOPENMP = ... or USEOPENMP?=..."
-			    		echo "If your version of AMSTer Engine is not planned for parallelistaion, just run the script without the -p option."
-			    		exit
+			    		echo "Your version of AMSTer Engine seems not planned for parallelisation. Compile it as it is..."
+						make PKGMGR=${PKGMGR}
+					else 
+			  			echo "The parallelisation option line doesn't exist in the makefile but you do not want to anyway. "
+			    		echo "Compile it as it is..."
+						make PKGMGR=${PKGMGR}
 			    fi
 		fi
 	}
 
+function DetectMacArch()
+	{
+	# Determine the REAL hardware architecture, even if this Terminal/shell is currently
+	# running translated under Rosetta 2 (e.g. "Open using Rosetta" ticked for Terminal.app/iTerm,
+	# or the script was launched with "arch -x86_64 bash ..."). Sets MACARCH (arm64/x86_64)
+	# and ROSETTA (yes/no) = whether THIS shell process is currently running translated.
+	unset MACARCH
+	unset ROSETTA
+	local RUNARCH
+	local TRANSLATED
+	RUNARCH=$(uname -m)
+	TRANSLATED=$(sysctl -n sysctl.proc_translated 2>/dev/null)
+	if [ "${RUNARCH}" == "arm64" ]
+		then
+			MACARCH="arm64"
+			ROSETTA="no"
+		elif [ "${TRANSLATED}" == "1" ]
+			then
+				MACARCH="arm64"		# real hardware is Apple Silicon ; this shell just happens to run translated
+				ROSETTA="yes"
+			else
+				MACARCH="x86_64"		# genuine Intel Mac
+				ROSETTA="no"
+	fi
+	}
+
+function DetectBrewPrefix()
+	{
+	# Locate an existing Homebrew installation, preferring the one NATIVE for this Mac's
+	# real hardware architecture (Apple Silicon -> /opt/homebrew, Intel -> /usr/local).
+	# Sets BREWPREFIX and BREWNATIVE (yes/no/unknown). Warns (via BREWNATIVE=no) if only a
+	# non-native (Rosetta-translated) Homebrew is found, so the caller can offer to fix it.
+	unset BREWPREFIX
+	unset BREWNATIVE
+
+	local NATIVEPREFIX
+	local OTHERPREFIX
+	if [ "${MACARCH}" == "arm64" ]
+		then NATIVEPREFIX="/opt/homebrew" ; OTHERPREFIX="/usr/local"
+		else NATIVEPREFIX="/usr/local" ; OTHERPREFIX="/opt/homebrew"
+	fi
+
+	if [ -x "${NATIVEPREFIX}/bin/brew" ]
+		then
+			BREWPREFIX="${NATIVEPREFIX}"
+			BREWNATIVE="yes"
+		elif [ -x "${OTHERPREFIX}/bin/brew" ]
+			then
+				BREWPREFIX="${OTHERPREFIX}"
+				BREWNATIVE="no"
+			elif command -v brew &> /dev/null
+				then
+					BREWPREFIX=$(brew --prefix 2>/dev/null)
+					BREWNATIVE="unknown"
+			else
+				# Homebrew not installed yet anywhere ; target the native prefix for the fresh install later in the script
+				BREWPREFIX="${NATIVEPREFIX}"
+				BREWNATIVE="yes"
+	fi
+
+	# Make sure brew (once installed) is usable in this very shell/script, even in a fresh Terminal
+	if [ -x "${BREWPREFIX}/bin/brew" ] ; then eval "$(${BREWPREFIX}/bin/brew shellenv)" ; fi
+	}
+
+
+############
+# Check OS #
+############
+# MACOS PACKAGE MANAGER STRATEGY:
+#   - macOS Tahoe (OSX_MAJOR -ge 26) and later: use Homebrew (some options/variants
+#     this script needs are not available - or not installable - through MacPorts anymore).
+#   - Older macOS: keep using MacPorts as before (unchanged behaviour).
+#   PKGMGR is set to either "brew" or "port" and is used everywhere a Mac package
+#   needs to be installed/checked (see fct PortInstall, BrewInstall, CheckLasPortVersion...).
+
+OS=$(uname -a | cut -d " " -f 1 )
+echo "Running on ${OS}"
+echo
+
+# These AMSTerEngine/msbas .tar.xz archives are created on macOS, which preserves
+# macOS-specific extended attributes (quarantine flag, Finder info, etc.) as PAX
+# extended tar headers. GNU tar (Linux) doesn't understand these keywords and prints
+# a harmless "Ignoring unknown extended header keyword" warning for each one -
+# extraction still works correctly. Silence just that specific warning on Linux.
+# (BSD tar on macOS doesn't need this - it's the one producing those headers.)
+TARWARNFLAG=""
+if [ "${OS}" == "Linux" ] ; then TARWARNFLAG="--warning=no-unknown-keyword" ; fi
+
+TSTSH=$(echo "$SHELL")
+if [ "${OS}" == "Darwin" ] 
+	then 
+		DetectMacArch
+
+		# If this Terminal/shell is running translated under Rosetta 2 on an Apple Silicon Mac,
+		# relaunch natively right away so Homebrew, compilers and every command below run as
+		# arm64 (mixing translated and native tools causes real, hard-to-diagnose problems).
+		if [ "${ROSETTA}" == "yes" ] 
+			then 
+				echo " // This Terminal/shell is currently running translated (Rosetta 2) though this Mac is Apple Silicon (arm64). "
+				echo " // Relaunching ${PRG} natively as arm64 to avoid mixing translated and native tools... "
+				exec arch -arm64 /bin/bash "$0" "$@"
+				exit	# should never be reached (exec replaces the process) ; safety net only
+		fi
+
+		if [ "${TSTSH}" == "/bin/bash" ] 
+			then 
+				echo " // Your OS is probably older than v 10.15 or shell was already changed to bash. No action required. "
+			else	
+				echo " // Your OS is probably v 10.15 or more recent. Need to change default shell Zsh with bash for scripts compatibility issues. "
+				chsh -s /bin/bash 	
+				echo " // It will only be effective in a new Terminal, hence close the present Terminal and relaunch the prensent script in that new terminal"
+				exit
+		fi
+		
+		PROCESSOR="${MACARCH}"
+
+		OSX_VER=$(sw_vers -productVersion)
+		OSX_MAJOR=$(echo "$OSX_VER" | cut -d. -f1)
+		OSX_MINOR=$(echo "$OSX_VER" | cut -d. -f2)
+
+		# Decide which Mac package manager to use
+		if [ "${OSX_MAJOR}" -ge 26 ] 
+			then 
+				PKGMGR="brew"
+				echo " // Detected macOS ${OSX_VER} (Tahoe or later) -> Homebrew will be used instead of MacPorts. "
+			else 
+				PKGMGR="port"
+		fi
+		DetectBrewPrefix
+
+fi
+				
 
 # Crash if path to ${NEWAMSTERENGINE} contains white spaces 
 if [ `echo "${NEWAMSTERENGINE}" | ${PATHGNU}/grep  \  | wc -l` -gt 0 ] ; then echo "Move your AMSTerEngine source in a dir without white spaces in name !" ; exit ; fi
@@ -155,7 +292,7 @@ cd ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine
 		else 
 			TARDIRNAME=`ls *.tar.xz | cut -d . -f 1`
 			echo "Decompress ${TARDIRNAME}.tar.xz..."
-			tar -xf *.tar.xz
+			tar ${TARWARNFLAG} -xf *.tar.xz
 	fi
 
 if [ -d ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine/${TARDIRNAME}/Archives ]
@@ -165,7 +302,7 @@ if [ -d ${PATHSOURCES}/V${DATEAMSTERENGINE}_AMSTerEngine/${TARDIRNAME}/Archives 
 		cd ${TARDIRNAME}/Archives
 		TARNAME=`ls Mas*.tar.xz`
 		echo "   Decompress ${TARNAME}.tar.xz..."
-		tar -xf Mas*.tar.xz
+		tar ${TARWARNFLAG} -xf Mas*.tar.xz
 		cd InSAR/sources
 	else
 		# seems to be the old version of AMSTerEngine distrubution

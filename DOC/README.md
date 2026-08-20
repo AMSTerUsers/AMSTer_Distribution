@@ -8,5 +8,5 @@ AMSTer Software = AMSTer Engine + AMSTer toolbox + MSBAS
 
 Develloppers of AMSTer:
     Dominique Derauw (AMSTer Engine)
-    Nicolas d'Oreye, Delphine Smittarello, Maxime Jaspard (AMSTer toolbox)
+    Nicolas d'Oreye, Delphine Smittarello, Maxime Jaspard, Quentin Glaude (AMSTer toolbox)
     Sergey Samsonov (MSBAS)

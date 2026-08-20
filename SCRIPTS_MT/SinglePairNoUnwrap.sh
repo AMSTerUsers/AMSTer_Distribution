@@ -87,13 +87,14 @@
 # New in Distro V 7.3 20250526:	- debug S1 IW asymetric zoom
 # New in Distro V 8.0 20250605:	- correct evaluation of pixel size in Az and Rg depending on ML and ZOOM (ZOOM is not taken into account in S1 IW SAR_CSL/NoCrop/SLCImageInfo.txt)
 # New in Distro V 8.1 20250708:	- remove computation of RANGEML and AZIMML because not used
+# New in Distro V 8.2 20260702:	- allows S1coregistration with ESD option 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 08, 2025"
+VER="Distro V8.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 02, 2026"
 
 
 echo " "
@@ -186,6 +187,8 @@ MLAMPLI=`GetParam "MLAMPLI,"`				# MLAMPLI, Multilooking factor for amplitude im
 ZOOM=`GetParam "ZOOM,"`						# ZOOM, zoom factor used while cropping
 PIXSHAPE=`GetParam "PIXSHAPE,"`				# PIXSHAPE, pix shape for products : SQUARE or ORIGINALFORM   
 CALIBSIGMA=`GetParam "CALIBSIGMA,"`			# CALIBSIGMA, if SIGMAYES it will output sigma nought calibrated amplitude file at the insar product generation step  
+
+ESD=`GetParam "ESD,"`						# ESD,For S1: applying Extended Spectral Density (ESDYes), or not (anything else than ESDYes)
 
 COH=`GetParam "COH,"`						# Coarse coregistration correlation threshold  
 CCOHWIN=`GetParam "CCOHWIN,"`     			# CCOHWIN, Coarse coreg window size (64 by default but may want less for very small crop)
@@ -973,7 +976,14 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 			then 
 				EchoTeeRed "Coregister Sentinel data with zoom factor not 1." 
 				cd ${RUNDIR}/i12.NoZoom
-				S1Coregistration -n
+				if [ "${ESD}" == "ESDYes" ] 
+					then 
+						EchoTee "Perform ESD..."
+						S1Coregistration -n -e
+					else 
+						EchoTee "Do not perform ESD..."
+						S1Coregistration -n
+				fi
 				# should now have a master and a slave interpolated i12/InSARProducts => need apply cut and zoom
 				
 				# the master
@@ -1075,7 +1085,16 @@ if [ "${SATDIR}" == "S1" ] && [ "${S1MODE}" == "WIDESWATH" ]
 				RATIOREAL=`echo "scale=5; ( s((${INCIDANGL} * 3.1415927) / 180) * ${AZSAMP} ) / ${RGSAMP}" | bc -l` # with 5 digits 
 				EchoTee "that is ${RATIO} (rounded) or ${RATIOREAL} (as Real number)"
 			else 
-				S1Coregistration
+				#S1Coregistration
+				if [ "${ESD}" == "ESDYes" ] 
+					then 
+						EchoTee "Perform ESD..."
+						S1Coregistration -e
+					else 
+						EchoTee "Do not perform ESD..."
+						S1Coregistration
+				fi
+
 		fi
 	else
 		# Coarse Coregistration and quality testing

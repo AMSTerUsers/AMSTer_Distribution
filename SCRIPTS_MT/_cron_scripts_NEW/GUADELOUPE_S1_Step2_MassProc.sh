@@ -14,6 +14,9 @@
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240415:	- increase Bp to 90m
+#								- change seti tables to allows getting Additional Pairs
+# New in Distro V 3.2 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
+#								- add wait at the end
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -35,9 +38,9 @@ DATECHG=20240201
 # some files
 ############
 
-#mode SM
-TABLEASC=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set1/table_0_${BP}_0_${BT}_Till_${DATECHG}_0_${BP2}_0_${BT2}_After_WITHHEADER.txt
-TABLEDESC=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set2/table_0_${BP}_0_${BT}_Till_${DATECHG}_0_${BP2}_0_${BT2}_After_WITHHEADER.txt
+#mode SM - do not take _WITHHEADER because it does not contains the Additional Pairs
+TABLEASC=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set1/table_0_${BP}_0_${BT}_Till_${DATECHG}_0_${BP2}_0_${BT2}_After.txt
+TABLEDESC=$PATH_1650/SAR_SM/MSBAS/GUADELOUPE/set2/table_0_${BP}_0_${BT}_Till_${DATECHG}_0_${BP2}_0_${BT2}_After.txt
 
 
 PARAMPROCESSASC=$PATH_1650/Param_files/S1/GUADELOUPE_A_164/LaunchMTparamS1_IW_Guadeloupe_A_Zoom1_ML2_MassProc.txt
@@ -56,15 +59,15 @@ TODAY=`date`
 
 
 # Check that GUADELOUPE_S1_Step1_Read_Coreg_Pairs.sh is finished
-CHECKREAD=`ps -eaf | ${PATHGNU}/grep GUADELOUPE_S1_Step1_Read_Coreg_Pairs.sh | ${PATHGNU}/grep -v "grep " | wc -l`
+CHECKREAD=`ps -eaf | ${PATHGNU}/grep GUADELOUPE_S1_Step1_Read_Coreg_Pairs.sh | ${PATHGNU}/grep -v "grep " | grep -v "Crons_1_2_3.sh" | wc -l`
 
 if [ ${CHECKREAD} -eq 0 ] 
 	then 
 		# OK, no more GUADELOUPE_S1_Step1_Read_SMCoreg_Pairs.sh is running: 
 		# Check that no other SuperMaster automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
 
-		CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMASCNAME} | wc -l`
-		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMDESCNAME} | wc -l`
+		CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMASCNAME} | grep -v "Crons_1_2_3.sh" | wc -l`
+		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMDESCNAME} | grep -v "Crons_1_2_3.sh" | wc -l`
 
  		if [ ${CHECKASC} -lt 1 ] 
  			then 
@@ -91,4 +94,7 @@ if [ ${CHECKREAD} -eq 0 ]
 
 		exit 0
 fi
+
+#beware: the wait is mandatory to allow waiting for the end of cron2 before launching cron 3
+wait
 

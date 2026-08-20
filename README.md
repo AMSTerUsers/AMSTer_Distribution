@@ -31,6 +31,8 @@ AMSTer can now process the Sentinel1 ETAD data for
 - applying Tropospheric and/or Ionospheric and/or Geodetic corrections to the interferometric products;
 - improving the geometric accuracy in Sentinel-1 images up to the centimetric-level at the geocoding step. 
 
+AMSTer can also process atmospheric corrections using MANGO and GACOS products. 
+
 Geocoded amplitude, coherence, interferometric phase and deformation maps are computed 
 using AMSTer Engine, a command line InSAR processor derived from the Centre Spatial de 
 Liege (CSL) InSAR Suite (CIS)[Derauw, 1999; Derauw et al, 2019]. 
@@ -144,6 +146,24 @@ The development of the AMSTer Software commenced in the early 2010s and leverage
 **Updates:**
 
 **________**
+
+- New in V 20260820:
+   1. AMSTer Engine 202813:
+      - ESD for Sentinel 1 
+      - Use a Global Primary with Sentinel-1 Wide Swath 
+      - process NISAR data
+      - make coherence tracking
+      - output local and geoidal geocoded incidence maps 
+   2. AMSTer Toolbox scripts:
+      - perform atmospheric corrections basted on MANGO and GACOS products 
+      - compatible with msbasv10	
+      - installer now offers option to pick up sources from GitHub distribution 
+      - display std in time series plot when request linear regression
+      - small bugs and improvements 
+      - various small new tools to make the like easier (hopefully)	
+   3. msbas sources sorted 
+   4. Manual updated accordingly
+
 
 - New in V 20251209:
    1. AMSTer Engine 20251114:

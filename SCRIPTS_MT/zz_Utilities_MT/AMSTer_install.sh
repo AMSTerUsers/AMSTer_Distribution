@@ -214,13 +214,95 @@
 #New in Distro V 6.11 20251029:		- adapt compiler for MSBAS make file depending on OS version ; install several clang for most recent versions because needed for various usage
 #									- avoid using simple backquote for variable definition  
 #New in Distro V 6.12 20251030:		- if recompile msbas, move all former versions 
+#New in Distro V 6.13 20260112:		- add mounting 3611 and 3612 (used at ECGS)
+#									- create ntrc even if no S1 orbit download
+#New in Distro V 6.14 20260112:		- do not install apt linux with quotes around graphicsmagick ffmpeg
+#New in Distro V 6.15 20260211:		- trim white spaces from TSTNRDISPL value 
+#New in Distro V 6.16 20260217:		- fix install python gdal (mac done a couple of days ago and linux)
+#									- Beware, Ubuntu 24.04 is delivered with python 3.12, but gdal is not OK with that version.
+#										Hence we should fall back to python 3.10 for a stable version and this requires installing deadsnakes
+#									- Linux: install nomacs to open .ras files (light alternative to GIMP)
+#New in Distro V 6.17 20260218:		- more fix for Linux install of python and gdal 
+#									- do not wait for confirmation while installing or upgrading apt
+#New in Distro V 6.18 20260224:		- mac osx install of gdal with necdf subport has changed 
+#									- remove mac port osgeo since it is unused now 
+#									- install GraphicsMagick and ffmpeg in two distinct call of PortInstall
+#New in Distro V 6.19 20260225:		- suggest nomacs for Mac 
+#									- do not suggest fortran 
+#									- update GitHub adress
+#									- force moving and overwriting to Sources_Installed if already exist 
+#									- installing Fiji on Linux: search for similar with *fiji* or *ImageJ*
+#New in Distro V 6.20 20260318:		- use python3 in cmd to make venv with Linux instead of python
+#New in Distro V 6.21 20260701:		- Mac: use Homebrew instead of MacPorts on macOS Tahoe (26) and later
+#									- PATHGNU, gdal/gmt/GraphicsMagick/ffmpeg, gimp, clang, openjdk and python3.10/3.11 installs adapted for Homebrew
+#									- installing GIMP after gnu fct because it needs them
+#New in Distro V 6.22 20260702:		- CompileMSBAS: select+copy Makefile_brew_cpp17 / msbas_extract_Makefile_brew when Homebrew is detected
+#									- fct PortInstall/CheckLasPortVersion now dispatch to MacPorts or Homebrew depending on OS version
+#New in Distro V 6.23 20260702:		- CompileMSBAS: factor msbas_extract build into fct BuildMSBASExtract, now also called for msbasv4_3D (Full3D)
+#									  (msbas_extract's source/Makefiles are identical between the 2D and Full3D distributions ; it was never actually being built for 4_3D before, just a placeholder message)
+#									  (the msbas source zip's own Makefile_clang21_cpp17 hardcodes MacPorts paths like /opt/local/bin/clang++-mp-21, which don't exist under Homebrew ;
+#									   these new companion Makefiles must be present in the msbas source distribution alongside the existing MacPorts variants)
+#									  Note: allows msbasv10 for Linux or only recent Mac OSX (Ventura or newer)
+#									- avoir unzip asking for confirmation 
+#New in Distro V 6.24 20260702:		- ParalleliseME now passes PKGMGR to make, so InSAR/sources and MSBASTools/sources
+#									  makefiles can select Homebrew (macOS Tahoe/26+) vs MacPorts on Darwin
+#									 (requires updated InSAR/sources/makefile and MSBASTools/sources/makefile with the new PKGMGR branch)
+#New in Distro V 6.25 20260702:		- Linux: add pyproj to python requirements.txt (was Mac-only ; matches modern-macOS unpinned choice)
+#New in Distro V 6.26 20260702:		- Linux: silence harmless "tar: Ignoring unknown extended header keyword" warnings
+#									 (Mac-created tar.xz/tar.gz archives carry macOS-specific PAX headers GNU tar doesn't know)
+#New in Distro V 6.27 20260714:		- fix path to Fiji for Mac ARM
+#									- install ghostscript for Mac
+#New in Distro V 6.28 20260729:		- new fct SetupMakeCommand: check at start up that make REALLY works and store it in ${MAKEBIN}
+#									  (on Mac, /usr/bin/make is only an xcode-select shim ; after an OS upgrade - e.g. Tahoe/macOS 26 - or
+#									   when Xcode.app was removed while still selected, it fails with "xcode-select: Failed to locate 'make'"
+#									   although pkgutil still reports the Command Line Tools as installed. Repaired by re-selecting
+#									   /Library/Developer/CommandLineTools, or falling back on Homebrew/MacPorts gmake)
+#									- all compilations (snaphu, cpxfiddle, AMSTerEngine, msbas, msbas_extract) now use "${MAKEBIN}"
+#									- CompileMSBAS: check make exit status and get the version from the msbasvXX EXECUTABLE really produced
+#									  (former "ls msbasv* | cut -d v -f2" was picking up msbasv10_Makefile_* and silently gave an empty
+#									   version, leading to "cp .../msbasv: No such file or directory" and "Unknown version" after a failed build)
+#									- CompileMSBAS: really keep the sources as announced (former rm -rf was deleting the whole source dir)
+#									- CompileMSBAS: use the dir REALLY created by unzip instead of assuming it is named as the zip
+#									  (a zip renamed msbas_..._V1_1.zip still expands into msbas_..._V1.1/ ; the cd then failed
+#									   silently and make ran in the wrong directory)
+#
+#									- CompileMSBAS: select the Makefile from an ORDERED list of candidates covering msbasv4, v4_3D,
+#									  v10 and v10_3D on Mac (Homebrew and MacPorts) and on Linux, check that it exists
+#									  before removing the current one, and never silently mix MacPorts/Homebrew flavours
+#									- CompileMSBAS: delete any prebuilt/former msbasvXX binary before compiling
+#									- BuildMSBASExtract: same cleaning, and check that msbas_extract was really built before copying it
+#									  (on Big Sur/Monterey the msbasv10 distributions ship no Makefile_clang21_cpp17, so the former
+#									   unconditional rm+cp left no Makefile at all: "No rule to make target `all'")
+#									- add numba<=0.62.1 and  llvmlite<=0.45.1 in $REQ for installing python on Monterey 
+# New in Distro V 6.29 20260730:	- Mac: install Python GDAL bindings (osgeo) for macOS 11+ (Big Sur through Tahoe/Homebrew)
+# New in Distro V 7.0 20260806: 	- the installer now OFFERS TO DOWNLOAD AMSTer_Distribution from GitHub instead of only
+#									  asking if it was already downloaded. New fct GetAMSTerDistroFromGitHub: gets (or updates) 
+#									  https://github.com/AMSTerUsers/AMSTer_Distribution in ${HOMEDIR}/SAR/EXEC/AMSTer_Distribution, 
+#									  i.e. where the installer keeps all the sources it installs from. 
+#									  Uses git clone --depth 1 when git is available (so that it can be updated later with a 
+#									  simple git pull), and falls back on downloading the branch zip archive with curl or wget. 
+#									  If a distribution is already there, it offers to update it, keep it, or move it aside 
+#									  (AMSTer_Distribution_Replaced_on_DATE) and get a fresh copy: nothing is overwritten silently.
+#									- former inline question about the path of AMSTer_Distribution moved in new fct AskPathDistro
+#									  (still offered, e.g. for an installation on a computer without internet access)
+#									- AskPathDistro: reset PATHDISTRO when the user gives up entering a valid path
+#									  (the invalid path was kept and used later as if it were valid, instead of falling back on 
+#									   asking the path of each component separately)
+#									- Prevent getting path with leading //
+#									- new fct UsableGit: on macOS, /usr/bin/git is only an xcode-select shim, exactly like 
+#									  /usr/bin/make (see SetupMakeCommand). It exists on a brand new Mac even without any 
+#									  developer tool, so "command -v git" is not a valid test: it would run the shim, which 
+#									  fails and pops up the command line developer tools dialog. UsableGit checks the ACTIVE 
+#									  toolchain, then Homebrew/MacPorts, and returns nothing if no git really works, in which 
+#									  case GetAMSTerDistroFromGitHub silently falls back on the zip archive
+#									- GetAMSTerDistroFromGitHub: check that unzip exists before falling back on the zip archive
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=$(basename "$0")
-VER="version 6.12 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Oct 30, 2025"
+VER="version 7.0 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 06, 2026"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -229,11 +311,196 @@ echo " "
 ############
 # Check OS #
 ############
+# MACOS PACKAGE MANAGER STRATEGY:
+#   - macOS Tahoe (OSX_MAJOR -ge 26) and later: use Homebrew (some options/variants
+#     this script needs are not available - or not installable - through MacPorts anymore).
+#   - Older macOS: keep using MacPorts as before (unchanged behaviour).
+#   PKGMGR is set to either "brew" or "port" and is used everywhere a Mac package
+#   needs to be installed/checked (see fct PortInstall, BrewInstall, CheckLasPortVersion...).
+function DetectMacArch()
+	{
+	# Determine the REAL hardware architecture, even if this Terminal/shell is currently
+	# running translated under Rosetta 2 (e.g. "Open using Rosetta" ticked for Terminal.app/iTerm,
+	# or the script was launched with "arch -x86_64 bash ..."). Sets MACARCH (arm64/x86_64)
+	# and ROSETTA (yes/no) = whether THIS shell process is currently running translated.
+	unset MACARCH
+	unset ROSETTA
+	local RUNARCH
+	local TRANSLATED
+	RUNARCH=$(uname -m)
+	TRANSLATED=$(sysctl -n sysctl.proc_translated 2>/dev/null)
+	if [ "${RUNARCH}" == "arm64" ]
+		then
+			MACARCH="arm64"
+			ROSETTA="no"
+		elif [ "${TRANSLATED}" == "1" ]
+			then
+				MACARCH="arm64"		# real hardware is Apple Silicon ; this shell just happens to run translated
+				ROSETTA="yes"
+			else
+				MACARCH="x86_64"		# genuine Intel Mac
+				ROSETTA="no"
+	fi
+	}
+
+function DetectBrewPrefix()
+	{
+	# Locate an existing Homebrew installation, preferring the one NATIVE for this Mac's
+	# real hardware architecture (Apple Silicon -> /opt/homebrew, Intel -> /usr/local).
+	# Sets BREWPREFIX and BREWNATIVE (yes/no/unknown). Warns (via BREWNATIVE=no) if only a
+	# non-native (Rosetta-translated) Homebrew is found, so the caller can offer to fix it.
+	unset BREWPREFIX
+	unset BREWNATIVE
+
+	local NATIVEPREFIX
+	local OTHERPREFIX
+	if [ "${MACARCH}" == "arm64" ]
+		then NATIVEPREFIX="/opt/homebrew" ; OTHERPREFIX="/usr/local"
+		else NATIVEPREFIX="/usr/local" ; OTHERPREFIX="/opt/homebrew"
+	fi
+
+	if [ -x "${NATIVEPREFIX}/bin/brew" ]
+		then
+			BREWPREFIX="${NATIVEPREFIX}"
+			BREWNATIVE="yes"
+		elif [ -x "${OTHERPREFIX}/bin/brew" ]
+			then
+				BREWPREFIX="${OTHERPREFIX}"
+				BREWNATIVE="no"
+			elif command -v brew &> /dev/null
+				then
+					BREWPREFIX=$(brew --prefix 2>/dev/null)
+					BREWNATIVE="unknown"
+			else
+				# Homebrew not installed yet anywhere ; target the native prefix for the fresh install later in the script
+				BREWPREFIX="${NATIVEPREFIX}"
+				BREWNATIVE="yes"
+	fi
+
+	# Make sure brew (once installed) is usable in this very shell/script, even in a fresh Terminal
+	if [ -x "${BREWPREFIX}/bin/brew" ] ; then eval "$(${BREWPREFIX}/bin/brew shellenv)" ; fi
+	}
+
+function SetupMakeCommand()
+	{
+	# Resolve a WORKING make and store it in ${MAKEBIN} ; every compilation below uses "${MAKEBIN}".
+	#
+	# Why: on macOS, /usr/bin/make is not make. It is a tiny shim that asks xcode-select
+	# where the real make lives. If the ACTIVE developer directory is stale or incomplete
+	# - typically after a major OS upgrade (Tahoe / macOS 26), or when Xcode.app was removed
+	# or moved while its path stayed selected - the shim fails with:
+	#     make: error: sh -c '/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -sdk '' -find make 2> /dev/null' failed with exit code 65280: (null) (errno=No such file or directory)
+	#     xcode-select: Failed to locate 'make', requesting installation of command line developer tools.
+	# although the Command Line Tools receipt (pkgutil --pkg-info=com.apple.pkg.CLTools_Executables)
+	# is still there and makes the tools look installed. Detect and repair that here, at start up,
+	# rather than in the middle of a compilation of AMSTerEngine or msbas.
+	#
+	# Note: do NOT name that variable MAKE ; MAKE is a special variable inside makefiles
+	# (used for recursive make invocations) and overriding it from the environment may break sub-makes.
+	MAKEBIN="make"
+
+	if [ "${OS}" != "Darwin" ]
+		then
+			# Linux (and anything else): plain make, just warn if missing
+			if ! command -v make > /dev/null 2>&1
+				then
+					echo "  // WARNING: make is not installed. Install it first (e.g. sudo apt install -y make), then relaunch ${PRG}. "
+			fi
+			return 0
+	fi
+
+	# 1) A DEVELOPER_DIR exported in the environment (e.g. leftover in .bashrc/.profile) overrides
+	#    xcode-select ; get rid of it for this script if it points to something that no longer exists
+	# (test make, not xcodebuild: a Command Line Tools only install has no xcodebuild)
+	if [ -n "${DEVELOPER_DIR}" ] && [ ! -x "${DEVELOPER_DIR}/usr/bin/make" ]
+		then
+			echo "  // DEVELOPER_DIR is set to a non existing toolchain (${DEVELOPER_DIR}) ; unset it for this script. "
+			unset DEVELOPER_DIR
+	fi
+
+	# 2) Where does the selected toolchain live, and does it provide make ?
+	#    Do not simply run "make" to test it: when the shim fails, it also pops up the 
+	#    "install the command line developer tools" dialog, which is precisely what we want to avoid here.
+	DEVDIR="${DEVELOPER_DIR}"
+	if [ "${DEVDIR}" == "" ] ; then DEVDIR=$(xcode-select -p 2>/dev/null) ; fi
+	if [ "${DEVDIR}" != "" ] && [ -x "${DEVDIR}/usr/bin/make" ] ; then return 0 ; fi
+
+	echo "  // The active Xcode / Command Line Tools directory is broken: make can not be located. "
+	echo "  //     xcode-select -p returns: $(xcode-select -p 2>/dev/null) "
+
+	# 3) Most common case after an OS upgrade: the Command Line Tools are installed but not active
+	if [ -x /Library/Developer/CommandLineTools/usr/bin/make ]
+		then
+			echo "  // Command Line Tools found in /Library/Developer/CommandLineTools but not active ; select them now. "
+			echo "  // Please enter your admin password if prompted : "
+			sudo xcode-select -s /Library/Developer/CommandLineTools
+			if [ -x "$(xcode-select -p 2>/dev/null)/usr/bin/make" ]
+				then
+					echo "  // OK, make is available again. "
+					return 0
+			fi
+	fi
+
+	# 4) Or a full Xcode is installed and can be selected instead
+	if [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/make ]
+		then
+			echo "  // Full Xcode found in /Applications/Xcode.app ; select its toolchain now. "
+			echo "  // Please enter your admin password if prompted : "
+			sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+			if [ -x "$(xcode-select -p 2>/dev/null)/usr/bin/make" ]
+				then
+					echo "  // OK, make is available again. "
+					return 0
+			fi
+	fi
+
+	# 5) Last resort: GNU make from Homebrew or MacPorts (gmake), which does not depend on xcode-select
+	for TSTMAKE in "${BREWPREFIX:-/opt/homebrew}/bin/gmake" /opt/homebrew/bin/gmake /usr/local/bin/gmake /opt/local/bin/gmake
+		do
+			if [ -x "${TSTMAKE}" ]
+				then
+					echo "  // Using ${TSTMAKE} (GNU make) instead of the Apple make shim. "
+					MAKEBIN="${TSTMAKE}"
+					return 0
+			fi
+		done
+
+	# 6) Nothing usable: nothing can be compiled, hence stop here with clear instructions
+	echo "  // No usable make found. Installing the Command Line Tools now: accept the dialog, wait for the end of the installation, then relaunch ${PRG}. "
+	xcode-select --install
+	echo "  // If the Command Line Tools were already installed but remain broken, force a clean reinstall with: "
+	echo "  //     sudo rm -rf /Library/Developer/CommandLineTools ; sudo xcode-select --install "
+	echo "  // then relaunch ${PRG}. "
+	exit 1
+	}
+
 OS=$(uname -a | cut -d " " -f 1 )
+
+# These AMSTerEngine/msbas .tar.xz archives are created on macOS, which preserves
+# macOS-specific extended attributes (quarantine flag, Finder info, etc.) as PAX
+# extended tar headers. GNU tar (Linux) doesn't understand these keywords and prints
+# a harmless "Ignoring unknown extended header keyword" warning for each one -
+# extraction still works correctly. Silence just that specific warning on Linux.
+# (BSD tar on macOS doesn't need this - it's the one producing those headers.)
+TARWARNFLAG=""
+if [ "${OS}" == "Linux" ] ; then TARWARNFLAG="--warning=no-unknown-keyword" ; fi
 
 TSTSH=$(echo "$SHELL")
 if [ "${OS}" == "Darwin" ] 
 	then 
+		DetectMacArch
+
+		# If this Terminal/shell is running translated under Rosetta 2 on an Apple Silicon Mac,
+		# relaunch natively right away so Homebrew, compilers and every command below run as
+		# arm64 (mixing translated and native tools causes real, hard-to-diagnose problems).
+		if [ "${ROSETTA}" == "yes" ] 
+			then 
+				echo " // This Terminal/shell is currently running translated (Rosetta 2) though this Mac is Apple Silicon (arm64). "
+				echo " // Relaunching ${PRG} natively as arm64 to avoid mixing translated and native tools... "
+				exec arch -arm64 /bin/bash "$0" "$@"
+				exit	# should never be reached (exec replaces the process) ; safety net only
+		fi
+
 		if [ "${TSTSH}" == "/bin/bash" ] 
 			then 
 				echo " // Your OS is probably older than v 10.15 or shell was already changed to bash. No action required. "
@@ -244,13 +511,26 @@ if [ "${OS}" == "Darwin" ]
 				exit
 		fi
 		
-		PROCESSOR=$(uname -m)
+		PROCESSOR="${MACARCH}"
 
 		OSX_VER=$(sw_vers -productVersion)
 		OSX_MAJOR=$(echo "$OSX_VER" | cut -d. -f1)
 		OSX_MINOR=$(echo "$OSX_VER" | cut -d. -f2)
 
+		# Decide which Mac package manager to use
+		if [ "${OSX_MAJOR}" -ge 26 ] 
+			then 
+				PKGMGR="brew"
+				echo " // Detected macOS ${OSX_VER} (Tahoe or later) -> Homebrew will be used instead of MacPorts. "
+			else 
+				PKGMGR="port"
+		fi
+		DetectBrewPrefix
+
 fi
+
+# Make sure a working make exists BEFORE anything gets compiled (sets ${MAKEBIN})
+SetupMakeCommand
 				
 
 eval RUNDATE=$(date "+ %m_%d_%Y_%Hh%Mm%Ss" | sed "s/ //g")
@@ -295,7 +575,7 @@ function AptInstall()
 						echo
 						echo "  // OK, let's try. "
 						read -e -p "Enter the exact name of apt to install (DO NOT FORGET DEPENDENCES IF ANY and frame them within quotes):  "  NEWAPTNAME
-						sudo apt install "${NEWAPTNAME}"
+						sudo apt install -y "${NEWAPTNAME}"
 						break ;;
 					[Nn]* ) 
 						echo
@@ -307,7 +587,7 @@ function AptInstall()
 			done
 		else 
 			#apt exists ; install it
-			sudo apt install "${APTNAME}"
+			sudo apt install -y "${APTNAME}"
 	fi
 	}
 	
@@ -320,7 +600,104 @@ function CheckLastAptVersion()
 	apt show "${APTNAME}" 2>/dev/null | grep Version
 	}
 
+function MapPortNameToBrew()
+	{
+	# Translate a MacPorts package name into its closest Homebrew equivalent(s).
+	# Homebrew does not support MacPorts-style "+variant" flags, so a few multi-word
+	# MacPorts specs are simplified here; Homebrew's default formula build usually
+	# already includes the equivalent feature set (e.g. gdal already ships with
+	# netcdf/hdf5/openjpeg support built-in).
+	# Sets global BREWNAMES (space separated list of formula/cask names, possibly empty)
+	# and BREWCASK (yes/no).
+	unset BREWNAMES
+	local INNAME="$1"
+	BREWCASK="no"
+
+	case "${INNAME}" in
+		"gimp2") 						BREWNAMES="gimp" ; BREWCASK="yes" ;;
+		"GraphicsMagick") 				BREWNAMES="graphicsmagick" ;;
+		"gmt6") 						BREWNAMES="gmt" ;;
+		"gsed") 						BREWNAMES="gnu-sed" ;;
+		"tiff") 						BREWNAMES="libtiff" ;;
+		"fftw-3-long"|"fftw-3-single"|"fftw-3"|"fftw") 
+										BREWNAMES="fftw" ;;	# Homebrew's fftw formula builds single + double + long-double in one go
+		"ImageMagick") 					BREWNAMES="imagemagick" ;;
+		clang-*|"clang") 				BREWNAMES="llvm" ;;	# NOTE: Homebrew does not keep every past numbered clang release like MacPorts does. It installs the latest llvm/clang, which is (well) above the "at least v20" requirement. If a Makefile explicitly expects a MacPorts-style binary name (e.g. clang-mp-XX), adjust it manually to use $(brew --prefix llvm)/bin/clang instead.
+		jdk*|openjdk*) 					BREWNAMES="openjdk" ;;
+		"postgresql17") 				BREWNAMES="postgresql@17" ;;
+		"gdal-netcdf"|"gdal-hdf5"|"gdal-openjpeg") 
+										BREWNAMES="" ;;	# already built-in with Homebrew's gdal formula, nothing to add
+		*) 								BREWNAMES="${INNAME}" ;;	# same name in most other cases (gawk, coreutils, findutils, grep, wget, curl, hdf5, libgeotiff, libxml2, lapack, libomp, parallel, mpich, gsl, gnuplot, openjpeg, ffmpeg, proj, geos, gdal, libkml...)
+	esac
+	}
+
+function BrewInstall()
+	{
+	unset PORTNAME
+	local PORTNAME=$1
+	local BNAME
+	local NEWBREWNAME
+	local TSTEXISTBREW
+
+	MapPortNameToBrew "${PORTNAME}"
+
+	if [ "${BREWNAMES}" == "" ] ; then
+		echo "  // ${PORTNAME}: already provided by default by the Homebrew package(s) installed above ; nothing more to install. "
+		return
+	fi
+
+	for BNAME in ${BREWNAMES} ; do
+		if [ "${BREWCASK}" == "yes" ] 
+			then 
+				echo "  // Install (cask) ${BNAME} with Homebrew. " 
+				brew install --cask "${BNAME}"
+			else 
+				TSTEXISTBREW=$(brew search "/^${BNAME}\$/" 2>/dev/null | wc -l)
+				if [ "${TSTEXISTBREW}" -eq 0 ] 
+					then 
+						#formula does not exist as such; search for similar
+						echo "  // Sorry, can't find ${BNAME} as a Homebrew formula. " 
+						echo "    Here is however the list of similar formulae I can find:"
+						brew search "${BNAME}"
+						while true; do
+							read -p "Do you want to install one of those (similar) ones ?  [y/n] "  yn
+							case $yn in
+								[Yy]* ) 
+									echo
+									echo "  // OK, let's try. "
+									read -e -p "Enter the exact name of the Homebrew formula/cask to install (DO NOT FORGET DEPENDENCES IF ANY and frame them within quotes):  "  NEWBREWNAME
+									brew install "${NEWBREWNAME}"
+									break ;;
+								[Nn]* ) 
+									echo
+									echo "  // OK, you know... "
+									break ;;
+								* ) 
+									echo "Please answer [y]es or [n]o.";;
+							esac
+						done
+					else 
+						#formula exists ; install it
+						echo "  // Install ${BNAME} with Homebrew. " 
+						brew install "${BNAME}"
+				fi
+		fi
+	done
+	}
+
 function PortInstall()
+	{
+	# Dispatcher: MacPorts on older macOS, Homebrew on macOS Tahoe (26) and later.
+	local PORTNAME=$1
+	if [ "${PKGMGR}" == "brew" ] 
+		then 
+			BrewInstall "${PORTNAME}"
+		else 
+			PortInstallMacports "${PORTNAME}"
+	fi
+	}
+
+function PortInstallMacports()
 	{
 	unset PORTNAME
 	unset NEWPORTNAME
@@ -359,14 +736,46 @@ function PortInstall()
 	fi
 	}
 
-function CheckLasPortVersion()
+function CheckLastBrewVersion()
+	{
+	unset PORTNAME
+	local PORTNAME=$1
+	local BNAME
+
+	MapPortNameToBrew "${PORTNAME}"
+	echo "  // The last version available seems to be : "
+	for BNAME in ${BREWNAMES} ; do
+		if [ "${BREWCASK}" == "yes" ] 
+			then 
+				brew info --cask "${BNAME}" 2>/dev/null | head -3
+			else 
+				brew info "${BNAME}" 2>/dev/null | head -3
+		fi
+	done
+	}
+
+function CheckLasPortVersionMacports()
 	{
 	unset PORTNAME
 	local PORTNAME=$1	
 	# Last version of apt available online 
 	echo "  // The last version available seems to be : "
-	port search --exact "${APTNAME}" 2>/dev/null | head -1
+	port search --exact "${PORTNAME}" 2>/dev/null | head -1
 	}
+
+function CheckLasPortVersion()
+	{
+	# Dispatcher: MacPorts on older macOS, Homebrew on macOS Tahoe (26) and later.
+	local PORTNAME=$1
+	if [ "${PKGMGR}" == "brew" ] 
+		then 
+			CheckLastBrewVersion "${PORTNAME}"
+		else 
+			CheckLasPortVersionMacports "${PORTNAME}"
+	fi
+	}
+
+
 
 function AskExternalComponent()
 	{
@@ -871,10 +1280,10 @@ function InstallSnaphu()
  
 										if [ "${FILEXT}" == "gz" ] || [ "${FILEXT}" == "tar" ] 
 											then 
-												tar -zxvf "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
+												tar ${TARWARNFLAG} -zxvf "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
 												#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
 												mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-												mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+												mv -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 												#SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
 												# take only the most recent if more than one dir satisfies the search
 												SNAPHUSOURCEDIR=$(find "${HOMEDIR}/SAR/EXEC/" -type d -name "*snaphu*" | grep "snaphu" | xargs ls -td 2>/dev/null | head -1)
@@ -886,9 +1295,9 @@ function InstallSnaphu()
 												"${PATHGNU}"/sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
 
 
-												make
-												mv "${SNAPHUSOURCEDIR}"/bin/snaphu "${HOMEDIR}"/SAR/EXEC/
-												mv "${SNAPHUSOURCEDIR}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+												"${MAKEBIN}"
+												mv -f "${SNAPHUSOURCEDIR}"/bin/snaphu "${HOMEDIR}"/SAR/EXEC/
+												mv -f "${SNAPHUSOURCEDIR}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed
 												echo "  // "
 											else 
 												echo " Format not as expected (gz). May not be genuine file ? Please do manually"			
@@ -922,7 +1331,7 @@ function InstallSnaphu()
 					if [ "${FILEXT}" == "gz" ] || [ "${FILEXT}" == "tar" ]  
 						then 
 							cd "${HOMEDIR}"/SAR/EXEC/
-							tar -zxvf "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
+							tar ${TARWARNFLAG} -zxvf "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
 							#SNAPHUSOURCEDIR=`find ${HOMEDIR}/SAR/EXEC/ -type d -name "*snaphu*"`
 							# take only the most recent if more than one dir satisfies the search
 							SNAPHUSOURCEDIR=$(find "${HOMEDIR}/SAR/EXEC/" -type d -name "*snaphu*" | grep "snaphu" | xargs ls -td 2>/dev/null | head -1)
@@ -934,12 +1343,12 @@ function InstallSnaphu()
 							# CFLAGS		=	-arch x86_64 $(OPTIMFLAGS) -Wall # -arch arm64 -Wuninitialized -m64 -D NO_CS2 
 							"${PATHGNU}"/sed -i 's/^CFLAGS.*/CFLAGS		=	$(OPTIMFLAGS) -Wall/' Makefile
 
-							make
+							"${MAKEBIN}"
 							mv "${SNAPHUSOURCEDIR}"/bin/snaphu "${HOMEDIR}"/SAR/EXEC/
 							#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
 							mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-							mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
-							mv "${SNAPHUSOURCEDIR}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+							mv -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+							mv -f "${SNAPHUSOURCEDIR}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed
 							echo "  // "
 						else 
 							echo " Format not as expected (gz). May not be genuine file ? Please do manually"			
@@ -967,6 +1376,9 @@ DoInstallCpxfiddle()
 		
 			FILEXT="${RAWFILE##*.}"
  
+ 			echo " Note: if you experience compilation error because of the fct register (which is just a compiler hint "
+ 			echo "       that's been ignored by real compilers for decades anyway), delete that keyword in all three spots (lines 256,257 and 635)."	
+ 
 			if [ "${FILEXT}" == "cc" ] 
 				then 
 					cd "${HOMEDIR}"/SAR/EXEC/
@@ -983,12 +1395,12 @@ DoInstallCpxfiddle()
 						"${PATHGNU}"/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' "${RAWFILE}"				# this is a tricky one... 
 					fi
 
-					make -n cpxfiddle
+					"${MAKEBIN}" -n cpxfiddle
 					g++ -O -c -ocpxfiddle.o cpxfiddle.cc  
 					g++ -O cpxfiddle.o -o cpxfiddle
 					rm -f cpxfiddle.o # cpxfiddle.cc
 					mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-					mv cpxfiddle.cc "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+					mv -f cpxfiddle.cc "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
 				else 
 					echo " Format not as expected (cc). May not be genuine file ? Please do manually"			
@@ -1051,19 +1463,19 @@ function ParalleliseME()
 		SEARCHSTRING=$1 	# YES or NO
 		
 		# Check if the line for parallelisation exists in the makefile 
- 		if grep -qF "USEOPENMP" makefile 
+ 		if ${PATHGNU}/ggrep -qF "USEOPENMP" makefile 
  			then
  				if [ "${SEARCHSTRING}" == "YES" ]
 					then 
 						echo " using the parallelisation option"
 						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = YES
 						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = YES"'/' makefile
-						make USEOPENMP=YES
+						"${MAKEBIN}" USEOPENMP=YES PKGMGR=${PKGMGR}
 					else 
 						echo " without using the parallelisation option"
 						# replace the line containing "USEOPENMP =" whatever the option is set as USEOPENMP = NO
 						#${PATHGNU}/gsed -i 's/.*'"USEOPENMP ="'.*/'"USEOPENMP = NO"'/' makefile
-						make
+						"${MAKEBIN}" PKGMGR=${PKGMGR}
 				fi
 			else
 			    if [ "${SEARCHSTRING}" == "YES" ]
@@ -1071,11 +1483,11 @@ function ParalleliseME()
 			  			echo "The parallelisation option line doesn't exist in the makefile ? It must have a line like this: "
 			    		echo "USEOPENMP = ... or USEOPENMP?=..."
 			    		echo "Your version of AMSTer Engine seems not planned for parallelisation. Compile it as it is..."
-						make
+						"${MAKEBIN}" PKGMGR=${PKGMGR}
 					else 
 			  			echo "The parallelisation option line doesn't exist in the makefile but you do not want to anyway. "
 			    		echo "Compile it as it is..."
-						make
+						"${MAKEBIN}" PKGMGR=${PKGMGR}
 			    fi
 		fi
 	}
@@ -1146,20 +1558,20 @@ CompileAMSTerEngine()
 				else 
 					TARDIRNAME=$(ls *.tar.xz | cut -d . -f 1)
 					echo "Decompress ${TARDIRNAME}.tar.xz..."
-					tar -xf *.tar.xz
+					tar ${TARWARNFLAG} -xf *.tar.xz
 			fi
 		
 		if [ -d "${PATHSOURCES}"/V"${DATEAMSTERENGINE}"_AMSTerEngine/"${TARDIRNAME}"/Archives ]
 			then 
-				# seems to be the new version of AMSTerEngine distrubution, that is made for the installer
+				# seems to be the new version of AMSTerEngine distribution, that is made for the installer
 				VERSION=NEW
 				cd "${TARDIRNAME}"/Archives
 				TARNAME=$(ls Mas*.tar.xz)
 				echo "   Decompress ${TARNAME}.tar.xz..."
-				tar -xf Mas*.tar.xz
+				tar ${TARWARNFLAG} -xf Mas*.tar.xz
 				cd InSAR/sources
 			else
-				# seems to be the old version of AMSTerEngine distrubution
+				# seems to be the old version of AMSTerEngine distribution
 				VERSION=OLD
 				if [ -d "${TARDIRNAME}" ]		# because sometimes tar decompress in current dir or in dir named by the tar file...
 					then 
@@ -1438,15 +1850,36 @@ function TstPathGnuFctMac()
 			then 
 				echo "${GFCT} is in ${TSTPATHGFCT} instead of ${PATHGNU}. Let's link it to ${PATHGNU}/${GFCT} (and to ${PATHGNU}/${FCT} for security)" 
 				#sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${GFCT} 2>/dev/null 
-				if [ ! -f "${PATHGNU}"/"${GFCT}" ] ; then sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${GFCT}" 2>/dev/null ; else echo "	// ${GFCT} already linked in ${PATHGNU}" ; fi
+				if [ ! -f "${PATHGNU}"/"${GFCT}" ] 
+					then 
+						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${GFCT}" 2>/dev/null 
+					else 
+						echo "	// ${GFCT} already linked in ${PATHGNU} - replace with new path to be sure..." 
+						sudo rm -f "${PATHGNU}"/"${GFCT}"
+						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${GFCT}" 2>/dev/null 
+				fi
 				
 				#sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${FCT} 2>/dev/null 
-				if [ ! -f "${PATHGNU}"/"${FCT}" ] ; then sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null ; else echo "	// ${FCT} already linked in ${PATHGNU}" ; fi
+				if [ ! -f "${PATHGNU}"/"${FCT}" ] 
+					then 
+						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
+					else 
+						echo "	// ${FCT} already linked in ${PATHGNU} - replace with new path to be sure..." 
+						sudo rm -f "${PATHGNU}"/"${FCT}"
+						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
+
+				fi
 			else 
 				echo "Link ${GFCT} to ${FCT} in ${PATHGNU} for security" 
 				#sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${FCT} 2>/dev/null
-				if [ ! -f "${PATHGNU}"/"${FCT}" ] ; then sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null ; else echo "	// ${FCT} already linked in ${PATHGNU}" ; fi
-
+				if [ ! -f "${PATHGNU}"/"${FCT}" ] 
+					then 
+						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
+					else 
+						echo "	// ${FCT} already linked in ${PATHGNU} - replace with new path to be sure..." 
+						sudo rm -f "${PATHGNU}"/"${FCT}"
+						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
+				fi
 		fi
 	}
 
@@ -1474,17 +1907,53 @@ function TstPathGnuFctLinux()
 		fi
 	}
 
+function SetPATHCONV()
+	{
+	# Resolve ImageMagick's "convert" (or "magick" on newer IM7 formulae that drop the
+	# convert compatibility shim) and mirror it into /opt/local/bin/convert - same "one
+	# canonical PATHGNU-style location" approach as gawk/gsed/java, and for the same reason:
+	# plain "which convert" can silently pick up a leftover MacPorts ImageMagick instead of
+	# the Homebrew one, since /opt/local/bin is deliberately early in PATH.
+	unset WHEREISCONV
+	unset IMPREFIX
+	if [ "${PKGMGR}" == "brew" ]
+		then
+			IMPREFIX=$(brew --prefix imagemagick 2>/dev/null)
+			if [ -x "${IMPREFIX}/bin/convert" ]
+				then
+					WHEREISCONV="${IMPREFIX}/bin/convert"
+				elif [ -x "${IMPREFIX}/bin/magick" ]
+					then
+						WHEREISCONV="${IMPREFIX}/bin/magick"
+			fi
+			if [ "${WHEREISCONV}" != "" ]
+				then
+					sudo mkdir -p /opt/local/bin
+					sudo ln -sf "${WHEREISCONV}" /opt/local/bin/convert
+					PATHCONV="/opt/local/bin"
+				else
+					# Homebrew's imagemagick not found yet (not installed this run ?) ; fall back to whatever is on PATH
+					WHEREISCONV=$(which convert)
+					PATHCONV=$(dirname "${WHEREISCONV}")
+			fi
+		else
+			WHEREISCONV=$(which convert)
+			PATHCONV=$(dirname "${WHEREISCONV}")
+	fi
+	}
+
 
 DoInstallMSBAS()
 	{
 		echo "  // MSBAS software performs the svd inversion for the ground deformation time series." 
 		echo "  //     The sources were prepared to be Mac and Linux compliant for this installer." 
 		echo "  // Several versions are possible, e.g.: " 
+		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1.2.2_Gilles.zip runs msbasv4 (2D) in parallel on ALL the available cores for a maximum of efficiency; compatible with Mac & Homebrew. "
 		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip runs msbasv4 (2D) in parallel on ALL the available cores for a maximum of efficiency. "
 		echo "  //      msbas_20201009_wExtract_Unified_20220919_Optimized_v1_Gilles.zip runs msbasv4 (2D) on only one core. "
 		echo "  //      msbas_20201009_wExtract_Unified_20220818-Gilles.zip runs msbasv4 (2D) on a LIMITED number of cores (max 12 threads). "
-		echo "  // 		msbas_20201009_wExtract_Unified_20220919_Optimized_v1.3_Full3D.zip runs msbasv4 for full 3D decomposition (only possible when enough diversity of looking geometry is available. DO NOT USE UNLESS YOU KNOW WHAT YOU DO - See AMSTer manual)"
-		echo "  //      msbas_v10_20230601_Gilles.zip runs msbasv10 (3/4D)... Not ready for the AMSTer software yet, i.e. for manual usage only . "
+		echo "  // 		msbas_20201009_wExtract_Unified_20220919_Optimized_v1.3.2_Full3D.zip runs msbasv4 for full 3D decomposition (only possible when enough diversity of looking geometry is available. DO NOT USE UNLESS YOU KNOW WHAT YOU DO - See AMSTer manual)"
+		echo "  //      msbas_v10_20230601_Gilles.zip runs msbasv10 (3/4D)... Not ready for the AMSTer scripting yet, i.e. for manual usage only . "
 
 
 		echo "  //   If you want another version, please install it manually. "
@@ -1542,6 +2011,47 @@ DoInstallMSBAS()
 		fi
 	}
 
+function BuildMSBASExtract()
+	{
+	# Build msbas_extract from the current msbas source directory (called with cwd
+	# = the extracted msbasvX source dir, e.g. .../msbas_..._Optimized_v1.2.2_Gilles/).
+	# Source and Makefiles are identical between the 2D and Full3D distributions,
+	# so this same logic is reused for both.
+	cd msbas_extract
+	case ${OS} in 
+		"Linux") 
+			if [ -f "msbas_extract_Makefile_port" ] ; then cp -f msbas_extract_Makefile_port Makefile ; fi
+			;;
+		"Darwin")
+			if [ "${PKGMGR}" == "brew" ]
+				then 
+					if [ -f "msbas_extract_Makefile_brew" ]
+						then 
+							echo "  // Homebrew detected: using msbas_extract_Makefile_brew instead of the MacPorts-hardcoded default. "
+							cp -f msbas_extract_Makefile_brew Makefile
+						else 
+							echo "  // WARNING: msbas_extract_Makefile_brew not found in this msbas source distribution. "
+							echo "  //          The default Makefile hardcodes MacPorts paths (/opt/local) and will NOT work under Homebrew. "
+							echo "  //          Please add msbas_extract_Makefile_brew to this msbas source (or compile manually) before continuing. "
+					fi
+				else 
+					if [ -f "msbas_extract_Makefile_port" ] ; then cp -f msbas_extract_Makefile_port Makefile ; fi
+			fi
+			;;
+	esac
+	rm -f msbas_extract		# do not let a former/prebuilt binary pass for a fresh build
+	"${MAKEBIN}"
+	if [ -f msbas_extract ] && [ -x msbas_extract ] 
+		then 
+			cp -f "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/msbas_extract/msbas_extract "${HOMEDIR}"/SAR/AMSTer/MSBAS/
+			echo "  // msbas_extract compiled and stored in SAR/AMSTer/MSBAS/ "
+		else 
+			echo "  // WARNING: msbas_extract compilation failed; nothing copied in ${HOMEDIR}/SAR/AMSTer/MSBAS. "
+			echo "  //          Sources are kept in ${PATHFORMERSOURCESMSBAS}${FILENOXT}/msbas_extract for a manual compilation. "
+	fi
+	cd "${HOMEDIR}" 
+	}
+
 CompileMSBAS()
 	{
 			RAWFILE=$1 		# e.g. .../msbasv4/msbas_20201009_wExtract_Unified_20220919_Optimized_v1.1_Gilles.zip
@@ -1571,56 +2081,156 @@ CompileMSBAS()
 
 					cp "${RAWFILE}" "${PATHFORMERSOURCESMSBAS}"
 					cd "${PATHFORMERSOURCESMSBAS}"
-					unzip "${MSBASSOURCEFILETAR}"
-					cd "${FILENOXT}"
+					unzip -o "${MSBASSOURCEFILETAR}" -x "__MACOSX/*"
+
+					# The dir created by unzip is not necessarily named after the zip file: a zip renamed 
+					# e.g. msbas_..._V1_1.zip (dots turned into underscores by a mail server, a web upload, 
+					# a copy on a FAT/exFAT disk...) still expands into msbas_..._V1.1/. Without this check the 
+					# cd below just fails and make would run in the wrong directory. 
+					if [ ! -d "${FILENOXT}" ] 
+						then 
+							ZIPTOPDIR=$(unzip -Z1 "${MSBASSOURCEFILETAR}" 2>/dev/null | grep -v "^__MACOSX" | cut -d / -f1 | sort -u | head -1)
+							if [ "${ZIPTOPDIR}" != "" ] && [ -d "${ZIPTOPDIR}" ] 
+								then 
+									echo "  // Note: ${MSBASSOURCEFILETAR} expands into ${ZIPTOPDIR}, not ${FILENOXT} ; using ${ZIPTOPDIR}. "
+									FILENOXT="${ZIPTOPDIR}"
+								else 
+									echo "  // ERROR: can not find the source dir extracted from ${MSBASSOURCEFILETAR} in ${PATHFORMERSOURCESMSBAS}. Please compile manually. "
+									cd "${HOMEDIR}"
+									return 1
+							fi
+					fi
+					cd "${FILENOXT}" || { echo "  // ERROR: can not enter ${PATHFORMERSOURCESMSBAS}${FILENOXT}. " ; cd "${HOMEDIR}" ; return 1 ; }
 					
-					# Adapt clang version to OS version
+					# Select the Makefile matching this msbas distribution, this OS and this package manager.
+					# What each supported distribution provides (checked on 2026/07/29):
+					#   msbasv4    (..._v1.2.2_Gilles) : Makefile, Makefile_brew_cpp17, Makefile_clang21_cpp17, Makefile_clang14_cpp11 -> msbasv4
+					#   msbasv4_3D (..._v1.3.2_Full3D) : idem                                                                          -> msbasv4_3D
+					#   msbasv10   (...Gilles_V1.2)    : Makefile, msbasv10_Makefile_brew, msbasv10_Makefile_port                      -> msbasv10
+					#   msbasv10_3D(...NdO_3D_V1.2)    : idem                                                                          -> msbasv10_3D
+					# Makefile_clang* are MacPorts flavoured (/opt/local/bin/clang++-mp-XX), Makefile_brew_cpp17 and 
+					# msbasv10_Makefile_brew are Homebrew flavoured, and the flavour of the plain "Makefile" varies from 
+					# one distribution to the other (Homebrew in v1.2.2, MacPorts in v1.3.2) so on Mac it is only used as 
+					# a last resort, with a warning. On Linux all of them have an equivalent Linux section.
+					# MKCANDIDATES = Makefiles matching the current package manager, MKFALLBACK = the other flavour.
+					# Both are checked with -f BEFORE the current Makefile is replaced: the former code was doing 
+					# "rm -f Makefile ; cp -f Makefile_clang21_cpp17 Makefile" unconditionally, hence on e.g. Monterey with 
+					# a msbasv10 distribution - which ships no Makefile_clang* at all - it deleted the working Makefile and 
+					# left none: "cp: Makefile_clang21_cpp17: No such file or directory" then "No rule to make target `all'".
+					MKFALLBACK=""
 					case ${OS} in 
 						"Linux") 
-							echo "Linux: Suppose recent installation; use c++ v17."
-							cp -f Makefile_clang21_cpp17 Makefile
+							MKCANDIDATES="Makefile_clang21_cpp17 msbasv10_Makefile_port msbasv10_Makefile_brew Makefile_brew_cpp17 Makefile_clang14_cpp11 Makefile"
 							;;
 						"Darwin")
-							if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -lt 15 ]]; then
-							    echo "macOS $OSX_MAJOR.$OSX_MINOR detected (< Catalina); use clang-14 and c++11."
-								cp -f Makefile_clang14_cpp11 Makefile
-							elif [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -eq 15 ]]; then
-							    echo "macOS 10.15 (Catalina) detected; use clang-14 and c++11."
-								cp -f Makefile_clang14_cpp11 Makefile
-							elif [[ "$OSX_MAJOR" -eq 11 || "$OSX_MAJOR" -eq 12 ]]; then
-							    echo "macOS $OSX_MAJOR.$OSX_MINOR (Big Sur / Monterey) detected; use clang-21 and c++17."
-								cp -f Makefile_clang21_cpp17 Makefile
-							else
-							    echo "macOS $OSX_MAJOR.$OSX_MINOR (Ventura or newer) detected; use clang-21 and c++17."
-								cp -f Makefile_clang21_cpp17 Makefile
+							if [ "${PKGMGR}" == "brew" ] 
+								then 
+									echo "  // macOS ${OSX_MAJOR}.${OSX_MINOR} with Homebrew: looking for a Homebrew Makefile (c++17). "
+									MKCANDIDATES="Makefile_brew_cpp17 msbasv10_Makefile_brew"
+									MKFALLBACK="Makefile_clang21_cpp17 Makefile_clang14_cpp11 msbasv10_Makefile_port Makefile"
+								else 
+									if [ "${OSX_MAJOR}" == "10" ] 
+										then 
+											# Catalina and older: prefer the old clang and c++11 when provided
+											echo "  // macOS ${OSX_MAJOR}.${OSX_MINOR} (Catalina or older) with MacPorts: prefer clang-14 and c++11. "
+											MKCANDIDATES="Makefile_clang14_cpp11 Makefile_clang21_cpp17 msbasv10_Makefile_port"
+										else 
+											echo "  // macOS ${OSX_MAJOR}.${OSX_MINOR} with MacPorts: prefer clang-21 and c++17. "
+											MKCANDIDATES="Makefile_clang21_cpp17 Makefile_clang14_cpp11 msbasv10_Makefile_port"
+									fi
+									MKFALLBACK="Makefile_brew_cpp17 msbasv10_Makefile_brew Makefile"
 							fi
 							;;
 					esac	
 					
-					make all 
+					MKCHOSEN=""
+					for TSTMK in ${MKCANDIDATES} 
+						do 
+							if [ -f "${TSTMK}" ] ; then MKCHOSEN="${TSTMK}" ; break ; fi
+						done
 					
-					# Check version 
-					MSBASVERSION=$(ls msbasv* | grep -v "zip" | cut -d v -f2)
+					if [ "${MKCHOSEN}" == "" ] && [ "${MKFALLBACK}" != "" ] 
+						then 
+							for TSTMK in ${MKFALLBACK} 
+								do 
+									if [ -f "${TSTMK}" ] ; then MKCHOSEN="${TSTMK}" ; break ; fi
+								done
+							if [ "${MKCHOSEN}" != "" ] 
+								then 
+									echo "  // WARNING: this msbas distribution provides no Makefile for ${PKGMGR}. "
+									echo "  //          Falling back on ${MKCHOSEN}, which may hardcode the paths of the OTHER package "
+									echo "  //          manager and hence fail to compile. If it does, add a ${PKGMGR} flavoured Makefile "
+									echo "  //          to this msbas source distribution. "
+									echo "  // Waiting 10 seconds before trying anyway... "
+									sleep 10
+							fi
+					fi
+					
+					if [ "${MKCHOSEN}" == "" ] 
+						then 
+							echo "  // ERROR: no usable Makefile in ${PATHFORMERSOURCESMSBAS}${FILENOXT} ; looked for: ${MKCANDIDATES} ${MKFALLBACK} "
+							echo "  //        Nothing was installed in ${HOMEDIR}/SAR/AMSTer/MSBAS ; sources are kept for a manual compilation. "
+							cd "${HOMEDIR}"
+							return 1
+					fi
+					
+					echo "  // Using ${MKCHOSEN}. "
+					if [ "${MKCHOSEN}" != "Makefile" ] ; then cp -f "${MKCHOSEN}" Makefile ; fi
+					
+					# Remove any msbas binary shipped within the source zip or left by a former build BEFORE compiling: 
+					# the msbasv4 distribution ships a prebuilt x86_64 Mach-O msbasv4, and without this a FAILED 
+					# compilation would leave it in place, where the check below would take it for a successful build 
+					# and install it - possibly for the wrong architecture. 
+					for TSTBIN in msbasv* msbas 
+						do 
+							case "${TSTBIN}" in 
+								*Makefile*) continue ;; 
+							esac
+							if [ -f "${TSTBIN}" ] && [ -x "${TSTBIN}" ] 
+								then 
+									echo "  // Removing the prebuilt/former ${TSTBIN} provided in the sources; it is recompiled here. "
+									rm -f "${TSTBIN}"
+							fi
+						done
+					
+					"${MAKEBIN}" all 
+					MAKESTATUS=$?
+					
+					# Check version: rely on what was really produced, i.e. the EXECUTABLE named msbasvXX
+					# (the source dir also contains msbasv10_Makefile_brew / msbasv10_Makefile_port, and 
+					#  possibly the zip itself, which must not be mistaken for the binary)
+					MSBASBIN=""
+					for TSTBIN in msbasv* ; do
+						if [ -f "${TSTBIN}" ] && [ -x "${TSTBIN}" ] ; then MSBASBIN="${TSTBIN}" ; fi
+					done
+					
+					if [ ${MAKESTATUS} -ne 0 ] || [ "${MSBASBIN}" == "" ] 
+						then 
+							echo "  // ERROR: msbas compilation failed (make returned ${MAKESTATUS}); no msbasvXX executable in ${PATHFORMERSOURCESMSBAS}${FILENOXT}. "
+							echo "  //        Nothing was installed in ${HOMEDIR}/SAR/AMSTer/MSBAS ; sources are kept for a manual check/compilation. "
+							echo "  //        Check first the compilation dependencies, which differ between the msbas generations: "
+							echo "  //          msbasv4 / v4_3D  : clang (Homebrew: llvm) + gdal + libomp  -> Mac: ${PKGMGR} install llvm gdal libomp / Linux: apt install g++ libgdal-dev liblapack-dev libomp-dev "
+							echo "  //          msbasv10 / v10_3D: mpich + gdal + libomp                   -> Mac: ${PKGMGR} install mpich gdal libomp / Linux: apt install mpich libgdal-dev liblapack-dev "
+							cd "${HOMEDIR}"
+							return 1
+					fi
+					
+					MSBASVERSION="${MSBASBIN#msbasv}"		# e.g. msbasv10 -> 10 ; msbasv4_3D -> 4_3D
 					echo "  // msbas version ${MSBASVERSION} compiled. "
 
 	
 					# store compiled msbas in SAR/AMSTer/MSBAS/
-					echo "  // store compiled msbasv${MSBASVERSION} in SAR/AMSTer/MSBAS/"
-					cp "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/msbasv"${MSBASVERSION}" "${HOMEDIR}"/SAR/AMSTer/MSBAS/
+					echo "  // store compiled ${MSBASBIN} in SAR/AMSTer/MSBAS/"
+					cp -f "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/"${MSBASBIN}" "${HOMEDIR}"/SAR/AMSTer/MSBAS/
 
 					case ${MSBASVERSION} in 
-						"4")
-							# msbas_extract only available in v4
+						"4"|"4_3D")
+							# msbas_extract's source and Makefiles are identical between the 2D (msbasv4)
+							# and Full3D (msbasv4_3D) distributions, so the same build logic covers both.
 							echo "  // msbas_extract available with msbasv${MSBASVERSION}; Compile it now "
-							cd msbas_extract
-							make
-							cp "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/msbas_extract/msbas_extract "${HOMEDIR}"/SAR/AMSTer/MSBAS/
-							cd "${HOMEDIR}" 
+							BuildMSBASExtract
 							;;
-						"4_3D")
-							echo "  // Compile msbas_extract with msbasv4 if needed and not done yet. "
-							;;
-						"10")
+						"10"|"10_3D")
 							echo "  // msbas_extract not available with msbasv${MSBASVERSION}; Compile it with a former version if needed... "
 							;;
 						*) 
@@ -1628,9 +2238,13 @@ CompileMSBAS()
 							;;
 					esac
 					
-					# Clean and keep sources
-					rm -rf "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"
+					# Clean and keep sources 
+					# (the former "rm -rf ${PATHFORMERSOURCESMSBAS}/${FILENOXT}" was deleting the whole 
+					#  source dir, in contradiction with the message displayed above, and made the second 
+					#  rm of __MACOSX a dead line ; only remove the macOS/build leftovers now)
 					rm -rf "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/__MACOSX
+					rm -f "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/.DS_Store
+					rm -f "${PATHFORMERSOURCESMSBAS}"/"${FILENOXT}"/*.o
 					
 				else 
 					echo " Format not as expected (zip). May not be genuine file ? Please do manually"		
@@ -1714,7 +2328,7 @@ function GetSCRIPTS()
 			echo "Former scripts exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_${RUNDATE}/"
 			# Save former scripts to ${HOMEDIR}/SAR/EXEC/Sources_Installed/SCRIPTS_MT/SCRIPTS_DATE
 			mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_"${RUNDATE}"
-			mv "${HOMEDIR}"/SAR/AMSTer/SCRIPTS_MT/* "${HOMEDIR}"/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_"${RUNDATE}"/
+			mv -f "${HOMEDIR}"/SAR/AMSTer/SCRIPTS_MT/* "${HOMEDIR}"/SAR/EXEC/Sources_Installed/SCRIPTS_MT/Removed_on_"${RUNDATE}"/
 		fi 
 		# install
 		cp -Rf "${SCRIPTSDIR}"/* "${HOMEDIR}"/SAR/AMSTer/SCRIPTS_MT/
@@ -1732,12 +2346,219 @@ function GetDoc()
 		if [ $(ls -l "${HOMEDIR}"/SAR/AMSTer/DOC 2>/dev/null | wc -l ) -gt 0 ] ; then 
 			echo "Former DOCs exist. Store them now in ${HOMEDIR}/SAR/EXEC/Sources_Installed/DOC/Removed_on_${RUNDATE}/"
 			mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed/DOC/Removed_on_"${RUNDATE}"
-			mv "${HOMEDIR}"/SAR/AMSTer/DOC/* "${HOMEDIR}"/SAR/EXEC/Sources_Installed/DOC/Removed_on_"${RUNDATE}"/
+			mv -f "${HOMEDIR}"/SAR/AMSTer/DOC/* "${HOMEDIR}"/SAR/EXEC/Sources_Installed/DOC/Removed_on_"${RUNDATE}"/
 		fi 
 
 		cp -Rf "${DOCDIR}"/* "${HOMEDIR}"/SAR/AMSTer/DOC/
 
 		echo ""	
+	}
+
+function AskPathDistro()
+	{
+	# Ask the user where the AMSTer_Distribution directory is on his computer and check it. 
+	# Sets PATHDISTRO to that directory, or to an empty string if the user gives up, 
+	# in which case the installer will ask him the path of each component separately. 
+	while true; do
+   		echo "Enter the path to the AMSTer_Distribution directory (e.g. ...YourPath/SAR/AMSTer_Distribution); "
+   		read -e -p "   You can use Tab for autocompletion or drag/drop the full path : " PATHDISTRO	# expet something like ...YourPath/SAR/ where it will find AMSTer_Distribution
+		# Clean the answer: drag/drop or copy/paste may add quotes and/or a trailing slash 
+		PATHDISTRO=$(echo "${PATHDISTRO}" | "${PATHGNU}"/gsed -e "s/'//g" -e 's/"//g' -e 's|/*$||')
+		# Make it absolute, though without creating a // path when it is already absolute 
+		case "${PATHDISTRO}" in
+			"")			echo "Empty answer... " ;;						# will be caught by the test below
+			"~")		PATHDISTRO="${HOME}" ;;							# read -e does not expand the tilde
+			"~/"*)		PATHDISTRO="${HOME}/${PATHDISTRO#\~/}" ;;
+			/*)			;;												# already absolute: nothing to do
+			*)			PATHDISTRO="/${PATHDISTRO}" ;;					# leading / lost at copy/paste
+		esac
+
+		# if AMSTer_Distribution is downloaded from GitHub, it might be zipped 
+		if [[ "${PATHDISTRO}" == *".zip" ]]; then
+			echo "The path to your AMSTer_Distribution ends with .zip and hence must be decompressed. "
+			WHERETOUNZIP=$(dirname "${PATHDISTRO}")
+			unzip -o "${PATHDISTRO}" -x "__MACOSX/*" -d "${WHERETOUNZIP}" # unzip in pwd
+			rm -f "${PATHDISTRO}"
+			PATHDISTRO="${PATHDISTRO%.zip}"
+		fi
+		# if AMSTer_Distribution is downloaded from GitHub, it may be named AMSTer_Distribution-main
+		if [[ "${PATHDISTRO}" == *"-main" ]]; then
+			echo "The path to your AMSTer_Distribution ends with -main (probably downloaded as a package from GitHub). "
+			echo "Rename it without that string..."
+			PATHDISTRONOMAIN="${PATHDISTRO%-main}"
+			mv -f "${PATHDISTRO}" "${PATHDISTRONOMAIN}" 
+			PATHDISTRO="${PATHDISTRONOMAIN}"
+		fi
+
+	    if [ -d "${PATHDISTRO}" ] && [ "$(ls -A "${PATHDISTRO}")" ] 
+	    	then # [[ -d ${PATHDISTRO} ]] only test if exist
+	        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
+	       		break
+	   		else
+	       		echo "Directory ${PATHDISTRO} does not exist or is empty. "
+				AskConfirmLoop "Do you want to enter a new path [y/n]? "  "OK, then you can provide me later with the path where you have the sources of each components."
+				if [ "${EXITLOOP}" == "YES" ] 
+					then 
+						PATHDISTRO=""	# do not keep an invalid path: it would be used later as if it were valid
+						break 
+				fi
+	    fi
+	done
+	}
+
+function UsableGit()
+	{
+	# Echo the path of a git that REALLY works, or nothing at all. 
+	#
+	# Why not simply "command -v git": on macOS, /usr/bin/git is not git, it is an xcode-select 
+	# shim, exactly like /usr/bin/make (see SetupMakeCommand). It is present on a brand new Mac 
+	# even when NO developer tool is installed, so command -v finds it, but running it fails and 
+	# pops up the "install the command line developer tools" dialog. Check the toolchain really 
+	# provides git instead, or take a git from Homebrew/MacPorts.  
+	local DEVDIR
+	local TSTGIT
+
+	if [ "${OS}" != "Darwin" ]
+		then
+			if command -v git > /dev/null 2>&1 ; then command -v git ; fi
+			return 0
+	fi
+
+	DEVDIR="${DEVELOPER_DIR}"
+	if [ "${DEVDIR}" == "" ] ; then DEVDIR=$(xcode-select -p 2>/dev/null) ; fi
+	if [ "${DEVDIR}" != "" ] && [ -x "${DEVDIR}/usr/bin/git" ] ; then echo "${DEVDIR}/usr/bin/git" ; return 0 ; fi
+
+	for TSTGIT in "${BREWPREFIX:-/opt/homebrew}/bin/git" /opt/homebrew/bin/git /usr/local/bin/git /opt/local/bin/git
+		do
+			if [ -x "${TSTGIT}" ] ; then echo "${TSTGIT}" ; return 0 ; fi
+		done
+	}
+
+function GetAMSTerDistroFromGitHub()
+	{
+	# Download (or update) the public AMSTer_Distribution repository in ${HOMEDIR}/SAR/EXEC, 
+	# that is where the installer keeps all the sources it installs from. 
+	# Uses git if available (so that it can be updated later with a simple git pull), 
+	# and falls back on downloading the zip archive of the branch with curl or wget otherwise. 
+	#
+	# On success, sets PATHDISTRO to ${HOMEDIR}/SAR/EXEC/AMSTer_Distribution and returns 0. 
+	# On failure, leaves PATHDISTRO empty and returns 1, so that the caller can ask the user 
+	# for a path instead.  
+	local GITHUBREPO="https://github.com/AMSTerUsers/AMSTer_Distribution"
+	local BRANCH="main"
+	local DISTROPARENT="${HOMEDIR}/SAR/EXEC"
+	local DISTRODIR="${DISTROPARENT}/AMSTer_Distribution"
+	local ZIPFILE="${DISTROPARENT}/AMSTer_Distribution-${BRANCH}.zip"
+	local UNZIPPEDDIR
+	local ukf
+	local GITBIN
+
+	PATHDISTRO=""
+	GITBIN=$(UsableGit)		# empty if no usable git on this computer
+	mkdir -p "${DISTROPARENT}"
+
+	# If a distribution is already there, do not overwrite it silently 
+	if [ -d "${DISTRODIR}" ] && [ "$(ls -A "${DISTRODIR}" 2>/dev/null)" ] 
+		then
+			echo "  // ${DISTRODIR} already exists and is not empty."
+			while true ; do
+				read -p "Do you want to [u]pdate it from GitHub, [k]eep it as it is, or get a [f]resh copy (the present one will be moved aside) ? [u/k/f] " ukf
+				case ${ukf} in
+					[Uu]* ) 
+						if [ -d "${DISTRODIR}/.git" ] && [ "${GITBIN}" != "" ]
+							then
+								echo "  // OK, I update ${DISTRODIR} from GitHub. Please wait..."
+								cd "${DISTRODIR}"
+								if "${GITBIN}" pull --ff-only
+									then 
+										cd "${HOMEDIR}"
+										PATHDISTRO="${DISTRODIR}"
+										return 0
+									else 
+										echo "  // Can't update it (local changes ? no fast forward possible ?). I will get a fresh copy instead."
+								fi
+								cd "${HOMEDIR}"
+							else
+								echo "  // ${DISTRODIR} is not a git clone (or git is not available here): it can't be updated. I will get a fresh copy instead."
+						fi
+						break ;;
+					[Kk]* ) 
+						echo "  // OK, I keep ${DISTRODIR} as it is."
+						PATHDISTRO="${DISTRODIR}"
+						return 0 ;;
+					[Ff]* ) 
+						break ;;
+					* ) 
+						echo "Please answer [u]pdate, [k]eep or [f]resh." ;;
+				esac
+			done
+			echo "  // Moving the former distribution in ${DISTRODIR}_Replaced_on_${RUNDATE}"
+			mv -f "${DISTRODIR}" "${DISTRODIR}_Replaced_on_${RUNDATE}"
+	fi
+	rm -rf "${DISTRODIR}"		# in case it existed but was empty
+
+	# Get it with git if possible: this allows updating it later with a simple git pull 
+	if [ "${GITBIN}" != "" ]
+		then
+			echo "  // Cloning ${GITHUBREPO} in ${DISTRODIR}. Please wait, this may take a while..."
+			cd "${DISTROPARENT}"
+			if "${GITBIN}" clone --depth 1 --branch "${BRANCH}" "${GITHUBREPO}.git" "${DISTRODIR}"
+				then 
+					cd "${HOMEDIR}"
+					PATHDISTRO="${DISTRODIR}"
+					return 0
+				else 
+					echo "  // git clone failed. I will try to download the zip archive instead."
+					rm -rf "${DISTRODIR}"
+			fi
+			cd "${HOMEDIR}"
+	fi
+
+	# No git (or clone failed): download the zip archive of the branch 
+	if ! command -v unzip > /dev/null 2>&1 
+		then 
+			echo "  // unzip is not available here, hence I can't use the zip archive of AMSTer_Distribution."
+			echo "  // Install git (or unzip) first, e.g. sudo apt install -y git, then relaunch ${PRG}. "
+			return 1
+	fi
+	echo "  // Downloading ${GITHUBREPO}/archive/refs/heads/${BRANCH}.zip in ${DISTROPARENT}. Please wait, this may take a while..."
+	rm -f "${ZIPFILE}"
+	if command -v curl > /dev/null 2>&1
+		then 
+			curl -fL -o "${ZIPFILE}" "${GITHUBREPO}/archive/refs/heads/${BRANCH}.zip"
+		elif command -v wget > /dev/null 2>&1
+			then 
+				wget -O "${ZIPFILE}" "${GITHUBREPO}/archive/refs/heads/${BRANCH}.zip"
+			else 
+				echo "  // Neither git, nor curl, nor wget is available here: I can't download AMSTer_Distribution."
+				return 1
+	fi
+
+	if [ ! -s "${ZIPFILE}" ] 
+		then 
+			echo "  // Download failed (no or empty ${ZIPFILE}). Check your internet connection."
+			rm -f "${ZIPFILE}"
+			return 1
+	fi
+
+	unzip -q -o "${ZIPFILE}" -d "${DISTROPARENT}"
+	rm -f "${ZIPFILE}"
+
+	# GitHub archives expand in a dir named REPO-BRANCH, though do not take it for granted
+	UNZIPPEDDIR="${DISTROPARENT}/AMSTer_Distribution-${BRANCH}"
+	if [ ! -d "${UNZIPPEDDIR}" ] 
+		then 
+			UNZIPPEDDIR=$(find "${DISTROPARENT}" -maxdepth 1 -type d -name "AMSTer_Distribution-*" | head -1)
+	fi
+	if [ "${UNZIPPEDDIR}" == "" ] || [ ! -d "${UNZIPPEDDIR}" ] 
+		then 
+			echo "  // Can't find the directory resulting from the decompression of the archive in ${DISTROPARENT}."
+			return 1
+	fi
+
+	mv -f "${UNZIPPEDDIR}" "${DISTRODIR}"
+	PATHDISTRO="${DISTRODIR}"
+	return 0
 	}
 
 ###############
@@ -1793,11 +2614,11 @@ case ${OS} in
 		UBUNTUVER=$(lsb_release -a 2> /dev/null | grep "Release" | awk '{ print $2 }' | cut -d . -f1)
 		if [ ${UBUNTUVER} -lt 18 ] ; then 
 			echo "  // Ubuntu versions before 18 does not have snap; install it now. " 
-			sudo apt install snapd
+			sudo apt install -y snapd
 		fi
 		TSTMAKE=$(make -version 2>/dev/null)
 		if [ "${TSTMAKE}" == "" ] 
-			then sudo apt install make 
+			then sudo apt install -y make 
 		fi
 		echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
 		;;
@@ -1912,7 +2733,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 					[Yy]* ) 				
 							echo "  // OK, it will request your admin pwd and may take time... "	
 							sudo apt-get update
-							sudo apt upgrade
+							sudo apt -y upgrade
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -1981,6 +2802,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 				# GIMP - Linux
 				# ....
 					EchoInverted "  // Although not mandatory, Gimp is a usefull tool to display raster images. "
+					EchoInverted "  // Note that nomacs is a lighter alternatice to open .ras files. You can install it too hereafter "
+					
 					while true; do
 						read -p "Do you want to [c]heck, [i]nstall or [s]kip GIMP  ? [c/i/s] "  cis
 						case $cis in
@@ -2027,6 +2850,49 @@ if [ "${TYPERUN}" == "I" ] ; then
 					done							
 					echo ""			
 
+					while true; do
+						read -p "Do you want to [c]heck, [i]nstall or [s]kip nomacs  ? [c/i/s] "  cis
+						case $cis in
+						[Cc]* ) 				
+								echo "  // OK, let's check its version. "
+								NOMACSVER=$(apt show nomacs 2>/dev/null | grep '^Version:' | awk '{print $2}')
+								if [ "${NOMACSVER}" == "" ] 
+									then 
+										echo "nomacs seems not installed. "
+										while true ; do
+										read -p "Do you want to install it now [y]es or [n]o ? "  yn
+											case $yn in
+												[Yy]* ) 
+													echo "  // OK, I will try to install it."
+													AptInstall "nomacs"
+													break ;;
+												[Nn]*)
+													echo "  // OK, you know..." 
+													break ;;
+												* ) 
+													echo "Please answer [y]es or [n]o." ;;
+											esac
+										done
+									else 
+										echo "${NOMACSVER} is installed"
+										CheckLastAptVersion "nomacs"
+										echo "  // It is your responsability to compare your version with the last one available..."
+								fi
+								break ;;
+						[Ii]* ) 				
+								echo "  // OK, I will try to install it."
+								AptInstall "nomacs"
+								break ;;
+						[Ssn]* ) 
+								echo "  // OK, I skip it."
+								break ;;
+							* )  
+								echo "Please answer [c]heck, [i]nstall or [s]kip." ;;
+						esac
+					done							
+					echo ""			
+
+
 
 			
 			# 3) Some external components - Linux
@@ -2038,7 +2904,23 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to install/update GMT, GDAL... ? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							echo "  // OK, install GMT (last version ?) and GDAL..."
+							echo "  // OK, install GMT, GDAL (last version ?)" ####and GDAL...
+
+							read -p "Do you want to make a fresh cleaning of apt python to avoid gdal_array errors ? [y/n] "  yn
+								case $yn in
+								[Yy]* ) 				
+										sudo apt remove --purge libpython3.6* libpython3.7*
+										sudo apt remove --purge python3-gdal python3-numpy python3-scipy python3-pandas python3-matplotlib python3-rasterio
+										sudo apt autoremove --purge 
+										sudo apt clean
+									 ;;
+								[Nn]* ) 
+										echo "  // OK, I skip it."
+									 ;;
+								* )  
+									echo "Please answer [y]es or [n]o.";;
+								esac
+
 							sudo apt install -y \
    								gdal-bin libgdal-dev \
    								libhdf5-dev libnetcdf-dev libopenjp2-7-dev \
@@ -2046,23 +2928,12 @@ if [ "${TYPERUN}" == "I" ] ; then
    								libgeos-dev \
    								build-essential python3.12 python3.12-venv python3.12-dev 	# python3.10-venv and python3.10-dev are needed to create a venv and compile some Python packages.
 							
-							
-							##AptInstall "gdal-bin" 
-							##AptInstall "libgdal-dev"
-							#AptInstall "libgdal26" 
-							##AptInstall "libgdal30" 
-							##AptInstall "libhdf5-dev" 
-							##AptInstall "libopenjp2-7-dev"
-							##AptInstall "proj-bin"
-							##AptInstall "libproj-dev"
-							##AptInstall "libgeos-dev"
-							
 							AptInstall "gmt"
 							AptInstall "libmpich-dev"
 							AptInstall "libopenmpi-dev"
 							
 							#sudo apt install openjpeg  
-							AptInstall "graphicsmagick ffmpeg "	# No capital letters at graphicsmagick
+							sudo apt install -y graphicsmagick ffmpeg	# No capital letters at graphicsmagick; do not run with quotes around graphicsmagick ffmpeg
 							echo "  // Your GDAL version is:"
 							gdalinfo --version
 							break ;;
@@ -2075,24 +2946,24 @@ if [ "${TYPERUN}" == "I" ] ; then
 				done							
 				echo ""			
 
-				# gnu fortran - Linux
-				# ...........
-				EchoInverted "  // Maybe not mandatory but always good to have: gnu fortran.  "
-				while true; do
-					read -p "Do you want to install/update gnu fortran ? [y/n] "  yn
-					case $yn in
-					[Yy]* ) 				
-							echo "  // OK, install gnu fortran."
-							AptInstall "gfortran" 
-							break ;;
-					[Nn]* ) 
-							echo "  // OK, I skip it."
-							break ;;
-						* )  
-							echo "Please answer [y]es or [n]o.";;
-					esac
-				done							
-				echo ""			
+				## gnu fortran - Linux
+				## ...........
+				#EchoInverted "  // Maybe not mandatory but always good to have: gnu fortran.  "
+				#while true; do
+				#	read -p "Do you want to install/update gnu fortran ? [y/n] "  yn
+				#	case $yn in
+				#	[Yy]* ) 				
+				#			echo "  // OK, install gnu fortran."
+				#			AptInstall "gfortran" 
+				#			break ;;
+				#	[Nn]* ) 
+				#			echo "  // OK, I skip it."
+				#			break ;;
+				#		* )  
+				#			echo "Please answer [y]es or [n]o.";;
+				#	esac
+				#done							
+				#echo ""			
 
 				# gnu functions - Linux
 				# .............
@@ -2183,7 +3054,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 							AptInstall "liblapack-dev"
 							AptInstall "libomp-dev"
 							#AptInstall "libatlas-base-dev"
-							sudo apt install "g++"
+							sudo apt install -y g++
 							AptInstall "libopenblas-dev"
 
 							AptInstall "graphicsmagick-imagemagick-compat"	# add compatibility for usage in script. Needs graphicsmagick installed above
@@ -2287,7 +3158,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 													if [ "${SKIP}" == "No" ] ; then 
 														# just if there is a typo in the version, or name... hoping that at least the main name is OK					
 														if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
-															FILETOINSTALL=$(find "${HOMEDIR}"/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null)
+															#FILETOINSTALL=$(find "${HOMEDIR}"/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null)
+															FILETOINSTALL=$(find "${HOMEDIR}/SAR/EXEC/" -maxdepth 1 -type f  \( -iname "*imagej*" -o -iname "*fiji*" \) 2>/dev/null)
 															SearchForSimilar "${RAWFILE}" "${FILETOINSTALL}"
 														fi
 														
@@ -2295,10 +3167,10 @@ if [ "${TYPERUN}" == "I" ] ; then
  
 														if [ "${FILEXT}" == "zip" ] 
 															then 
-																unzip "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" 
+																unzip -o "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" -x "__MACOSX/*"
 																#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
 																mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-													 			mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+													 			mv -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
 																FIJIEXEC=$(find "${HOMEDIR}"/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*"  2>/dev/null)
 																if [ "${FIJIEXEC}" == "" ] ; then FIJIEXEC=$(find "${HOMEDIR}"/Fiji.app/ -type f -name "ImageJ-linux*") ; fi
@@ -2327,7 +3199,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 							if [ "${SKIP}" == "No" ] ; then 
 								# just if there is a typo in the version, or name... hoping that at least the main name is OK					
 								if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
-									FILETOINSTALL=$(find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null)
+									#FILETOINSTALL=$(find ${HOMEDIR}/SAR/EXEC/ -maxdepth 1 -type f -name "*ImageJ*" 2>/dev/null)
+									FILETOINSTALL=$(find "${HOMEDIR}/SAR/EXEC/" -maxdepth 1 -type f  \( -iname "*imagej*" -o -iname "*fiji*" \) 2>/dev/null)
 									SearchForSimilar "${RAWFILE}" "${FILETOINSTALL}"
 								fi
 								
@@ -2335,10 +3208,10 @@ if [ "${TYPERUN}" == "I" ] ; then
  
 								if [ "${FILEXT}" == "zip" ] 
 									then 
-										unzip "${HOMEDIR}"/SAR/EXEC/"${RAWFILE} "
+										unzip -o "${HOMEDIR}"/SAR/EXEC/"${RAWFILE} " -x "__MACOSX/*"
 										#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
 										mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-										mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+										mv -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 										FIJIEXEC=$(find "${HOMEDIR}"/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*" 2>/dev/null)
 										if [ "${FIJIEXEC}" == "" ] ; then FIJIEXEC=$(find "${HOMEDIR}"/Fiji.app/ -type f -name "ImageJ-linux*") ; fi
 
@@ -2399,24 +3272,54 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $yn in
 					[Yy]* ) 				
 							echo "  // OK, I do it."
+
+							# Some cleaning for fresh start 
+							rm -rf /opt/local/amster_python_env/
+
+							read -p "Do you want to make a fresh cleaning of pip caches to avoid gdal_array errors ? [y/n] "  yn
+								case $yn in
+								[Yy]* ) 				
+										rm -rf ~/.cache/pip
+									 ;;
+								[Nn]* ) 
+										echo "  // OK, I skip it."
+									 ;;
+								* )  
+									echo "Please answer [y]es or [n]o.";;
+								esac
+							
 							
 							# With venv
 								sudo mkdir -p /opt/local
-								sudo chown -R "$USER" /opt/local
-								python3.12 -m venv /opt/local/amster_python_env
-								sudo chown -R "$USER" /opt/local/amster_python_env
+								sudo chown -R $USER /opt/local
+								python3 -m venv /opt/local/amster_python_env
+								sudo chown -R $USER /opt/local/amster_python_env
 								source /opt/local/amster_python_env/bin/activate
 	
 							# Upgrade pip
-								/opt/local/amster_python_env/bin/pip install --upgrade pip setuptools wheel
+							#	/opt/local/amster_python_env/bin/pip install --upgrade pip setuptools wheel
+							/opt/local/amster_python_env/bin/pip install --upgrade pip 
+							
+							# ------------------------------
+							# Install numpy first (required before GDAL build)
+							# ------------------------------
+							#pip install numpy==1.26.4
+							pip install numpy>1.0.0 wheel setuptools>=67
+							#pip install --no-cache --force-reinstall gdal[numpy]=="$(gdal-config --version).*"
+							
+							#pip install numpy==1.26.4 wheel setuptools>=67
+							
+							#pip install gdal[numpy]=="$(gdal-config --version).*" --no-build-isolation
+							pip install gdal[numpy]=="$(gdal-config --version).*"
 							
 							# Install with requirments to get the versions:
-								echo "numpy==1.26.4" > /opt/local/requirements.txt
-								echo "scipy==1.11.4" >> /opt/local/requirements.txt
+								#echo "numpy==1.26.4" > /opt/local/requirements.txt
+								echo "scipy==1.11.4" > /opt/local/requirements.txt
 								echo "matplotlib==3.8.2" >> /opt/local/requirements.txt
-								echo "gdal==3.4.1" >> /opt/local/requirements.txt
+								#echo "gdal==3.4.1" >> /opt/local/requirements.txt
 								echo "shapely==2.0.2" >> /opt/local/requirements.txt
 								echo "utm==0.7.0" >> /opt/local/requirements.txt
+								echo "pyproj" >> /opt/local/requirements.txt
 								echo "PyQt6==6.7.1" >> /opt/local/requirements.txt
 								echo "networkx==3.2.1" >> /opt/local/requirements.txt
 								echo "geopandas==0.14.3" >> /opt/local/requirements.txt
@@ -2428,7 +3331,240 @@ if [ "${TYPERUN}" == "I" ] ; then
 								echo "opencv-contrib-python==4.8.1.78" >> /opt/local/requirements.txt
 						
 								/opt/local/amster_python_env/bin/pip install -r /opt/local/requirements.txt
-							
+
+#####
+#####							# ------------------------------
+#####							# Configuration
+#####							# ------------------------------
+#####							VENV_DIR=/opt/local/amster_python_env
+#####							REQ_FILE=/opt/local/requirements.txt
+#####							PYTHON_BIN=python3.10
+#####							
+#####							# ----------------------------------------------------------
+#####							#  Detecting Ubuntu version
+#####							# ----------------------------------------------------------
+#####							UBUNTU_VERSION=$(lsb_release -rs)
+#####							echo "Detected Ubuntu version: ${UBUNTU_VERSION}"
+#####							
+#####							# ----------------------------------------------------------
+#####							#  Ensure Python 3.10 is available
+#####							# ----------------------------------------------------------
+#####							
+#####							if ! command -v $PYTHON_BIN >/dev/null 2>&1; then
+#####							    echo "Installing Python 3.10..."
+#####							
+#####							    if [[ "${UBUNTU_VERSION}" == "24.04" ]]; then
+#####
+#####									EchoInverted "  // Beware: with Ubuntu 24.04, it must be python 3.10 insated of native 3.12 because needed gdal and osgeo is incompatible with 3.12 for now. "
+#####									EchoInverted "  // 		In case of installation problem, you may need to purge all your native installation of gdal first with something like:  "
+#####									EchoInverted "  // 			sudo apt remove --purge -y python3-gdal"
+#####									EchoInverted "  // 			rm -rf /opt/local/amster_python_env "
+#####			
+#####							        sudo apt install -y software-properties-common
+#####							        sudo add-apt-repository -y ppa:deadsnakes/ppa
+#####							        sudo apt update
+#####							    fi
+#####							
+#####							    sudo apt install -y \
+#####							        python3.10 \
+#####							        python3.10-venv \
+#####							        python3.10-dev
+#####							fi
+#####							
+#####							# ------------------------------
+#####							# Install system GDAL + dependencies
+#####							# ------------------------------
+#####							
+#####							echo "Installing GDAL system libraries..."
+#####							
+#####							sudo apt install -y \
+#####							    build-essential \
+#####							    gdal-bin \
+#####							    libgdal-dev \
+#####							    libproj-dev \
+#####							    proj-bin \
+#####							    libgeos-dev \
+#####							    libhdf5-dev \
+#####							    libnetcdf-dev \
+#####							    libopenjp2-7-dev \
+#####							    libtiff-dev \
+#####							    graphicsmagick \
+#####							    ffmpeg \
+#####							    gmt \
+#####							    libmpich-dev \
+#####							    libopenmpi-dev
+#####							
+#####							echo "System GDAL version:"
+#####							gdal-config --version
+#####							
+#####								
+#####							# ------------------------------
+#####							# Create clean virtual environment
+#####							# ------------------------------
+#####						
+#####							echo "Creating clean Python 3.10 venv..."
+#####							
+#####							sudo mkdir -p /opt/local
+#####							sudo chown -R $USER /opt/local
+#####
+#####							# Remove old venv if it exists
+#####							rm -rf "${VENV_DIR}"
+#####							
+#####							$PYTHON_BIN -m venv "${VENV_DIR}"
+#####							source "${VENV_DIR}/bin/activate"
+#####							
+#####							# Upgrade pip / setuptools / wheel
+#####							pip install --upgrade pip setuptools wheel
+#####							
+#####							# ------------------------------
+#####							# Install numpy first (required before GDAL build)
+#####							# ------------------------------
+#####							pip install numpy==1.26.4
+#####							
+#####							# ------------------------------
+#####							# Build Python GDAL against system GDAL
+#####							# ------------------------------
+#####							
+#####							# CRITICAL STEP — avoids _gdal_array error
+#####							echo "Building Python GDAL against system GDAL..."
+#####							
+#####							export CPLUS_INCLUDE_PATH=/usr/include/gdal
+#####							export C_INCLUDE_PATH=/usr/include/gdal
+#####							
+#####							GDAL_VER=$(gdal-config --version)
+#####							
+#####							# for extra safety
+#####							pip uninstall -y GDAL
+#####							rm -rf ~/.cache/pip
+#####							
+#####							export GDAL_CONFIG=$(which gdal-config)
+#####							pip install --no-binary=:all: --no-cache-dir "GDAL==${GDAL_VER}"
+#####							
+#####							# Verify immediately
+#####							python -c "from osgeo import gdal, gdal_array; print('Python GDAL version:', gdal.__version__)"
+#####
+#####							# ----------------------------------------------------------
+#####							# Prepare requirements file (no GDAL here)
+#####							# ----------------------------------------------------------
+#####							###### Core scientific
+#####							####echo "numpy==1.26.4" > "$REQ_FILE"
+#####							####echo "scipy==1.11.4" >> "$REQ_FILE"
+#####							####echo "matplotlib==3.8.2" >> "$REQ_FILE"
+#####							####echo "shapely==2.0.2" >> "$REQ_FILE"
+#####							####echo "utm==0.7.0" >> "$REQ_FILE"
+#####							####echo "networkx==3.2.1" >> "$REQ_FILE"
+#####							####echo "pandas==2.2.1" >> "$REQ_FILE"
+#####							####echo "scikit-gstat==1.0.18" >> "$REQ_FILE"
+#####							####echo "glob2==0.7" >> "$REQ_FILE"
+#####							
+#####							####### GIS / geospatial
+#####							#####echo "GDAL==3.7.2" >> "$REQ_FILE"
+#####							#####echo "pyproj==3.6.1" >> "$REQ_FILE"
+#####							#####echo "rasterio==1.3.9" >> "$REQ_FILE"
+#####							#####echo "geopandas==0.14.3" >> "$REQ_FILE"
+#####							
+#####							####### GUI / visualization
+#####							#####echo "PyQt6==6.7.1" >> "$REQ_FILE"
+#####							#####echo "opencv-python==4.8.1.78" >> "$REQ_FILE"
+#####							#####echo "opencv-contrib-python==4.8.1.78" >> "$REQ_FILE"
+#####						
+#####
+#####							{
+#####								echo "numpy==1.26.4"
+#####								echo "scipy==1.11.4"
+#####								echo "matplotlib==3.8.2"
+#####								echo "shapely==2.0.2"
+#####								echo "utm==0.7.0"
+#####								echo "networkx==3.2.1"
+#####								echo "pandas==2.2.1"
+#####								echo "scikit-gstat==1.0.18"
+#####								echo "glob2==0.7"
+#####								echo "pyproj==3.6.1"
+#####								echo "rasterio==1.3.9"
+#####								echo "geopandas==0.14.3"
+#####								echo "PyQt6==6.7.1"
+#####								echo "opencv-python==4.8.1.78"
+#####								echo "opencv-contrib-python==4.8.1.78"
+#####							} > "${REQ_FILE}"
+#####							
+#####							# ----------------------------------------------------------
+#####							# Install remaining packages
+#####							# ----------------------------------------------------------
+#####							
+#####							pip install --prefer-binary -r "${REQ_FILE}"
+#####							
+#####							
+#####							# ------------------------------
+#####							# Final verification (single-line python)
+#####							# ------------------------------
+#####							python -c "import sys, rasterio, geopandas, pyproj; from osgeo import gdal; print('Python:', sys.version.split()[0]); print('GDAL:', gdal.__version__); print('Rasterio:', rasterio.__version__); print('Geopandas:', geopandas.__version__)"
+#####							
+#####
+#							# Paths
+#							VENV_DIR=/opt/local/amster_python_env
+#							REQ_FILE=/opt/local/requirements.txt
+#							
+#							# Ensure /opt/local exists and is writable
+#							sudo mkdir -p /opt/local
+#							sudo chown -R "$USER" /opt/local
+#							
+#							# Ubuntu version
+#							UBUNTU_VERSION=$(lsb_release -rs)
+#							echo "Detected Ubuntu version: ${UBUNTU_VERSION}"
+#							
+#							# Add deadsnakes PPA only if Ubuntu 24.04 (Python 3.10 not in default repos)
+#							if [[ "${UBUNTU_VERSION}" == "24.04" ]]; then
+#							    echo "Adding deadsnakes PPA for Python 3.10..."
+#							    sudo apt install -y software-properties-common
+#							    sudo add-apt-repository -y ppa:deadsnakes/ppa
+#							    sudo apt update
+#							fi
+#							
+#							# Install Python 3.10 and dev packages
+#							echo "Installing Python 3.10 packages..."
+#							sudo apt install -y python3.10 python3.10-venv python3.10-dev gdal-bin libgdal-dev build-essential
+#							
+#							# Remove old venv if exists
+#							if [[ -d "${VENV_DIR}" ]]; then
+#							    echo "Removing existing venv at ${VENV_DIR}..."
+#							    rm -rf "${VENV_DIR}"
+#							fi
+#							
+#							# Create virtual environment
+#							echo "Creating Python 3.10 virtual environment..."
+#							python3.10 -m venv "${VENV_DIR}"
+#							sudo chown -R "$USER" "${VENV_DIR}"
+#							
+#							# Activate venv
+#							source "${VENV_DIR}/bin/activate"
+#							
+#							# Upgrade pip / setuptools / wheel
+#							"${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel
+#							
+#							# Install numpy first (required for GDAL)
+#							"${VENV_DIR}/bin/pip" install numpy==1.26.4
+#							
+#							# Prepare requirements file
+#							echo "scipy==1.11.4" > "$REQ_FILE"
+#							echo "matplotlib==3.8.2" >> "$REQ_FILE"
+#							echo "shapely==2.0.2" >> "$REQ_FILE"
+#							echo "utm==0.7.0" >> "$REQ_FILE"
+#							echo "PyQt6==6.7.1" >> "$REQ_FILE"
+#							echo "networkx==3.2.1" >> "$REQ_FILE"
+#							echo "geopandas==0.14.3" >> "$REQ_FILE"
+#							echo "scikit-gstat==1.0.18" >> "$REQ_FILE"
+#							echo "rasterio==1.3.9" >> "$REQ_FILE"
+#							echo "pandas==2.2.1" >> "$REQ_FILE"
+#							echo "glob2==0.7" >> "$REQ_FILE"
+#							echo "opencv-contrib-python==4.8.1.78" >> "$REQ_FILE"
+#							
+#							# Install all other requirements
+#							"${VENV_DIR}/bin/pip" install -r "$REQ_FILE"
+#							
+#							# Install GDAL matching system version
+#							GDAL_SYS_VER=$(gdal-config --version)
+#							echo "Installing Python GDAL matching system version: ${GDAL_SYS_VER}..."
+#							"${VENV_DIR}/bin/pip" install --no-binary gdal GDAL=="${GDAL_SYS_VER}"
 							
 							break ;;
 					[Nn]* ) 
@@ -2553,14 +3689,14 @@ if [ "${TYPERUN}" == "I" ] ; then
 
 				# x-terminal-emulator - Linux
 				# ...................
-				EchoInverted "  // A terminal emulator is required to open temrinal from command line (e.g. when splitting mass processing). "
+				EchoInverted "  // A terminal emulator is required to open terminal from command line (e.g. when splitting mass processing). "
 
 				eval MYDISPLAY="$(who -m | cut -d "(" -f 2  | cut -d ")" -f 1)"
 
 				if [ "$MYDISPLAY" == "" ]
 					then 
 						eval MYDISPLAY="$(who | cut -d "(" -f 2  | cut -d ")" -f 1)"
-						TSTNRDISPL=$(who | cut -d "(" -f 2  | cut -d ")" -f 1 | wc -l)
+						TSTNRDISPL=$(who | cut -d "(" -f 2 | cut -d ")" -f 1 | wc -l | xargs)
 				fi 
 				if [ "$MYDISPLAY" == "" ] || [ ${TSTNRDISPL} -gt 1 ]
 					then 
@@ -2658,60 +3794,120 @@ if [ "${TYPERUN}" == "I" ] ; then
 						echo
 				fi
 				
-				# Check mac ports - Mac OS X
-				if [ $(port version 2>/dev/null | wc -w) -eq 0 ] 
-					then 
-						echo "  // Mac ports is not installed. Let's try to install it now. "
-						echo "  // Visit https://guide.macports.org and download the MacPorts package consistent with your OS version,"
-						echo "     e.g. for OS 12 Monterey: MacPorts-2.7.2-12-Monterey.pkg "
-
-						AskExternalComponent "MacPorts-_YOUR_VERSION_NAME" "https://guide.macports.org "
-
-						if [ "${SKIP}" == "No" ] ; then 
-						FILEXT="${RAWFILE##*.}"
- 
-						if [ "${FILEXT}" == "pkg" ] 
-								then 
-									sudo installer -pkg "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" -target /
-									#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}
-									mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-									mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
-									echo "  // "
-									if command -v port &> /dev/null
-										then
-									    	echo "MacPorts sucessfully installed."
-										else
-									   	 	echo "MacPorts installation failed. Please install manually, then relaunch ${PRG} "
-									   	 	exit
-									fi
-									
-								else 
-									echo " Format not as expected (pkg). Please check or install manually"	
-									exit		
-							fi
+				# Check Mac package manager (MacPorts or Homebrew) - Mac OS X
+				if [ "${PKGMGR}" == "brew" ]
+					then
+						# ---- HOMEBREW ----
+						if [ $(brew --version 2>/dev/null | wc -w) -eq 0 ]
+							then
+								echo "  // Homebrew is not installed. Let's try to install it now (official installer), natively for ${MACARCH}. "
+								echo "  // Please enter your admin password now if prompted (needed before the non-interactive install can proceed) : "
+								sudo -v
+								NONINTERACTIVE=1 arch -"${MACARCH}" /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+								DetectBrewPrefix
+								if command -v brew &> /dev/null
+									then
+										echo "Homebrew sucessfully installed."
+									else
+										echo "Homebrew installation failed. Please install manually from https://brew.sh, then relaunch ${PRG} "
+										exit
+								fi
+							elif [ "${BREWNATIVE}" == "no" ]
+								then
+									EchoInverted "  // Homebrew is installed, but only the NON-native (Rosetta 2) version was found at ${BREWPREFIX}. "
+									echo "  // This works but is slower and can cause architecture mismatches when compiling AMSTerEngine/msbas on your ${MACARCH} Mac. "
+									while true; do
+										read -p "Do you want to install a native ${MACARCH} Homebrew as well (recommended) ? [y/n] "  yn
+										case $yn in
+										[Yy]* ) 
+												echo "  // OK, installing a native Homebrew for ${MACARCH}. "
+												echo "  // Please enter your admin password now if prompted (needed before the non-interactive install can proceed) : "
+												sudo -v
+												NONINTERACTIVE=1 arch -"${MACARCH}" /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+												DetectBrewPrefix
+												EchoInverted "  // Now using Homebrew at ${BREWPREFIX} (native: ${BREWNATIVE}). "
+												break ;;
+										[Nn]* ) 
+												echo "  // OK, keeping the non-native Homebrew at ${BREWPREFIX}. You know the risks... "
+												break ;;
+											* )  
+												echo "Please answer [y]es or [n]o." ;;
+										esac
+									done
+									echo
+								else
+									EchoInverted "  // Homebrew is installed (native: ${BREWNATIVE:-unknown}, prefix: ${BREWPREFIX}) and has the following version: "
+									brew --version
+									echo "  // It is your responsability to verify that it is the last one though... "
+									echo
 						fi
-					else 
-						EchoInverted "  // Mac ports is installed and has the following version: "
-						port version
-						echo "  // It is your responsability to verify that it is the last one though... "
-						echo
+					else
+						# ---- MACPORTS ----
+						if [ $(port version 2>/dev/null | wc -w) -eq 0 ] 
+							then 
+								echo "  // Mac ports is not installed. Let's try to install it now. "
+								echo "  // Visit https://guide.macports.org and download the MacPorts package consistent with your OS version,"
+								echo "     e.g. for OS 12 Monterey: MacPorts-2.7.2-12-Monterey.pkg "
+
+								AskExternalComponent "MacPorts-_YOUR_VERSION_NAME" "https://guide.macports.org "
+
+								if [ "${SKIP}" == "No" ] ; then 
+								FILEXT="${RAWFILE##*.}"
+	 
+								if [ "${FILEXT}" == "pkg" ] 
+										then 
+											sudo installer -pkg "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" -target /
+											#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}
+											mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+											mv -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+											echo "  // "
+											if command -v port &> /dev/null
+												then
+											    	echo "MacPorts sucessfully installed."
+												else
+											   	 	echo "MacPorts installation failed. Please install manually, then relaunch ${PRG} "
+											   	 	exit
+											fi
+											
+										else 
+											echo " Format not as expected (pkg). Please check or install manually"	
+											exit		
+									fi
+								fi
+							else 
+								EchoInverted "  // Mac ports is installed and has the following version: "
+								port version
+								echo "  // It is your responsability to verify that it is the last one though... "
+								echo
+						fi
 				fi
 
 			# 1) Update ports - Mac OS X
 			# ---------------				
-				EchoInverted "  // Although not mandatory, it might be advised to update the ports first. "
+				EchoInverted "  // Although not mandatory, it might be advised to update the packages first. "
 								
 				while true; do
-					read -p "Do you want to update the ports ? [y/n] "  yn
+					read -p "Do you want to update the packages ? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							echo "  // OK, it will request your admin pwd and may take time... "	
-							sudo port selfupdate
-							echo ""
-							echo "  // Upgrading outdated ports. May take time... "
-							sudo port upgrade outdated
-							echo "  // Reclaiming outdated ports... "
-							sudo port reclaim
+							if [ "${PKGMGR}" == "brew" ]
+								then
+									echo "  // OK, this may take time... "
+									brew update
+									echo ""
+									echo "  // Upgrading outdated Homebrew packages. May take time... "
+									brew upgrade
+									echo "  // Cleaning up old versions... "
+									brew cleanup
+								else
+									echo "  // OK, it will request your admin pwd and may take time... "	
+									sudo port selfupdate
+									echo ""
+									echo "  // Upgrading outdated ports. May take time... "
+									sudo port upgrade outdated
+									echo "  // Reclaiming outdated ports... "
+									sudo port reclaim
+							fi
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2722,121 +3918,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 				done							
 				echo ""			
 			
-			# 2) Some optional stuffs - Mac OS X
-			# -----------------------
-				# GITKRAKEN - Mac OS X
-				# .........
-					EchoInverted "  // Although not mandatory, Gitkraken is a usefull tool to sync with the last versions of AMSTerEngine."
-					echo "  // It requires creditentials to access AMSTer private repositories on Github (contact ndo@ecgs.lu)."
-					echo "  // GitKraken used to access private repositories requires a license though. "
-					while true; do
-						read -p "Do you want to [c]heck, [i]nstall or [s]kip GITKRAKEN  ? [c/i/s] "  cis
-						case $cis in
-						[Cc]* ) 				
-								echo "  // OK, let's check its version. "
-								GITVER=$(gitkraken --version 2>/dev/null)
-								GITVER2=$(/Applications/GitKraken.app/Contents/MacOS/GitKraken --version 2>/dev/null ) 
-								if [ "${GITVER}" == "" ] && [ "${GITVER2}" == "" ] 
-									then 
-										echo "Gitkraken seems not installed. "
-										while true ; do
-										read -p "Do you want to install it now [y]es or [n]o ? "  yn
-											case $yn in
-												[Yy]* ) 
-													echo "  // OK, Visit https://www.gitkraken.com/, download GitKraken Client and install it manually" 
-													#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
-													#brew install --cask gitkraken
-													break ;;
-												[Nn]*)
-													echo "  // OK, you know..." 
-													break ;;
-												* ) 
-													echo "Please answer [y]es or [n]o." ;;
-											esac
-										done
 
-									else 
-										if [ "${GITVER}" == "" ]
-											then 
-												echo "Gitkraken version ${GITVER2} is installed"
-											else 
-												echo "Gitkraken version ${GITVER} is installed"
-										fi
-										echo "  // It is your responsability to verify that it is the last one though..."
-								fi
-								break ;;
-						[Ii]* ) 				
-								echo "  // OK, Visit https://www.gitkraken.com/, download GitKraken Client and install it manually" 
-								#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
-								#brew install --cask gitkraken
-								break ;;
-						[Ssn]* ) 
-								echo "  // OK, I skip it."
-								break ;;
-							* )  
-								echo "Please answer [c]heck, [i]nstall or [s]kip." ;;
-						esac
-					done							
-					echo ""			
-			
-				# GIMP - Mac OS X
-				# ....
-					EchoInverted "  // Although not mandatory, Gimp is a usefull tool to display raster images. "
-					while true; do
-						read -p "Do you want to [c]heck, [i]nstall or [s]kip GIMP  ? [c/i/s] "  cis
-						case $cis in
-						[Cc]* ) 				
-								echo "  // OK, let's check its version. "
-								GIMPVER=$(gimp -version 2>/dev/null)
-								if [ "${GIMPVER}" == "" ] 
-									then 
-										if [ $(port list 2>/dev/null | ${PATHGNU}/grep gimp2 | wc -l) -gt 0 ] 
-											then 
-												GIMPVER=$(port info 'gimp2' 2>/dev/null | "${PATHGNU}"/grep " @" | "${PATHGNU}"/gawk '{ print $2 }' )
-												echo "GIMP version ${GIMPVER} is installed"
-												echo "  // It is your responsability to compare your version with the last one available..."
-												#printf "%-60s%-20s\n" "--> GIMP (gimp2):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
-											else
-												echo "Gimp seems not installed. "
-												while true ; do
-												read -p "Do you want to install it now [y]es or [n]o ? "  yn
-													case $yn in
-														[Yy]* ) 
-															echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
-															PortInstall "gimp2" 
-															#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
-															#brew install --cask gimp
-															break ;;
-														[Nn]*)
-															echo "  // OK, you know..." 
-															break ;;
-														* ) 
-															echo "Please answer [y]es or [n]o." ;;
-													esac
-												done
-										fi
-									else 
-										echo "${GIMPVER} is installed"
-										CheckLasPortVersion "gimp2" 
-										echo "  // It is your responsability to compare your version with the last one available..."
-								fi
-								break ;;
-						[Ii]* ) 				
-								echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
-								PortInstall "gimp2" 
-								#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
-								#brew install --cask gimp
-								break ;;
-						[Ssn]* ) 
-								echo "  // OK, I skip it."
-								break ;;
-							* )  
-								echo "Please answer [c]heck, [i]nstall or [s]kip." ;;
-						esac
-					done							
-					echo ""			
-
-			# 3) Some external components - Mac OS X
+			# 2) Some external components - Mac OS X
 			# ---------------------------
 				# gmt, GDAL - Mac OS X
 				# .........
@@ -2845,27 +3928,50 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to install/update GMT, GDAL... ? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							echo "  // OK, install GMT6 (change script if you want another version) and GDAL..."
-							#PortInstall "gdal +hdf5 +netcdf +openjpeg proj geos" 			# ok with python in venv
-							#PortInstall "gdal-hdf5"
-							#PortInstall "gdal gdal-hdf5 gdal-netcdf gdal-openjpeg proj geos"
-							#PortInstall "gdal gdal-hdf5 +netcdf +openjpeg +libkml +postgresql17"
-							sudo port clean gdal
-							PortInstall "openjpeg"
+							if [ "${PKGMGR}" == "brew" ]
+								then
+									echo "  // OK, install GMT and GDAL with Homebrew (already built with netcdf/hdf5/openjpeg/postgresql support by default)..."
+									PortInstall "openjpeg"
+									echo "  // Install gdal. " 
+									brew install gdal
+									#PortInstall "libkml"			# NOTE: check manually if this formula is unavailable/removed in Homebrew
+									PortInstall "postgresql17"
 
-							echo "  // Install port gdal +netcdf +libkml +postgresql17. " 
-							sudo port install gdal +netcdf +libkml +postgresql17 #configure.cflags-append="-I/opt/local/include/openjpeg-2.5" configure.ldflags-append="-L/opt/local/lib"
+									PortInstall "gmt6"
+									PortInstall "GraphicsMagick"
+									PortInstall "ffmpeg"
 
-							PortInstall "proj geos"
-							PortInstall "gmt6"
-							PortInstall "GraphicsMagick ffmpeg"
-							# make link for portability
-							GMTPATH=$(which gmt6)
-							mkdir -p /opt/local/bin
+									echo "  // Your GDAL version is:"
+									gdalinfo --version
+								else
+									echo "  // OK, install GMT6 (change script if you want another version) and GDAL..."
+									#PortInstall "gdal +hdf5 +netcdf +openjpeg proj geos" 			# ok with python in venv
+									#PortInstall "gdal-hdf5"
+									#PortInstall "gdal gdal-hdf5 gdal-netcdf gdal-openjpeg proj geos"
+									#PortInstall "gdal gdal-hdf5 +netcdf +openjpeg +libkml +postgresql17"
+									sudo port clean gdal
+									PortInstall "openjpeg"
+
+									echo "  // Install port gdal +netcdf +libkml +postgresql17. " 
+									#sudo port install gdal +netcdf +libkml +postgresql17 #configure.cflags-append="-I/opt/local/include/openjpeg-2.5" configure.ldflags-append="-L/opt/local/lib"
+									sudo port install gdal gdal-netcdf libkml postgresql17 
+
+									#PortInstall "proj geos"
+									PortInstall "gmt6"
+									PortInstall "GraphicsMagick"
+									PortInstall "ffmpeg"
+
+									echo "  // Your GDAL version is:"
+									gdalinfo --version
+							fi
+
+							# make link for portability - same /opt/local/bin/gmt path whether the real binary
+							# is named "gmt6" (MacPorts) or already "gmt" (Homebrew)
+							GMTPATH=$(which gmt 2>/dev/null)
+							if [ "${GMTPATH}" == "" ] ; then GMTPATH=$(which gmt6 2>/dev/null) ; fi
+							sudo mkdir -p /opt/local/bin
 							sudo ln -sf "${GMTPATH}" /opt/local/bin/gmt
-							
-							echo "  // Your GDAL version is:"
-							gdalinfo --version
+
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -2907,9 +4013,16 @@ if [ "${TYPERUN}" == "I" ] ; then
 									PortInstall "clang-21"
 								else
 								    echo "macOS $OSX_MAJOR.$OSX_MINOR (Ventura or newer) detected → using latest pyproj (>=3.7)"
-									PortInstall "clang-14"
-									PortInstall "clang-20"
-									PortInstall "clang-21"
+									if [ "${PKGMGR}" == "brew" ]
+										then
+											echo "  // Homebrew: installing the latest llvm/clang (Homebrew does not keep every past numbered clang release like MacPorts). This exceeds the 'at least v20' requirement."
+											PortInstall "llvm"
+											echo "  // If a Makefile expects a specific MacPorts-style clang binary name (e.g. clang-mp-XX), point it instead to $(brew --prefix llvm 2>/dev/null)/bin/clang"
+										else
+											PortInstall "clang-14"
+											PortInstall "clang-20"
+											PortInstall "clang-21"
+									fi
 								fi
 							break ;;
 					[Nn]* ) 
@@ -2922,42 +4035,42 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo ""
 
 
-				EchoInverted "  // Maybe not mandatory but always good to have: gnu fortran.  "
-				while true; do
-					read -p "Do you want to install/update gnu fortran ? [y/n] "  yn
-					case $yn in
-					[Yy]* ) 				
-							echo "  // Please visit https://github.com/fxcoudert/gfortran-for-macOS/releases to get the latest version for your OS, e.g. gfortran-Intel-12.1-Monterey.dmg."
-							AskExternalComponent "gfortran-YOUR_VERSION.dmg" "https://github.com/fxcoudert/gfortran-for-macOS/releases "
-							
-							FILEXT="${RAWFILE##*.}"
- 
-							if [ "${FILEXT}" == "dmg" ] 
-								then 
-									sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}"
-									
-									LISTING=$(sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" | grep Volumes) # exec and store output in variable 
-    								VOL=$(echo "$LISTING" | cut -f 3)		# take 3rd element 
-									
-									PCKG=$(find "${VOL}"/ -type f -name "*.pkg")
-									sudo installer -package "${PCKG}" -target /
-									sudo hdiutil detach "${VOL}"
-									#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}
-									mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-									mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
-									
-								else 
-									echo " Format not as expected (dmg). Please check or do manually"			
-							fi
-
-							break ;;
-					[Nn]* ) 
-							echo "  // OK, I skip it."
-							break ;;
-						* )  
-							echo "Please answer [y]es or [n]o.";;
-					esac
-				done							
+				#EchoInverted "  // Maybe not mandatory but always good to have: gnu fortran.  "
+				#while true; do
+				#	read -p "Do you want to install/update gnu fortran ? [y/n] "  yn
+				#	case $yn in
+				#	[Yy]* ) 				
+				#			echo "  // Please visit https://github.com/fxcoudert/gfortran-for-macOS/releases to get the latest version for your OS, e.g. gfortran-Intel-12.1-Monterey.dmg."
+				#			AskExternalComponent "gfortran-YOUR_VERSION.dmg" "https://github.com/fxcoudert/gfortran-for-macOS/releases "
+				#			
+				#			FILEXT="${RAWFILE##*.}"
+ #
+				#			if [ "${FILEXT}" == "dmg" ] 
+				#				then 
+				#					sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}"
+				#					
+				#					LISTING=$(sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" | grep Volumes) # exec and store output in variable 
+    			#					VOL=$(echo "$LISTING" | cut -f 3)		# take 3rd element 
+				#					
+				#					PCKG=$(find "${VOL}"/ -type f -name "*.pkg")
+				#					sudo installer -package "${PCKG}" -target /
+				#					sudo hdiutil detach "${VOL}"
+				#					#rm -f ${HOMEDIR}/SAR/EXEC/${RAWFILE}
+				#					mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+				#					mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+				#					
+				#				else 
+				#					echo " Format not as expected (dmg). Please check or do manually"			
+				#			fi
+#
+				#			break ;;
+				#	[Nn]* ) 
+				#			echo "  // OK, I skip it."
+				#			break ;;
+				#		* )  
+				#			echo "Please answer [y]es or [n]o.";;
+				#	esac
+				#done							
 				echo ""			
 
 
@@ -2982,7 +4095,12 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PATHCURL=$(dirname "${WHEREISCURL}")						
 							
 							# To be sure, make all gnu fct and their g-named version in PATHGNU 
+							# NOTE: kept as /opt/local/bin on purpose, even with Homebrew (whose g-tools actually
+							# live in ${BREWPREFIX}/bin), so PATHGNU stays identical across Mac (MacPorts or
+							# Homebrew) and Linux installs. TstPathGnuFctMac below symlinks the real Homebrew
+							# binaries into /opt/local/bin so every script that hardcodes "${PATHGNU}/gsed" etc. keeps working.
 							PATHGNU="/opt/local/bin"
+							sudo mkdir -p "${PATHGNU}"
 							
 							TstPathGnuFctMac "gawk" # (beware if awk already exist and would be a link pointing toward another version of awk. Replace it with our gawk)
 							TstPathGnuFctMac "gsed"
@@ -3034,12 +4152,13 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PortInstall "ImageMagick"
 							PortInstall "parallel"
 							
+							PortInstall	"ghostscript"
+							
 							PortInstall "mpich"
 							
 							PortInstall "gsl"
 							
-							WHEREISCONV=$(which convert)					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
-							PATHCONV=$(dirname "${WHEREISCONV}")
+							SetPATHCONV		# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
 
 							break ;;
 					[Nn]* ) 
@@ -3059,24 +4178,29 @@ if [ "${TYPERUN}" == "I" ] ; then
 					read -p "Do you want to install/update Java? [y/n] "  yn
 					case $yn in
 					[Yy]* ) 				
-							#PortInstall jdk20
-							# Find the latest available JDK in MacPorts
-							#LATEST_JDK=$(port search openjdk | awk '/^openjdk[0-9]+ / {print $1}' | sort -V | tail -n 1)
-							echo "Installing latest JDK available: ${LATEST_JDK}"
+							if [ "${PKGMGR}" == "brew" ]
+								then
+									echo "  // Installing latest JDK available with Homebrew (openjdk)."
+									PortInstall "openjdk"
+								else
+									#PortInstall jdk20
+									# Find the latest available JDK in MacPorts
+									#LATEST_JDK=$(port search openjdk | awk '/^openjdk[0-9]+ / {print $1}' | sort -V | tail -n 1)
+									echo "Installing latest JDK available: ${LATEST_JDK}"
 
-							for ver in $(port search openjdk | awk '/^openjdk[0-9]+ / {print $1}' | sort -Vr); do
-							    echo "Checking jdk $ver..."
-							    if sudo port -n install $ver 2>&1 | grep -q 'full Xcode installation'; then
-							        echo "$ver requires full Xcode → skip"
-							    else
-							        echo "$ver is installable!"
-							        LATEST_JDK=$ver
-							        break
-							    fi
-							done
-							
-							PortInstall "${LATEST_JDK}"
-							
+									for ver in $(port search openjdk | awk '/^openjdk[0-9]+ / {print $1}' | sort -Vr); do
+									    echo "Checking jdk $ver..."
+									    if sudo port -n install $ver 2>&1 | grep -q 'full Xcode installation'; then
+									        echo "$ver requires full Xcode → skip"
+									    else
+									        echo "$ver is installable!"
+									        LATEST_JDK=$ver
+									        break
+									    fi
+									done
+									
+									PortInstall "${LATEST_JDK}"
+							fi
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -3085,6 +4209,27 @@ if [ "${TYPERUN}" == "I" ] ; then
 							echo "Please answer [y]es or [n]o.";;
 					esac
 				done							
+				
+				# Register/refresh the Homebrew JDK every run (not only when just (re)installed above),
+				# since Homebrew's openjdk is keg-only and never puts itself on PATH by itself.
+				if [ "${PKGMGR}" == "brew" ]
+					then
+						JDKKEGPATH=$(brew --prefix openjdk 2>/dev/null)
+						if [ -x "${JDKKEGPATH}/bin/java" ]
+							then
+								# Register with the system's java_home mechanism
+								JDKLINKNAME=$(basename "$(readlink -f "${JDKKEGPATH}" 2>/dev/null)" 2>/dev/null)
+								if [ "${JDKLINKNAME}" == "" ] ; then JDKLINKNAME="openjdk"; fi
+								sudo mkdir -p /Library/Java/JavaVirtualMachines/
+								sudo ln -sfn "${JDKKEGPATH}"/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/"${JDKLINKNAME}".jdk 2>/dev/null
+
+								# A leftover /opt/local/bin/java from an old MacPorts JDK would otherwise keep
+								# shadowing it, since PATHGNU=/opt/local/bin is placed early in PATH on purpose.
+								sudo mkdir -p /opt/local/bin
+								sudo ln -sf "${JDKKEGPATH}/bin/java" /opt/local/bin/java
+								sudo ln -sf "${JDKKEGPATH}/bin/javac" /opt/local/bin/javac
+						fi
+				fi
 				
 				echo "  // In case of instalation problem, you can also try manual install from http://www.java.com (e.g. jre-8u341-macosx-x64.dmg) following the instructions"
 				echo "  //"
@@ -3099,7 +4244,14 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo "        << The operation couldn't be completed. Unable to locate a Java Runtime that supports (null). >>"
 				echo 
 
-				JAVAHOMEPATH=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | cut -d = -f2- | cut -d " " -f2-) 
+				if [ "${PKGMGR}" == "brew" ] && [ -d "${JDKKEGPATH}/libexec/openjdk.jdk/Contents/Home" ]
+					then
+						# Don't rely on bare "java" here: Homebrew's openjdk is keg-only and a leftover
+						# MacPorts/Oracle "java" earlier in PATH would otherwise get picked up instead.
+						JAVAHOMEPATH="${JDKKEGPATH}/libexec/openjdk.jdk/Contents/Home"
+					else
+						JAVAHOMEPATH=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | cut -d = -f2- | cut -d " " -f2-) 
+				fi
 				JVHP="\"${JAVAHOMEPATH}\""
 				UpdateVARIABLESBashrc "JAVA_HOME" "export JAVA_HOME=${JVHP}"
 
@@ -3113,37 +4265,53 @@ if [ "${TYPERUN}" == "I" ] ; then
 					case $cis in
 						[Cc]* ) 
 							echo "  // OK, let's check its version. "
+							# For Fiji before usage with Jaunch, i.e. before February 2025
 							FIJIEXEC=$(find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*" 2>/dev/null)
+							# For Fiji with Jaunch, i.e. from February 2025
+							FIJIEXEC2=$(find /Applications/Fiji  -type f -name "fiji" 2>/dev/null)
+							
 							if [ "${FIJIEXEC}" == "" ] 
 								then
-									echo "Fiji/ImageJ seems not installed. "
-									while true ; do
-										read -p "Do you want to install it now [y]es or [n]o ? "  yn
-											case $yn in
-												[Yy]* ) 
-													echo "  // OK, let's try to install it."
-													echo "  // Visit https://imagej.net/software/fiji/downloads"
-													echo "  // and click on macOSX download icon (with Java). It should install by itself in /Applications."
-
-													break ;;
-												[Nn]*)
-													echo "  // OK, you know..." 
-													break ;;
-												* ) 
-													echo "Please answer [y]es or [n]o." ;;
-											esac
-										done
-									else 
+									if [ "${FIJIEXEC2}" == "" ] 
+										then
+											echo "Fiji/ImageJ seems not installed. "
+											while true ; do
+												read -p "Do you want to install it now [y]es or [n]o ? "  yn
+													case $yn in
+														[Yy]* ) 
+															echo "  // OK, let's try to install it."
+															echo "  // Visit https://imagej.net/software/fiji/downloads"
+															echo "  // and click on macOSX download icon (with Java). It should install by itself in /Applications."
+															echo "  // If not, move it to Applications !!"			
+															
+															break ;;
+														[Nn]*)
+															echo "  // OK, you know..." 
+															break ;;
+														* ) 
+															echo "Please answer [y]es or [n]o." ;;
+													esac
+												done
+										else 
+											# Fiji with Jaunch, i.e. from February 2025
+											FIJIVERMAC=$("${PATHFIJI}/fiji" --headless -- -eval 'print("IJVERSION=" + IJ.getFullVersion());' 2>/dev/null | sed -n 's/^IJVERSION=//p')
+											echo "Fiji/ImageJ seems installed and is version ${FIJIVERMAC} with Jaunch (from Feb 2025)"
+											echo  "  // It is your responsability to verify that it is the last one though..."
+									fi
+									
+								else 
+										# Fiji before usage with Jaunch, i.e. before February 2025
 										FIJIVERMAC=$("${PATHFIJI}"/ImageJ-macosx --headless -h 2>&1 > /dev/null | grep launcher)
-										echo "Fiji/ImageJ seems installed and is version ${FIJIVERMAC}"
+										echo "Fiji/ImageJ seems installed and is version ${FIJIVERMAC} with ImageJ Launcher (before Feb 2025)"
 										echo  "  // It is your responsability to verify that it is the last one though..."
 										
-								fi
-								break ;;
+							fi
+							break ;;
 						[Ii]* ) 				
 							echo "  // OK, let's try to install it."
 							echo "  // Visit https://imagej.net/software/fiji/downloads"
 							echo "  // and click on macOSX download icon (with Java). It should install by itself in /Applications."
+							echo "  // If not, move it to Applications !!"
 							
 							break ;;
 					[Ssn]* ) 
@@ -3207,22 +4375,40 @@ if [ "${TYPERUN}" == "I" ] ; then
 								fi
 								
 								if [[ $USE_PY310 -eq 1 ]]; then
-									    echo "Installing Python 3.10 via MacPorts"
-    									sudo port -f install python310 py310-pip
-    									sudo port select --set python3 python310
-    									sudo port select --set pip pip310
-    									PYBIN=/opt/local/bin/python3.10
+									    if [ "${PKGMGR}" == "brew" ]
+											then
+												echo "Installing Python 3.10 via Homebrew"
+												PortInstall "python@3.10"
+												PYBIN="$(brew --prefix python@3.10)/bin/python3.10"
+											else
+												echo "Installing Python 3.10 via MacPorts"
+	    									sudo port -f install python310 py310-pip
+	    									sudo port select --set python3 python310
+	    									sudo port select --set pip pip310
+	    									PYBIN=/opt/local/bin/python3.10
+									fi
 									else
-									    echo "Installing Python 3.11 via MacPorts"
-										sudo port -f install python311 py311-pip
-    									sudo port select --set python3 python311
-    									sudo port select --set pip pip311
-    									PYBIN=/opt/local/bin/python3.11								
+									    if [ "${PKGMGR}" == "brew" ]
+											then
+												echo "Installing Python 3.11 via Homebrew"
+												PortInstall "python@3.11"
+												PYBIN="$(brew --prefix python@3.11)/bin/python3.11"
+											else
+												echo "Installing Python 3.11 via MacPorts"
+											sudo port -f install python311 py311-pip
+	    									sudo port select --set python3 python311
+	    									sudo port select --set pip pip311
+	    									PYBIN=/opt/local/bin/python3.11								
+									fi
     							fi
 
 								VENV=/opt/local/amster_python_env
 								rm -rf $VENV
-								$PYBIN -m venv ${VENV} --upgrade-deps 
+								#$PYBIN -m venv ${VENV} --upgrade-deps 
+								# following should allow venv to see site-packages
+								$PYBIN -m venv ${VENV} --system-site-packages --upgrade-deps
+
+								
 								sudo chown -R "${USER}":staff ${VENV}
 								source "${VENV}"/bin/activate
 								
@@ -3241,10 +4427,19 @@ if [ "${TYPERUN}" == "I" ] ; then
 								echo "networkx==3.2.1"      >> $REQ
 								
 							# Handle pyproj + PyQt6 depending on macOS version
+								unset NEEDPYGDAL
 								if [[ "$OSX_MAJOR" -eq 10 && "$OSX_MINOR" -lt 15 ]]; then
 								    echo "⚠️ macOS $OSX_MAJOR.$OSX_MINOR detected (< Catalina)."
 								    echo "Installing proj + gdal via MacPorts..."
-								    sudo port install proj gdal
+								    #sudo port install proj gdal
+								    # following is supposed to solve prblm with gdal and osgeo
+								    if [[ $USE_PY310 -eq 1 ]]; then
+									    sudo port install proj gdal py310-gdal
+									else
+									    sudo port install proj gdal py311-gdal
+									fi
+
+								    
 								    export PROJ_DIR=/opt/local
 								    echo "pyproj==3.4.1" >> $REQ
 								    echo "PyQt6==6.5.3"  >> $REQ
@@ -3261,11 +4456,26 @@ if [ "${TYPERUN}" == "I" ] ; then
 								    echo "macOS $OSX_VER (Big Sur / Monterey) → using pyproj 3.6.1 + PyQt6 6.7.1"
 								    echo "pyproj==3.6.1" >> $REQ
 								    echo "PyQt6==6.7.1"  >> $REQ
-								
+									# needed to fix problem with llvmlite while installing python
+									echo "numba<=0.62.1"     	>> $REQ
+									echo "llvmlite<=0.45.1"     >> $REQ
+									NEEDPYGDAL="YES"
+							
 								else
 								    echo "macOS $OSX_VER (Ventura or newer) → using latest pyproj + PyQt6 6.7.1"
 								    echo "pyproj"        >> $REQ
 								    echo "PyQt6==6.7.1"  >> $REQ
+									NEEDPYGDAL="YES"
+								fi
+								
+							# macOS 11+ (Big Sur through Tahoe/Homebrew) has no dedicated MacPorts/Homebrew
+							# port or formula for Python GDAL bindings (unlike py310-gdal/py311-gdal used for
+							# older macOS above) - build them with pip instead, matched to whichever GDAL
+							# (MacPorts or Homebrew) is on PATH. Same pattern already used and working on Linux.
+								if [ "${NEEDPYGDAL}" == "YES" ] ; then
+									echo "  // Installing Python GDAL bindings (osgeo) matching your system's GDAL ($(gdal-config --version 2>/dev/null))... "
+									"${VENV}"/bin/pip install numpy wheel setuptools
+									"${VENV}"/bin/pip install "gdal[numpy]==$(gdal-config --version).*"
 								fi
 								
 							# Handle OpenCV for all macOS versions
@@ -3346,7 +4556,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 														sudo hdiutil detach "${VOL}"
 														sudo rm -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr # ${HOMEDIR}/SAR/EXEC/${RAWFILE}
 														mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-													 	mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+													 	mv -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
 														echo "  // "
 													else 
@@ -3408,7 +4618,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 									sudo hdiutil detach "${VOL}"
 									sudo rm -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}".cdr # ${HOMEDIR}/SAR/EXEC/${RAWFILE} 
 									mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-									mv "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+									mv -f "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
 
 									echo "  // "
 								else 
@@ -3435,7 +4645,151 @@ if [ "${TYPERUN}" == "I" ] ; then
 							echo "Please answer [c]heck, [i]nstall or [s]kip." ;;
 					esac
 				done							
-				echo ""		
+				echo ""	
+				
+			# 3) Some optional stuffs - Mac OS X
+			# -----------------------
+				# GITKRAKEN - Mac OS X
+				# .........
+					EchoInverted "  // Although not mandatory, Gitkraken is a usefull tool to sync with the last versions of AMSTerEngine."
+					echo "  // It requires creditentials to access AMSTer private repositories on Github (contact ndo@ecgs.lu)."
+					echo "  // GitKraken used to access private repositories requires a license though. "
+					while true; do
+						read -p "Do you want to [c]heck, [i]nstall or [s]kip GITKRAKEN  ? [c/i/s] "  cis
+						case $cis in
+						[Cc]* ) 				
+								echo "  // OK, let's check its version. "
+								GITVER=$(gitkraken --version 2>/dev/null)
+								GITVER2=$(/Applications/GitKraken.app/Contents/MacOS/GitKraken --version 2>/dev/null ) 
+								if [ "${GITVER}" == "" ] && [ "${GITVER2}" == "" ] 
+									then 
+										echo "Gitkraken seems not installed. "
+										while true ; do
+										read -p "Do you want to install it now [y]es or [n]o ? "  yn
+											case $yn in
+												[Yy]* ) 
+													echo "  // OK, Visit https://www.gitkraken.com/, download GitKraken Client and install it manually" 
+													#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
+													#brew install --cask gitkraken
+													break ;;
+												[Nn]*)
+													echo "  // OK, you know..." 
+													break ;;
+												* ) 
+													echo "Please answer [y]es or [n]o." ;;
+											esac
+										done
+
+									else 
+										if [ "${GITVER}" == "" ]
+											then 
+												echo "Gitkraken version ${GITVER2} is installed"
+											else 
+												echo "Gitkraken version ${GITVER} is installed"
+										fi
+										echo "  // It is your responsability to verify that it is the last one though..."
+								fi
+								break ;;
+						[Ii]* ) 				
+								echo "  // OK, Visit https://www.gitkraken.com/, download GitKraken Client and install it manually" 
+								#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
+								#brew install --cask gitkraken
+								break ;;
+						[Ssn]* ) 
+								echo "  // OK, I skip it."
+								break ;;
+							* )  
+								echo "Please answer [c]heck, [i]nstall or [s]kip." ;;
+						esac
+					done							
+					echo ""			
+			
+				# GIMP - Mac OS X
+				# ....
+					EchoInverted "  // Although not mandatory, Gimp is a usefull tool to display raster images. "
+					while true; do
+						read -p "Do you want to [c]heck, [i]nstall or [s]kip GIMP  ? [c/i/s] "  cis
+						case $cis in
+						[Cc]* ) 				
+								echo "  // OK, let's check its version. "
+								GIMPVER=$(gimp -version 2>/dev/null)
+								if [ "${GIMPVER}" == "" ] 
+									then 
+										if [ "${PKGMGR}" == "brew" ] && [ $(brew list --cask gimp 2>/dev/null | wc -l) -gt 0 ] 
+											then 
+												GIMPVER=$(brew info --cask gimp 2>/dev/null | "${PATHGNU}"/grep -m1 "gimp:" | "${PATHGNU}"/gawk '{ print $3 }' )
+												echo "GIMP version ${GIMPVER} is installed"
+												echo "  // It is your responsability to compare your version with the last one available..."
+											elif [ "${PKGMGR}" == "port" ] && [ $(port list 2>/dev/null | ${PATHGNU}/grep gimp2 | wc -l) -gt 0 ] 
+												then 
+													GIMPVER=$(port info 'gimp2' 2>/dev/null | "${PATHGNU}"/grep " @" | "${PATHGNU}"/gawk '{ print $2 }' )
+													echo "GIMP version ${GIMPVER} is installed"
+													echo "  // It is your responsability to compare your version with the last one available..."
+													#printf "%-60s%-20s\n" "--> GIMP (gimp2):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${GIMPVER}$(tput sgr 0)"
+												else
+													echo "Gimp seems not installed. "
+													while true ; do
+													read -p "Do you want to install it now [y]es or [n]o ? "  yn
+														case $yn in
+															[Yy]* ) 
+																echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
+																PortInstall "gimp2" 
+																break ;;
+															[Nn]*)
+																echo "  // OK, you know..." 
+																break ;;
+															* ) 
+																echo "Please answer [y]es or [n]o." ;;
+														esac
+													done
+											fi
+									else 
+										echo "${GIMPVER} is installed"
+										CheckLasPortVersion "gimp2" 
+										echo "  // It is your responsability to compare your version with the last one available..."
+								fi
+								break ;;
+						[Ii]* ) 				
+								echo "  // OK, I will try to install it. Please wait; download can take a few minutes"
+								PortInstall "gimp2" 
+								#ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" < /dev/null 2> /dev/null ; brew install caskroom/cask/brew-cask 2> /dev/null
+								#brew install --cask gimp
+								break ;;
+						[Ssn]* ) 
+								echo "  // OK, I skip it."
+								break ;;
+							* )  
+								echo "Please answer [c]heck, [i]nstall or [s]kip." ;;
+						esac
+					done							
+					echo ""			
+
+					EchoInverted "  // Another (lighter) option to display raster images is using nomacs (only available from recent OSX ?). "
+					while true; do
+						read -p "Do you want to [c]heck, [i]nstall or [s]kip nomacs  ? [c/i/s] "  cis
+						case $cis in
+						[Cc]* ) 				
+								echo "  // OK, let's check it. "
+								if [ -d "/Applications/nomacs.app" ]
+									then
+								    	echo "nomacs app exists"
+									else
+								   	 	echo "nomacs seems not installed. "
+								    	echo "  --> visit the web site (https://nomacs.org/docs/getting-started/installation/) and install manualy for your hardware. " 
+								fi
+								break ;;
+						[Ii]* ) 				
+								echo "  --> visit the web site (https://nomacs.org/docs/getting-started/installation/) and install manualy for your hardware. " 
+								break ;;
+						[Ssn]* ) 
+								echo "  // OK, I skip it."
+								break ;;
+							* )  
+								echo "Please answer [c]heck, [i]nstall or [s]kip." ;;
+						esac
+					done							
+					echo ""			
+
 				
 				
 						
@@ -3451,64 +4805,46 @@ fi
 EchoInverted "  // AMSTer Software main components:"
 echo 
 echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
-echo "  // AMSTer Software is freely available (under GPL licence) from https://github.com/ndoreye/AMSTer_Distribution."
+echo "  // AMSTer Software is freely available (under AGPL licence) from https://github.com/AMSTerUsers/AMSTer_Distribution."
 
 	cd
+	PATHDISTRO=""
+	echo "  // I can download it for you in ${HOMEDIR}/SAR/EXEC/AMSTer_Distribution, that is where the installer keeps all the sources it installs from."
+	echo "  //    [d] : yes, download (or update) AMSTer_Distribution from GitHub now "
+	echo "  //    [p] : no, I already have AMSTer_Distribution on this computer and I will provide you with its path "
+	echo "  //    [n] : none of these; I will provide you later with the path of each component (AMSTer Engine, MSBAS and SCRIPTS_MT) "
 	while true ; do
-   		read -p "Have you downloaded the AMSTer_Distribution components from Github ? [y/n]: " yn
-		case $yn in
-			[Yy]* ) 
+   		read -p "Do you want me to download AMSTer_Distribution from GitHub ? [d/p/n]: " dpn
+		case ${dpn} in
+			[Dd]* ) 
+				if GetAMSTerDistroFromGitHub 
+					then 
+						echo "  // OK, I will install AMSTer components from ${PATHDISTRO} (AMSTer Engine, MSBAS and SCRIPTS_MT)."
+					else 
+						echo "  // I could not get AMSTer_Distribution from GitHub."
+						AskConfirmLoop "Do you want to provide me with the path to an AMSTer_Distribution that you would already have [y/n]? " "OK, then you can provide me later with the path where you have the sources of each components"
+						if [ "${EXITLOOP}" == "NO" ] ; then AskPathDistro ; fi
+				fi
+				break ;;
+			[Pp]* ) 
 				echo "  // OK, I will try to install AMSTer components from there (AMSTer Engine, MSBAS and SCRIPTS_MT)."
-				while true; do
-			   		echo "Enter the path to the AMSTer_Distribution directory (e.g. ...YourPath/SAR/AMSTer_Distribution); "
-			   		read -e -p "   You can use Tab for autocompletion or drag/drop the full path : " PATHDISTRO	# expet something like ...YourPath/SAR/ where it will find AMSTer_Distribution
-					PATHDISTRO=$(echo "${PATHDISTRO}" | "${PATHGNU}"/gsed -e "s/'//g" -e 's/"//g' -e 's/"//g')
-					PATHDISTRO="/${PATHDISTRO}" # Just in case... 
-
-					# if AMSTer_Distribution is downloaded from GitHub, it might be zipped 
-					if [[ "${PATHDISTRO}" == *".zip" ]]; then
-						echo "The path to your AMSTer_Distribution ends with .zip and hence must be decompressed. "
-						WHERETOUNZIP=$(dirname "${PATHDISTRO}")
-						unzip -d "${WHERETOUNZIP}" "${PATHDISTRO}" # unzip in pwd
-						rm -f "${PATHDISTRO}"
-						PATHDISTRO="${PATHDISTRO%.zip}"
-					fi
-					# if AMSTer_Distribution is downloaded from GitHub, it may be named AMSTer_Distribution-main
-					if [[ "${PATHDISTRO}" == *"-main" ]]; then
-						echo "The path to your AMSTer_Distribution ends with -main (probably downloaded as a package from GitHub). "
-						echo "Rename it without that string..."
-						PATHDISTRONOMAIN="${PATHDISTRO%-main}"
-						mv -f "${PATHDISTRO}" "${PATHDISTRONOMAIN}" 
-						PATHDISTRO="${PATHDISTRONOMAIN}"
-					fi
-
-				    if [ -d "${PATHDISTRO}" ] && [ "$(ls -A "${PATHDISTRO}")" ] 
-				    	then # [[ -d ${PATHDISTRO} ]] only test if exist
-				        	echo "Directory ${PATHDISTRO} exists and is not empty : Let's take the source in there...'"
-				       		break
-				   		else
-				       		echo "Directory ${PATHDISTRO} does not exist or is empty. "
-							AskConfirmLoop "Do you want to enter a new path [y/n]? "  "OK, then you can provide me later with the path where you have the sources of each components."
-							if [ "${EXITLOOP}" == "YES" ] ; then break ; fi
-# 							read -p "Do you want to enter a new path [y/n]? " choice
-# 							if [ "$choice" == "n" ] || [ "$choice" == "N" ] 
-# 								then
-# 							    	echo "OK, then you can provide me later with the path where you have the sources of each components."
-# 							    	break
-# 							fi
-				    fi
-				done
+				AskPathDistro
 				break ;;
 			[Nn]* ) 
 				echo "  // OK, I will ask you to provide me later with the path where you have the sources of each components (AMSTer Engine, MASBAS and SCRIPTS_MT)."
 				break ;;
 			* ) 
-				echo "  // Please answer y or n"
+				echo "  // Please answer [d]ownload, [p]ath or [n]one."
 				;;
 		esac
 	done
 echo
-echo "  // OK, I will try to install/update AMSTer Software from ${PATHDISTRO}."
+if [ "${PATHDISTRO}" == "" ] 
+	then 
+		echo "  // No AMSTer_Distribution provided: I will ask you the path of each AMSTer Software component to install/update."
+	else 
+		echo "  // OK, I will try to install/update AMSTer Software from ${PATHDISTRO}."
+fi
 echo "  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
 
 	# AMSTer Engine 
@@ -3706,6 +5042,15 @@ if [ "${TYPERUN}" == "I" ] ; then
 		#   Note that PATH to PATHGNU and /opt/local/bin MUST be before other default bin dir
 		#   to prevent the computer to use default commands that may differ from the installed ones. 
 		# Note that PATHGNU must be ok to use sed -i in fct UpdatePATHBashrcBEFORE
+
+		# Homebrew's own bin dir (Mac + Homebrew only) - needed for every Homebrew-installed tool
+		# that isn't explicitly mirrored into PATHGNU/opt/local/bin (gdal, ffmpeg, ImageMagick,
+		# mpich, llvm/clang, python, gsl...). Added BEFORE the PATHGNU call below on purpose, so
+		# PATHGNU/opt/local/bin (with its intentional symlinks) keeps top priority in the final PATH.
+		if [ "${OS}" == "Darwin" ] && [ "${PKGMGR}" == "brew" ] && [ "${BREWPREFIX}" != "" ] ; then
+				echo "  // Also make sure Homebrew's own bin dir (${BREWPREFIX}/bin) is on PATH, for every Homebrew tool not mirrored into PATHGNU: "
+				UpdatePATHBashrcBEFORE "${BREWPREFIX}/bin"
+		fi
 				
 		echo "  // One of the most important is the ${smso}path to gnu functions (PATHGNU)${rmso}: "	
 		if [ "${PATHGNU}" != "" ] ; then 
@@ -3784,7 +5129,14 @@ if [ "${TYPERUN}" == "I" ] ; then
 					then 													
 						FIJIEXEC=$(find "${HOMEDIR}"/SAR/EXEC/Fiji.app/ -type f -name "ImageJ-linux*")
 					else 
-						FIJIEXEC=$(find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*")
+						#FIJIEXEC=$(find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*")
+						# For Fiji before usage with Jaunch, i.e. before February 2025
+						FIJIEXEC=$(find /Applications/Fiji*/Contents/MacOS/  -type f -name "ImageJ-macosx*" 2>/dev/null)
+						if [ "${FIJIEXEC}" == "" ] 
+								then
+								# For Fiji with Jaunch, i.e. from February 2025
+								FIJIEXEC=$(find /Applications/Fiji  -type f -name "fiji" 2>/dev/null)
+						fi
 				fi
 
 				PATHFIJI=$(dirname "${FIJIEXEC}")	
@@ -3793,8 +5145,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 		if [ "${PATHCONV}" != "" ] ; then 
 				UpdateVARIABLESBashrc "PATHCONV" "export PATHCONV=${PATHCONV}"
 			else 
-				WHEREISCONV=$(which convert)					# To be sure, prepare to add convert in PATHCONV state variable (see at the bottom of the script)
-				PATHCONV=$(dirname "${WHEREISCONV}")
+				SetPATHCONV		# To be sure, prepare to add convert in PATHCONV state variable
 				UpdateVARIABLESBashrc "PATHCONV" "export PATHCONV=${PATHCONV}"
 		fi
 
@@ -3942,6 +5293,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo "  //    I suggest here two names but feel free to change the present script if you want to give them other names or add more of them. "					
 					NecessaryDisk "1660" "/mnt/1660 where 1660 mounting point is defined in /etc/fstab; you can also add a path instead of a disk /Path/To_Your/Dir5"
 					NecessaryDisk "3610" "/mnt/3610 where 3610 mounting point is defined in /etc/fstab; you can also add a path instead of a disk /Path/To_Your/Dir6"
+					NecessaryDisk "3611" "/mnt/3611 where 3611 mounting point is defined in /etc/fstab; you can also add a path instead of a disk /Path/To_Your/Dir6"
+					NecessaryDisk "3612" "/mnt/3612 where 3612 mounting point is defined in /etc/fstab; you can also add a path instead of a disk /Path/To_Your/Dir6"
 
 					NecessaryDisk "SynoData" "/mnt/syno_data where syno_data mounting point is defined in /etc/fstab"
 					NecessaryDisk "HOMEDATA" "/mnt/dellrack_data where dellrack_data mounting point is defined in /etc/fstab"
@@ -3963,6 +5316,8 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo "  //    I suggest here two names but feel free to change the present script if you want to give them other names or add more of them. "					
 					NecessaryDisk "1660" "/Volumes/You_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
 					NecessaryDisk "3610" "/Volumes/You_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
+					NecessaryDisk "3611" "/Volumes/You_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
+					NecessaryDisk "3612" "/Volumes/You_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
 
 					NecessaryDisk "SynoData" "/Volumes/ou_Mounting_Point if it is an external disk, or provide here with a path to your chosen dir"
 					NecessaryDisk "HOMEDATA" "Path to an additionnal internal disk if any"
@@ -4088,6 +5443,21 @@ if [ "${OS}" == "Linux" ] ; then
 	cat .bashrc | grep "export" | grep -v "#"
 fi	
 echo ""	
+
+
+###################
+# Create a .netrc #
+###################
+# Ensure that .netrc exist with identity.dataspace.copernicus.eu login
+if [ ! -e "${HOMEDIR}"/.netrc ]
+	then 
+		echo "You do not have a .netrc file yet in your home directroy yet. It will be needed for S1 download, srtm DEM creation etc..."
+		echo "I create an empty .netrc now... You will need your credentials and you will need to write them in that netrc. "
+		cd 
+		touch .netrc
+		chmod 0600 .netrc
+fi
+
 
 
 #############################

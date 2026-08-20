@@ -27,6 +27,8 @@
 #									overlapping part will be filled with the constant offset 
 #									bewteen parts.   
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 3.0 20260202:	- rewritten to make it much faster using vectorized implementation 
+#								  numerically equivalent to scipy.linregress
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -34,136 +36,148 @@
 # -----------------------------------------------------------------------------------------
 
 import os
-import numpy as np
-from scipy.stats import linregress
 import re
-from datetime import datetime
 import shutil
+import numpy as np
+from datetime import datetime
 
+# -------------------------------------------------------------
+# File pattern
 # get type of file and prepare hdr files for results
 # Define the pattern to extract the type string
+# -------------------------------------------------------------
+
 pattern = r'^MSBAS_\d{8}T\d{6}_(UD|EW|NS|LOS)\.bin$'
 
-# List all relevant files in the current directory
-files = [f for f in os.listdir('.') if f.startswith('MSBAS_') and f.endswith('.bin')]
+files = [f for f in os.listdir('.') if re.match(pattern, f)]
+if not files:
+    raise RuntimeError("No MSBAS_*.bin files found")
 
-# Check if there are any files
-if files:
-    # Extract the type string from the first file in the list
-    match = re.match(pattern, files[0])
-    if match:
-        type_str = match.group(1)  # Extracted type string
-        print(f"Type of files: {type_str}. Computing reg. lin. ; please wait...")
+match = re.match(pattern, files[0])
+type_str = match.group(1)
+hdr_file_to_cp = files[0].replace('.bin', '.bin.hdr')
 
-        # Construct the corresponding .hdr file name
-        hdr_file_to_cp = files[0].replace('.bin', '.bin.hdr')
-    else:
-        print("First MSBAS file does not match expected pattern.")
-else:
-    print("No files named with nmae starting with MSBAS and ending with .bin found.")
+print(f"Type of files: {type_str}. Computing reg. lin. (FAST mode)...")
 
 
+# -------------------------------------------------------------
+# Date extraction
+# -------------------------------------------------------------
 def extract_date_from_filename(filename):
-    """Extracts the date from the filename in YYYYMMDD format and returns it as a numerical value (days since epoch)."""
-    pattern = r'^MSBAS_(\d{8})T\d{6}_(UD|EW|NS|LOS)\.bin$'
     match = re.match(pattern, filename)
     if match:
-        date_str = match.group(1)
-        #type_str = match.group(2)
+        date_str = filename.split('_')[1][:8]
         date_obj = datetime.strptime(date_str, '%Y%m%d')
-        days_since_epoch = (date_obj - datetime(1970, 1, 1)).days
-        return days_since_epoch#, type_str
-    else:
-        # Print a message and return None for files that don't match the pattern
-        print(f"Skipping file: {filename} (not a defo map)")
-        return None#, None
+        return (date_obj - datetime(1970, 1, 1)).days
+    return None
 
 
+# -------------------------------------------------------------
+# Fast vectorized regression
+# -------------------------------------------------------------
 def linear_regression_for_pixels(files):
-    """Performs linear regression on each pixel's values across time (files) and returns the coefficients, standard deviations, and R-squared values."""
-    # Extract dates and sort files by date
+
+    # Sort files by acquisition date
     dates_files = [(extract_date_from_filename(f), f) for f in files]
     dates_files = [(d, f) for d, f in dates_files if d is not None]
-    
-    if not dates_files:
-        print("No valid defo maps found. Exiting.")
-        return None, None
-
     dates_files.sort()
+
     dates, sorted_files = zip(*dates_files)
+    X = np.asarray(dates, dtype=np.float64)
+
+    # Read first file to get size
+    first = np.fromfile(sorted_files[0], dtype=np.float32)
+    n_pixels = first.size
+    n_times = len(sorted_files)
+
+    # Load all data
+    all_data = np.zeros((n_pixels, n_times), dtype=np.float32)
+    for i, f in enumerate(sorted_files):
+        all_data[:, i] = np.fromfile(f, dtype=np.float32)
+
+    # Output arrays
+    coefficients = np.zeros(n_pixels, dtype=np.float32)
+    stdevs = np.zeros(n_pixels, dtype=np.float32)
+    r_squared = np.zeros(n_pixels, dtype=np.float32)
+
+    # Skip mask (same logic as original) -  Check if the second and third values are zero
+    ##valid = ~((all_data[:, 1] == 0) & (all_data[:, 2] == 0))
+    ##if not np.any(valid):
+    ##    return coefficients, stdevs, r_squared
+    # 1) skip if 2nd and 3rd maps are zero
+    skip_zero = (all_data[:, 1] == 0) & (all_data[:, 2] == 0)
     
-    # Convert dates to numpy array
-    X = np.array(dates)
+    # 2) skip if any 3 consecutive identical values
+    # shape: (n_pixels, n_times-2)
+    triple_equal = (
+        (all_data[:, :-2] == all_data[:, 1:-1]) &
+        (all_data[:, 1:-1] == all_data[:, 2:])
+    )
     
-    # Read the first file to get the shape
-    first_file_data = np.fromfile(sorted_files[0], dtype=np.float32)
-    shape = first_file_data.shape
-    num_files = len(sorted_files)
+    skip_triple = np.any(triple_equal, axis=1)
     
-    # Prepare arrays to store regression coefficients and standard deviations
-    coefficients = np.zeros(shape, dtype=np.float32)
-    stdevs = np.zeros(shape, dtype=np.float32)
-    r_squared = np.zeros(shape, dtype=np.float32)
+    # Final valid mask
+    valid = ~(skip_zero | skip_triple)
     
-    # Stack all data into a 2D array where each row is a pixel and each column is a time point
-    all_data = np.zeros((shape[0], num_files), dtype=np.float32)
-    
-    for i, filename in enumerate(sorted_files):
-        data = np.fromfile(filename, dtype=np.float32)
-        all_data[:, i] = data
-    
-    # Perform linear regression for each pixel
-    for pixel_idx in range(shape[0]):
-        y = all_data[pixel_idx]
-        
-        # Check if the second and third values are zero
-        if y[1] == 0 and y[2] == 0:
-            # Skip linear regression, results remain zero
-            coefficients[pixel_idx] = 0
-            stdevs[pixel_idx] = 0
-            r_squared[pixel_idx] = 0
-        else:
-            # Check if the same value occurs three times consecutively
-            has_consecutive_repeats = any(y[j] == y[j + 1] == y[j + 2] for j in range(len(y) - 2))
-            
-            if has_consecutive_repeats:
-                # Same value occurs three times consecutively, skip linear regression, store zeros
-                coefficients[pixel_idx] = 0
-                stdevs[pixel_idx] = 0
-                r_squared[pixel_idx] = 0
-            else:
-                # Perform linear regression
-                slope, intercept, r_value, _, std_err = linregress(X, y)
-                coefficients[pixel_idx] = slope * 365.25  # velocity in m/yr
-                stdevs[pixel_idx] = std_err * 365.25  # velocity in m/yr
-                r_squared[pixel_idx] = r_value ** 2
+    if not np.any(valid):
+        return coefficients, stdevs, r_squared
+
+    # --- Regression math (identical to linregress) ---
+    X_mean = X.mean()
+    Xc = X - X_mean
+    Sxx = np.sum(Xc ** 2)
+
+    Y = all_data[valid].astype(np.float64)
+    Y_mean = Y.mean(axis=1, keepdims=True)
+    Yc = Y - Y_mean
+
+    # slope
+    Sxy = Yc @ Xc
+    slope = Sxy / Sxx
+
+    # fitted values
+    Yfit = slope[:, None] * Xc
+
+    # residuals
+    resid = Yc - Yfit
+    ss_res = np.sum(resid ** 2, axis=1)
+    ss_tot = np.sum(Yc ** 2, axis=1)
+
+    # r²
+    r2 = 1.0 - ss_res / ss_tot
+
+    # standard error of slope (same as linregress)
+    n = X.size
+    std_err = np.sqrt(ss_res / (n - 2)) / np.sqrt(Sxx)
+
+    # Store results (m/yr)
+    coefficients[valid] = slope * 365.25
+    stdevs[valid] = std_err * 365.25
+    r_squared[valid] = r2.astype(np.float32)
+
     return coefficients, stdevs, r_squared
 
-def save_binary_file(data, filename, type_str):
-    """Saves the given data to a binary file."""
-    new_filename = f"{filename}_{type_str}_recomputed.bin"
-    new_filename_hdr = f"{filename}_{type_str}_recomputed.bin.hdr"
-    data.tofile(new_filename)
-    # Copy the .hdr file to the new destination
-    shutil.copy(hdr_file_to_cp, new_filename_hdr)
-    print(f"Create {new_filename_hdr}.")
 
-# Main script
-if __name__ == '__main__':
-    # List all relevant files in the current directory
-    files = [f for f in os.listdir('.') if f.startswith('MSBAS_') and f.endswith('.bin')]
-    
-    files[0]
-    
-    # Perform linear regression for each pixel
-    coefficients, stdevs, r_squared = linear_regression_for_pixels(files)
+# -------------------------------------------------------------
+# Save results
+# -------------------------------------------------------------
+def save_binary_file(data, basename):
+    out_bin = f"{basename}_{type_str}_recomputed.bin"
+    out_hdr = out_bin + ".hdr"
+    data.tofile(out_bin)
+    shutil.copy(hdr_file_to_cp, out_hdr)
+    print(f"Created {out_bin}")
 
-    # Use type_str from the first file (assumed to be the same for all)
-    #type_str = types[0]
-    
-    # Save the coefficients and standard deviations to binary files if data was processed
-    if coefficients is not None and stdevs is not None:
-        save_binary_file(coefficients, 'MSBAS_LINEAR_RATE', type_str)
-        save_binary_file(stdevs, 'MSBAS_LINEAR_RATE_STD', type_str)
-        save_binary_file(r_squared, 'MSBAS_LINEAR_RATE_R2', type_str)
+
+# -------------------------------------------------------------
+# Main
+# -------------------------------------------------------------
+if __name__ == "__main__":
+
+    coeffs, stdv, r2 = linear_regression_for_pixels(files)
+
+    save_binary_file(coeffs, "MSBAS_LINEAR_RATE")
+    save_binary_file(stdv, "MSBAS_LINEAR_RATE_STD")
+    save_binary_file(r2, "MSBAS_LINEAR_RATE_R2")
+
 

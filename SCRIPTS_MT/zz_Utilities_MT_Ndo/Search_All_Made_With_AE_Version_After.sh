@@ -20,14 +20,15 @@
 # New in Distro V 1.0 20240821:	- set up
 # New in Distro V 1.1 20250530:	- add option to check AMPLITUDES
 #								- correct typo in file naming: Processing_Pair[s]_w_AMSTerEngine_V.txt 
-
+# New in Distro V 1.2 20260219:	- add birth date of detected files 
+# New in Distro V 1.3 20260220:	- change to modification date of detected files
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 30, 2025"
+VER="Distro V1.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 20, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -76,7 +77,17 @@ case "${TYPE}" in
 			    # Compare the extracted date with the given date
 			    if (file_date > given_date) {
 			        #print filepath
-			        printf(dirpath "	processed with version:	" file_date "\n")
+			        #printf(dirpath "	processed with version:	" file_date "\n")
+			        # Get last modification date (GNU stat)
+					cmd = "stat -c %y \"" filepath "\""
+					cmd | getline mod_date
+					close(cmd)
+					
+					# Keep only YYYY-MM-DD hh:mm:ss
+					split(mod_date, dt_parts, ".")
+					mod_date_only = dt_parts[1]
+					
+					printf(dirpath "\tprocessed with version:\t" file_date "\tmodified on:\t" mod_date_only "\n")
 			
 			    }
 			}'
@@ -114,7 +125,17 @@ case "${TYPE}" in
 			    # Compare the extracted date with the given date
 			    if (file_date > given_date) {
 			        #print filepath
-			        printf(dirpath "	processed with version:	" file_date "\n")
+			        #printf(dirpath "	processed with version:	" file_date "\n")
+			        # Get last modification date (GNU stat)
+					cmd = "stat -c %y \"" filepath "\""
+					cmd | getline mod_date
+					close(cmd)
+					
+					# Keep only YYYY-MM-DD hh:mm:ss
+					split(mod_date, dt_parts, ".")
+					mod_date_only = dt_parts[1]
+					
+					printf(dirpath "\tprocessed with version:\t" file_date "\tmodified on:\t" mod_date_only "\n")
 			
 			    }
 			}'
@@ -155,7 +176,17 @@ case "${TYPE}" in
 			    # Compare the extracted date with the given date
 			    if (file_date > given_date) {
 			        #print filepath
-			        printf(dirpath "	processed with version:	" file_date "\n")
+			        #printf(dirpath "	processed with version:	" file_date "\n")
+			        # Get last modification date (GNU stat)
+					cmd = "stat -c %y \"" filepath "\""
+					cmd | getline mod_date
+					close(cmd)
+					
+					# Keep only YYYY-MM-DD hh:mm:ss
+					split(mod_date, dt_parts, ".")
+					mod_date_only = dt_parts[1]
+					
+					printf(dirpath "\tprocessed with version:\t" file_date "\tmodified on:\t" mod_date_only "\n")
 			
 			    }
 			}'
@@ -196,8 +227,17 @@ case "${TYPE}" in
 			    # Compare the extracted date with the given date
 			    if (file_date > given_date) {
 			        #print filepath
-			        printf(dirpath "	processed with version:	" file_date "\n")
-			
+			        #printf(dirpath "	processed with version:	" file_date "\n")
+			        # Get last modification date (GNU stat)
+					cmd = "stat -c %y \"" filepath "\""
+					cmd | getline mod_date
+					close(cmd)
+					
+					# Keep only YYYY-MM-DD hh:mm:ss
+					split(mod_date, dt_parts, ".")
+					mod_date_only = dt_parts[1]
+					
+					printf(dirpath "\tprocessed with version:\t" file_date "\tmodified on:\t" mod_date_only "\n")
 			    }
 			}'	
 		;;
@@ -234,7 +274,18 @@ case "${TYPE}" in
 			    # Compare the extracted date with the given date
 			    if (file_date > given_date) {
 			        #print filepath
-			        printf(dirpath "	processed with version:	" file_date "\n")
+			        #printf(dirpath "	processed with version:	" file_date "\n")
+			        # Get last modification date (GNU stat)
+					cmd = "stat -c %y \"" filepath "\""
+					cmd | getline mod_date
+					close(cmd)
+					
+					# Keep only YYYY-MM-DD hh:mm:ss
+					split(mod_date, dt_parts, ".")
+					mod_date_only = dt_parts[1]
+					
+					printf(dirpath "\tprocessed with version:\t" file_date "\tmodified on:\t" mod_date_only "\n")
+
 			
 			    }
 			}'	

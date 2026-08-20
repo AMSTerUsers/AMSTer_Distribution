@@ -22,14 +22,19 @@
 # New in Distro V 1.0.2 20250429 :	- debug Coh threshold naming for Part1 and 2 TS 
 # New in Distro V 1.0.3 20250508 :	- debug Baselin Plots for part 1 & 2 w/o Coh Thresh and TS for part 1 & 2 w/o Coh Threshold
 # New in Distro V 1.2.0 20251125 :	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
-##									
+# New in Distro V 1.2.1 20260114 :	- debug testing existing _Part1 and _Part2 dirs
+# New in Distro V 1.3.0 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
+#									- check that flag file does not exist in SAR_MASSPROCESS (created from iMac27 ) to attest of running cron 1 or 2
+#									- test if another Step3 is running. If yes, stop to avoid overloading the computer
+									
+# New in Distro V 1.4.0 2026730 :	- force msbasv4								
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 25, 2025"
+VER="Distro V1.4.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -42,6 +47,13 @@ cd
 TODAY=`date`
 
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
+
+	# Variables to check that no other cron job step 1 or 2 is running from another computer
+	# in this case, crons 1 and 2 are launched from iMac27
+	TARGET="GALERAS"
+	PATH_DIR_FOR_FLAG="$PATH_3601/SAR_MASSPROCESS/S1/"
+
+
 	# some parameters
 	#################
 
@@ -375,7 +387,7 @@ TODAY=`date`
 		local MODE=$1
 		cd ${MSBASDIR}
 		cp -f ${MSBASDIR}/header_${MODE}.txt  header.txt 
-		NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+		NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 
 		cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 		# remove header line to avoid error message 
@@ -406,11 +418,46 @@ TODAY=`date`
 		#mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
 		}
 
+# Check that there is no other Step3 running
+#############################################
+	CHECKCRON3=`ps -Af | ${PATHGNU}/grep "Step3" | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
+	if [ ${CHECKCRON3} -gt 0 ] ; then 
+			REASON=" another Step3 is running, which may overload the computer; pause here" 
+			STOPRUN="YES"
+	fi
+
 
 # Check that there is no other cron (Step 2 or 3) or manual SuperMaster_MassProc.sh running
 ###########################################################################################
+
+	# Check that no other cron job step 1 or 2 is running, e.g from another computer
+	RUNDATE=$(date "+%m_%d_%Y_%Hh%Mm")
+	RNDM=$(( $RANDOM % 10000 ))
+	
+	# Create a Flag file that warns that crons are running for the target and make a trap to delete it when script ends or is stopped by ctrl-C (not if terminated by reboot or kill -9)
+	FLAGFILE="${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt"
+
+	cleanup() {
+	  rm -f "${FLAGFILE}" 
+	}
+
+	trap cleanup EXIT INT TERM
+	
+	if ! find "${PATH_DIR_FOR_FLAG}" -maxdepth 1 -name "Running_crons_${TARGET}*" -print -quit | grep -q .
+		then
+	    	echo "No running crons step 1 or 2 for ${TARGET} ; can run now"
+   			touch "${FLAGFILE}"
+   			
+    		echo "start cron 3 at $(date '+%Y-%m-%d %H:%M:%S')" >> "${FLAGFILE}"
+	    	
+	    else
+	    	echo "Another cron step 1 or 2 is running for ${TARGET}, see ${PATH_DIR_FOR_FLAG}/Running_crons_${TARGET}*.txt ; Do not run cron3 now"
+	    	exit 1
+	fi
+
+
 	# Check that no other cron job step 3 (MSBAS) or manual SuperMaster_MassProc.sh is running
-	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | wc -l`
+	CHECKMB=`ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | grep -v "Crons_1_2_3.sh"  | wc -l`
 		#### For Debugging
 		# echo "ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v ${PATHGNU}/grep | ${PATHGNU}/grep -v /dev/null | wc -l" > CheckRun.txt
 		# echo ${CHECKMB} >> CheckRun.txt
@@ -421,8 +468,8 @@ TODAY=`date`
 			STOPRUN="YES"
 		else
 			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-			CHECKASCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
-			CHECKDESCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l` 
+			CHECKASCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKDESCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESCIW} | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null"  | grep -v "Crons_1_2_3.sh" | wc -l` 
 	
 	
 			# For unknown reason it counts 1 even when no process is running
@@ -431,7 +478,7 @@ TODAY=`date`
 	fi 
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
-	CHECKMPIW=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
+	CHECKMPIW=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
 
 	if [ ${CHECKMPIW} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
@@ -654,7 +701,7 @@ cd ${MSBASDIR}
 				echo "# Run MSBAS Without Coh Threshold. With Coh threshold will follow #"
 				echo "###################################################################"
 		 
-				NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS}
+				NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh ${TIMESERIESPTS} --msbasv4
 		 
 				# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 				cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/
@@ -712,7 +759,7 @@ cd ${MSBASDIR}
 			echo "####################################"
  	fi
 
-	NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+	NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 	
 	# test if MSBAS_log.txt contains "completed 100%" ; if not log error 
  	if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt
@@ -724,7 +771,7 @@ cd ${MSBASDIR}
   			_Check_bad_DefoInterpolx2Detrend.sh DefoInterpolx2Detrend2 ${PATH_3601}/SAR_MASSPROCESS &
   			wait 
   			
-  			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS}
+  			NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
   			if ${PATHGNU}/grep -q "writing results to a disk" ${MSBASDIR}/zz_EW_Auto_${ORDER}_${LAMBDA}_${LABEL}/MSBAS_LOG.txt ; then echo "Solved after cleaning DefoInterpolx2Detrend's txt"; else  echo "!! MSBAS crashed on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt ; fi
   	fi
 	
@@ -807,415 +854,461 @@ cd ${MSBASDIR}
 
 cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 
 # period 1: before gap 1, taht is before ]20190502-20191110[
-	for dir in zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1*; do
-		if [ -d "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1*" ] && [ "$(ls -A "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1*")" ]
-			then 
-				echo "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1 exists and is not empty"
-				echo " Period ]20190502-20191110[ already processed with Coh Threshold; no need to reporcess Part1"
-			else
-				if [ ${IFCOH} == "YES" ] 
-					then 
-						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/_Time_series
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/__Combi/
-						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/_Time_series
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/__Combi/
+	if [ ${IFCOH} == "YES" ] 
+		then 
+			# ie expect computation with and without Coh threshold
+			if ls -d zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/ >/dev/null 2>&1 && [ "$(ls -A zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/)" ] && \
+			   ls -d zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThresh/ >/dev/null 2>&1 && [ "$(ls -A zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThresh/)" ]
+				then 
+					echo "Both zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh and _CohThreshold exist and are not empty"
+					echo " Period ]20190502-20191110[ already processed with/wo Coh Threshold; no need to reporcess Part1"
+				else
+					echo "At least one of the zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh or _CohThreshold does not exist or is empty"
+					echo " Period ]20190502-20191110[ must be processed with/wo Coh Threshold; Reporcess Part1"
 	
-						cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part1_CohThresh.txt
-						cp DefoInterpolx2Detrend1_Full.txt DefoInterpolx2Detrend1_Part1_NoCohThresh.txt
-						cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part1_CohThresh.txt
-						cp DefoInterpolx2Detrend2_Full.txt DefoInterpolx2Detrend2_Part1_NoCohThresh.txt
-						
-						RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend1_Part1_CohThresh.txt 20190503
-						RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend1_Part1_NoCohThresh.txt 20190503
-						RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend2_Part1_CohThresh.txt 20190503
-						RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend2_Part1_NoCohThresh.txt 20190503
-						
-						# get the most recent list of cleaned file from date after the given date
-						FILECLEANEDCOH1=`ls -1tr DefoInterpolx2Detrend1_Part1_CohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANEDNOCOH1=`ls -1tr DefoInterpolx2Detrend1_Part1_NoCohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANEDCOH2=`ls -1tr DefoInterpolx2Detrend2_Part1_CohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANEDNOCOH2=`ls -1tr DefoInterpolx2Detrend2_Part1_NoCohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
-						
-						# With Coh threshold 
-						####################
-							cd ${MSBASDIR}
-							## trick the header file						
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH1}/" ${MSBASDIR}/header.txt
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH2}/" ${MSBASDIR}/header.txt
-
-							echo "############################################################"
-							echo "# Run MSBAS With Coh Threshold Part1; without will follow  #"
-							echo "############################################################"
- 			 		
-							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold ${TIMESERIESPTS}
-			 		
-							## Make baseline plot 
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDCOH1}
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDCOH2}		 	
-							
-							# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
-							cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/
-							# remove header line to avoid error message 
-							TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
-							while read -r DESCR X Y RX RY
-								do	
-									echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_CohThreshold.txt
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_CohThreshold.pdf
-							done < ${TIMESERIESPTSDESCRNOHEADER}
-			 		
-			 				cd ${MSBASDIR}									####
-							#LABEL="${LABEL}_CohThresh_Part1"
-							eval LABEL="${LABEL}_Part1_CohThreshold"		####
-							# Why not some double difference plotting
-							while read -r X1 Y1 X2 Y2 DESCR
-								do	
-									PlotAll ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
-							done < ${DOUBLEDIFFPAIRSEWUD}
-								
-							# move all plots in same dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Part1*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-			  		
-							# move all time series in dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
-						
-							# back to normal LABEL
-							LABEL="${LABELORIG}"
-							
-						# Without Coh threshold 
-						#######################
-							cd ${MSBASDIR}
-							
-							cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 
-
-							## trick the header file						
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH1}/" ${MSBASDIR}/header.txt
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH2}/" ${MSBASDIR}/header.txt
-
-							echo "##############################################"
-							echo "# Run now MSBAS Without Coh Threshold Part1  #"
-							echo "##############################################"
-			 		
-							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh ${TIMESERIESPTS}
-			 		
-							## Make baseline plot 
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDNOCOH1}
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDNOCOH2}		 	
-							
-							# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
-							cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/
-							# remove header line to avoid error message 
-							TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
-							while read -r DESCR X Y RX RY
-								do	
-									echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_NoCohThresh.txt
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_NoCohThresh.pdf
-							done < ${TIMESERIESPTSDESCRNOHEADER}
-			 		
-							# Why not some double difference plotting
-							cd ${MSBASDIR}
-							LABEL="${LABEL}_Part1"	# Do not add _NoCohThresh as it is added by fct PlotAllNoCoh
-							while read -r X1 Y1 X2 Y2 DESCR
-								do	
-									PlotAllNoCoh ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
-							done < ${DOUBLEDIFFPAIRSEWUD}
-								
-							# move all plots in same dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*_Part1*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/__Combi/
-			  		
-							# move all time series in dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/_Time_series/
-
-							# back to normal LABEL
-							LABEL="${LABELORIG}"
-
-					else 
- 						cd ${MSBASDIR}
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/_Time_series
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/__Combi/
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/_Time_series
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/__Combi/
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/_Time_series
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/__Combi/
 	
-						cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part1.txt
-						cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part1.txt
-						
-						RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend1_Part1.txt 20190503
-						RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend2_Part1.txt 20190503
-						
-						# get the most recent list of cleaned file from date after the given date
-						FILECLEANED1=`ls -1tr DefoInterpolx2Detrend1_Part1.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANED2=`ls -1tr DefoInterpolx2Detrend2_Part1.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
-	
+					cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part1_CohThresh.txt
+					cp DefoInterpolx2Detrend1_Full.txt DefoInterpolx2Detrend1_Part1_NoCohThresh.txt
+					cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part1_CohThresh.txt
+					cp DefoInterpolx2Detrend2_Full.txt DefoInterpolx2Detrend2_Part1_NoCohThresh.txt
+					
+					RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend1_Part1_CohThresh.txt 20190503
+					RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend1_Part1_NoCohThresh.txt 20190503
+					RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend2_Part1_CohThresh.txt 20190503
+					RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend2_Part1_NoCohThresh.txt 20190503
+					
+					# get the most recent list of cleaned file from date after the given date
+					FILECLEANEDCOH1=`ls -1tr DefoInterpolx2Detrend1_Part1_CohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANEDNOCOH1=`ls -1tr DefoInterpolx2Detrend1_Part1_NoCohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANEDCOH2=`ls -1tr DefoInterpolx2Detrend2_Part1_CohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANEDNOCOH2=`ls -1tr DefoInterpolx2Detrend2_Part1_NoCohThresh.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
+					
+					# With Coh threshold 
+					####################
+						cd ${MSBASDIR}
 						## trick the header file						
-						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANED1}/" ${MSBASDIR}/header.txt
-						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${FILECLEANED2}/" ${MSBASDIR}/header.txt
-							
-						echo "#############################################"
-						echo "# Run MSBAS part1 (Without Coh Threshold )  #"
-						echo "#############################################"
-		 	
-						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1 ${TIMESERIESPTS}
-
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH1}/" ${MSBASDIR}/header.txt
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH2}/" ${MSBASDIR}/header.txt
+	
+						echo "############################################################"
+						echo "# Run MSBAS With Coh Threshold Part1; without will follow  #"
+						echo "############################################################"
+				
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold ${TIMESERIESPTS} --msbasv4
+				
 						## Make baseline plot 
-							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANED1}
-							PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANED2}		 	
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDCOH1}
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDCOH2}		 	
 						
 						# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
-						cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/
+						cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/
 						# remove header line to avoid error message 
 						TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
 						while read -r DESCR X Y RX RY
 							do	
 								echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
-								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1.txt
-								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1.pdf
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_CohThreshold.txt
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_CohThreshold.pdf
 						done < ${TIMESERIESPTSDESCRNOHEADER}
-			 	
+				
+						cd ${MSBASDIR}									####
+						#LABEL="${LABEL}_CohThresh_Part1"
+						eval LABEL="${LABEL}_Part1_CohThreshold"		####
 						# Why not some double difference plotting
-						LABEL="${LABEL}_Part1" 				 
 						while read -r X1 Y1 X2 Y2 DESCR
 							do	
 								PlotAll ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
 						done < ${DOUBLEDIFFPAIRSEWUD}
-						
+							
 						# move all plots in same dir 
 						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Part1*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-			  	
+				
 						# move all time series in dir 
 						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
-
+					
 						# back to normal LABEL
 						LABEL="${LABELORIG}"
-				fi
-
-		# Also invert part1 of only Asc 
-		LINEDESC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | tail -1 | cut -d: -f1)
-		cat ${MSBASDIR}/header.txt | ${PATHGNU}/gsed ${LINEDESC}' s/SET = /#SET = /' > ${MSBASDIR}/header_IWAscPart1.txt
-		echo "#############################"
-		echo "# Run SBAS Ascending  Part1 #"
-		echo "#############################"
-
- 		mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}
- 		mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
- 		mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-
-		FILEPAIRS=${DOUBLEDIFFPAIRSASCIW}
-		MSBASmode IWAscPart1
-		fi
-	done
-
+						
+					# Without Coh threshold 
+					#######################
+						cd ${MSBASDIR}
+						
+						cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 
+	
+						## trick the header file						
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH1}/" ${MSBASDIR}/header.txt
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH2}/" ${MSBASDIR}/header.txt
+	
+						echo "##############################################"
+						echo "# Run now MSBAS Without Coh Threshold Part1  #"
+						echo "##############################################"
+				
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh ${TIMESERIESPTS} --msbasv4
+				
+						## Make baseline plot 
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDNOCOH1}
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDNOCOH2}		 	
+						
+						# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
+						cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/
+						# remove header line to avoid error message 
+						TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
+						while read -r DESCR X Y RX RY
+							do	
+								echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_NoCohThresh.txt
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1_NoCohThresh.pdf
+						done < ${TIMESERIESPTSDESCRNOHEADER}
+				
+						# Why not some double difference plotting
+						cd ${MSBASDIR}
+						LABEL="${LABEL}_Part1"	# Do not add _NoCohThresh as it is added by fct PlotAllNoCoh
+						while read -r X1 Y1 X2 Y2 DESCR
+							do	
+								PlotAllNoCoh ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
+						done < ${DOUBLEDIFFPAIRSEWUD}
+							
+						# move all plots in same dir 
+						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*_Part1*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/__Combi/
+				
+						# move all time series in dir 
+						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/_Time_series/
+	
+						# back to normal LABEL
+						LABEL="${LABELORIG}"
+			fi
+		else 
+			# ie expect computation only without Coh threshold
+			if ls -d zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/ >/dev/null 2>&1 && [ "$(ls -A zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/)" ] 
+				then 
+					echo "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1 exists and is not empty"
+					echo " Period ]20190502-20191110[ already processed ; no need to reporcess Part1"
+				else
+					echo "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1 does not exist or is empty"
+					echo " Period ]20190502-20191110[ must be processed ; Reprocess Part1"
+	
+					cd ${MSBASDIR}
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/_Time_series
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/__Combi/
+	
+					cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part1.txt
+					cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part1.txt
+					
+					RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend1_Part1.txt 20190503
+					RemovePairsFromModeList_WithImagesAfter.sh DefoInterpolx2Detrend2_Part1.txt 20190503
+					
+					# get the most recent list of cleaned file from date after the given date
+					FILECLEANED1=`ls -1tr DefoInterpolx2Detrend1_Part1.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANED2=`ls -1tr DefoInterpolx2Detrend2_Part1.txt_Below20190503*.txt | tail -1` # take the most recent if former run was not deleted
+	
+					## trick the header file						
+					${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANED1}/" ${MSBASDIR}/header.txt
+					${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${FILECLEANED2}/" ${MSBASDIR}/header.txt
+						
+					echo "#############################################"
+					echo "# Run MSBAS part1 (Without Coh Threshold )  #"
+					echo "#############################################"
+	 	
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1 ${TIMESERIESPTS} --msbasv4
+	
+					## Make baseline plot 
+						PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANED1}
+						PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANED2}		 	
+					
+					# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
+					cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/
+					# remove header line to avoid error message 
+					TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
+					while read -r DESCR X Y RX RY
+						do	
+							echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
+							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1.txt
+							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part1/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part1.pdf
+					done < ${TIMESERIESPTSDESCRNOHEADER}
+			
+					# Why not some double difference plotting
+					LABEL="${LABEL}_Part1" 				 
+					while read -r X1 Y1 X2 Y2 DESCR
+						do	
+							PlotAll ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
+					done < ${DOUBLEDIFFPAIRSEWUD}
+					
+					# move all plots in same dir 
+					mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Part1*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+			
+					# move all time series in dir 
+					mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
+	
+					# back to normal LABEL
+					LABEL="${LABELORIG}"
+			fi
+	fi
+	
+	# Also invert part1 of only Asc 
+	if ls -d zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}/ >/dev/null 2>&1 && [ "$(ls -A zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}/)" ] 
+			then 
+				echo "zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL} exists and is not empty"
+				echo " Period ]20190502-20191110[ already processed ; no need to reporcess Part1"
+			else
+				echo "zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL} does not exist or is empty"
+				echo " Period ]20190502-20191110[ must be processed ; Reprocess Part1"
+	
+				LINEDESC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | tail -1 | cut -d: -f1)
+				cat ${MSBASDIR}/header.txt | ${PATHGNU}/gsed ${LINEDESC}' s/SET = /#SET = /' > ${MSBASDIR}/header_IWAscPart1.txt
+				echo "#############################"
+				echo "# Run SBAS Ascending  Part1 #"
+				echo "#############################"
+		
+				mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}
+				mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+				mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart1_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		
+				FILEPAIRS=${DOUBLEDIFFPAIRSASCIW}
+				MSBASmode IWAscPart1
+	fi
+	
 cd ${MSBASDIR}
 cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 
 # period 2: between gap 1 ]20190502-20191110[ and gap2 ]20240505-20240809[
 	PART2MIN=20191109	# i.e. date of end of gap 1 - 1 day 
 	PART2MAX=20240504	# i.e. date of beginning of gap 2 - 1 day
-	for dir in zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2*; do
-		if [ -d "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2*" ] && [ "$(ls -A "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2*")" ]
-			then 
-				echo "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2 exists and is not empty"
-				echo " Period between gaps ]20190502-20191110[ and ]20240505-20240809[ already processed with Coh Threshold; no need to reporcess Part2"
-			else
-				if [ ${IFCOH} == "YES" ] 
-					then 
-						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/_Time_series
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/__Combi/
-						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/_Time_series
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/__Combi/
+	if [ ${IFCOH} == "YES" ] 
+		then 
+			# ie expect computation with and without Coh threshold
+			if ls -d zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/ >/dev/null 2>&1 && [ "$(ls -A zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/)" ] && \
+			   ls -d zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThresh/ >/dev/null 2>&1 && [ "$(ls -A zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThresh/)" ]
+				then 
+					echo "Both zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh and _CohThreshold exist and are not empty"
+					echo " Period between gaps ]20190502-20191110[ and ]20240505-20240809[ already processed with/wo Coh Threshold; no need to reporcess Part2"
+				else
+					echo "At least one of the zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh or _CohThreshold does not exist or is empty"
+					echo " Period between gaps ]20190502-20191110[ and ]20240505-20240809[ must be processed with/wo Coh Threshold; Reprocess Part2"
 	
-						cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part2_CohThresh.txt
-						cp DefoInterpolx2Detrend1_Full.txt DefoInterpolx2Detrend1_Part2_NoCohThresh.txt
-						cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part2_CohThresh.txt
-						cp DefoInterpolx2Detrend2_Full.txt DefoInterpolx2Detrend2_Part2_NoCohThresh.txt
-						
-						RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend1_Part2_CohThresh.txt ${PART2MIN} ${PART2MAX}
-						RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend1_Part2_NoCohThresh.txt ${PART2MIN} ${PART2MAX}
-						RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend2_Part2_CohThresh.txt ${PART2MIN} ${PART2MAX}
-						RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend2_Part2_NoCohThresh.txt ${PART2MIN} ${PART2MAX}
-						
-						# get the most recent list of cleaned file from date after the given date
-						FILECLEANEDCOH1=`ls -1tr DefoInterpolx2Detrend1_Part2_CohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANEDNOCOH1=`ls -1tr DefoInterpolx2Detrend1_Part2_NoCohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANEDCOH2=`ls -1tr DefoInterpolx2Detrend2_Part2_CohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANEDNOCOH2=`ls -1tr DefoInterpolx2Detrend2_Part2_NoCohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
-						
-						# With Coh threshold 
-						####################
-							## trick the header file						
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH1}/" ${MSBASDIR}/header.txt
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH2}/" ${MSBASDIR}/header.txt
-
-							echo "############################################################"
-							echo "# Run MSBAS With Coh Threshold Part2; without will follow  #"
-							echo "############################################################"
-			 				
-			 				cd ${MSBASDIR}
-							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold ${TIMESERIESPTS}
-			 		
-							## Make baseline plot 
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDCOH1}
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDCOH2}		 	
-							
-							# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
-							cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/
-							# remove header line to avoid error message 
-							TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
-							while read -r DESCR X Y RX RY
-								do	
-									echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_CohThreshold.txt
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_CohThreshold.pdf
-							done < ${TIMESERIESPTSDESCRNOHEADER}
-			 		
-							# Why not some double difference plotting
-							LABEL="${LABEL}_Part2_CohThreshold"
-							while read -r X1 Y1 X2 Y2 DESCR
-								do	
-									PlotAll ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
-							done < ${DOUBLEDIFFPAIRSEWUD}
-
-								
-							# move all plots in same dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Part2*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-			  		
-							# move all time series in dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
-
-							# back to normal LABEL
-							LABEL="${LABELORIG}"
-						
-						# Without Coh threshold 
-						#######################
-							cd ${MSBASDIR}
-							cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 
-
-							## trick the header file						
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH1}/" ${MSBASDIR}/header.txt
-							${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH2}/" ${MSBASDIR}/header.txt
-
-							echo "##############################################"
-							echo "# Run now MSBAS Without Coh Threshold Part2  #"
-							echo "##############################################"
-			 		
-							NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh ${TIMESERIESPTS}
-			 		
-							## Make baseline plot 
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDNOCOH1}
-								PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDNOCOH2}		 	
-						
-							# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
-							cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/
-							# remove header line to avoid error message 
-							TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
-							while read -r DESCR X Y RX RY
-								do	
-									echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_NoCohThresh.txt
-									mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_NoCohThresh.pdf
-							done < ${TIMESERIESPTSDESCRNOHEADER}
-			 		
-							# Why not some double difference plotting
-							LABEL="${LABEL}_Part2"		# Do not add _NoCohThresh as it will be added by fct PlotAllNoCoh
-							while read -r X1 Y1 X2 Y2 DESCR
-								do	
-									PlotAllNoCoh ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
-							done < ${DOUBLEDIFFPAIRSEWUD}
-								
-							# move all plots in same dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*_Part2*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/__Combi/
-			  		
-							# move all time series in dir 
-							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/_Time_series/
-
-							# back to normal LABEL
-							LABEL="${LABELORIG}"
-
-					else 
- 						cd ${MSBASDIR}
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/_Time_series
- 						mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/__Combi/
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh
+ 					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/_Time_series
+ 					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/__Combi/
+					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold
+ 					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/_Time_series
+ 					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/__Combi/
 	
-						cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part2.txt
-						cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part2.txt
-						
-						RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend1_Part2.txt ${PART2MIN} ${PART2MAX}
-						RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend2_Part2.txt ${PART2MIN} ${PART2MAX}
-						
-						# get the most recent list of cleaned file from date after the given date
-						FILECLEANED1=`ls -1tr DefoInterpolx2Detrend1_Part2.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
-						FILECLEANED2=`ls -1tr DefoInterpolx2Detrend2_Part2.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
-	
+					cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part2_CohThresh.txt
+					cp DefoInterpolx2Detrend1_Full.txt DefoInterpolx2Detrend1_Part2_NoCohThresh.txt
+					cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part2_CohThresh.txt
+					cp DefoInterpolx2Detrend2_Full.txt DefoInterpolx2Detrend2_Part2_NoCohThresh.txt
+					
+					RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend1_Part2_CohThresh.txt ${PART2MIN} ${PART2MAX}
+					RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend1_Part2_NoCohThresh.txt ${PART2MIN} ${PART2MAX}
+					RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend2_Part2_CohThresh.txt ${PART2MIN} ${PART2MAX}
+					RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend2_Part2_NoCohThresh.txt ${PART2MIN} ${PART2MAX}
+					
+					# get the most recent list of cleaned file from date after the given date
+					FILECLEANEDCOH1=`ls -1tr DefoInterpolx2Detrend1_Part2_CohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANEDNOCOH1=`ls -1tr DefoInterpolx2Detrend1_Part2_NoCohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANEDCOH2=`ls -1tr DefoInterpolx2Detrend2_Part2_CohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANEDNOCOH2=`ls -1tr DefoInterpolx2Detrend2_Part2_NoCohThresh.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
+					
+					# With Coh threshold 
+					####################
 						## trick the header file						
-						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANED1}/" ${MSBASDIR}/header.txt
-						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${FILECLEANED2}/" ${MSBASDIR}/header.txt
-
-						echo "###########################################"
-						echo "# Run MSBAS Part2 (Without Coh Threshold) #"
-						echo "###########################################"
-
-						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2 ${TIMESERIESPTS}
-			 	
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH1}/" ${MSBASDIR}/header.txt
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDCOH2}/" ${MSBASDIR}/header.txt
+	
+						echo "############################################################"
+						echo "# Run MSBAS With Coh Threshold Part2; without will follow  #"
+						echo "############################################################"
+						
+						cd ${MSBASDIR}
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold ${TIMESERIESPTS} --msbasv4
+				
 						## Make baseline plot 
-							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANED1}
-							PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANED2}		 	
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDCOH1}
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDCOH2}		 	
 						
 						# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
-						cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/
+						cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/
 						# remove header line to avoid error message 
 						TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
 						while read -r DESCR X Y RX RY
 							do	
 								echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
-								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2.txt
-								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2.pdf
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_CohThreshold.txt
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_CohThreshold/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_CohThreshold.pdf
 						done < ${TIMESERIESPTSDESCRNOHEADER}
-			 	
+				
 						# Why not some double difference plotting
-						LABEL="${LABEL}_Part2"
+						LABEL="${LABEL}_Part2_CohThreshold"
 						while read -r X1 Y1 X2 Y2 DESCR
 							do	
 								PlotAll ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
 						done < ${DOUBLEDIFFPAIRSEWUD}
-						
+	
+							
 						# move all plots in same dir 
-						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Part2_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
-			  	
+						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Part2*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+				
 						# move all time series in dir 
 						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
-
+	
 						# back to normal LABEL
 						LABEL="${LABELORIG}"
+					
+					# Without Coh threshold 
+					#######################
+						cd ${MSBASDIR}
+						cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 
+	
+						## trick the header file						
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH1}/" ${MSBASDIR}/header.txt
+						${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANEDNOCOH2}/" ${MSBASDIR}/header.txt
+	
+						echo "##############################################"
+						echo "# Run now MSBAS Without Coh Threshold Part2  #"
+						echo "##############################################"
+				
+						NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh ${TIMESERIESPTS} --msbasv4
+				
+						## Make baseline plot 
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANEDNOCOH1}
+							PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANEDNOCOH2}		 	
+					
+						# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
+						cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/
+						# remove header line to avoid error message 
+						TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
+						while read -r DESCR X Y RX RY
+							do	
+								echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_NoCohThresh.txt
+								mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2_NoCohThresh/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2_NoCohThresh.pdf
+						done < ${TIMESERIESPTSDESCRNOHEADER}
+				
+						# Why not some double difference plotting
+						LABEL="${LABEL}_Part2"		# Do not add _NoCohThresh as it will be added by fct PlotAllNoCoh
+						while read -r X1 Y1 X2 Y2 DESCR
+							do	
+								PlotAllNoCoh ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
+						done < ${DOUBLEDIFFPAIRSEWUD}
+							
+						# move all plots in same dir 
+						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*_Part2*_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/__Combi/
+				
+						# move all time series in dir 
+						mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_NoCohThresh/_Time_series/
+	
+						# back to normal LABEL
+						LABEL="${LABELORIG}"
+			fi
+		else 
+			# ie expect computation only without Coh threshold
+			if ls -d zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/ >/dev/null 2>&1 && [ "$(ls -A zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/)" ] 
+				then 
+					echo "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2 exists and is not empty"
+					echo " Period between gaps ]20190502-20191110[ and ]20240505-20240809[ already processed ; no need to reporcess Part2"
+				else
+					echo "zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2 does not exist or is empty"
+					echo " Period between gaps ]20190502-20191110[ and ]20240505-20240809[ must be processed ; Reprocess Part2"
+	
+					cd ${MSBASDIR}
+ 					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2
+ 					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/_Time_series
+ 					mkdir -p ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/__Combi/
+	
+					cp DefoInterpolx2Detrend1.txt DefoInterpolx2Detrend1_Part2.txt
+					cp DefoInterpolx2Detrend2.txt DefoInterpolx2Detrend2_Part2.txt
+					
+					RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend1_Part2.txt ${PART2MIN} ${PART2MAX}
+					RemovePairsFromModeList_WithImagesOutside_dates.sh DefoInterpolx2Detrend2_Part2.txt ${PART2MIN} ${PART2MAX}
+					
+					# get the most recent list of cleaned file from date after the given date
+					FILECLEANED1=`ls -1tr DefoInterpolx2Detrend1_Part2.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
+					FILECLEANED2=`ls -1tr DefoInterpolx2Detrend2_Part2.txt_Between${PART2MIN}_${PART2MAX}*.txt | tail -1` # take the most recent if former run was not deleted
+	
+					## trick the header file						
+					${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend1.txt/${FILECLEANED1}/" ${MSBASDIR}/header.txt
+					${PATHGNU}/gsed -i "s/DefoInterpolx2Detrend2.txt/${FILECLEANED2}/" ${MSBASDIR}/header.txt
+	
+					echo "###########################################"
+					echo "# Run MSBAS Part2 (Without Coh Threshold) #"
+					echo "###########################################"
+	
+					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2 ${TIMESERIESPTS} --msbasv4
+			
+					## Make baseline plot 
+						PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${FILECLEANED1}
+						PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${FILECLEANED2}		 	
+					
+					# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
+					cp ${TIMESERIESPTSDESCR} ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/
+					# remove header line to avoid error message 
+					TIMESERIESPTSDESCRNOHEADER=`tail -n +2 ${TIMESERIESPTSDESCR}`
+					while read -r DESCR X Y RX RY
+						do	
+							echo "Rename time series of ${X}_${Y} as ${X}_${Y}_${RX}_${RY}_${DESCR}"
+							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2.txt
+							mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}.pdf ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_Part2/MSBAS_${X}_${Y}_${RX}_${RY}_${DESCR}_Part2.pdf
+					done < ${TIMESERIESPTSDESCRNOHEADER}
+			
+					# Why not some double difference plotting
+					LABEL="${LABEL}_Part2"
+					while read -r X1 Y1 X2 Y2 DESCR
+						do	
+							PlotAll ${X1} ${Y1} ${X2} ${Y2} ${DESCR}
+					done < ${DOUBLEDIFFPAIRSEWUD}
+					
+					# move all plots in same dir 
+					mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*_Part2_Combi.jpg ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+			
+					# move all time series in dir 
+					mv ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_UD_EW_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
+	
+					# back to normal LABEL
+					LABEL="${LABELORIG}"
+			fi
+	
+	fi
+	
+	# Also invert part2 of only Asc 
+	if ls -d zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}/ >/dev/null 2>&1 && [ "$(ls -A zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}/)" ] 
+		then 
+			echo "zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL} exists and is not empty"
+			echo " Period between gaps ]20190502-20191110[ and ]20240505-20240809[ already processed ; no need to reporcess Part2"
+		else
+			echo "zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL} does not exist or is empty"
+			echo " Period between gaps ]20190502-20191110[ and ]20240505-20240809[  must be processed ; Reprocess Part2"
+	
+			cd ${MSBASDIR}
+			LINEDESC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | tail -1 | cut -d: -f1)
+			cat ${MSBASDIR}/header.txt | ${PATHGNU}/gsed ${LINEDESC}' s/SET = /#SET = /' > ${MSBASDIR}/header_IWAscPart2.txt
+			echo "#############################"
+			echo "# Run SBAS Ascending  Part2 #"
+			echo "#############################"
+		
+ 			mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}
+ 			mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+ 			mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
+		
+			FILEPAIRS=${DOUBLEDIFFPAIRSASCIW}
+			MSBASmode IWAscPart2
+	fi
 
-				fi
-
-		# Also invert part2 of only Asc 
-		cd ${MSBASDIR}
-		LINEDESC=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | tail -1 | cut -d: -f1)
-		cat ${MSBASDIR}/header.txt | ${PATHGNU}/gsed ${LINEDESC}' s/SET = /#SET = /' > ${MSBASDIR}/header_IWAscPart2.txt
-		echo "#############################"
-		echo "# Run SBAS Ascending  Part2 #"
-		echo "#############################"
-
- 		mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}
- 		mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
- 		mkdir -p ${MSBASDIR}/zz_LOS_TS_IWAscPart2_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series
-
-		FILEPAIRS=${DOUBLEDIFFPAIRSASCIW}
-		MSBASmode IWAscPart2
-		fi
-	done
 
 # Back to normal for next run and get out
-		cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 		 				
+	cp -f ${MSBASDIR}/header_UD_EW.txt ${MSBASDIR}/header.txt 		 				
 
-		TODAY=`date`
-		echo "MSBAS finished on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt
+	TODAY=`date`
+	echo "MSBAS finished on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt
 
-		echo "${LASTASCTIMEIW}" > ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
-		echo "${LASTDESCTIMEIW}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
+	echo "${LASTASCTIMEIW}" > ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
+	echo "${LASTDESCTIMEIW}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 # Clean ${FILECLEANED2}
 	rm -f ${FILECLEANED2}
+
+# Keep track of last successful run
+    cp -f "${PATH_DIR_FOR_FLAG}"/"Running_crons_${TARGET}_${RUNDATE}_${RNDM}.txt" "${PATH_DIR_FOR_FLAG}"/"Last_Sucessful_Crons_${TARGET}.txt" 	

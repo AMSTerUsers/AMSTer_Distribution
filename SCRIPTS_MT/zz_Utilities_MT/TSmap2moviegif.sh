@@ -13,13 +13,14 @@
 # New in Distro V 1.0 (Oct 08, 2020):	- Based on developpement version 1.1 and Beta V1.0.2
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20260714:	- fix path to Fiji for Mac ARM
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello (c) - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Delphine Smittarello, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Delphine Smittarello, (c)2016-2019, Last modified on Jul 14, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -75,14 +76,29 @@ for FILEBIN in MSBAS_????????T??????_*.bin ; do
 
 	# Check OS
 	OS=`uname -a | cut -d " " -f 1 `
-	case ${OS} in 
-		"Linux") 
-#			${PATHFIJI}/ImageJ-linux64  --headless -batch ${FILE}FijiMacroFig.txt ;; ## bug headless and Calibration bar
-			${PATHFIJI}/ImageJ-linux64 -batch ${FILE}FijiMacroFig.txt ;;
-		"Darwin")
-			#${PATHFIJI}/ImageJ-macosx  --headless -batch ${FILE}FijiMacroFig.txt 	;;
-			${PATHFIJI}/ImageJ-macosx -batch ${FILE}FijiMacroFig.txt 	;;
-	esac			
+
+	# Pick the Fiji launcher: new Jaunch "fiji" or a legacy platform binary
+		if [ -x "${PATHFIJI}/fiji" ]; then
+		    FIJI="${PATHFIJI}/fiji"               # new Jaunch (Mac arm64, Linux, ...)
+		elif [ -x "${PATHFIJI}/ImageJ-linux64" ]; then
+		    FIJI="${PATHFIJI}/ImageJ-linux64"     # legacy Linux
+		elif [ -x "${PATHFIJI}/ImageJ-macosx" ]; then
+		    FIJI="${PATHFIJI}/ImageJ-macosx"      # legacy Intel Mac
+		else
+		    echo "ERROR: no Fiji/ImageJ launcher found in ${PATHFIJI}" >&2
+		    exit 1
+		fi
+
+	"${FIJI}" --headless -batch " ${FILE}FijiMacroFig.txt" 
+
+#	case ${OS} in 
+#		"Linux") 
+##			${PATHFIJI}/ImageJ-linux64  --headless -batch ${FILE}FijiMacroFig.txt ;; ## bug headless and Calibration bar
+#			${PATHFIJI}/ImageJ-linux64 -batch ${FILE}FijiMacroFig.txt ;;
+#		"Darwin")
+#			#${PATHFIJI}/ImageJ-macosx  --headless -batch ${FILE}FijiMacroFig.txt 	;;
+#			${PATHFIJI}/ImageJ-macosx -batch ${FILE}FijiMacroFig.txt 	;;
+#	esac			
 	# Keep script if one wants to change paramerters of the plot
 		#rm ${FILE}FijiMacroFig.txt 
 # resize

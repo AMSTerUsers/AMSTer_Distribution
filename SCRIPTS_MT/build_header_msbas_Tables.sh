@@ -77,14 +77,14 @@
 #								- check if raster exist before creating link 
 # New in Distro V 2.8 20251202:	- skip PrepareModeI if no hdr file found 
 #								- if HDR file of last mode does not exist, seach for a HDR file from previous mode to build the header.txt 
-
+# New in Distro V 2.9 20260819:	- Add options for msbasv10 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.8 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dev 02, 2025"
+VER="Distro V2.9 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 19, 2026"
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -693,13 +693,37 @@ NRLINES=`${PATHGNU}/grep -i "Samples" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' 
 NRCOLMSS=`${PATHGNU}/grep -i "Lines" ${HDRMOD} | cut -c 9-30 | tr -dc '[0-9].' `
 WINLINES=`expr "$NRLINES" - 1`
 WINCOLMS=`expr "$NRCOLMSS" - 1`
-echo 	"FORMAT = 0" 	> header.txt 			# Small/Big endian
+
+if [ "${MSBAS}" == "msbasv10" ] 
+	then 
+		echo 	"FORMAT = 2,3" 	> header.txt 			# geotif, interpolation 
+	else 
+		echo 	"FORMAT = 0" 	> header.txt 			# 0 Small/ 1 Big endian
+fi		
+
 echo	"FILE_SIZE = ${NRLINES}, ${NRCOLMSS}"  >> header.txt
 echo	"WINDOW_SIZE = 0, ${WINLINES}, 0, ${WINCOLMS}"  >> header.txt
 echo	"R_FLAG = 2, 0.02"  >> header.txt  		# Lambda for Thickonov regularisation
 echo	"T_FLAG = 0"  >> header.txt  	# 1=remove topo residuals (eg if pix dem >> interfero) ; 0=no
 echo	"C_FLAG = 10"  >> header.txt  		# pixel(s) coordinates of reference region: Nr of ref, line, col of each ref, radius for all ref pix, e.g: C_FLAG = 2, 452, 822, 237, 259, 32,32
-if [ "${MSBAS}" == "msbasv4" ] ; then echo 	"V_FLAG=0"   >> header.txt ; fi		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
+case ${MSBAS} in 
+	"msbasv4") 
+		echo 	"V_FLAG=0"   >> header.txt ; fi		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
+		;;
+	"msbasv10")
+		echo 	"V_FLAG=0"   >> header.txt ; fi		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
+		#echo 	"V_FLAG=1"   >> header.txt ; fi		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
+		
+		echo 	"D_FLAG=0"   >> header.txt ; fi		# MSBAS3D (0) or 4D (1)	
+
+		;;
+	*)
+		echo "set no V_FLAG"
+	;;
+esac			
+
+
+
 #echo	"TAV_FLAG = 0"  >> header.txt		# Gausian filtering in temporal domain; 0 = off or width of Gauss. Win. (in yrs)
 echo	"I_FLAG = 0"  >> header.txt  		# 0= auto run; 1= ask for coord of pix for time series; 2=takes coord from par.txt file, 	e.g: I_FLAG = 2, par.txt	
 
