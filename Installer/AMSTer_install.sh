@@ -296,13 +296,15 @@
 #									  toolchain, then Homebrew/MacPorts, and returns nothing if no git really works, in which 
 #									  case GetAMSTerDistroFromGitHub silently falls back on the zip archive
 #									- GetAMSTerDistroFromGitHub: check that unzip exists before falling back on the zip archive
+# New in Distro V 7.0.1 20260820: 	- a gnuplot link was missingthe leading g: ${PATHGNU}/nuplot
+#									- clean unused commented lines 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=$(basename "$0")
-VER="version 7.0 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 06, 2026"
+VER="version 7.0.1 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 20, 2026"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -1835,51 +1837,47 @@ function InstallAMSTerEngine()
 	
 function TstPathGnuFctMac()
 	{
+		# Make a command reachable in ${PATHGNU} (i.e. /opt/local/bin), whatever the package manager
+		# that really installed it (MacPorts in /opt/local/bin, Homebrew in /opt/homebrew/bin or
+		# /usr/local/bin), so that every script hardcoding e.g. "${PATHGNU}/gsed" keeps working.
+		#
+		#	$1 = name of the command as it is installed		(e.g. gsed, gawk, gnuplot)
+		#	$2 = OPTIONAL second name to create beside it	(e.g. sed, awk)
+		#
+		# The second name MUST be given explicitly. The former version derived it with "${GFCT:1}",
+		# that is by dropping the FIRST CHARACTER of $1, which is only correct for the g-prefixed gnu
+		# tools: called as TstPathGnuFctMac "gnuplot", it was silently creating a link named "nuplot".
+		# No second argument (or an empty one) means: just make the command itself reachable.
 		local GFCT
-		local WHEREISGFCT
-		local TSTPATHGFCT
 		local FCT
-		
+		local WHEREISGFCT
+
 		GFCT=$1
+		FCT=$2
 
-		WHEREISGFCT=$(which "${GFCT}")
-		TSTPATHGFCT=$(dirname "${WHEREISGFCT}")
-		FCT="${GFCT:1}" 
-		
-		if [ "${WHEREISGFCT}" != "${PATHGNU}/${GFCT}" ] 
-			then 
-				echo "${GFCT} is in ${TSTPATHGFCT} instead of ${PATHGNU}. Let's link it to ${PATHGNU}/${GFCT} (and to ${PATHGNU}/${FCT} for security)" 
-				#sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${GFCT} 2>/dev/null 
-				if [ ! -f "${PATHGNU}"/"${GFCT}" ] 
-					then 
-						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${GFCT}" 2>/dev/null 
-					else 
-						echo "	// ${GFCT} already linked in ${PATHGNU} - replace with new path to be sure..." 
-						sudo rm -f "${PATHGNU}"/"${GFCT}"
-						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${GFCT}" 2>/dev/null 
-				fi
-				
-				#sudo ln -s "${WHEREISGFCT}" ${PATHGNU}/${FCT} 2>/dev/null 
-				if [ ! -f "${PATHGNU}"/"${FCT}" ] 
-					then 
-						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
-					else 
-						echo "	// ${FCT} already linked in ${PATHGNU} - replace with new path to be sure..." 
-						sudo rm -f "${PATHGNU}"/"${FCT}"
-						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
+		WHEREISGFCT=$(command -v "${GFCT}" 2>/dev/null)
+		if [ "${WHEREISGFCT}" == "" ]
+			then
+				echo "  // ${GFCT} is not installed or not in the PATH: nothing to link in ${PATHGNU}. Please check."
+				return
+		fi
 
-				fi
-			else 
-				echo "Link ${GFCT} to ${FCT} in ${PATHGNU} for security" 
-				#sudo ln -s "${WHEREISFCT}" ${PATHGNU}/${FCT} 2>/dev/null
-				if [ ! -f "${PATHGNU}"/"${FCT}" ] 
-					then 
-						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
-					else 
-						echo "	// ${FCT} already linked in ${PATHGNU} - replace with new path to be sure..." 
-						sudo rm -f "${PATHGNU}"/"${FCT}"
-						sudo ln -s "${WHEREISGFCT}" "${PATHGNU}"/"${FCT}" 2>/dev/null 
-				fi
+		sudo mkdir -p "${PATHGNU}"
+
+		# ln -sfn replaces whatever is already there (file, valid link or DANGLING link) in one go.
+		# The former "if [ ! -f ... ]" test was false for a dangling link - e.g. one left behind by a
+		# former MacPorts or Homebrew installation - and the ln that followed then failed silently
+		# (2>/dev/null), leaving the broken link in place.
+		if [ "${WHEREISGFCT}" != "${PATHGNU}/${GFCT}" ]
+			then
+				echo "  // ${GFCT} is in $(dirname "${WHEREISGFCT}") instead of ${PATHGNU}: link it to ${PATHGNU}/${GFCT}"
+				sudo ln -sfn "${WHEREISGFCT}" "${PATHGNU}/${GFCT}"
+		fi
+
+		if [ "${FCT}" != "" ] && [ "${FCT}" != "${GFCT}" ]
+			then
+				echo "  // Link ${GFCT} to ${PATHGNU}/${FCT} as well, in case a script would call it without its g-name"
+				sudo ln -sfn "${WHEREISGFCT}" "${PATHGNU}/${FCT}"
 		fi
 	}
 
@@ -3332,240 +3330,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 						
 								/opt/local/amster_python_env/bin/pip install -r /opt/local/requirements.txt
 
-#####
-#####							# ------------------------------
-#####							# Configuration
-#####							# ------------------------------
-#####							VENV_DIR=/opt/local/amster_python_env
-#####							REQ_FILE=/opt/local/requirements.txt
-#####							PYTHON_BIN=python3.10
-#####							
-#####							# ----------------------------------------------------------
-#####							#  Detecting Ubuntu version
-#####							# ----------------------------------------------------------
-#####							UBUNTU_VERSION=$(lsb_release -rs)
-#####							echo "Detected Ubuntu version: ${UBUNTU_VERSION}"
-#####							
-#####							# ----------------------------------------------------------
-#####							#  Ensure Python 3.10 is available
-#####							# ----------------------------------------------------------
-#####							
-#####							if ! command -v $PYTHON_BIN >/dev/null 2>&1; then
-#####							    echo "Installing Python 3.10..."
-#####							
-#####							    if [[ "${UBUNTU_VERSION}" == "24.04" ]]; then
-#####
-#####									EchoInverted "  // Beware: with Ubuntu 24.04, it must be python 3.10 insated of native 3.12 because needed gdal and osgeo is incompatible with 3.12 for now. "
-#####									EchoInverted "  // 		In case of installation problem, you may need to purge all your native installation of gdal first with something like:  "
-#####									EchoInverted "  // 			sudo apt remove --purge -y python3-gdal"
-#####									EchoInverted "  // 			rm -rf /opt/local/amster_python_env "
-#####			
-#####							        sudo apt install -y software-properties-common
-#####							        sudo add-apt-repository -y ppa:deadsnakes/ppa
-#####							        sudo apt update
-#####							    fi
-#####							
-#####							    sudo apt install -y \
-#####							        python3.10 \
-#####							        python3.10-venv \
-#####							        python3.10-dev
-#####							fi
-#####							
-#####							# ------------------------------
-#####							# Install system GDAL + dependencies
-#####							# ------------------------------
-#####							
-#####							echo "Installing GDAL system libraries..."
-#####							
-#####							sudo apt install -y \
-#####							    build-essential \
-#####							    gdal-bin \
-#####							    libgdal-dev \
-#####							    libproj-dev \
-#####							    proj-bin \
-#####							    libgeos-dev \
-#####							    libhdf5-dev \
-#####							    libnetcdf-dev \
-#####							    libopenjp2-7-dev \
-#####							    libtiff-dev \
-#####							    graphicsmagick \
-#####							    ffmpeg \
-#####							    gmt \
-#####							    libmpich-dev \
-#####							    libopenmpi-dev
-#####							
-#####							echo "System GDAL version:"
-#####							gdal-config --version
-#####							
-#####								
-#####							# ------------------------------
-#####							# Create clean virtual environment
-#####							# ------------------------------
-#####						
-#####							echo "Creating clean Python 3.10 venv..."
-#####							
-#####							sudo mkdir -p /opt/local
-#####							sudo chown -R $USER /opt/local
-#####
-#####							# Remove old venv if it exists
-#####							rm -rf "${VENV_DIR}"
-#####							
-#####							$PYTHON_BIN -m venv "${VENV_DIR}"
-#####							source "${VENV_DIR}/bin/activate"
-#####							
-#####							# Upgrade pip / setuptools / wheel
-#####							pip install --upgrade pip setuptools wheel
-#####							
-#####							# ------------------------------
-#####							# Install numpy first (required before GDAL build)
-#####							# ------------------------------
-#####							pip install numpy==1.26.4
-#####							
-#####							# ------------------------------
-#####							# Build Python GDAL against system GDAL
-#####							# ------------------------------
-#####							
-#####							# CRITICAL STEP — avoids _gdal_array error
-#####							echo "Building Python GDAL against system GDAL..."
-#####							
-#####							export CPLUS_INCLUDE_PATH=/usr/include/gdal
-#####							export C_INCLUDE_PATH=/usr/include/gdal
-#####							
-#####							GDAL_VER=$(gdal-config --version)
-#####							
-#####							# for extra safety
-#####							pip uninstall -y GDAL
-#####							rm -rf ~/.cache/pip
-#####							
-#####							export GDAL_CONFIG=$(which gdal-config)
-#####							pip install --no-binary=:all: --no-cache-dir "GDAL==${GDAL_VER}"
-#####							
-#####							# Verify immediately
-#####							python -c "from osgeo import gdal, gdal_array; print('Python GDAL version:', gdal.__version__)"
-#####
-#####							# ----------------------------------------------------------
-#####							# Prepare requirements file (no GDAL here)
-#####							# ----------------------------------------------------------
-#####							###### Core scientific
-#####							####echo "numpy==1.26.4" > "$REQ_FILE"
-#####							####echo "scipy==1.11.4" >> "$REQ_FILE"
-#####							####echo "matplotlib==3.8.2" >> "$REQ_FILE"
-#####							####echo "shapely==2.0.2" >> "$REQ_FILE"
-#####							####echo "utm==0.7.0" >> "$REQ_FILE"
-#####							####echo "networkx==3.2.1" >> "$REQ_FILE"
-#####							####echo "pandas==2.2.1" >> "$REQ_FILE"
-#####							####echo "scikit-gstat==1.0.18" >> "$REQ_FILE"
-#####							####echo "glob2==0.7" >> "$REQ_FILE"
-#####							
-#####							####### GIS / geospatial
-#####							#####echo "GDAL==3.7.2" >> "$REQ_FILE"
-#####							#####echo "pyproj==3.6.1" >> "$REQ_FILE"
-#####							#####echo "rasterio==1.3.9" >> "$REQ_FILE"
-#####							#####echo "geopandas==0.14.3" >> "$REQ_FILE"
-#####							
-#####							####### GUI / visualization
-#####							#####echo "PyQt6==6.7.1" >> "$REQ_FILE"
-#####							#####echo "opencv-python==4.8.1.78" >> "$REQ_FILE"
-#####							#####echo "opencv-contrib-python==4.8.1.78" >> "$REQ_FILE"
-#####						
-#####
-#####							{
-#####								echo "numpy==1.26.4"
-#####								echo "scipy==1.11.4"
-#####								echo "matplotlib==3.8.2"
-#####								echo "shapely==2.0.2"
-#####								echo "utm==0.7.0"
-#####								echo "networkx==3.2.1"
-#####								echo "pandas==2.2.1"
-#####								echo "scikit-gstat==1.0.18"
-#####								echo "glob2==0.7"
-#####								echo "pyproj==3.6.1"
-#####								echo "rasterio==1.3.9"
-#####								echo "geopandas==0.14.3"
-#####								echo "PyQt6==6.7.1"
-#####								echo "opencv-python==4.8.1.78"
-#####								echo "opencv-contrib-python==4.8.1.78"
-#####							} > "${REQ_FILE}"
-#####							
-#####							# ----------------------------------------------------------
-#####							# Install remaining packages
-#####							# ----------------------------------------------------------
-#####							
-#####							pip install --prefer-binary -r "${REQ_FILE}"
-#####							
-#####							
-#####							# ------------------------------
-#####							# Final verification (single-line python)
-#####							# ------------------------------
-#####							python -c "import sys, rasterio, geopandas, pyproj; from osgeo import gdal; print('Python:', sys.version.split()[0]); print('GDAL:', gdal.__version__); print('Rasterio:', rasterio.__version__); print('Geopandas:', geopandas.__version__)"
-#####							
-#####
-#							# Paths
-#							VENV_DIR=/opt/local/amster_python_env
-#							REQ_FILE=/opt/local/requirements.txt
-#							
-#							# Ensure /opt/local exists and is writable
-#							sudo mkdir -p /opt/local
-#							sudo chown -R "$USER" /opt/local
-#							
-#							# Ubuntu version
-#							UBUNTU_VERSION=$(lsb_release -rs)
-#							echo "Detected Ubuntu version: ${UBUNTU_VERSION}"
-#							
-#							# Add deadsnakes PPA only if Ubuntu 24.04 (Python 3.10 not in default repos)
-#							if [[ "${UBUNTU_VERSION}" == "24.04" ]]; then
-#							    echo "Adding deadsnakes PPA for Python 3.10..."
-#							    sudo apt install -y software-properties-common
-#							    sudo add-apt-repository -y ppa:deadsnakes/ppa
-#							    sudo apt update
-#							fi
-#							
-#							# Install Python 3.10 and dev packages
-#							echo "Installing Python 3.10 packages..."
-#							sudo apt install -y python3.10 python3.10-venv python3.10-dev gdal-bin libgdal-dev build-essential
-#							
-#							# Remove old venv if exists
-#							if [[ -d "${VENV_DIR}" ]]; then
-#							    echo "Removing existing venv at ${VENV_DIR}..."
-#							    rm -rf "${VENV_DIR}"
-#							fi
-#							
-#							# Create virtual environment
-#							echo "Creating Python 3.10 virtual environment..."
-#							python3.10 -m venv "${VENV_DIR}"
-#							sudo chown -R "$USER" "${VENV_DIR}"
-#							
-#							# Activate venv
-#							source "${VENV_DIR}/bin/activate"
-#							
-#							# Upgrade pip / setuptools / wheel
-#							"${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel
-#							
-#							# Install numpy first (required for GDAL)
-#							"${VENV_DIR}/bin/pip" install numpy==1.26.4
-#							
-#							# Prepare requirements file
-#							echo "scipy==1.11.4" > "$REQ_FILE"
-#							echo "matplotlib==3.8.2" >> "$REQ_FILE"
-#							echo "shapely==2.0.2" >> "$REQ_FILE"
-#							echo "utm==0.7.0" >> "$REQ_FILE"
-#							echo "PyQt6==6.7.1" >> "$REQ_FILE"
-#							echo "networkx==3.2.1" >> "$REQ_FILE"
-#							echo "geopandas==0.14.3" >> "$REQ_FILE"
-#							echo "scikit-gstat==1.0.18" >> "$REQ_FILE"
-#							echo "rasterio==1.3.9" >> "$REQ_FILE"
-#							echo "pandas==2.2.1" >> "$REQ_FILE"
-#							echo "glob2==0.7" >> "$REQ_FILE"
-#							echo "opencv-contrib-python==4.8.1.78" >> "$REQ_FILE"
-#							
-#							# Install all other requirements
-#							"${VENV_DIR}/bin/pip" install -r "$REQ_FILE"
-#							
-#							# Install GDAL matching system version
-#							GDAL_SYS_VER=$(gdal-config --version)
-#							echo "Installing Python GDAL matching system version: ${GDAL_SYS_VER}..."
-#							"${VENV_DIR}/bin/pip" install --no-binary gdal GDAL=="${GDAL_SYS_VER}"
-							
+
 							break ;;
 					[Nn]* ) 
 							echo "  // OK, I skip it."
@@ -4044,7 +3809,7 @@ if [ "${TYPERUN}" == "I" ] ; then
 				#			AskExternalComponent "gfortran-YOUR_VERSION.dmg" "https://github.com/fxcoudert/gfortran-for-macOS/releases "
 				#			
 				#			FILEXT="${RAWFILE##*.}"
- #
+ 				#
 				#			if [ "${FILEXT}" == "dmg" ] 
 				#				then 
 				#					sudo hdiutil attach "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}"
@@ -4102,21 +3867,21 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PATHGNU="/opt/local/bin"
 							sudo mkdir -p "${PATHGNU}"
 							
-							TstPathGnuFctMac "gawk" # (beware if awk already exist and would be a link pointing toward another version of awk. Replace it with our gawk)
-							TstPathGnuFctMac "gsed"
-							TstPathGnuFctMac "ggrep"
-							TstPathGnuFctMac "gseq"
-							TstPathGnuFctMac "guniq"
-							TstPathGnuFctMac "greadlink"
-							TstPathGnuFctMac "gxargs"
-							TstPathGnuFctMac "gdu"
+							TstPathGnuFctMac "gawk" "awk" # (beware if awk already exist and would be a link pointing toward another version of awk. Replace it with our gawk)
+							TstPathGnuFctMac "gsed" "sed"
+							TstPathGnuFctMac "ggrep" "grep"
+							TstPathGnuFctMac "gseq" "seq"
+							TstPathGnuFctMac "guniq" "uniq"
+							TstPathGnuFctMac "greadlink" "readlink"
+							TstPathGnuFctMac "gxargs" "xargs"
+							TstPathGnuFctMac "gdu" "du"
 							
 							if [ "$(which gdate)" != "${PATHGNU}/gdate" ] ; then echo "coreutils seems not in ${PATHGNU}; please check. I arrange it at least for gdate  here though" ; fi
-							TstPathGnuFctMac "gdate"
+							TstPathGnuFctMac "gdate" "date"
 
 							if [ "$(which gstat)" != "${PATHGNU}/gstat" ] ; then echo "findutils seems not in ${PATHGNU}; please check. I arrange it at least for gstat and gfind here though" ; fi
-							TstPathGnuFctMac "gstat"
-							TstPathGnuFctMac "gfind" 
+							TstPathGnuFctMac "gstat" "stat"
+							TstPathGnuFctMac "gfind" "find" 
 							
 							WHEREISWGET=$(which wget)
 							if [ "${WHEREISWGET}" != "${PATHGNU}/wget" ] ; then echo "wget is in ${WHEREISWGET} instead of ${PATHGNU}; please check. I make a link though" ; sudo ln -sf "${WHEREISWGET}" ${PATHGNU}/wget 2>/dev/null ; fi
@@ -4342,7 +4107,14 @@ if [ "${TYPERUN}" == "I" ] ; then
 					[Yy]* ) 				
 							echo "  // OK, I do it."
 							PortInstall "gnuplot"
-							TstPathGnuFctMac "gnuplot" 
+							# Former versions of this script derived the second name by dropping the first
+							# character of the first argument, hence created a link named "nuplot" here.
+							# Remove it if this computer was installed with one of those versions.
+							if [ -L "${PATHGNU}/nuplot" ] ; then
+								echo "  // Removing ${PATHGNU}/nuplot, a stray link created by a former version of this installer."
+								sudo rm -f "${PATHGNU}/nuplot"
+							fi
+							TstPathGnuFctMac "gnuplot"		# gnuplot is NOT a g-prefixed gnu tool: no second name
 							echo "  // "
 							break ;;
 					[Nn]* ) 
