@@ -26,13 +26,15 @@
 #
 # New in Distro V 1.0:	- based on Funu step 3
 # New in Distro V 1.1.0 2026730 :	- force msbasv4								
+# New in Distro V 2.0.0 20260824 :	- With ESD
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 24, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "

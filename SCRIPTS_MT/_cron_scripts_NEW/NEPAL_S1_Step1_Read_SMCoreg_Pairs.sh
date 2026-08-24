@@ -11,6 +11,7 @@
 # New in Distro V 2.1.0 20250225 :	- adapt kml for reading to avoid extra bursts 
 #									- add kml with overlap area of interest to check bursts nr of each mode
 # New in Distro V 3.0.0 20251111 :	- Since new download and unzip from Mac doris5m4, no need to Sort_UNZIP_S1.sh
+# New in Distro V 4.0.0 20260824 :	- With ESD
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -82,12 +83,12 @@ KMLFILED92=$PATH_1650/kml/Nepal/KML_GOOGLEEARTH/Overlap_CentralNepal_D92.kml
 KMLFILED121=$PATH_1650/kml/Nepal/KML_GOOGLEEARTH/Overlap_CentralNepal_D121.kml
 
 #Launch param files
-PARAMCOREGASC1=$PATH_1650/Param_files/S1/Nepal_A_85/LaunchMTparam_S1_Nepal_A_85_Zoom1_ML2_Coreg_0keep.txt 
-PARAMCOREGASC2=$PATH_1650/Param_files/S1/Nepal_A_158/LaunchMTparam_S1_Nepal_A_158_Zoom1_ML2_Coreg_0keep.txt 
+PARAMCOREGASC1=$PATH_1650/Param_files/S1/Nepal_A_85/LaunchMTparam_S1_Nepal_A_85_Zoom1_ML2_Coreg_0keep_withESD.txt 
+PARAMCOREGASC2=$PATH_1650/Param_files/S1/Nepal_A_158/LaunchMTparam_S1_Nepal_A_158_Zoom1_ML2_Coreg_0keep_withESD.txt 
 
-PARAMCOREGDESC1=$PATH_1650/Param_files/S1/Nepal_D_19/LaunchMTparam_S1_Nepal_D_19_Zoom1_ML2_Coreg_0keep.txt
-PARAMCOREGDESC2=$PATH_1650/Param_files/S1/Nepal_D_92/LaunchMTparam_S1_Nepal_D_92_Zoom1_ML2_Coreg_0keep.txt
-PARAMCOREGDESC3=$PATH_1650/Param_files/S1/Nepal_D_121/LaunchMTparam_S1_Nepal_D_121_Zoom1_ML2_Coreg_0keep.txt
+PARAMCOREGDESC1=$PATH_1650/Param_files/S1/Nepal_D_19/LaunchMTparam_S1_Nepal_D_19_Zoom1_ML2_Coreg_0keep_withESD.txt
+PARAMCOREGDESC2=$PATH_1650/Param_files/S1/Nepal_D_92/LaunchMTparam_S1_Nepal_D_92_Zoom1_ML2_Coreg_0keep_withESD.txt
+PARAMCOREGDESC3=$PATH_1650/Param_files/S1/Nepal_D_121/LaunchMTparam_S1_Nepal_D_121_Zoom1_ML2_Coreg_0keep_withESD.txt
 
 # resampled dir
 NEWASCPATH1=$PATH_3610/SAR_SM/RESAMPLED/S1/Nepal_A_85/SMNoCrop_SM_${SMASC2}

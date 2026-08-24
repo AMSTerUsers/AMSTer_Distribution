@@ -41,13 +41,14 @@
 #									- test if another Step3 is running. If yes, stop to avoid overloading the computer
 # New in Distro V 1.9.1 20260119:	- typo in arg PlotAllCombiModes ; add MODES in PlotAllLOS	
 # New in Distro V 1.10.0 2026730 :	- force msbasv4								
+# New in Distro V 2.0.0 20260824 :	- With ESD
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.10.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+VER="Distro V2.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 24, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -168,11 +169,11 @@ YYYY=$(date +%Y)
 		# Path to LaunchParameters.txt files for each mode (need one for each mode)
 		LAUNCHPARAMPATH=${PATH_1650}/Param_files/S1/
 
-		LAUNCHPARAMASC1=${LAUNCHPARAMPATH}/Nepal_A_85/LaunchMTparam_S1_Nepal_A_85_Zoom1_ML2_MassProc_0keep_MassProc.txt
-		LAUNCHPARAMASC2=${LAUNCHPARAMPATH}/Nepal_A_158/LaunchMTparam_S1_Nepal_A_158_Zoom1_ML2_MassProc_0keep_MassProc.txt
-		LAUNCHPARAMDESC1=${LAUNCHPARAMPATH}/Nepal_D_19/LaunchMTparam_S1_Nepal_D_19_Zoom1_ML2_MassProc_0keep_MassProc.txt
-		LAUNCHPARAMDESC2=${LAUNCHPARAMPATH}/Nepal_D_92/LaunchMTparam_S1_Nepal_D_92_Zoom1_ML2_MassProc_0keep_MassProc.txt
-		LAUNCHPARAMDESC3=${LAUNCHPARAMPATH}/Nepal_D_121/LaunchMTparam_S1_Nepal_D_121_Zoom1_ML2_MassProc_0keep_MassProc.txt
+		LAUNCHPARAMASC1=${LAUNCHPARAMPATH}/Nepal_A_85/LaunchMTparam_S1_Nepal_A_85_Zoom1_ML2_MassProc_0keep_withESD.txt
+		LAUNCHPARAMASC2=${LAUNCHPARAMPATH}/Nepal_A_158/LaunchMTparam_S1_Nepal_A_158_Zoom1_ML2_MassProc_0keep_withESD.txt
+		LAUNCHPARAMDESC1=${LAUNCHPARAMPATH}/Nepal_D_19/LaunchMTparam_S1_Nepal_D_19_Zoom1_ML2_MassProc_0keep_withESD.txt
+		LAUNCHPARAMDESC2=${LAUNCHPARAMPATH}/Nepal_D_92/LaunchMTparam_S1_Nepal_D_92_Zoom1_ML2_MassProc_0keep_withESD.txt
+		LAUNCHPARAMDESC3=${LAUNCHPARAMPATH}/Nepal_D_121/LaunchMTparam_S1_Nepal_D_121_Zoom1_ML2_MassProc_0keep_withESD.txt
 
 	# Events tables
 	###############

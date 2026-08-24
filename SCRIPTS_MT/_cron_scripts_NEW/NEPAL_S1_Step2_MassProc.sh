@@ -9,6 +9,7 @@
 #
 # New in Distro V 2.0 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
 #								- add wait at the end
+# New in Distro V 3.0.0 20260824 :	- With ESD
 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -59,12 +60,12 @@ TABLEDESC3=${DIRSET}/set5/table_0_0_MaxShortest_${NR}_Without_Quanrantained_Data
 
 
 #Launch param files
-PARAMPROCESSASC1=$PATH_1650/Param_files/S1/Nepal_A_85/LaunchMTparam_S1_Nepal_A_85_Zoom1_ML2_MassProc_0keep.txt 
-PARAMPROCESSASC2=$PATH_1650/Param_files/S1/Nepal_A_158/LaunchMTparam_S1_Nepal_A_158_Zoom1_ML2_MassProc_0keep.txt 
+PARAMPROCESSASC1=$PATH_1650/Param_files/S1/Nepal_A_85/LaunchMTparam_S1_Nepal_A_85_Zoom1_ML2_MassProc_0keep_withESD.txt 
+PARAMPROCESSASC2=$PATH_1650/Param_files/S1/Nepal_A_158/LaunchMTparam_S1_Nepal_A_158_Zoom1_ML2_MassProc_0keep_withESD.txt 
 
-PARAMPROCESSDESC1=$PATH_1650/Param_files/S1/Nepal_D_19/LaunchMTparam_S1_Nepal_D_19_Zoom1_ML2_MassProc_0keep.txt
-PARAMPROCESSDESC2=$PATH_1650/Param_files/S1/Nepal_D_92/LaunchMTparam_S1_Nepal_D_92_Zoom1_ML2_MassProc_0keep.txt
-PARAMPROCESSDESC3=$PATH_1650/Param_files/S1/Nepal_D_121/LaunchMTparam_S1_Nepal_D_121_Zoom1_ML2_MassProc_0keep.txt
+PARAMPROCESSDESC1=$PATH_1650/Param_files/S1/Nepal_D_19/LaunchMTparam_S1_Nepal_D_19_Zoom1_ML2_MassProc_0keep_withESD.txt
+PARAMPROCESSDESC2=$PATH_1650/Param_files/S1/Nepal_D_92/LaunchMTparam_S1_Nepal_D_92_Zoom1_ML2_MassProc_0keep_withESD.txt
+PARAMPROCESSDESC3=$PATH_1650/Param_files/S1/Nepal_D_121/LaunchMTparam_S1_Nepal_D_121_Zoom1_ML2_MassProc_0keep_withESD.txt
 
 
 MASSPROCESSASCDIR1=$PATH_3611/SAR_MASSPROCESS/S1/NEPAL_A_85
