@@ -71,14 +71,26 @@
 #New in Distro V 4.23 20260714:	- fix path to Fiji for Mac ARM
 #								- mute possible message complaining "Unknown locale, assumin C" 
 #								- check ghostscript
+#New in Distro V 4.24 20260824:	- check the zstd and LERC compression libs (libzstd-dev and liblerc-dev on Linux, zstd and 
+#								  lerc on Mac, where the Homebrew formula of the latter is named liblerc and not lerc)
+#								- new fct CheckDevLib: checks that a dev lib is really usable at compilation, i.e. that 
+#								  both its header and its link lib are found, which a package manager check can not tell
+#								- CheckLib1, CheckLib2, CheckLib3 (which was moreover defined twice, the first definition
+#								  being dead code) and CheckPkg are replaced by the single fct CheckAptPkg, based on 
+#								  dpkg-query instead of greping ldconfig or dpkg -l. Two helper fcts come with it: AptPkgIsInstalled 
+#								  (silent test) and AptPkgProvidedBy (handles virtual packages)
+#								- check libmpich-dev and libopenmpi-dev instead of mpich-dev, and check parallel
+#								- update warning about GraphicsMagick and ImageMagick 
+#								- new fct ImageMagickIsInstalled for the policy.xml checks
+#								- QGIS version on Linux: exact dpkg-query instead of a grep returning one line per qgis* pkg
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=`basename "$0"`
-VER="version 4.23 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Jul 14, 2026"
+VER="version 4.24 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 24, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -440,123 +452,166 @@ function TestDirs()
 	}
 
 
-function CheckLib3()
+function AptPkgIsInstalled()
 	{
-		unset LIBTOTEST
-		unset LIB
-		unset EXT1
-		unset EXT2
-		unset VER
+	# Return 0 (true) if an apt package is really installed on this computer, 1 (false) otherwise. 
+	# Nothing is displayed: only the return code matters, so that it can be used in a test. 
+	#
+	# dpkg-query is used here instead of greping "ldconfig -p", "dpkg -l" or using "dpkg -s" because: 
+	#	- "ldconfig -p" only lists the RUNTIME shared libraries and says nothing about the headers, 
+	#	  hence a missing -dev package was reported as installed as soon as its runtime lib was there 
+	#	  (which is almost always the case since gdal, tiff etc. pull them as dependencies)
+	#	- a grep in "dpkg -l" matches any package whose name merely CONTAINS the searched string, 
+	#	  e.g. "graphicsmagick-imagemagick-compat" matches both graphicsmagick and imagemagick 
+	#	- "dpkg -s" (and "dpkg -l") also succeed for packages that were removed but whose configuration 
+	#	  files remain (status "deinstall ok config-files"), hence the test on "install ok installed"
+	local PKGTOTEST=$1
+	local STATUS=""
 
-		local LIBTOTEST=$1	
-		
-		LIB=`echo ${LIBTOTEST} | cut -d - -f1`
-		EXT1=`echo ${LIBTOTEST} | cut -d - -f2`
-		EXT2=`echo ${LIBTOTEST} | cut -d - -f3`
-						
-		if [ `ldconfig -p | ${PATHGNU}/grep ${LIB} | wc -l` -gt 0 ] 
-			then 
-				VER=$(dpkg  -l | ${PATHGNU}/grep ${LIB} | ${PATHGNU}/grep ${EXT1} | ${PATHGNU}/grep ${EXT2} | ${PATHGNU}/gawk '{ print $3 }' | head -1 )			# if more than one version, take only the first one... 
-				#echo "--> ${LIBTOTEST}-${EXT1}:$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VERHD}$(tput sgr 0)"
-				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
-			else
-				#echo "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}-${EXT1} : failed$(tput sgr 0)"	
-				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
-		fi
+	STATUS=$(dpkg-query -W -f='${Status}' "${PKGTOTEST}" 2> /dev/null)
+	if [ "${STATUS}" == "install ok installed" ] ; then return 0 ; fi
+	return 1
 	}
 
-function CheckLib3()
+function AptPkgProvidedBy()
 	{
-		unset LIBTOTEST
-		unset LIB
-		unset EXT1
-		unset VER
+	# Echo the name of the installed package that provides PKGTOTEST as a virtual package, or nothing 
+	# if there is none. Some names indeed only exist as virtual packages provided by a real one. 
+	#
+	# Note: no ${PATHGNU}/gawk here although it would be shorter, because these fcts must answer a 
+	# yes/no question: if PATHGNU were empty or wrong, the call would fail and every package would 
+	# be silently reported as missing. Plain bash can not fail that way. 
+	local PKGTOTEST=$1
+	local PKGNAME=""
+	local STATUS=""
+	local PROVIDED=""
+	local ENTRY=""
 
-		local LIBTOTEST=$1	
-		
-		LIB=`echo ${LIBTOTEST} | cut -d - -f1`
-		EXT1=`echo ${LIBTOTEST} | cut -d - -f2`
-						
-		if dpkg -s ${LIBTOTEST} >/dev/null 2>&1
-			then 
-				VER=$(dpkg -s ${LIBTOTEST} | ${PATHGNU}/grep Version | ${PATHGNU}/gawk '{ print $2 }' | head -1)			# if more than one version, take only the first one... 
-				#echo "--> ${LIBTOTEST}-${EXT1}:$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VERHD}$(tput sgr 0)"
-				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
-			else
-				#echo "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}-${EXT1} : failed$(tput sgr 0)"	
-				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
-		fi
+	while IFS="|" read -r PKGNAME STATUS PROVIDED
+		do
+			if [ "${STATUS}" != "install ok installed" ] || [ "${PROVIDED}" == "" ] ; then continue ; fi
+			# PROVIDED is a comma separated list where each entry may carry a version, e.g. "name (= 1.2)". 
+			# Splitting on commas and spaces is enough here: the version bits simply never match a package name. 
+			for ENTRY in $(echo "${PROVIDED}" | tr "," " ")
+				do
+					if [ "${ENTRY}" == "${PKGTOTEST}" ] ; then echo "${PKGNAME}" ; return ; fi
+				done
+		done <<< "$(dpkg-query -W -f='${Package}|${Status}|${Provides}\n' 2> /dev/null)"
 	}
 
-function CheckLib2()
+function ImageMagickIsInstalled()
 	{
-		unset LIBTOTEST
-		unset LIB
-		unset EXT1
-		unset VER
+	# Return 0 (true) if ImageMagick itself is installed, 1 (false) otherwise. 
+	# A grep for "imagemagick" in the package list can not be used because it also matches 
+	# graphicsmagick-imagemagick-compat, which is GraphicsMagick and has no policy.xml. 
+	# The package name of ImageMagick varies though (imagemagick, imagemagick-6.q16, imagemagick-7.q16...), 
+	# hence dpkg-query is asked for the imagemagick* family only, and the status of these packages is tested. 
+	local STATUSLIST=""
 
-		local LIBTOTEST=$1	
-		
-		LIB=`echo ${LIBTOTEST} | cut -d - -f1`
-		EXT1=`echo ${LIBTOTEST} | cut -d - -f2`
-						
-		if [ `ldconfig -p | ${PATHGNU}/grep ${LIB} | wc -l` -gt 0 ] 
-			then 
-				VER=$(dpkg  -l | ${PATHGNU}/grep ${LIB} | ${PATHGNU}/grep ${EXT1} | ${PATHGNU}/gawk '{ print $3 }'  | head -1 )			# if more than one version, take only the first one... 
-				#echo "--> ${LIBTOTEST}-${EXT1}:$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VERHD}$(tput sgr 0)"
-				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
-			else
-				#echo "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}-${EXT1} : failed$(tput sgr 0)"	
-				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
-		fi
-	}
-function CheckLib1()
-	{
-		unset LIBTOTEST
-		unset VER
-
-		local LIBTOTEST=$1	
-				
-		if [ `ldconfig -p | ${PATHGNU}/grep ${LIBTOTEST} | wc -l` -gt 0 ] 
-			then 
-				if [ "${LIBTOTEST}" == "gdal" ]
-					then 
-						VER=$(gdalinfo --version | ${PATHGNU}/grep "GDAL" | ${PATHGNU}/gawk '{ print $2 }' )
-					else
-						VER=$(dpkg  -l | ${PATHGNU}/grep ${LIBTOTEST} | ${PATHGNU}/gawk '{ print $3 }'  | head -1 )			# if more than one version, take only the first one... 
-				fi
-				#echo "--> ${LIBTOTEST}-${EXT1}:$(tput setaf 2)	passed$(tput sgr 0)		Version	$(tput setaf 2)${VERHD}$(tput sgr 0)"
-				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
-			else
-				#echo "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}-${EXT1} : failed$(tput sgr 0)"	
-				
-				if [ "${LIBTOTEST}" == "gfortran" ]
-					then 
-						printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed but not mandatory$(tput sgr 0)"
-					else
-						printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
-				fi
-
-		fi
+	STATUSLIST=$(dpkg-query -W -f='${Status}\n' 'imagemagick*' 2> /dev/null)
+	case "${STATUSLIST}" in
+		*"install ok installed"*) 	return 0 ;;
+	esac
+	return 1
 	}
 
-function CheckPkg()
+function CheckAptPkg()
 	{
-		unset LIBTOTEST
-		unset VER
+	# Check that an apt package is really installed and display its version. 
+	# Usage: CheckAptPkg <package name> [optional]
+	#	where the second - optional - argument "optional" tells that a missing package is not blocking
+	#
+	# This single function replaces the former CheckLib1, CheckLib2, CheckLib3 and CheckPkg, which were 
+	# doing the same job with grep based tests that could not tell a -dev package from its runtime lib 
+	# (see the note in AptPkgIsInstalled). Beware that the package name must be the exact apt name. 
+	unset PKGTOTEST
+	unset VER
 
-		local LIBTOTEST=$1	
-				
-		if [ `dpkg  -l | ${PATHGNU}/grep ${LIBTOTEST} | wc -l` -gt 0 ] 
-			then 
-						VER=$(dpkg  -l | ${PATHGNU}/grep ${LIBTOTEST} | ${PATHGNU}/gawk '{ print $3 }'  | head -1 )			# if more than one version, take only the first one... 
-				printf "%-60s%-20s\n" "--> ${LIBTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
-			else
-				printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${LIBTOTEST}:" "failed$(tput sgr 0)"
-		fi
+	local PKGTOTEST=$1
+	local MANDATORY=$2
+	local VER=""
+	local PROVIDER=""
+
+	if AptPkgIsInstalled "${PKGTOTEST}"
+		then
+			VER=$(dpkg-query -W -f='${Version}' "${PKGTOTEST}" 2> /dev/null)
+			printf "%-60s%-20s\n" "--> ${PKGTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+			return
+	fi
+
+	# not installed under that name; maybe it is a virtual package provided by an installed one
+	PROVIDER=$(AptPkgProvidedBy "${PKGTOTEST}")
+	if [ "${PROVIDER}" != "" ]
+		then
+			VER=$(dpkg-query -W -f='${Version}' "${PROVIDER}" 2> /dev/null)
+			printf "%-60s%-20s\n" "--> ${PKGTOTEST}:" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)	(provided by ${PROVIDER})"
+			return
+	fi
+
+	if [ "${MANDATORY}" == "optional" ]
+		then
+			printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${PKGTOTEST}:" "failed but not mandatory$(tput sgr 0)"
+		else
+			printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${PKGTOTEST}:" "failed$(tput sgr 0)"
+	fi
 	}
 
+function CheckDevLib()
+	{
+	# Check that a development library is REALLY usable by the compiler, that is that both its 
+	# header and its link library are found. This is what actually matters to compile AMSTerEngine 
+	# and MSBAS, while a package manager check can be misleading: on Linux the runtime lib is often 
+	# already there as a dependency of something else although the -dev package (i.e. the headers) 
+	# is missing, and on Mac the port/formula can be installed while its include dir is not searched. 
+	#
+	# Usage: CheckDevLib <header file> <link name> [<pkg-config name>]
+	#   e.g. CheckDevLib "zstd.h" "zstd" "libzstd"		# link name is what follows -l, i.e. -lzstd
+	unset HEADER
+	unset LINKNAME
+	unset PCNAME
+	unset VER
 
+	local HEADER=$1
+	local LINKNAME=$2
+	local PCNAME=$3
+	local VER=""
+	local CFLAGS=""
+	local LDFLAGS="-l${LINKNAME}"
+	local PKGPREFIX=""
+	local CC="cc"
+	local TSTPRG="${TMPDIR:-/tmp}/AMSTer_CheckDevLib_$$"
+
+	command -v cc > /dev/null 2>&1 || CC="gcc"
+
+	# Get the exact flags from pkg-config when the lib ships a .pc file, otherwise fall back on the 
+	# include/lib dirs of the local package manager because neither MacPorts nor Homebrew installs 
+	# in a directory searched by default by clang. 
+	if [ "${PCNAME}" != "" ] && pkg-config --exists "${PCNAME}" 2> /dev/null
+		then
+			CFLAGS=$(pkg-config --cflags "${PCNAME}" 2> /dev/null)
+			LDFLAGS=$(pkg-config --libs "${PCNAME}" 2> /dev/null)
+			VER=$(pkg-config --modversion "${PCNAME}" 2> /dev/null)
+		else
+			if [ "${OS}" == "Darwin" ]
+				then
+					if [ "${PKGMGR}" == "brew" ] && [ "${BREWPREFIX}" != "" ]
+						then PKGPREFIX="${BREWPREFIX}"
+						else PKGPREFIX="/opt/local"
+					fi
+					CFLAGS="-I${PKGPREFIX}/include"
+					LDFLAGS="-L${PKGPREFIX}/lib ${LDFLAGS}"
+			fi
+	fi
+
+	# Try to compile and link a minimal program that includes the header
+	if printf '#include <%s>\nint main(void) { return 0 ; }\n' "${HEADER}" | ${CC} -x c - ${CFLAGS} ${LDFLAGS} -o "${TSTPRG}" > /dev/null 2>&1
+		then
+			printf "%-60s%-20s\n" "--> ${HEADER} + lib${LINKNAME} (usable at compilation):" "$(tput setaf 2)passed$(tput sgr 0)	Version	$(tput setaf 2)${VER}$(tput sgr 0)"
+		else
+			printf "%-75s%-20s\n" "$(tput setaf 1)$(tput setab 7)--> ${HEADER} + lib${LINKNAME} (usable at compilation):" "failed$(tput sgr 0)"
+	fi
+	rm -f "${TSTPRG}"
+	}
 
 
 function MapPortNameToBrew()
@@ -575,6 +630,7 @@ function MapPortNameToBrew()
 		"gmt6") 						BREWNAMES="gmt" ;;
 		"gsed") 						BREWNAMES="gnu-sed" ;;
 		"tiff") 						BREWNAMES="libtiff" ;;
+		"lerc") 						BREWNAMES="liblerc" ;;	# MacPorts calls it lerc, Homebrew calls it liblerc
 		"fftw-3-long"|"fftw-3-single"|"fftw-3"|"fftw") 
 										BREWNAMES="fftw" ;;	# Homebrew's fftw formula builds single + double + long-double in one go
 		"ImageMagick") 					BREWNAMES="imagemagick" ;;
@@ -583,7 +639,7 @@ function MapPortNameToBrew()
 		"postgresql17") 				BREWNAMES="postgresql@17" ;;
 		"gdal-netcdf"|"gdal-hdf5"|"gdal-openjpeg") 
 										BREWNAMES="" ;;	# already built-in with Homebrew's gdal formula, nothing to check separately
-		*) 								BREWNAMES="${INNAME}" ;;	# same name in most other cases
+		*) 								BREWNAMES="${INNAME}" ;;	# same name in most other cases (incl. zstd)
 	esac
 	}
 
@@ -1194,36 +1250,42 @@ echo "----------------------------------"  # For Mac or Linux
 case ${OS} in 
 	"Linux") 
 		echo "Testing libraries for MSBAS, AMSTerEngine etc..." 
-		CheckLib2 "gdal-bin"				# version nr can't be obtained as others 
-		CheckLib2 "libgdal-dev"
-		CheckLib2 "libhdf5-dev"
-		CheckLib2 "libnetcdf-dev"
-		CheckLib2 "libopenjp2-7-dev"	
-		CheckLib2 "proj-bin"	
-		CheckLib2 "libproj-dev"		
-		CheckLib2 "libgeos-dev"					
-		CheckLib2 "build-essential"					
-		CheckLib1 "python3.12"					
-		CheckLib2 "python3.12-venv"					
-		CheckLib2 "python3.12-dev"					
+		CheckAptPkg "gdal-bin"
+		CheckAptPkg "libgdal-dev"
+		CheckAptPkg "libhdf5-dev"
+		CheckAptPkg "libnetcdf-dev"
+		CheckAptPkg "libopenjp2-7-dev"	
+		CheckAptPkg "proj-bin"	
+		CheckAptPkg "libproj-dev"		
+		CheckAptPkg "libgeos-dev"					
+		CheckAptPkg "build-essential"					
+		CheckAptPkg "python3.12"					
+		CheckAptPkg "python3.12-venv"					
+		CheckAptPkg "python3.12-dev"					
 	
-		CheckLib1 "gmt"	
-		CheckLib1 "mpich"	
-		CheckLib2 "mpich-dev"	
-		CheckLib2 "libomp-dev"	
+		CheckAptPkg "gmt"	
+		CheckAptPkg "mpich"	
+		CheckAptPkg "libmpich-dev"		# "mpich-dev" was checked before although no such package exists in Debian/Ubuntu; 
+										# it seemed to pass only because the former test greped ldconfig for "mpich". 
+										# AMSTer_install.sh installs libmpich-dev and libopenmpi-dev. 
+		CheckAptPkg "libopenmpi-dev"
+		CheckAptPkg "libomp-dev"	
+		CheckAptPkg "parallel"
 		
 		# graphicsmagick is used e.g. for convert; more performant than imagemagick but less compatible
 		# Also, unlike graphicsmagick, it needs to edit the policy.xml file, hence prefer graphicsmagick 
 		# However, do not mix with graphicsmagick !
-		CheckPkg "graphicsmagick"		# no capital letters ; e.g. used for convert 
-		CheckPkg "graphicsmagick-imagemagick-compat"
+		CheckAptPkg "graphicsmagick"		# no capital letters ; e.g. used for convert 
+		CheckAptPkg "graphicsmagick-imagemagick-compat"
 
 		# imagemagick is used e.g. for convert; more compatible than graphicsmagick but less performant; do not mix with graphicsmagick 
-		CheckPkg "imagemagick"		# no capital letters ; e.g. used for convert 
-		CheckLib3 "imagemagick-6-common"
+		CheckAptPkg "imagemagick"		# no capital letters ; e.g. used for convert 
+		CheckAptPkg "imagemagick-6-common"
 		
-		# check that both are not installed 
-		if [ `dpkg  -l | ${PATHGNU}/grep graphicsmagick | wc -l` -gt 0 ] && [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] ; then 
+		# check that both are not installed. Beware that a grep in "dpkg -l" can not be used here because 
+		# graphicsmagick-imagemagick-compat contains BOTH names, which was raising the warning below as soon 
+		# as that single compatibility package was installed, that is in every normal AMSTer installation. 
+		if AptPkgIsInstalled "graphicsmagick" && AptPkgIsInstalled "imagemagick" ; then 
 			printf "%-55s%-20s\n" "$(tput setaf 3)" "Beware: Both GraphicsMagick and ImageMagick are installed. Possible conflict for usage of functions like convert.$(tput sgr 0)"
 			printf "%-60s%-20s\n" "$(tput setaf 3)" "The first is more performant than the other and do not need setup of policy.xml to manage max height/width or allow permissions to read/write PS, EPS or PDF files. $(tput sgr 0)"
 			printf "%-60s%-20s\n" "$(tput setaf 3)" "However, graphicsmagick may be less compatible. For instance, permissions to read/write PS, EPS or PDF files might need to be managed by ghostscript.$(tput sgr 0)"
@@ -1231,25 +1293,29 @@ case ${OS} in
 			printf "%-60s%-20s\n" "$(tput setaf 3)" "Example: 'sudo update-alternatives --config convert' will let you pick whether /usr/bin/convert points to ImageMagick or GraphicsMagick.$(tput sgr 0)"
 		fi
 
-		CheckPkg "ffmpeg"	
+		CheckAptPkg "ffmpeg"	
 
-		CheckLib1 "clang-18"	
-		CheckLib2 "libfftw3-dev"
-		CheckLib2 "libfftw3-long3"
-		CheckLib2 "libfftw3-single3"
-		CheckLib2 "libgeotiff-dev"
-		CheckLib2 "libtiff-dev"		
-		CheckLib1 "libxml2"
-		CheckLib2 "libxml2-dev"
-		CheckLib2 "liblapack-dev"
+		CheckAptPkg "clang-18"	
+		CheckAptPkg "libfftw3-dev"
+		CheckAptPkg "libfftw3-long3"
+		CheckAptPkg "libfftw3-single3"
+		CheckAptPkg "libgeotiff-dev"
+		CheckAptPkg "libtiff-dev"		
+		CheckAptPkg "libzstd-dev"
+		CheckDevLib "zstd.h" "zstd" "libzstd"
+		CheckAptPkg "liblerc-dev"
+		CheckDevLib "Lerc_c_api.h" "Lerc" "Lerc"		# LERC: the lib is libLerc and its pkg-config file Lerc.pc, both with a capital L
+		CheckAptPkg "libxml2"
+		CheckAptPkg "libxml2-dev"
+		CheckAptPkg "liblapack-dev"
 	
-		CheckPkg "gsfonts"
+		CheckAptPkg "gsfonts"
 	
-		CheckLib2 "libopenblas-dev"	
+		CheckAptPkg "libopenblas-dev"	
 
-		CheckLib2 "libgsl-dev"
+		CheckAptPkg "libgsl-dev"
 		
-		CheckLib1 "gfortran"
+		CheckAptPkg "gfortran" "optional"
 
 		if [ `g++ --version 2>/dev/null | wc -l` -gt 0 ] 
 			then 
@@ -1274,7 +1340,7 @@ case ${OS} in
 	
 		echo ""		
 		echo "Testing specific Linux features:"
-		CheckPkg "gzip"
+		CheckAptPkg "gzip"
 		TestVariableShort "x-terminal-emulator"
 		TestVariableShort "espeak"
 		TestVarBashrc "OPENBLAS_NUM_THREADS="
@@ -1297,6 +1363,10 @@ case ${OS} in
 		CheckLibMAC "lapack"
 #		CheckLibMAC "atlas"
 		CheckLibMAC "tiff"
+		CheckLibMAC "zstd"				# same name for MacPorts and Homebrew
+		CheckDevLib "zstd.h" "zstd" "libzstd"
+		CheckLibMAC "lerc"				# MacPorts port lerc, Homebrew formula liblerc: MapPortNameToBrew translates it
+		CheckDevLib "Lerc_c_api.h" "Lerc" "Lerc"		# LERC: the lib is libLerc and its pkg-config file Lerc.pc, both with a capital L
 		CheckLibMAC "libxml2"
 		CheckLibMAC "fftw-3"
 		CheckLibMAC "fftw-3-long"
@@ -1383,9 +1453,9 @@ echo ""
 
 # Set up specs for imagemagick
 if  [ "${OS}" == "Linux" ] ; then
-	if [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] 
+	if ImageMagickIsInstalled 
 		then 	
-			if [ -f "/etc/ImageMagick/policy.xml" ] && [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] 
+			if [ -f "/etc/ImageMagick/policy.xml" ] 
 				then 
 					if [ `grep "policy domain=" /etc/ImageMagick/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | wc -l` -gt 0 ]
 						then 
@@ -1449,7 +1519,7 @@ if  [ "${OS}" == "Linux" ] ; then
 			
 			fi
 			
-			if [ -f "/etc/ImageMagick-6/policy.xml" ] && [ `dpkg  -l | ${PATHGNU}/grep imagemagick | wc -l` -gt 0 ] 
+			if [ -f "/etc/ImageMagick-6/policy.xml" ] 
 				then 
 					if [ `grep "policy domain=" /etc/ImageMagick-6/policy.xml | grep "rights=" | grep "pattern="  | grep \"PS\" | wc -l` -gt 0 ]
 						then 
@@ -1612,7 +1682,7 @@ fi
 #QGIS
 		case ${OS} in 
 		    "Linux")	QGISVER=`qgis --version 2>/dev/null`		# insatlled from apt installer 
-		    			QGISVER2=`dpkg -l | grep qgis | awk '{print $3}' 2>/dev/null`
+		    			QGISVER2=$(dpkg-query -W -f='${Version}' qgis 2>/dev/null)		# exact package, else one line per qgis* package
 		        ;;
 		    "Darwin")	QGISVER=`/Applications/QGIS.app/Contents/MacOS/QGIS --version 2>/dev/null`
 						QGISVER2=`qgis --version 2>/dev/null`

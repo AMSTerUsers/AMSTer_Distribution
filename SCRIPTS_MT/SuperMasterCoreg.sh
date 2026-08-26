@@ -80,13 +80,14 @@
 #								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
 # New in Distro V 5.1 20260703:	- allows S1coregistration with ESD option 
 # New in Distro V 5.2 20260729:	- Keep computing amplitude for S1 in WIDESWATH mode because it is needed in mass processing 
+# New in Distro V 5.3 20260825:	- Cope with BIOMASS data
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 29, 2026"
+VER="Distro V5.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -312,7 +313,7 @@ eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
 eval RNDM1=`echo $(( $RANDOM % 10000 ))`
 
 case ${SATDIR} in 
-	"NISAR") 
+	"NISAR" | "BIOMASS" | "BIO" | "SAOCOM" | "ICEYE" ) 
 		# need this definition here for usage in GetParamFromFile
 		MASDIR=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SUPERMASTER}` 		 # i.e. if NISAR is given in the form of date, MASNAME is now the full name.csl of the image anyway
 
@@ -408,6 +409,7 @@ esac
 # Supermaster directory name based on date given in LaunchParameters file
 if [ ${SATDIR} == "S1" ] ; then 
 		if [ "${S1MODE}" == "WIDESWATH" ] ; then 
+				#INPUTDATA is ${DATAPATH}/${SATDIR}/${TRKDIR}/${CROPDIR}
 				SUPERMASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SUPERMASTER} | cut -d . -f 1` 		 # i.e. if S1 in wideswath is given in the form of date, MASNAME is now the full name of the image anyway and no crop is possible for S1
 			else 
 				SUPERMASNAME=`ls  ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SUPERMASTER}  | cut -d . -f 1` 		 # i.e. if S1 is not wideswath, crop is possible, so one must search for the name in NoCrop; MASNAME is now the full name of the image anyway
@@ -415,6 +417,7 @@ if [ ${SATDIR} == "S1" ] ; then
 	else
 		SUPERMASNAME=${SUPERMASTER} 
 fi	
+
 SUPERMASDIR=${SUPERMASNAME}.csl
 
 # Check required dir:

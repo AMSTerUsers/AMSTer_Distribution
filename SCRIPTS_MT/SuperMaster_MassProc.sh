@@ -126,14 +126,14 @@
 #								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
 #								- mute error while atempting to rm ExistingPairs_.. file if does not exist yet (at first run)
 # New in Distro V 5.1 20260703:	- allows S1coregistration with ESD option 
-
+# New in Distro V 5.2 20260825:	- Cope with BIOMASS data
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 03, 2026"
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
 
 
 echo " "
@@ -421,7 +421,7 @@ mkdir -p ${INPUTDATA}
 
 # Test if S1 is strip map, because it would then require normal processing
 case ${SATDIR} in 
-	"NISAR") 
+	"NISAR" | "BIOMASS" | "BIO") 
 		SUPERMASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SUPERMASTER} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, MASNAME is now the full name of the image anyway
 		;;
 	"S1") 
@@ -710,7 +710,7 @@ case ${LISTOFPROCESSED} in
 				# force to build the list of existing pairs based on the list of pair dirs in MASSPROCESSPATHLONG
 				# If MASSPROCESSPATHLONG contains subdir, check pairs already processed (in the form of date_date ; also for S1) :
 				if find "${MASSPROCESSPATHLONG}" -mindepth 1 -print -quit | ${PATHGNU}/grep -q . ; then 
-					if [ "${SATDIR}" == "S1" ]
+					if [ "${SATDIR}" == "S1" ] #||  [ "${SATDIR}" == "BIOMASS" ]
 							then 
 								#ls -d * | ${PATHGNU}/grep -v ".txt"  | ${PATHGNU}/grep -v "Geocoded" | ${PATHGNU}/grep -v "_CheckResults" | cut -d _ -f 3,7 > ExistingPairs_${RUNDATE}_${RNDM1}.txt
 								find . -maxdepth 1 -type d -name "*_*" | ${PATHGNU}/grep -v "Check"  | ${PATHGNU}/grep -v "Crop" | ${PATHGNU}/grep -v ".txt"  | cut -d _ -f 3,7 > ExistingPairs_${RUNDATE}_${RNDM1}.txt
@@ -914,12 +914,13 @@ do
 		SLV=`echo ${PAIRS} | cut -d _ -f 2`
 
 		# some naming and conventions
-		if [ ${SATDIR} == "S1" ] 
+		if [[ "${SATDIR}" == "S1" ]] #|| [[ "${SATDIR}" == "BIOMASS" ]] 
 			then 
 				MASNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${MAS} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
 				SLVNAME=`ls ${INPUTDATA} | ${PATHGNU}/grep ${SLV} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
 				# repeat touch FLAG to keep recent date and offer the possibility to check that FLAG is not a ghost file 
-				touch ${FLAGUSAGE}
+				#if [[ "${SATDIR}" == "S1" ]] ; then touch "${FLAGUSAGE}" ; fi
+				touch "${FLAGUSAGE}"
 			else
 				MASNAME=${MAS} 
 				SLVNAME=${SLV} 
@@ -1111,10 +1112,18 @@ do
 								SUPERMASNAMEBAK=${SUPERMASNAME}
 								SUPERMASNAME=${SUPERMASTER}  # may be a problem later ?  
 						fi
-						ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl ${RUNDIR}/i12/InSARProducts/${SLVNAME}.interpolated.csl
-	# link below does not exists 
-	#					ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${MASNAME}.${POLMAS}.mod ${RUNDIR}/i12/InSARProducts/${SUPERMASNAME}.${POLMAS}.mod 
-	# must get the file
+						#ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl ${RUNDIR}/i12/InSARProducts/${SLVNAME}.interpolated.csl
+						if [ -f ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl ${RUNDIR}/i12/InSARProducts/${SLVNAME}.interpolated.csl ] 
+							then
+								ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl ${RUNDIR}/i12/InSARProducts/${SLVNAME}.interpolated.csl
+							else 
+								ln -s ${OUTPUTDATA}/${SUPERMASTER}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.interpolated.csl ${RUNDIR}/i12/InSARProducts/${SLVNAME}.interpolated.csl
+						fi
+						
+						# link below does not exists 
+						#ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${MASNAME}.${POLMAS}.mod ${RUNDIR}/i12/InSARProducts/${SUPERMASNAME}.${POLMAS}.mod 
+						# must get the file
+						
 						# Copy files that can be needed. Attention, one must COPY and not LINK the files because they are changed during processing
 						# The function below also update InSARParameters.txt
 						if [ ${SATDIR} == "S1" ] 
@@ -1123,11 +1132,17 @@ do
 									GetImgMod ${MASNAME} master  
 								fi
 							else 
-								GetImgMod ${MAS} master  
+								getImgMod ${MAS} master
+						fi
+
+						# ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod ${RUNDIR}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod
+						if [ -f ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod ] 
+							then
+								ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod ${RUNDIR}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod
+							else 
+								ln -s ${OUTPUTDATA}/${SUPERMASTER}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod ${RUNDIR}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod
 						fi
 					
-						ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod ${RUNDIR}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod
-
 						# Need to update the InSARProducts.txt
 						cd ${RUNDIR}/i12/TextFiles
 						mv InSARParameters.txt InSARParameters.back.txt
@@ -1463,7 +1478,7 @@ if [ "${execdir}" == "${storedir}" ]
 		
 		while IFS=_ read -r MASDATE SLVDATE
 		do	
-			cp -R *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"
+			cp -R *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"	2>/dev/null		# mute error message when inverted pairs not found
 		
 		done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
 

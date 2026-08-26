@@ -146,13 +146,15 @@
 # New in Distro V 5.17 20260316:	- allows selecting NISAR polarisation at reading
 # New in Distro V 5.18 20260318:	- allows selecting NISAR Freq at reading
 #									- name NISAR CSL dir with Frame, Orbit and Rge bandwidth
+# New in Distro V 5.19 20260825:	- add BIOMASS (also accept BIO)
+#									- add INITPOL constrain for NISAR
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.18 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 18, 2026"
+VER="Distro V5.19 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -241,17 +243,20 @@ fi
 
 FCTFILE=${PATH_SCRIPTS}/SCRIPTS_MT/FUNCTIONS_FOR_MT.sh
 
-if [[ "${SAT}" == "S1" ]] && [[ "${INITPOL}" = "" ]]
-	then
-		echo "Please provide a S1 polarisation to read : VV, HH, VH, HV or ALLPOL"
-		exit
-fi
-if [[ "${SAT}" == "SAOCOM" ]] && [[ "${INITPOL}" = "" ]]
-	then
-		echo "Please provide a SAOCOM polarisation to read : VV, HH, VH, HV or ALLPOL"
-		exit
-fi
-
+case "${SAT}" in
+	"S1")
+		if [[ "${INITPOL}" = "" ]] ; then echo "Please provide a S1 polarisation to read : VV, HH, VH, HV or ALLPOL" ; exit ; fi
+		;;
+	"SAOCOM")
+		if [[ "${INITPOL}" = "" ]] ; then echo "Please provide a SAOCOM polarisation to read : VV, HH, VH, HV or ALLPOL" ; exit ; fi
+		;;
+	"NISAR")
+		if [[ "${INITPOL}" = "" ]] ; then echo "Please provide a NISAR polarisation to read : VV, HH, VH, HV or ALLPOL" ; exit ; fi
+		;;
+	"BIOMASS" | "BIO")
+		if [[ "${INITPOL}" = "" ]] ; then echo "Please provide a BIOMASS polarisation to read : VV, HH, VH, HV or ALLPOL" ; exit ; fi
+		;;
+esac
 
 # do not run if no EARTH_GRAVITATIONAL_MODELS_DIR available
 if [ `ls "${EARTH_GRAVITATIONAL_MODELS_DIR}" 2>/dev/null | wc -w ` -eq 0 ] ;  then echo "No EARTH_GRAVITATIONAL_MODELS_DIR ; can't run." ; exit ; fi
@@ -1964,9 +1969,79 @@ case ${SAT} in
 			done
 			wait
 			echo
-
 		;;
-	"ICEYE")
+		
+		
+	"BIOMASS" | "BIO")
+		# Use the bulk reader
+		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up 
+		REGION=`basename ${PARENTCSL}`
+		
+		# Read the data in a _Link directory for allowing renaming later
+		
+		# Check if there are any subfolders ending with ".csl"
+	    mkdir -p "${PARENTCSL}_Link/NoCrop"
+	    cd "${PARENTCSL}_Link/NoCrop"
+	    
+	    if find "${PARENTCSL}_Link/NoCrop" -type d -name "*.csl" -print -quit | grep -q .; then
+	      echo "Subfolders with .csl found in ${PARENTCSL}_Link/NoCrop"
+	      echo "Check if the links are OK, eg. not from the wrong OS"
+          	FIRSTLINK=`find . -maxdepth 1 -type l -name "*.csl" 2>/dev/null | head -1`		
+	     	if [ "${FIRSTLINK}" != "" ] ; then TestLink "${FIRSTLINK}" ; fi
+	    else
+	      echo "No subfolders with .csl found in ${PARENTCSL}_Link/NoCrop, this is a first image reading"
+	    fi
+  
+		# Check if links in ${PARENTCSL} points toward files (must be in ${PARENTCSL}_${ICYMODE}_${ICYTRK}_${ICYINCID}deg/NoCrop/)
+		# if not, remove broken link
+		EchoTee "Remove possible broken links"
+		for LINKS in `ls -d *.csl 2>/dev/null`
+			do
+				find -L ${LINKS} -type l ! -exec test -e {} \; -exec rm {} \; # first part stays silent if link is ok (or is not a link but a file or dir); answer the name of the link if the link is broken. Second part removes link if broken 
+		done
+
+		if [ "${FAY}" == "ForceAllYears" ]	# NOT FOR _FORMER etc... To do ! though ForceAllYears force re-reading all images
+			then 
+				EchoTeeYellow "Re-read all images in ${RAW}"
+				if [[ "${INITPOL}" == "ALLPOL" ]]
+					then
+						BIOMASSDataReader ${RAW} ${PARENTCSL}_Link/NoCrop -r 
+					else
+						BIOMASSDataReader ${RAW} ${PARENTCSL}_Link/NoCrop -r P=${INITPOL} 
+				fi
+			else 
+				EchoTeeYellow "Read only new images in ${RAW} not yet in ${PARENTCSL}"
+				if [[ "${INITPOL}" == "ALLPOL" ]]
+					then
+						BIOMASSDataReader ${RAW} ${PARENTCSL}_Link/NoCrop 
+					else
+						BIOMASSDataReader ${RAW} ${PARENTCSL}_Link/NoCrop P=${INITPOL}  			
+				fi
+		fi
+
+		# For the sake of compatibility, move all CSL_Link/names.csl to in CSL/dates.csl and link back to get same naming as ALOS, NISAR etc...
+			for IMGPATH in `find ${PARENTCSL}_Link/NoCrop/ -name "*.csl" -print`  # list actually the former links and the new dir if new images were read
+				do
+				BIOIMG=`echo ${IMGPATH##*/}` 
+				BIODATE=`updateParameterFile ${IMGPATH}/Info/SLCImageInfo.txt "Acquisition date"` 					# Get date
+				if [ ! -d ${PARENTCSL}/NoCrop/${BIODATE}.csl ]
+						then
+							# There is no  ${BIODATE}.csl in CSL yet, hence it is a new img; move new img there
+								mv ${BIOIMG} ${PARENTCSL}/NoCrop/${BIODATE}.csl 
+								#and create a link
+								ln -s ${PARENTCSL}/NoCrop/${BIODATE}.csl ${PARENTCSL}_Link/NoCrop/${BIOIMG} 
+								echo "Last created AMSTer Engine source dir suggest reading with ME version: ${LASTVERSIONMT}" > ${CSL}/NoCrop/${BIODATE}.csl/Read_w_AMSTerEngine_V.txt
+				fi  
+			done
+		
+		EchoTee ""
+		EchoTee "All BIOMASS img read "
+		
+		echo 		
+		;; 	
+		
+		
+			"ICEYE")
 		# Use the bulk reader
 		PARENTCSL="$(dirname "$CSL")"  # get the parent dir, one level up
 		REGION=`basename ${PARENTCSL}`
@@ -2021,7 +2096,8 @@ case ${SAT} in
 				fi  
 		done
 		echo 		
-		;; 		
+		;; 	
+			
 	*) 	# Do not use Bulk Reader; compare instead with existing images and read only the new ones
 		# Read existing raw archives
 		# BEWARE, ${RAW} can't end with a /

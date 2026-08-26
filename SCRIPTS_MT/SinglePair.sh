@@ -111,14 +111,15 @@
 # New in Distro V 8.6 20260702:	- allows S1coregistration with ESD option 
 # New in Distro V 9.1 20260703:	- Allows coregistration of S1 on Global Primary (Super Master), providing that the 
 #								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
+# New in Distro V 9.2 20260825:	- Cope with BIOMASS data
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 03, 2026"
+VER="Distro V9.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -350,7 +351,7 @@ eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
 eval RNDM1=`echo $(( $RANDOM % 10000 ))`
 
 case ${SATDIR} in 
-	"NISAR") 
+	"NISAR" | "BIO" | "BIOMASS") 
 		MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MAS} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, MASNAME is now the full name of the image anyway
 		SLVNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SLV} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, SLVNAME is now the full name of the image anyway
 

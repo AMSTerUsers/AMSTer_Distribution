@@ -298,13 +298,37 @@
 #									- GetAMSTerDistroFromGitHub: check that unzip exists before falling back on the zip archive
 # New in Distro V 7.0.1 20260820: 	- a gnuplot link was missingthe leading g: ${PATHGNU}/nuplot
 #									- clean unused commented lines 
+# New in Distro V 7.0.2 20260824: 	- install the zstd and LERC compression libraries and their headers, which are now required 
+#									  at compilation: libzstd-dev and liblerc-dev on Linux, zstd and lerc port/formula on 
+#									  Mac (same names for MacPorts and Homebrew)
+# New in Distro V 7.0.3 20260825: 	- the Homebrew formula of LERC is named liblerc while the MacPorts port is named lerc 
+#									- BrewInstall: the existence of a formula is now tested with the exit code of 
+#									  "brew info --formula" rather than by counting the lines of "brew search /^name$/", 
+#									  and the search for similar names is restricted to formulae (--formula) so that casks, 
+#									  i.e. applications, are not proposed instead of a library 
+#									- new fct GetFileFromWeb: downloads a single file with curl or wget and checks that what 
+#									  was received is really the expected file and not, e.g., an html error page
+#									- DoInstallCpxfiddle now downloads cpxfiddle.cc itself from the Doris repository on GitHub 
+#									  instead of asking the user to go and get it manually. The manual way is kept as a 
+#									  fallback for computers without internet access or if the file moved in the repository
+#									- cpxfiddle is compiled quietly (-w) on the first attempt: the warnings of that legacy 
+#									  source (deprecated register keyword, "using namespace std" written before its own 
+#									  #include <iostream>) are harmless but look like a failure. The second attempt, if 
+#									  any, shows everything 
+#									- cpxfiddle is compiled with -std=gnu++14 instead of asking the user to delete the 
+#									  register keyword (removed in C++17) on three lines of the source. The patch of the 
+#									  invalid pointer/character comparison is now applied whatever the OS and its version, 
+#									  as the patched line is valid for all compilers anyway
+#									- cpxfiddle: no more "make -n cpxfiddle" (which only printed what make would do) and 
+#									  the source is moved to Sources_Installed only if the compilation really produced 
+#									  the binary
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=$(basename "$0")
-VER="version 7.0.1 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 20, 2026"
+VER="version 7.0.3 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 25, 2026"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -621,6 +645,7 @@ function MapPortNameToBrew()
 		"gmt6") 						BREWNAMES="gmt" ;;
 		"gsed") 						BREWNAMES="gnu-sed" ;;
 		"tiff") 						BREWNAMES="libtiff" ;;
+		"lerc") 						BREWNAMES="liblerc" ;;	# MacPorts calls it lerc, Homebrew calls it liblerc
 		"fftw-3-long"|"fftw-3-single"|"fftw-3"|"fftw") 
 										BREWNAMES="fftw" ;;	# Homebrew's fftw formula builds single + double + long-double in one go
 		"ImageMagick") 					BREWNAMES="imagemagick" ;;
@@ -629,7 +654,7 @@ function MapPortNameToBrew()
 		"postgresql17") 				BREWNAMES="postgresql@17" ;;
 		"gdal-netcdf"|"gdal-hdf5"|"gdal-openjpeg") 
 										BREWNAMES="" ;;	# already built-in with Homebrew's gdal formula, nothing to add
-		*) 								BREWNAMES="${INNAME}" ;;	# same name in most other cases (gawk, coreutils, findutils, grep, wget, curl, hdf5, libgeotiff, libxml2, lapack, libomp, parallel, mpich, gsl, gnuplot, openjpeg, ffmpeg, proj, geos, gdal, libkml...)
+		*) 								BREWNAMES="${INNAME}" ;;	# same name in most other cases (gawk, coreutils, findutils, grep, wget, curl, hdf5, libgeotiff, libxml2, lapack, libomp, parallel, mpich, gsl, gnuplot, openjpeg, ffmpeg, proj, geos, gdal, libkml, zstd...)
 	esac
 	}
 
@@ -639,7 +664,6 @@ function BrewInstall()
 	local PORTNAME=$1
 	local BNAME
 	local NEWBREWNAME
-	local TSTEXISTBREW
 
 	MapPortNameToBrew "${PORTNAME}"
 
@@ -654,13 +678,19 @@ function BrewInstall()
 				echo "  // Install (cask) ${BNAME} with Homebrew. " 
 				brew install --cask "${BNAME}"
 			else 
-				TSTEXISTBREW=$(brew search "/^${BNAME}\$/" 2>/dev/null | wc -l)
-				if [ "${TSTEXISTBREW}" -eq 0 ] 
+				# "brew info" answers for the exact name asked and tells by its exit code whether that 
+				# formula exists, which is more reliable than counting the lines of a "brew search" 
+				# whose output also contains headers and hints. 
+				if ! brew info --formula "${BNAME}" > /dev/null 2>&1 
 					then 
 						#formula does not exist as such; search for similar
 						echo "  // Sorry, can't find ${BNAME} as a Homebrew formula. " 
+						echo "  // If ${PORTNAME} does exist in Homebrew under another name, add that name in the fct MapPortNameToBrew. "
 						echo "    Here is however the list of similar formulae I can find:"
-						brew search "${BNAME}"
+						# --formula, because a search without it also returns casks, which are applications and 
+						# certainly not what is expected here: a name that merely contains the searched one 
+						# (e.g. sublercli when searching lerc) would be proposed for installation. 
+						brew search --formula "${BNAME}"
 						while true; do
 							read -p "Do you want to install one of those (similar) ones ?  [y/n] "  yn
 							case $yn in
@@ -1366,9 +1396,66 @@ function InstallSnaphu()
 		echo ""	
 	}
 
+function GetFileFromWeb()
+	{
+	# Download a single file from the web with curl or wget and check that we really got what we asked for. 
+	# Usage: GetFileFromWeb <url> <target file> [<string that must appear in the file>]
+	#	the optional third argument is a sanity check: a web server, a proxy or GitHub itself may answer 
+	#	with an html error page, which would otherwise be stored as if it were the expected file. 
+	# Returns 0 on success, 1 otherwise (and no target file is left behind in that case). 
+	local URL=$1
+	local TARGETFILE=$2
+	local MUSTCONTAIN=$3
+
+	rm -f "${TARGETFILE}"
+	if command -v curl > /dev/null 2>&1
+		then 
+			curl -fL -o "${TARGETFILE}" "${URL}"
+		elif command -v wget > /dev/null 2>&1
+			then 
+				wget -O "${TARGETFILE}" "${URL}"
+			else 
+				echo "  // Neither curl nor wget is available here: I can't download ${URL}."
+				return 1
+	fi
+
+	if [ ! -s "${TARGETFILE}" ] 
+		then 
+			echo "  // Download of ${URL} failed (no or empty file). Check your internet connection."
+			rm -f "${TARGETFILE}"
+			return 1
+	fi
+
+	if [ "${MUSTCONTAIN}" != "" ] && ! grep -q "${MUSTCONTAIN}" "${TARGETFILE}" 
+		then 
+			echo "  // What was downloaded from ${URL} does not look like the expected file (no \"${MUSTCONTAIN}\" in it)."
+			echo "  // May be an error page, or the file moved in the repository ?"
+			rm -f "${TARGETFILE}"
+			return 1
+	fi
+	return 0
+	}
+
 DoInstallCpxfiddle()
 	{
-		AskExternalComponent "cpxfiddle.cc" " https://github.com/TUDelftGeodesy/Doris/tree/master/sar_tools"
+		# cpxfiddle is a single source file of the Doris toolbox, hence it is downloaded directly from  
+		# the Doris repository on GitHub. Only if that fails (no internet, file moved in the repository...) 
+		# the user is asked for a copy downloaded manually, as it was done in the former versions. 
+		local CPXURL="https://raw.githubusercontent.com/TUDelftGeodesy/Doris/master/sar_tools/cpxfiddle.cc"
+
+		SKIP="Yes"
+		RAWFILE="cpxfiddle.cc"
+
+		mkdir -p "${HOMEDIR}"/SAR/EXEC
+		echo "  // Getting the cpxfiddle source from ${CPXURL}"
+		if GetFileFromWeb "${CPXURL}" "${HOMEDIR}/SAR/EXEC/${RAWFILE}" "cpxfiddle"
+			then 
+				SKIP="No"
+			else 
+				echo "  // I could not get it automatically; let's do it manually then."
+				AskExternalComponent "cpxfiddle.cc" "https://github.com/TUDelftGeodesy/Doris/tree/master/sar_tools"
+		fi
+
 		if [ "${SKIP}" == "No" ] ; then 
 			# just if there is a typo in the version, or name... hoping that at least the main name is OK					
 			if [ ! -f  "${HOMEDIR}"/SAR/EXEC/"${RAWFILE}" ] ; then 
@@ -1378,31 +1465,42 @@ DoInstallCpxfiddle()
 		
 			FILEXT="${RAWFILE##*.}"
  
- 			echo " Note: if you experience compilation error because of the fct register (which is just a compiler hint "
- 			echo "       that's been ignored by real compilers for decades anyway), delete that keyword in all three spots (lines 256,257 and 635)."	
- 
 			if [ "${FILEXT}" == "cc" ] 
 				then 
 					cd "${HOMEDIR}"/SAR/EXEC/
-					if [ "${OS}" == "Linux" ] ; then 													
-						ORIGINAL="if (argv\[optind\]==" 
-						NEW="if (argv\[optind\]==0 || argv\[optind\]\[0\]==\'\\\0\'\)" 		# this is a tricky one... 
-						"${PATHGNU}"/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' "${RAWFILE}"				# this is a tricky one... 
-					fi
-					
-					# Moste recent version of OSX also require the change. Not sure from which version though but at least 15
-					if [ "${OS}" == "Darwin" ] && [ "$OSX_MAJOR" -ge 15 ] ; then 													
-						ORIGINAL="if (argv\[optind\]==" 
-						NEW="if (argv\[optind\]==0 || argv\[optind\]\[0\]==\'\\\0\'\)" 		# this is a tricky one... 
-						"${PATHGNU}"/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' "${RAWFILE}"				# this is a tricky one... 
+
+					# cpxfiddle.cc compares a pointer with a character, i.e. if (argv[optind]=='\0'), which 
+					# recent compilers refuse. The line below is equivalent and valid for all of them, hence 
+					# it is applied whatever the OS and its version. 
+					ORIGINAL="if (argv\[optind\]==" 
+					NEW="if (argv\[optind\]==0 || argv\[optind\]\[0\]==\'\\\0\'\)" 		# this is a tricky one... 
+					"${PATHGNU}"/sed -i 's/.*'"${ORIGINAL}"'.*/'"${NEW}"'/' "${RAWFILE}"				# this is a tricky one... 
+
+					# cpxfiddle.cc also uses the register keyword, which was removed from the language in C++17: 
+					# clang refuses it as an error and g++ warns about it. Compiling as C++14, where register is 
+					# merely deprecated, avoids having to edit the source. If the compiler ignores that flag, 
+					# compile the usual way and let it complain. 
+					#
+					# -w (no warnings) only on that first attempt: this legacy source is not ours to fix and it 
+					# warns about the deprecated register keyword, as well as about its "using namespace std" 
+					# written one line before its own #include <iostream>. Seven warnings in the middle of an 
+					# interactive installation look like a failure although they are harmless. Should the 
+					# compilation fail nevertheless, the second attempt below says it all. 
+					rm -f cpxfiddle
+					if ! g++ -O -std=gnu++14 -w -o cpxfiddle "${RAWFILE}" 
+						then 
+							echo "  // Compilation as C++14 failed; I try again with the default C++ version of your compiler, showing all warnings."
+							g++ -O -o cpxfiddle "${RAWFILE}"
 					fi
 
-					"${MAKEBIN}" -n cpxfiddle
-					g++ -O -c -ocpxfiddle.o cpxfiddle.cc  
-					g++ -O cpxfiddle.o -o cpxfiddle
-					rm -f cpxfiddle.o # cpxfiddle.cc
-					mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
-					mv -f cpxfiddle.cc "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+					if [ -x cpxfiddle ] 
+						then 
+							echo "  // cpxfiddle compiled in ${HOMEDIR}/SAR/EXEC/ - Note: you can ignore warnings..."
+							mkdir -p "${HOMEDIR}"/SAR/EXEC/Sources_Installed
+							mv -f "${RAWFILE}" "${HOMEDIR}"/SAR/EXEC/Sources_Installed/
+						else 
+							echo "  // Compilation of ${RAWFILE} failed. Its source is kept in ${HOMEDIR}/SAR/EXEC/ for you to check."
+					fi
 
 				else 
 					echo " Format not as expected (cc). May not be genuine file ? Please do manually"			
@@ -1413,6 +1511,7 @@ DoInstallCpxfiddle()
 function InstallCpxfiddle()
 	{
 		EchoInverted "  // cpxfiddle is not mandatory but it is called thousands of time to create (very convenient) raster files. "
+		EchoInverted "  //    Its source will be downloaded automatically from the Doris repository on GitHub. "
 		while true; do
 			read -p "Do you want to [c]heck, [i]nstall or [s]kip cpxfiddle  ? [c/i/s] "  cis
 			case $cis in
@@ -3047,6 +3146,10 @@ if [ "${TYPERUN}" == "I" ] ; then
 							AptInstall "libfftw3-single3"
 							AptInstall "libgeotiff-dev"
 							AptInstall "libtiff-dev"
+							AptInstall "libzstd-dev"		# zstd compression: headers + link lib (the runtime libzstd1 comes as a dependency). 
+															# Note: the Debian/Ubuntu package is libzstd-dev, there is no "zstdlib-dev". 
+							AptInstall "liblerc-dev"		# LERC (Limited Error Raster Compression) codec used by GeoTIFF and gdal: 
+															# headers + link lib. The lib itself is libLerc (with capital L). 
 							AptInstall "libxml2"
 							AptInstall "libxml2-dev"
 							AptInstall "liblapack-dev"
@@ -3909,6 +4012,11 @@ if [ "${TYPERUN}" == "I" ] ; then
 							PortInstall "fftw-3-single" 
 							PortInstall "hdf5"
 							PortInstall "tiff"
+							PortInstall "zstd"			# zstd compression: same port/formula name for MacPorts and Homebrew, and both ship the headers 
+														# with the lib. Usually pulled in as a dependency of tiff/gdal, but install it explicitly 
+														# so that its headers are guaranteed to be there for AMSTerEngine compilation. 
+							PortInstall "lerc"			# LERC compression: same remarks as for zstd above. Beware that the MacPorts port is named 
+														# lerc while the Homebrew formula is named liblerc: MapPortNameToBrew does the translation. 
 							PortInstall "libgeotiff"
 							PortInstall "libxml2"
 							PortInstall "lapack"

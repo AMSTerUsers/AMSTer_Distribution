@@ -88,13 +88,15 @@
 # New in Distro V 8.0 20250605:	- correct evaluation of pixel size in Az and Rg depending on ML and ZOOM (ZOOM is not taken into account in S1 IW SAR_CSL/NoCrop/SLCImageInfo.txt)
 # New in Distro V 8.1 20250708:	- remove computation of RANGEML and AZIMML because not used
 # New in Distro V 8.2 20260702:	- allows S1coregistration with ESD option 
+# New in Distro V 8.3 20260825:	- Cope with BIOMASS data and NISAR
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 02, 2026"
+VER="Distro V8.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
 
 
 echo " "
@@ -341,6 +343,13 @@ eval RUNDATE=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
 eval RNDM1=`echo $(( $RANDOM % 10000 ))`
 
 case ${SATDIR} in 
+	"NISAR" | "BIO" | "BIOMASS") 
+		MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MAS} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, MASNAME is now the full name of the image anyway
+		SLVNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SLV} | cut -d . -f 1` 		 # i.e. if NISAR is given in the form of date, SLVNAME is now the full name of the image anyway
+
+		MASDIR=${MASNAME}.csl  # need this definition here for usage in GetParamFromFile
+		SLVDIR=${SLVNAME}.csl
+		;;
 	"S1") 
 		MASNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${MAS} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, MASNAME is now the full name of the image anyway
 		SLVNAME=`ls ${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop | ${PATHGNU}/grep ${SLV} | cut -d . -f 1` 		 # i.e. if S1 is given in the form of date, SLVNAME is now the full name of the image anyway

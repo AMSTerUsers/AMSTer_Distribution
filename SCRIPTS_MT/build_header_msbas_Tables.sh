@@ -78,13 +78,14 @@
 # New in Distro V 2.8 20251202:	- skip PrepareModeI if no hdr file found 
 #								- if HDR file of last mode does not exist, seach for a HDR file from previous mode to build the header.txt 
 # New in Distro V 2.9 20260819:	- Add options for msbasv10 
+# New in Distro V 2.10 20260826:- typo in case fct for MSBAS version
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.9 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 19, 2026"
+VER="Distro V2.10 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 26, 2026"
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
@@ -708,13 +709,13 @@ echo	"T_FLAG = 0"  >> header.txt  	# 1=remove topo residuals (eg if pix dem >> i
 echo	"C_FLAG = 10"  >> header.txt  		# pixel(s) coordinates of reference region: Nr of ref, line, col of each ref, radius for all ref pix, e.g: C_FLAG = 2, 452, 822, 237, 259, 32,32
 case ${MSBAS} in 
 	"msbasv4") 
-		echo 	"V_FLAG=0"   >> header.txt ; fi		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
+		echo 	"V_FLAG=0"   >> header.txt  		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
 		;;
 	"msbasv10")
-		echo 	"V_FLAG=0"   >> header.txt ; fi		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
-		#echo 	"V_FLAG=1"   >> header.txt ; fi		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
+		echo 	"V_FLAG=0"   >> header.txt 	#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
+		#echo 	"V_FLAG=1"   >> header.txt 		#  V_FLAG=0 - compute displacement time series as before and V_FLAG=1 - compute velocity time series, in this case linear rate is acceleration.
 		
-		echo 	"D_FLAG=0"   >> header.txt ; fi		# MSBAS3D (0) or 4D (1)	
+		echo 	"D_FLAG=0"   >> header.txt 		# MSBAS3D (0) or 4D (1)	
 
 		;;
 	*)
