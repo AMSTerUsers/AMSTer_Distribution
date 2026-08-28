@@ -46,13 +46,14 @@
 # New in Distro V 3.11 20250903:	- Use Envi2kmz.sh with option -l to add a legend in kmz
 # New in Distro V 4.0 20260730:	- cope with msbasv10 
 #								- allows forcing msbas version if second param is --msbasvi (where i = version nr)
+# New in Distro V 4.1 20260826:	- typo in countMSBASV10 and case
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 26, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 
@@ -123,10 +124,10 @@ if [ ${countSBASV2} -gt 1 ] 		# v2 or above
 fi 
 if [ ${countMSBASV1} -gt 1 ] ; then lname="MSBASV1" ; echo "You probably processed ${lname}" ; fi
 
-if [ ${countMBASV10} -gt 1 ] 		# v2 or above
+if [ ${countMSBASV10} -ge 1 ] 		# v2 or above
 	then 
-		countMBASV10=`ls -1 MSBAS_LINEAR_RATE_LOS.tif 2>/dev/null | wc -l`
-		if [ ${countSBASV4} -gt 1 ] 
+		countMSBASV10=`ls -1 MSBAS_LINEAR_RATE_LOS.tif 2>/dev/null | wc -l`
+		if [ ${countSBASV10} -ge 1 ] 
 			then 
 				lname="SBASV10" 									 
 				echo "You probably processed ${lname} or above"			
@@ -141,7 +142,7 @@ case ${lname} in
  	"SBASV10")
 		# No need to list files in listdir.tmp because no HDR will be needed  
  		mkdir -p zz_LOS${PARAMNAME} 
- 		mkdir -p zz_LOS_TS${PARAMNAME} ;;
+ 		mkdir -p zz_LOS_TS${PARAMNAME} 
 		;;
  	"MSBASV10")
 		# No need to list files in listdir.tmp because no HDR will be needed  

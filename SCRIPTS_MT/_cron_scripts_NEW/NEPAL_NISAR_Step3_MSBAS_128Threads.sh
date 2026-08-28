@@ -978,6 +978,7 @@ cd ${MSBASDIR}
 			# EW-UD 
 					NUM_THREADS=${NTHR} ${PATH_SCRIPTS}/SCRIPTS_MT/MSBAS.sh _Auto_${ORDER}_${LAMBDA}_${LABEL} ${TIMESERIESPTS} --msbasv4
 			
+					cd ${MSBASDIR}
 					# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 					cp ${TSDESCRFILE} ${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/
 			
