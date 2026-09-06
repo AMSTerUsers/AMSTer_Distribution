@@ -112,14 +112,16 @@
 # New in Distro V 9.1 20260703:	- Allows coregistration of S1 on Global Primary (Super Master), providing that the 
 #								  LaunchParameters.txt file contrains the parameter S1COREGMODE set to S1SM
 # New in Distro V 9.2 20260825:	- Cope with BIOMASS data
+# New in Distro V 9.3 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
+# New in Distro V 9.4 20260903:	- S1 with ETAD: check first that ETAD exist for both images
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
+VER="Distro V9.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 03, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -1397,7 +1399,8 @@ fi
 						   FLP=flip
 						   FLIPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod ${MASY} 
 						   FLIPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod ${SLVY}
-						   FLIPproducts.py.sh ${RUNDIR}/i12/InSARProducts/incidence ${INCIDY} 
+						   FLIPproducts.py.sh ${RUNDIR}/i12/InSARProducts/localIncidenceAngle ${INCIDY} 
+						   FLIPproducts.py.sh ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle ${INCIDY} 
 						   if [ ${CALIBSIGMA} == "SIGMAYES" ] && [ ${SATDIR} == "S1" ] ; then 
 								FLIPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.sigma0 ${MASY} 
 								FLIPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.sigma0 ${SLVY}				   
@@ -1407,7 +1410,8 @@ fi
 						   FLP=flop
 						   FLOPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod ${MASY}
 						   FLOPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod ${SLVY}
-						   FLOPproducts.py.sh ${RUNDIR}/i12/InSARProducts/incidence ${INCIDY} 
+						   FLOPproducts.py.sh ${RUNDIR}/i12/InSARProducts/localIncidenceAngle ${INCIDY} 
+						   FLOPproducts.py.sh ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle ${INCIDY} 
 						   if [ ${CALIBSIGMA} == "SIGMAYES" ] && [ ${SATDIR} == "S1" ] ; then 
 								FLOPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.sigma0 ${MASY} 
 								FLOPproducts.py.sh ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.sigma0 ${SLVY}				   
@@ -1441,7 +1445,8 @@ fi
 		PROJ=""
 		CreateHDR ${MASX} ${MASY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.mod.${FLP}
 		CreateHDR ${SLVX} ${SLVY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.mod.${FLP}
-		CreateHDR ${INCIDX} ${INCIDY} 4 1 1 ${RUNDIR}/i12/InSARProducts/incidence.${FLP}
+		CreateHDR ${INCIDX} ${INCIDY} 4 1 1 ${RUNDIR}/i12/InSARProducts/localIncidenceAngle.${FLP}
+		CreateHDR ${INCIDX} ${INCIDY} 4 1 1 ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle.${FLP}
 		 if [ ${CALIBSIGMA} == "SIGMAYES" ] && [ ${SATDIR} == "S1" ] ; then 
 				CreateHDR ${MASX} ${MASY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${MASTERPOLNAME}.sigma0.${FLP} 
 				CreateHDR ${SLVX} ${SLVY} 4 1 1 ${RUNDIR}/i12/InSARProducts/${SLAVEPOLNAME}.sigma0.${FLP}				   
@@ -1619,6 +1624,16 @@ fi
 
 	if [ "${SATDIR}" = "S1" ] && [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011)$ ]]
 		then
+	    	# Check that ETD products exist 
+	    	NRETADPRODMAS=$(find "${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASDIR}/Data" -maxdepth 4 -mindepth 4 -type d -name "ETADData" | wc -l )
+	    	NRETADPRODSLV=$(find "${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${SLVDIR}/Data" -maxdepth 4 -mindepth 4 -type d -name "ETADData" | wc -l )
+			if [[ "${NRETADPRODMAS}" -ne 0 && "${NRETADPRODMAS}" -eq "${NRETADPRODSLV}" ]]; then
+			    EchoTee "Both images have ETAD products and they have the same number of ETAD products => OK"
+			else
+			    EchoTeeRed "Both images DO NOT have ETAD products or they do not have the same number of ETAD products => can't work. Exiting... "
+			    exit
+			fi
+	
 	    	if [ "${ETADCOMBI}" = "ETADCOMBIyes" ] ; then 
 				IONOCORRPHASE="${RUNDIR}/i12/InSARProducts/ETADIonosphericPhaseCorrection"			
 				GEOCORRPHASE="${RUNDIR}/i12/InSARProducts/ETADGeodeticPhaseCorrection"

@@ -63,13 +63,14 @@
 # New in Distro V 5.3 20250519:	- Allows cropping on kml
 # 								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
 # New in Distro V 5.4 20250604:	- remove possible path to kml for re-geocoding when performing non Forced geocoding
+# New in Distro V 5.5 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 04, 2025"
+VER="Distro V5.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -97,7 +98,7 @@ source ${PATH_SCRIPTS}/SCRIPTS_MT/FUNCTIONS_FOR_MT.sh
 FIG=FIGyes  # or FIGno
 # only the deformation maps
 #  		DEFOMAP	MASAMPL	SLVAMPL	COH	INTERF	FILTINTERF	RESINTERF	UNWPHASE INCIDENCE 
-FILESTOGEOC="YES YES YES YES YES YES YES YES NO"
+FILESTOGEOC="YES NO NO NO NO NO NO NO NO"
 # All
 #FILESTOGEOC="YES YES NO YES NO YES YES YES YES"
 # All but ampl
@@ -486,7 +487,10 @@ do
 			echo "Will geocode incidence again"
 		else 
 			echo "Temporarily rename indidence to avoid automatic geocoding" 
-			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_incidence  ; fi
+			# Note 1 instead of i
+			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/inc1dence  ; fi
+			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localIncidenceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localIncidenceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localInc1denceAngle  ; fi
+			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalIncidenceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalIncidenceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalInc1denceAngle  ; fi
 	fi
 	echo ""
 	echo "*****************************************************"
@@ -1005,7 +1009,11 @@ do
 					echo ""
 				else 
 					echo "Indidence file restaured" 
-					mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_incidence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence 
+					if [ -f {MASSPROCDIR}/${DIR}/i12/InSARProducts/inc1dence ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/inc1dence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ; fi
+					if [ -f {MASSPROCDIR}/${DIR}/i12/InSARProducts/localInc1denceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localInc1denceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localIncidenceAngle ; fi
+					if [ -f {MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalInc1denceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalInc1denceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalIncidenceAngle ; fi
+
+
 			fi
 		else  # MVRES=no
 			# ensure that products are renamed as before 

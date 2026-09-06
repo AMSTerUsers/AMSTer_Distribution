@@ -30,13 +30,15 @@
 # New in Distro V 4.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.1 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
+# New in Distro V 4.2 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 27, 2025"
+VER="Distro V4.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
 
 
 echo "${PRG} ${VER}, ${AUT}"
@@ -206,7 +208,10 @@ do
 					echo "  // Will geocode incidence again"
 				else 
 					echo "  // Temporarily rename indidence to avoid automatic geocoding" 
-					if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_incidence  ; fi
+					# note 1 instead of i in incidence name 
+					if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_inc1dence  ; fi
+					if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localIncidenceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localIncidenceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_localInc1denceAngle  ; fi
+					if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalIncidenceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalIncidenceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_geoidalInc1denceAngle  ; fi
 			fi
 			echo ""
 			# remove possible existing old Projection Map
@@ -252,6 +257,12 @@ do
 			geoProjection -rk ./TextFiles/geoProjectionParameters.txt
 
 			mv ./GeoProjection/* ${MASSPROCDIR}/_GEOCAMPLI/
+	
+			echo "  // Get back temporarily renamed indidence" 
+			# note 1 instead of i in incidence name  
+			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_inc1dence ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_inc1dence ${MASSPROCDIR}/${DIR}/i12/InSARProducts/incidence  ; fi
+			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_localInc1denceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_localInc1denceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/localIncidenceAngle  ; fi
+			if [ -f ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_geoidalInc1denceAngle ] ; then mv ${MASSPROCDIR}/${DIR}/i12/InSARProducts/BAK_geoidalInc1denceAngle ${MASSPROCDIR}/${DIR}/i12/InSARProducts/geoidalIncidenceAngle  ; fi
 	
 			echo 
 			cd  ${MASSPROCDIR}

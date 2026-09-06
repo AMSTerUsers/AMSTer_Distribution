@@ -62,6 +62,7 @@
 #								  [cm/year] label) and before the truncation to 2 decimals, so that 
 #								  TimeSeriesInfo_HP.sh V7.2 (SCALEFROM=LEGEND) can scale its 
 #								  thumbnails on exactly the same range as the bar 
+# New in Distro V 1.5 20260901:	- update call for FIJI 
 # 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -81,8 +82,8 @@ source ${PATH_SCRIPTS}/SCRIPTS_MT/__ImageMagickFcts.sh
 # ^^^ ----- Hard coded lines to check -- ^^^ 
 
 PRG=`basename "$0"`
-VER="Distro V1.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on Aug 04, 2026"
+VER="Distro V1.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2021, Last modified on SEPT 01, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -268,25 +269,51 @@ ${PATHGNU}/gsed "s/'/\"/g" FijiMacro_${Random}.txt > FijiMacro_${Random}2.txt
 	    exit 1
 	fi
 
-case ${OS} in 
-	"Linux") 
-		export DISPLAY=:10
-		#font="FreeSans"		# NdO Aug 04 2026: now handled by FONT_OPT
-		# since imageJ V1.53c, option -b must be repalced by --headless
-		#${PATHFIJI}/ImageJ-linux64 -b ./FijiMacro_${Random}2.txt ;;
-		#${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacro_${Random}2.txt ;;
-		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
-
-	"Darwin")
-		#font="Helvetica"	# NdO Aug 04 2026: now handled by FONT_OPT
-		#${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacro_${Random}2.txt ;;	
-		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
+#case ${OS} in 
+#	"Linux") 
+#		export DISPLAY=:10
+#		#font="FreeSans"		# NdO Aug 04 2026: now handled by FONT_OPT
+#		# since imageJ V1.53c, option -b must be repalced by --headless
+#		#${PATHFIJI}/ImageJ-linux64 -b ./FijiMacro_${Random}2.txt ;;
+#		#${PATHFIJI}/ImageJ-linux64  --headless -batch FijiMacro_${Random}2.txt ;;
+#		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
+#
+#	"Darwin")
+#		#font="Helvetica"	# NdO Aug 04 2026: now handled by FONT_OPT
+#		#${PATHFIJI}/ImageJ-macosx  --headless -batch FijiMacro_${Random}2.txt ;;	
+#		"${FIJI}" --headless -batch "FijiMacro_${Random}2.txt" ;;
+#
+#	*)
+#		echo "I can't figure out what is you opeating system. Please check"
+#		exit 0
+#		;;
+#esac						
+case ${OS} in
+	"Linux"|"Darwin")
+		# Batch run: Fiji must not depend on an X server. A DISPLAY inherited from a
+		# desktop or VNC session (this used to be hard coded to :10) works from a
+		# terminal but not from cron, at or ssh, where no X cookie is reachable.
+		# Force a real headless JVM instead.
+		# NdO Aug 04 2026: now handled by FONT_OPT (was font=FreeSans / Helvetica)
+		# since imageJ V1.53c, option -b must be replaced by --headless
+		unset DISPLAY XAUTHORITY
+		export _JAVA_OPTIONS="-Djava.awt.headless=true ${_JAVA_OPTIONS}"
+		"${FIJI}" --headless --console -batch "FijiMacro_${Random}2.txt"
+		FIJISTATUS=$?
+		;;
 
 	*)
-		echo "I can't figure out what is you opeating system. Please check"
-		exit 0
+		echo "I can't figure out what is your operating system. Please check" >&2
+		exit 1
 		;;
-esac						
+esac
+
+if [ ${FIJISTATUS} -ne 0 ] || [ ! -s "${PATHFILES}/${FILEOUTPUT}.tif" ]
+	then
+		echo "ERROR: Fiji failed (exit ${FIJISTATUS}) or ${PATHFILES}/${FILEOUTPUT}.tif was not built" >&2
+		echo "       macro kept for inspection: $(pwd)/FijiMacro_${Random}2.txt" >&2
+		exit 1
+fi
 
 echo
 echo "Results ${PATHFILES}/${FILEOUTPUT}.tif "

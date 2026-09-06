@@ -1,3 +1,31 @@
+/* AMSTerEngine20260901 (© DD @SAREOS & al.)*/
+/* **************************************** */
+cohTrack: Debugging. Correction of an indexing error left since authorizing non symetrical intervals around reference registration.
+		Correction in naming convention to take local slopes into account for displacements metric conversion. 
+		Since August 13 version, incidence file is named localIncidenceAngle.
+
+/* AMSTerEngine20260826 (© DD @SAREOS & al.)*/
+/* **************************************** */
+SentinelDataDownloader: Bugs correction to ocorrectly build COPERNICUS request on Mac compiled versions. 
+
+/* AMSTerEngine20260825 (© DD @SAREOS & al.)*/
+/* **************************************** */
+BIOMASSDataReader: Missing function prototype leading to compilation error on Mac mow corrected.
+	Memory leaks corrections.
+	Increase of the size of the ZSTD buffer to avoid memory corruption.
+S1Coregidtration: Forgotten function prototype added in ESDLib.h
+SentinelDataDownloader: Now the program stops if no data listing is returned by COPERNICUS server to avoir crash. 
+
+/* AMSTerEngine20260824 (© DD @SAREOS & al.)*/
+/* **************************************** */
+BIOMASSDataReader : First release. Requires the installation of libzstd-dev and LERC. 
+For LERC library : 
+	git clone --depth 1 https://github.com/Esri/lerc.git
+	cmake lerc -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -B lerc/build
+	make -C lerc/build -j4
+	sudo cp lerc/build/libLerc.so.4 /usr/local/lib/
+	sudo ldconfig
+	
 /* AMSTerEngine20260813 (© DD @SAREOS & al.)*/
 /* **************************************** */
 INSARProductsGeneration: option -i generates two incidence files; the geoidal one given in degrees and the local one given in radian.

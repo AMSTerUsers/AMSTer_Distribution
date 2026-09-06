@@ -127,13 +127,18 @@
 #								- mute error while atempting to rm ExistingPairs_.. file if does not exist yet (at first run)
 # New in Distro V 5.1 20260703:	- allows S1coregistration with ESD option 
 # New in Distro V 5.2 20260825:	- Cope with BIOMASS data
+# New in Distro V 5.3 20260904:	- Avoid error message while searching pairs to process about Quarantained dir if it does not exist 
+#								- test if masks and kml's are present before starting 
+#								- properly manage inverted pairs; use a new fct
+#								- rename log file after SUPERMASTER (instead of MAS, which was unset when defined)  
+#								- log now follows the results instead of being left behind 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
+VER="Distro V5.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 04, 2026"
 
 
 echo " "
@@ -200,6 +205,8 @@ DATAPATH=`GetParam DATAPATH`				# DATAPATH, path to dir where data are stored
 FCTFILE=`GetParam FCTFILE`					# FCTFILE, path to file where all functions are stored
 
 DEMDIR=`GetParam DEMDIR`					# DEMDIR, path to dir where DEM is stored
+DEMNAME=`GetParam DEMNAME`					# DEMNAME, name of DEM (in mathematical order). Need txt file in same dir
+
 RECOMPDEM=`GetParam "RECOMPDEM,"`			# RECOMPDEM, recompute DEM even if already there (FORCE), or trust the one that would exist (KEEP)
 SIMAMP=`GetParam "SIMAMP,"`					# SIMAMP, (SIMAMPno or SIMAMPyes). Option to compute simulated amplitude during Extenral DEM generation - usually not needed.
 
@@ -364,6 +371,42 @@ eval PROPATH=${PROROOTPATH}/${SATDIR}/${TRKDIR}	# Path to dir where data will be
 
 source ${FCTFILE}
 
+# Apply ACTION (mv, cp or rm) to every pair dir listed in LIST, that is:
+#	mv : move the pair dir to ${MASSPROCESSPATHLONG}
+#	cp : copy the pair dir to ${MASSPROCESSPATHLONG}
+#	rm : remove the pair dir from the processing dir
+# The pair dir is searched in both PRM_SCD and SCD_PRM order because a pair whose 
+# Secondary is the Global Primary is processed with PRM and SCD swapped (to benefit 
+# from the processing already performed at geocoding), and hence ends up in a dir 
+# named in the reverse order than in the list of pairs to process. 
+# Must be run from the dir where the pair dirs are, i.e. ${MAINRUNDIR}. 
+function ActionOnPairDirs()
+	{
+	local LIST="$1"
+	local ACTION="$2"
+	local MASDATE SLVDATE PAIRDIR
+
+	if [ ! -f "${LIST}" ] || [ ! -s "${LIST}" ] ; then return ; fi
+
+	while IFS=_ read -r MASDATE SLVDATE || [ -n "${MASDATE}" ]
+		do
+			if [ "${MASDATE}" == "" ] || [ "${SLVDATE}" == "" ] ; then continue ; fi
+
+			for PAIRDIR in *"${MASDATE}"*_*"${SLVDATE}"* *"${SLVDATE}"*_*"${MASDATE}"*
+				do
+					# an unmatched glob remains literal, hence test the dir before acting
+					if [ ! -d "${PAIRDIR}" ] ; then continue ; fi
+
+					case ${ACTION} in
+						"mv")	mv -f "${PAIRDIR}" "${MASSPROCESSPATHLONG}"/ ;;
+						"cp")	cp -R "${PAIRDIR}" "${MASSPROCESSPATHLONG}"/ ;;
+						"rm")	rm -Rf "${PAIRDIR}" ;;
+						*)		echo "ActionOnPairDirs: unknown action ${ACTION}" ;;
+					esac
+				done
+		done < "${LIST}"
+	}
+
 # Test asymetric zoom - not allowed for mass processing 
 CheckZOOMasymetry
 if [ "${ZOOMONEVAL}" == "Two" ] 
@@ -380,13 +423,15 @@ echo
 case ${CROP} in 
 	"CROPyes") 
 		CROPDIR=/Crop_${REGION}_${FIRSTL}-${LASTL}_${FIRSTP}-${LASTP} #_Zoom${ZOOM}_ML${INTERFML}
+		CROPKML=""
 		;;
 	"CROPno")		
 		CROPDIR=/NoCrop 
+		CROPKML=""
 		;;
 	*.kml)  
 		CROPDIR=/NoCrop 
-		CROPKML=${CROP}
+		CROPKML="${CROP}"
 		;;
 esac
 
@@ -542,6 +587,84 @@ SUPERMASDIR=${SUPERMASNAME}.csl
 			fi
 	fi
 
+
+# Check required files:
+#######################
+	if [ -f "${DEMDIR}/${DEMNAME}" ] && [ -s "${DEMDIR}/${DEMNAME}" ] 
+		then
+		   echo "  // OK: DEM exist." 
+		else
+			echo " "
+			echo "  // NO expected DEM. Can't run..." 
+			echo "  // PLEASE REFER TO SCRIPT and  change hard link if needed"
+			exit 1		
+	fi
+
+	if [[ "${CROPKML}" != "" ]] && [[ "${CROPKML}" == *.kml ]] 
+		then
+		   if [[ -f "${CROPKML}" ]] && [[ -s "${CROPKML}" ]]
+				then 
+		   			echo "  // OK: kml for crop exist." 
+				else
+					echo " "
+					echo "  // NO kml for crop. Can't run..." 
+					echo "  // PLEASE REFER TO SCRIPT and  change hard link if needed"
+					exit 1		
+			fi
+	fi
+
+	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && [ "${PATHTOMASKGEOC}" != "" ] 
+		then
+		   if [ -f "${PATHTOMASKGEOC}" ] && [ -s "${PATHTOMASKGEOC}" ] 
+		   	then 
+		   		echo "  // OK: You requested a mask with PATHTOMASKGEOC and it exist." 
+			else
+				echo " "
+				echo "  // You requested a mask with PATHTOMASKGEOC and it does not exist. Can't run..." 
+				echo "  // PLEASE REFER TO SCRIPT and  change hard link if needed"
+				exit 1	
+			fi	
+	fi
+
+	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && [ "${PATHTOMASKCOH}" != "" ] 
+		then
+		   if [ -f "${PATHTOMASKCOH}" ] && [ -s "${PATHTOMASKCOH}" ] 
+		   	then 
+		   		echo "  // OK: You requested a mask with PATHTOMASKCOH and it exist." 
+			else
+				echo " "
+				echo "  // You requested a mask with PATHTOMASKCOH and it does not exist. Can't run..." 
+				echo "  // PLEASE REFER TO SCRIPT and  change hard link if needed"
+				exit 1	
+			fi	
+	fi
+	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && [ "${PATHTODIREVENTSMASKS}" != "" ] 
+		then
+		   if [ -f "${PATHTODIREVENTSMASKS}" ] && [ -s "${PATHTODIREVENTSMASKS}" ] 
+		   	then 
+		   		echo "  // OK: You requested a mask with PATHTODIREVENTSMASKS and it exist." 
+			else
+				echo " "
+				echo "  // You requested a mask with PATHTODIREVENTSMASKS and it does not exist. Can't run..." 
+				echo "  // PLEASE REFER TO SCRIPT and  change hard link if needed"
+				exit 1	
+			fi	
+	fi
+
+	if [[ "${GEOCMETHD}" == "Forced" ]] && [[ "${GEOCKML}" == *.kml ]] 
+		then
+		   if  [[ -f "${GEOCKML}" ]] && [[ -s "${GEOCKML}" ]]
+				then
+				   echo "  // OK: You requested Forced geocoding on kml and kml exist." 
+				else
+					echo " "
+					echo "  // You requested Forced geocoding on kml but kml does not exist. Can't run..." 
+					echo "  // PLEASE REFER TO SCRIPT and  change hard link if needed"
+					exit 1	
+			fi	
+	fi
+
+
 	# Define Super Master Crop Dir and place where original data are
 	if [ ${CROP} == "CROPyes" ]
 		then
@@ -564,7 +687,10 @@ cd ${RUNDIR}				# i.e. now ${PROROOTPATH}/${SATDIR}/${TRKDIR}/SMas_${MAS}/(No)Cr
 cp ${PARAMFILE} ${RUNDIR} 		
 
 # Log File
-LOGFILE=${RUNDIR}/LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt
+# Name it after SUPERMASTER: MAS is only assigned later, when looping on the pairs, 
+# and is moreover swapped for the pairs which have the Global Primary as Secondary
+LOGFILENAME=LogFile_MassProcess_Super${SUPERMASTER}_${RUNDATE}_${RNDM1}.txt
+LOGFILE=${RUNDIR}/${LOGFILENAME}
 
 EchoTee "" 
 EchoTee "---------------------------------------------------------------------"
@@ -771,7 +897,7 @@ fi
 sort -r PairsToProcess_${RUNDATE}_${RNDM1}.txt -o PairsToProcess_${RUNDATE}_${RNDM1}.txt
 
 # Just in case, remove pairs with images that would be stored in .../SAR_CSL/sat/mode/Quarantained
-if [ -n "$(find "${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained" -type d -name '*.csl' -print -quit)" ]; then
+if  [ -d "${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained" ] && [ -n "$(find "${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained" -type d -name '*.csl' -print -quit)" ]; then
 	EchoTee "  (without pairs including images found in ${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained)"
 	# get the date of img from dir names in /Quarantained  
 	find "${DATAPATH}/${SATDIR}/${TRKDIR}/Quarantained" -maxdepth 1 -type d -name '*.csl' -exec basename {} \; | ${PATHGNU}/grep -Eo '[0-9]{8}' > Quarantained_dates_${RUNDATE}_${RNDM1}.txt
@@ -1449,47 +1575,22 @@ if [ "${execdir}" == "${storedir}" ]
 	then 
 		EchoTee "Same physical disk; Move all processed Pair directories and text (log) files to ${MASSPROCESSPATHLONG}."
 		#mv -f ${MAINRUNDIR}/* ${MASSPROCESSPATHLONG}
-		while IFS=_ read -r MASDATE SLVDATE
-		do	
-			mv -f *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"/
-			mv -f LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt "${MASSPROCESSPATHLONG}"/
+		ActionOnPairDirs "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt" mv
 
-		done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+		mv -f "${LOGFILENAME}" "${MASSPROCESSPATHLONG}"/
 
-		if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
-			then
-				while IFS=_ read -r MASDATE SLVDATE
-				do	
-					mv -f *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"/
-					mv -f LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt "${MASSPROCESSPATHLONG}"/
-		
-				done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
-		fi
-		
-		
 		# From now on, log file is in ${MASSPROCESSPATHLONG}
-		LOGFILE=${MASSPROCESSPATHLONG}/LogFile_MassProcess_Super${SUPERMASTER}_${RUNDATE}_${RNDM1}.txt
+		LOGFILE=${MASSPROCESSPATHLONG}/${LOGFILENAME}
 	else 
 		EchoTee "Not the same physical disk; Processed Pair directories were copied in background to ${MASSPROCESSPATHLONG}."
 		EchoTee "Now copy associated text files and logs"
 		#cp -R ${MAINRUNDIR}/* ${MASSPROCESSPATHLONG}
 		
-		cp LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt "${MASSPROCESSPATHLONG}"
-		
-		while IFS=_ read -r MASDATE SLVDATE
-		do	
-			cp -R *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"	2>/dev/null		# mute error message when inverted pairs not found
-		
-		done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
+		cp -f "${LOGFILENAME}" "${MASSPROCESSPATHLONG}"
 
-		if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
-			then
-				while IFS=_ read -r MASDATE SLVDATE
-				do	
-					cp -R *"${MASDATE}"*_*"${SLVDATE}"* "${MASSPROCESSPATHLONG}"
-						
-				done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
-		fi
+		# Pair dirs were already copied in background right after their processing; this 
+		# catches the ones for which the background cp would have failed 
+		ActionOnPairDirs "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt" cp
 
 	
 		# not faster than cp ?
@@ -1498,7 +1599,7 @@ if [ "${execdir}" == "${storedir}" ]
  		#tar cf - *  | (cd ${MASSPROCESSPATHLONG} ; tar xf -)
 
 		# From now on, log file is in ${MASSPROCESSPATHLONG}
-		LOGFILE=${MASSPROCESSPATHLONG}/LogFile_MassProcess_Super${SUPERMASTER}_${RUNDATE}_${RNDM1}.txt
+		LOGFILE=${MASSPROCESSPATHLONG}/${LOGFILENAME}
 
 		# Do not EchoTee because it would make the log files different in MAINRUNDIR and MASSPROCESSPATHLONG
 		echo "Compare now with diff to ensure that everything was copied before removing from processing disk."
@@ -1542,37 +1643,15 @@ if [ "${execdir}" == "${storedir}" ]
 							else 
 								EchoTee "Disk seems ok - REMOVE PROCESSED PAIR DIRS"
 
-								while IFS=_ read -r MASDATE SLVDATE
-								do	
-									rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
-								done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
-
-								if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
-									then
-										while IFS=_ read -r MASDATE SLVDATE
-										do	
-											rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
-										done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
-								fi
+								ActionOnPairDirs "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt" rm
 
 								rm -f ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
 
 						fi
 					else 
 						EchoTee "REMOVE PROCESSED PAIR DIRS"
-						
-						while IFS=_ read -r MASDATE SLVDATE
-						do	
-							rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
-						done < "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt"
 
-						if [ -f ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ] && [ -s ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt ]  
-							then
-								while IFS=_ read -r MASDATE SLVDATE
-								do	
-									rm -Rf *"${MASDATE}"*_*"${SLVDATE}"* 
-								done < "${MASSPROCESSPATHLONG}/ExistingPairs_${RUNDATE}_${RNDM1}_inverted.txt"
-						fi
+						ActionOnPairDirs "${MASSPROCESSPATHLONG}/PairsToProcess_${RUNDATE}_${RNDM1}.txt" rm
 
 						rm -f ${MASSPROCESSPATHLONG}/Check_MoveFromRundir_${RUNDATE}_${RNDM1}.txt
 
@@ -1661,7 +1740,7 @@ echo "All done - hope it worked."
 echo "Processing finisehd on $(date) " 
 SpeakOut " Mass processing of satellite ${SATDIR}, mode ${TRKDIR} is finished. Enjoy mass processing."
 
-if [ ${NPAIRS} -eq 0 ] ; then rm -f ${RUNDIR}/LogFile_MassProcess_Super${MAS}_${RUNDATE}_${RNDM1}.txt ; fi
+if [ ${NPAIRS} -eq 0 ] ; then rm -f "${MAINRUNDIR}/${LOGFILENAME}" ; fi
 PARAMFILENAME=$(basename ${PARAMFILE})
 rm -f "${RUNDIR}/${PARAMFILENAME}"
 

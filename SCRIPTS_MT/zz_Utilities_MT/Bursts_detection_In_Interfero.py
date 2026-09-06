@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/opt/local/amster_python_env/bin/python
 #
 # The scripts searches for the presence of “burst-remnant” artifacts in Sentinel-1 TOPS 
 # interferograms.

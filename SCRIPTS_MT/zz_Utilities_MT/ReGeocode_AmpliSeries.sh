@@ -49,13 +49,15 @@
 # New in Distro V 3.5 20250804:	- Correct checking unchanged zoom factor  
 # New in Distro V 3.6 20250821:	- debug search for "Slant range sampling [m]"
 # New in Distro V 3.7 20250822:	- more robust way of computing abs to avoid prblm eg. with values 1e-15
+# New in Distro V 3.8 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.6 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 21, 2025"
+VER="Distro V3.8 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
 
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -273,6 +275,12 @@ function GetParamFromFile()
 # do not re-geocode incidence angles
 if [ -f ${RUNDIR}/i12/InSARProducts/incidence ] ; then 
 	mv ${RUNDIR}/i12/InSARProducts/incidence ${RUNDIR}/i12/incidence
+fi
+if [ -f ${RUNDIR}/i12/InSARProducts/localIncidenceAngle ] ; then 
+	mv ${RUNDIR}/i12/InSARProducts/localIncidenceAngle ${RUNDIR}/i12/localIncidenceAngle
+fi
+if [ -f ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle ] ; then 
+	mv ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle ${RUNDIR}/i12/geoidalIncidenceAngle
 fi
 
 echo ""
@@ -609,7 +617,11 @@ cd ${RUNDIR}/i12
 if [ -f ${RUNDIR}/i12/incidence ] ; then 
 	mv ${RUNDIR}/i12/incidence ${RUNDIR}/i12/InSARProducts/incidence
 fi 
-
+if [ -f ${RUNDIR}/i12/localIncidenceAngle ] ; then 
+	mv ${RUNDIR}/i12/localIncidenceAngle ${RUNDIR}/i12/InSARProducts/localIncidenceAngle
+fi if [ -f ${RUNDIR}/i12/geoidalIncidenceAngle ] ; then 
+	mv ${RUNDIR}/i12/geoidalIncidenceAngle ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle
+fi 
 # Make figs 
 cd ${RUNDIR}/i12/GeoProjection
 

@@ -25,13 +25,14 @@
 
 # New in Distro V 1.0 20260323:	- set up
 # New in Distro V 1.1.0 2026730 :	- force msbasv4								
+# New in Distro V 1.2.0 20260805 :	- add 3rd mode/target FreqA_D48_LL_Frame74_40Mhz_41deg (set15): full 3-targets processing (Asc98 40MHz + Desc48 20MHz + Desc48 40MHz)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+VER="Distro V1.1.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 05, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -60,6 +61,8 @@ YYYY=$(date +%Y)
 
 		MODE01D="FreqA_D48_LL_Frame74_20Mhz_41deg"
 
+		MODE02D="FreqA_D48_LL_Frame74_40Mhz_41deg"
+
 		# max perpendicular baseline - Not used becasue use table (Delaunay or shortests) instead
 		
 		LABEL=NEPAL		# Label for file naming (used for naming zz_ dirs with results and figs etc)
@@ -87,26 +90,31 @@ YYYY=$(date +%Y)
 		PATHMASSPROCESS=${PATH_3612}/SAR_MASSPROCESS
 
 		# Path to Seti
-		PATHSETI=$PATH_1660/SAR_SM/MSBAS
+		PATHSETI=${PATH_1660}/SAR_SM/MSBAS/NEPAL
 
 		# Path to Pair Dirs and Geocoded files to use (need one for each mode)
 		NISARASC1=${PATHMASSPROCESS}/NISAR/NEPAL_${MODE01A}/SMNoCrop_SM_${SMASC1}_Zoom1_ML4
 		
 		NISARDESC1=${PATHMASSPROCESS}/NISAR/NEPAL_${MODE01D}/SMNoCrop_SM_${SMDESC1}_Zoom1_ML4
+
+		NISARDESC2=${PATHMASSPROCESS}/NISAR/NEPAL_${MODE02D}/SMNoCrop_SM_${SMDESC2}_Zoom1_ML4
 		
 		# Path to dir where list of compatible pairs files are computed (need one for each mode)
-		SET1=${PATHSETI}/NEPAL/set11
-		SET2=${PATHSETI}/NEPAL/set13
+		SET1=${PATHSETI}/set11
+		SET2=${PATHSETI}/set13
+		SET3=${PATHSETI}/set15
 
 		TABLESET1=${SET1}/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
 		TABLESET2=${SET2}/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
+		TABLESET3=${SET3}/table_0_0_MaxShortest_3_Without_Quanrantained_Data.txt
 
 
 		# Path to LaunchParameters.txt files for each mode (need one for each mode)
-		LAUNCHPARAMPATH=${PATH_1650}/Param_files/NISAR/
+		LAUNCHPARAMPATH=${PATH_1650}/Param_files/NISAR
 
 		LAUNCHPARAMASC1=${LAUNCHPARAMPATH}/NEPAL_FreqA_A98_LL_Frame16_40Mhz_41deg/LaunchMTparam_NISAR_A98_FreqA_Zoom1_ML4_MassProc.txt
 		LAUNCHPARAMDESC1=${LAUNCHPARAMPATH}/NEPAL_FreqA_D48_LL_Frame74_20Mhz_41deg/LaunchMTparam_NISAR_D48_FreqA_Zoom1_ML4_MassProc.txt
+		LAUNCHPARAMDESC2=${LAUNCHPARAMPATH}/NEPAL_FreqA_D48_LL_Frame74_40Mhz_41deg/LaunchMTparam_NISAR_D48_FreqA_Zoom1_ML4_MassProc.txt
 
 	# Events tables
 	###############
@@ -177,12 +185,15 @@ YYYY=$(date +%Y)
 		
 		TIMESERIESPTSDESCRDESC1=${PATH_1650}/Data_Points/Points_TS_${LABEL}_${MODE01D}.txt
 
-		TIMESERIESPTSDESCREWUD=${PATH_1650}/Data_Points/Points_TS_${LABEL}_EW_UD_NISAR.txt
+		TIMESERIESPTSDESCRDESC2=${PATH_1650}/Data_Points/Points_TS_${LABEL}_${MODE02D}.txt
+
+		#TIMESERIESPTSDESCREWUD=${PATH_1650}/Data_Points/Points_TS_${LABEL}_EW_UD_NISAR.txt
 
 		# List of PAIRS of points for plotting double difference (i.e. without error bar) in EW and UD, ASC and Desc... 
 		# 	Note: if pixels are coherent in all modes, these can be the same list
 		DOUBLEDIFFPAIRSASC1=${PATH_1650}/Data_Points/List_DoubleDiff_${LABEL}_${MODE01A}.txt
 		DOUBLEDIFFPAIRSDESC1=${PATH_1650}/Data_Points/List_DoubleDiff_${LABEL}_${MODE01D}.txt
+		DOUBLEDIFFPAIRSDESC2=${PATH_1650}/Data_Points/List_DoubleDiff_${LABEL}_${MODE02D}.txt
 
 		DOUBLEDIFFPAIRSEWUD=${PATH_1650}/Data_Points/List_DoubleDiff_EW_UD_${LABEL}_NISAR.txt
 		
@@ -202,7 +213,7 @@ YYYY=$(date +%Y)
 		CROP_A98="0, 17612, 0, 10749"
 		
 		# D48
-		CROP_D48="7200, 17612, 0, 10749"
+		CROP_D48="7000, 17612, 0, 10749"
 		
 
 
@@ -242,6 +253,9 @@ YYYY=$(date +%Y)
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
 	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}
+	mkdir -p ${MSBASDIR}/zz_LOS_TS_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
+
 
 	## in Coh threshold restriction
 	#if [ ${IFCOH} == "YES" ] ; then 
@@ -280,6 +294,15 @@ YYYY=$(date +%Y)
 		${PATHGNU}/gsed '1d' "${TIMESERIESPTSDESCRDESC1}" > ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
 		${PATHGNU}/gsed  -i -r 's/(\s+)?\S+//1' ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
 		TIMESERIESPTSDESC1=${MSBASDIR}/Cln_${TIMESERIESPTNAME}
+
+	# Desc 2
+		TIMESERIESPTNAME=$(basename "${TIMESERIESPTSDESCRDESC2}")
+		cp -f ${TIMESERIESPTSDESCRDESC2}  ${MSBASDIR}/${TIMESERIESPTNAME}
+		TIMESERIESPTSDESCRDESC2=${MSBASDIR}/${TIMESERIESPTNAME}
+		# Remove header and naming in 1st col from Pts list
+		${PATHGNU}/gsed '1d' "${TIMESERIESPTSDESCRDESC2}" > ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
+		${PATHGNU}/gsed  -i -r 's/(\s+)?\S+//1' ${MSBASDIR}/Cln_${TIMESERIESPTNAME}
+		TIMESERIESPTSDESC2=${MSBASDIR}/Cln_${TIMESERIESPTNAME}
 	
 
 
@@ -591,10 +614,12 @@ YYYY=$(date +%Y)
 			STOPRUN="YES"
 		else
 			# Check that no other SuperMaster_MassProc.sh automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-			CHECKASC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
-			CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKASC1=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${LAUNCHPARAMASC1} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKDESC1=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC1} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+			CHECKDESC2=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${LAUNCHPARAMDESC2} | ${PATHGNU}/grep -v "kate"  | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l` 
+
 			# For unknown reason it counts 1 even when no process is running
-			if [ ${CHECKASC} -ne 0 ] || [ ${CHECKDESC} -ne 0 ] ; then REASON="  SuperMaster_MassProc.sh in progress (probably manual)" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi  	
+			if [ ${CHECKASC1} -ne 0 ] || [ ${CHECKDESC1} -ne 0 ] || [ ${CHECKDESC2} -ne 0 ]  ; then REASON="  SuperMaster_MassProc.sh in progress (probably manual)" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi  	
 	fi 
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
@@ -619,6 +644,9 @@ YYYY=$(date +%Y)
 
 	cd ${NISARDESC1}
 	Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh &
+
+	cd ${NISARDESC2}
+	Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh &
 	wait
 	
 # Get date (in sec) of last available processed pairs in each MODE
@@ -628,10 +656,14 @@ YYYY=$(date +%Y)
 
 	LASTDESC1=`find ${NISARDESC1}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`
 
+	LASTDESC2=`find ${NISARDESC2}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`
+
 	# get date in sec of last available processed pairs in each MODE
 	LASTASCTIME1=`stat -c %Y ${LASTASC1}`
 
 	LASTDESCTIME1=`stat -c %Y ${LASTDESC1}`
+
+	LASTDESCTIME2=`stat -c %Y ${LASTDESC2}`
 
 # Check if first run and if  appropriate, get time of last images in time series
 ################################################################################
@@ -641,9 +673,10 @@ YYYY=$(date +%Y)
 			FIRSTRUN=NO
 			FORMERLASTASCTIME1=`head -1 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt`
 
-			FORMERLASTDESCTIME1=`head -3 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1` # tail -1 ok also but this is ready for case where more than 2 lines are present in _Last_MassProcessed_Pairs_Time.txt
+			FORMERLASTDESCTIME1=`head -2 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1` # tail -1 ok also but this is ready for case where more than 2 lines are present in _Last_MassProcessed_Pairs_Time.txt
+			FORMERLASTDESCTIME2=`head -3 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1` # tail -1 ok also but this is ready for case where more than 2 lines are present in _Last_MassProcessed_Pairs_Time.txt
 
-			if [ ${FORMERLASTASCTIME1} -eq ${LASTASCTIME1} ] && [ ${FORMERLASTDESCTIME1} -eq ${LASTDESCTIME1} ]  # if no more recent file is available since the last cron processing
+			if [ ${FORMERLASTASCTIME1} -eq ${LASTASCTIME1} ] && [ ${FORMERLASTDESCTIME1} -eq ${LASTDESCTIME1} ] && [ ${FORMERLASTDESCTIME2} -eq ${LASTDESCTIME2} ]  # if no more recent file is available since the last cron processing
 				then
 					echo "MSBAS finished on ${TODAY} without new pairs to process"  >>  ${MSBASDIR}/_last_MSBAS_process.txt
 					echo "MSBAS finished on ${TODAY} without new pairs to process"
@@ -662,6 +695,7 @@ YYYY=$(date +%Y)
 		echo "Remove Broken Links and Clean txt file in existing ${MSBASDIR}/${DEFOMODE}"
 		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}1 &
 		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}2 &
+		Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}3 &
 
 		wait
 		echo "Possible broken links in former existing MODEi dir are cleaned"
@@ -671,6 +705,7 @@ YYYY=$(date +%Y)
 		if [ ${IFCOH} == "YES" ] ; then 
 			Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}1_Full &
 			Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}2_Full &
+			Remove_BrokenLinks_and_Clean_txt_file.sh ${MSBASDIR}/${DEFOMODE}3_Full &
 			wait
 			echo "Possible broken links in former existing MODEi_Full dir are cleaned"
 			echo ""
@@ -685,9 +720,11 @@ cd ${MSBASDIR}
 	if [ "${FIRSTRUN}" == "NO" ] ; then 
 		mv ${DEFOMODE}1.txt ${DEFOMODE}1_all4col.txt
 		mv ${DEFOMODE}2.txt ${DEFOMODE}2_all4col.txt
+		mv ${DEFOMODE}3.txt ${DEFOMODE}3_all4col.txt
 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}1_all4col.txt > ${DEFOMODE}1.txt 
 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}2_all4col.txt > ${DEFOMODE}2.txt 
-		rm -f ${DEFOMODE}1_all4col.txt ${DEFOMODE}2_all4col.txt 
+		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3.txt 
+		rm -f ${DEFOMODE}1_all4col.txt ${DEFOMODE}2_all4col.txt ${DEFOMODE}3_all4col.txt 
 		echo "All lines in former existing MODEi.txt have 4 columns"
 		echo ""
 
@@ -715,6 +752,7 @@ cd ${MSBASDIR}
 		echo "Remove lines in existing MSBAS/MODEi.txt file associated to possible broken links or duplicated lines"
 		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}1 ${PATHMASSPROCESS} &
 		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}2 ${PATHMASSPROCESS} &
+		_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}3 ${PATHMASSPROCESS} &
 		wait
 		echo "All lines in former existing MODEi.txt are ok"
 		echo ""
@@ -723,6 +761,7 @@ cd ${MSBASDIR}
 		if [ ${IFCOH} == "YES" ] ; then 
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}1_Full ${PATHMASSPROCESS} &
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}2_Full ${PATHMASSPROCESS} &
+			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}3_Full ${PATHMASSPROCESS} &
 			wait
 			echo "All lines in former existing MODEi_Full.txt are ok"
 			echo ""	
@@ -733,7 +772,7 @@ cd ${MSBASDIR}
 # Prepare MSBAS
 ###############
 #	${PATH_SCRIPTS}/SCRIPTS_MT/build_header_msbas_criteria.sh DefoInterpolx2Detrend 3 ${BP} ${BT} ${NISARASC} ${NISARDESC1} ${NISARDESC2}
-	${PATH_SCRIPTS}/SCRIPTS_MT/build_header_msbas_Tables.sh ${DEFOMODE} 2 ${TABLESET1} ${TABLESET2} ${NISARASC1} ${NISARDESC1} 
+	${PATH_SCRIPTS}/SCRIPTS_MT/build_header_msbas_Tables.sh ${DEFOMODE} 3 ${TABLESET1} ${TABLESET2} ${TABLESET3} ${NISARASC1} ${NISARDESC1} ${NISARDESC2} 
 	# For debug:
 	#read -p "build header finished, click to continue"
 
@@ -752,18 +791,22 @@ cd ${MSBASDIR}
 		# ensure that format is ok, that is with 4 columns 
 		mv ${DEFOMODE}1.txt ${DEFOMODE}1_all4col.txt
 		mv ${DEFOMODE}2.txt ${DEFOMODE}2_all4col.txt
+		mv ${DEFOMODE}3.txt ${DEFOMODE}3_all4col.txt
 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}1_all4col.txt > ${DEFOMODE}1.txt 
 		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}2_all4col.txt > ${DEFOMODE}2.txt 
+		${PATHGNU}/gawk 'NF>=4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3.txt 
 		# keep track of prblms
 		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}1_all4col.txt > ${DEFOMODE}1_MissingCol.txt 
 		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}2_all4col.txt > ${DEFOMODE}2_MissingCol.txt 
-		rm -f ${DEFOMODE}1_all4col.txt ${DEFOMODE}2_all4col.txt
+		${PATHGNU}/gawk 'NF<4' ${DEFOMODE}3_all4col.txt > ${DEFOMODE}3_MissingCol.txt 
+		rm -f ${DEFOMODE}1_all4col.txt ${DEFOMODE}2_all4col.txt ${DEFOMODE}3_all4col.txt
 		
 		# Need again to check for duplicated lines with different Bp in Col 2 resulting from orbit update 
 		if [ ${IFCOH} == "YES" ] ; then 
 			echo "Remove lines in newly created MSBAS/MODEi.txt file associated to possible broken links or duplicated lines"
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}1 ${PATHMASSPROCESS} &
 			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}2 ${PATHMASSPROCESS} &
+			_Check_bad_DefoInterpolx2Detrend.sh ${DEFOMODE}3 ${PATHMASSPROCESS} &
 			wait
 			echo "All lines in new MODEi.txt should be ok"
 			echo ""	
@@ -807,6 +850,8 @@ cd ${MSBASDIR}
 
 		LINENR01D=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | head -2 | tail -1 | cut -d: -f1)	
 
+		LINENR02D=$(cat ${MSBASDIR}/header.txt | ${PATHGNU}/grep -n "SET =" | head -3 | tail -1 | cut -d: -f1)
+
 
  		#   Change "SET = " with "#SET = " in each line of header
 		cat ${MSBASDIR}/header_all_modes.txt | ${PATHGNU}/gsed "s/SET = /#SET = /g" > ${MSBASDIR}/header_none.txt	# This allows computing LoS of rejected modes as well
@@ -818,6 +863,9 @@ cd ${MSBASDIR}
 		
 		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR01D}' s/#SET = /SET = /' > ${MSBASDIR}/header_${MODE01D}.txt	# D48
 		${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_D48}'/" ${MSBASDIR}/header_${MODE01D}.txt
+		
+		cat ${MSBASDIR}/header_none.txt | ${PATHGNU}/gsed ${LINENR02D}' s/#SET = /SET = /' > ${MSBASDIR}/header_${MODE02D}.txt	# D48 40Mhz
+		${PATHGNU}/gsed -i "s/^WINDOW_SIZE.*/WINDOW_SIZE = '${CROP_D48}'/" ${MSBASDIR}/header_${MODE02D}.txt
 		
 
 #	# EW-UD without coh threshold restriction 
@@ -936,6 +984,7 @@ cd ${MSBASDIR}
 			# Make baseline plot 
 			PlotBaselineGeocMSBASmodeTXT.sh ${SET1} ${MSBASDIR}/${DEFOMODE}1.txt
 			PlotBaselineGeocMSBASmodeTXT.sh ${SET2} ${MSBASDIR}/${DEFOMODE}2.txt
+			PlotBaselineGeocMSBASmodeTXT.sh ${SET3} ${MSBASDIR}/${DEFOMODE}3.txt
 			
 			function RunCombiEWUD()
 					{
@@ -1142,6 +1191,10 @@ cd ${MSBASDIR}
  			FILEPAIRS=${DOUBLEDIFFPAIRSDESC1}
  			MSBASmode  ${MODE01D} ${FORMERLASTDESCTIME1} ${LASTDESCTIME1}
 
+		# DESC 2
+ 			FILEPAIRS=${DOUBLEDIFFPAIRSDESC2}
+ 			MSBASmode  ${MODE02D} ${FORMERLASTDESCTIME2} ${LASTDESCTIME2}
+
  		# Back to normal for next run and get out
  			cp -f ${MSBASDIR}/header_${ALLCOMP}.txt ${MSBASDIR}/header.txt 		 				
 
@@ -1151,6 +1204,8 @@ cd ${MSBASDIR}
 			echo "${LASTASCTIME1}" > ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 
 			echo "${LASTDESCTIME1}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
+
+			echo "${LASTDESCTIME2}" >> ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt
 		
 	#mv -f ${MSBASDIR}/${TIMESERIESPTSDESCR}.tmp ${MSBASDIR}/${TIMESERIESPTSDESCR}
 

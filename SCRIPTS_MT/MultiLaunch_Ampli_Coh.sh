@@ -44,13 +44,14 @@
 # New in Distro V 3.3 20250523:	- state that it allows asymetric zoom  
 #								- echo "n" instead of "y" when launching SinglePair.sh because we do not want by default to get the results coregistered on the supermatser 
 #								- mv masked coh only if APPLYMASKyes... 
+# New in Distro V 3.4 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 23, 2025"
+VER="Distro V3.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -261,7 +262,8 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 				TMPDIR=${PROROOTPATH}/${SATDIR}/${TRKDIR}/${MAS}_${SLV}_${REGION}_Zoom${ZOOM}_ML${INTERFML}/i12
 		
 				${PATHGNU}/gsed -i '/.*GeocUTM.*/i mkdir -p '${TMPDIR}'\/InSARProductsDoNotGeoc' ${SOFT}
-				${PATHGNU}/gsed -i '/.*GeocUTM.*/i mv '${TMPDIR}'\/InSARProducts\/incidence\* '${TMPDIR}'\/InSARProductsDoNotGeoc' ${SOFT} # add this for mute error > /dev/null 2>&1 ?
+				#${PATHGNU}/gsed -i '/.*GeocUTM.*/i mv '${TMPDIR}'\/InSARProducts\/incidence\* '${TMPDIR}'\/InSARProductsDoNotGeoc' ${SOFT} # add this for mute error > /dev/null 2>&1 ?
+				${PATHGNU}/gsed -i '/.*GeocUTM.*/i mv '${TMPDIR}'\/InSARProducts\/\*incidence\* '${TMPDIR}'\/InSARProductsDoNotGeoc' ${SOFT} # add this for mute error > /dev/null 2>&1 ?
 				${PATHGNU}/gsed -i '/.*GeocUTM.*/i mv '${TMPDIR}'\/InSARProducts\/\*flip\* '${TMPDIR}'\/InSARProductsDoNotGeoc' ${SOFT}
 				${PATHGNU}/gsed -i '/.*GeocUTM.*/i mv '${TMPDIR}'\/InSARProducts\/\*flop\* '${TMPDIR}'\/InSARProductsDoNotGeoc' ${SOFT}
 
@@ -317,8 +319,24 @@ if [ -f "${PROROOTPATH}/${SATDIR}/${TRKDIR}/Pairs_to_process_${RUNDATE}.txt" ] &
 						# Some specific things for Alex
 						# get header file opening slant range coherence with GIS software
 						COHFILE=`basename ${TMPDIR}/InSARProducts/coherence*days`
-						cp ${TMPDIR}/InSARProductsDoNotGeoc/incidence.fl?p.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr 
+						#cp ${TMPDIR}/InSARProductsDoNotGeoc/incidence.fl?p.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr 
+						if [ -f ${TMPDIR}/InSARProductsDoNotGeoc/incidence.flip.hdr ] ; then cp ${TMPDIR}/InSARProductsDoNotGeoc/incidence.flip.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr  ; fi
+						if [ -f ${TMPDIR}/InSARProductsDoNotGeoc/incidence.flop.hdr ] ; then cp ${TMPDIR}/InSARProductsDoNotGeoc/incidence.flop.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr  ; fi
 
+						if [ -f ${TMPDIR}/InSARProductsDoNotGeoc/localIncidenceAngle.flip.hdr ] 
+							then 
+								cp ${TMPDIR}/InSARProductsDoNotGeoc/localIncidenceAngle.flip.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr 
+							else 
+								if [ -f ${TMPDIR}/InSARProductsDoNotGeoc/geoidalIncidenceAngle.flip.hdr ] ; then cp ${TMPDIR}/InSARProductsDoNotGeoc/geoidalIncidenceAngle.flip.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr  ; fi
+						fi
+						
+						if [ -f ${TMPDIR}/InSARProductsDoNotGeoc/localIncidenceAngle.flop.hdr ] 
+							then 
+								cp ${TMPDIR}/InSARProductsDoNotGeoc/localIncidenceAngle.flop.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr 
+							else 		
+								if [ -f ${TMPDIR}/InSARProductsDoNotGeoc/geoidalIncidenceAngle.flop.hdr ] ; then cp ${TMPDIR}/InSARProductsDoNotGeoc/geoidalIncidenceAngle.flop.hdr ${TMPDIR}/InSARProducts/${COHFILE}.hdr  ; fi
+						fi
+						
 						# mask coherence 
 						#ffa ${TMPDIR}/InSARProducts/${COHFILE} x ${TMPDIR}/InSARProducts/slantRangeMask 
 	

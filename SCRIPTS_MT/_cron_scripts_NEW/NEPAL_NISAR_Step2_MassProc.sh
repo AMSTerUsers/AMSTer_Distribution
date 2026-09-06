@@ -30,7 +30,7 @@ echo "Starting $0"
 # Global Primaries (SuperMasters)
 SMASC1=20251128			# Asc98 FreqA LL Frame16 40Mhz 41deg
 SMDESC1=20260112		# Desc48 FreqA LL Frame74 20Mhz 41deg
-SMDESC2=20251207				# Desc48 FreqA LL Frame74 40Mhz 41deg -> unused because only one img as on march 2026
+SMDESC2=20251207		# Desc48 FreqA LL Frame74 40Mhz 41deg -> unused because only one img as on march 2026
 
 # DO NOT FORGET TO ADJUST ALSO THE SET BELOWS IN SCRIPT
 
@@ -43,7 +43,8 @@ STEP1="NEPAL_NISAR_Step1_Read_SMCoreg_Pairs.sh"
 #####################
 
 #SETi DIR
-DIRSET=$PATH_1660/SAR_SM/MSBAS/NEPAL
+DIRSET=${PATH_1660}/SAR_SM/MSBAS/NEPAL
+
 
 TABLEASC1=${DIRSET}/set11/table_0_0_MaxShortest_${NR}_Without_Quanrantained_Data.txt
 
@@ -53,15 +54,15 @@ TABLEDESC2=${DIRSET}/set15/table_0_0_MaxShortest_${NR}_Without_Quanrantained_Dat
 
 
 #Launch param files
-PARAMPROCESSASC1=$PATH_1650/Param_files/NISAR/NEPAL_FreqA_A98_LL_Frame16_40Mhz_41deg/LaunchMTparam_NISAR_A98_FreqA_Zoom1_ML4_MassProc.txt 
+PARAMPROCESSASC1=${PATH_1650}/Param_files/NISAR/NEPAL_FreqA_A98_LL_Frame16_40Mhz_41deg/LaunchMTparam_NISAR_A98_FreqA_Zoom1_ML4_MassProc.txt 
 
-PARAMPROCESSDESC1=$PATH_1650/Param_files/NISAR/NEPAL_FreqA_D48_LL_Frame74_20Mhz_41deg/LaunchMTparam_NISAR_D48_FreqA_Zoom1_ML4_MassProc.txt
-PARAMPROCESSDESC2=$PATH_1650/Param_files/NISAR/NEPAL_FreqA_D48_LL_Frame74_40Mhz_41deg/LaunchMTparam_NISAR_D48_FreqA_Zoom1_ML4_MassProc.txt
+PARAMPROCESSDESC1=${PATH_1650}/Param_files/NISAR/NEPAL_FreqA_D48_LL_Frame74_20Mhz_41deg/LaunchMTparam_NISAR_D48_FreqA_Zoom1_ML4_MassProc.txt
+PARAMPROCESSDESC2=${PATH_1650}/Param_files/NISAR/NEPAL_FreqA_D48_LL_Frame74_40Mhz_41deg/LaunchMTparam_NISAR_D48_FreqA_Zoom1_ML4_MassProc.txt
 
-MASSPROCESSASCDIR1=$PATH_3612/SAR_MASSPROCESS/NISAR/NEPAL_FreqA_A98_LL_Frame16_40Mhz_41deg
+MASSPROCESSASCDIR1=${PATH_3612}/SAR_MASSPROCESS/NISAR/NEPAL_FreqA_A98_LL_Frame16_40Mhz_41deg
 
-MASSPROCESSDESCDIR1=$PATH_3612/SAR_MASSPROCESS/NISAR/NEPAL_FreqA_D48_LL_Frame74_20Mhz_41deg
-MASSPROCESSDESCDIR2=$PATH_3612/SAR_MASSPROCESS/NISAR/NEPAL_FreqA_D48_LL_Frame74_40Mhz_41deg
+MASSPROCESSDESCDIR1=${PATH_3612}/SAR_MASSPROCESS/NISAR/NEPAL_FreqA_D48_LL_Frame74_20Mhz_41deg
+MASSPROCESSDESCDIR2=${PATH_3612}/SAR_MASSPROCESS/NISAR/NEPAL_FreqA_D48_LL_Frame74_40Mhz_41deg
 
 
 # resampled dir
@@ -93,10 +94,10 @@ if [ ${CHECKREAD} -eq 0 ]
 	then 
 		# OK, no more Step1 is running: 
 		# Check that no other SuperMaster automatic Ascending and Desc mass processing uses the LaunchMTparam_.txt yet
-		CHECKASC1=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMASCNAME1} | grep -v "Crons_1_2_3.sh"  | wc -l`
+		CHECKASC1=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMPROCESSASC1} | grep -v "Crons_1_2_3.sh"  | wc -l`
 	
-		CHECKDESC1=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAME1} | grep -v "Crons_1_2_3.sh"  | wc -l`
-		CHECKDESC2=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAME2} | grep -v "Crons_1_2_3.sh"  | wc -l`
+		CHECKDESC1=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMPROCESSDESC1} | grep -v "Crons_1_2_3.sh"  | wc -l`
+		CHECKDESC2=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMPROCESSDESC2} | grep -v "Crons_1_2_3.sh"  | wc -l`
 
 		if [ ${CHECKASC1} -lt 1 ] 
 			then 
@@ -111,20 +112,20 @@ if [ ${CHECKREAD} -eq 0 ]
 		if [ ${CHECKDESC1} -lt 1 ] 
 			then 
 				# No process running yet
-				echo "Desc 48 run on ${TODAY}"  >>  ${MASSPROCESSDESCDIR1}/_Desc_48_last_Mass.txt	2>/dev/null
+				echo "Desc 48 20 Mhz run on ${TODAY}"  >>  ${MASSPROCESSDESCDIR1}/_Desc_48_20Mhz_last_Mass.txt	2>/dev/null
 				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEDESC1} ${PARAMPROCESSDESC1} > /dev/null 2>&1 &
 			else 
-				echo "Desc 48 attempt aborted on ${TODAY} because other Mass Process in progress"  >>  ${MASSPROCESSDESCDIR1}/_Desc_48_last_aborted.txt
+				echo "Desc 48 20 Mhz attempt aborted on ${TODAY} because other Mass Process in progress"  >>  ${MASSPROCESSDESCDIR1}/_Desc_48_20Mhz_last_aborted.txt
 		fi
 		
 		## if running yet we will try again tomorrow
 		if [ ${CHECKDESC2} -lt 1 ] 
 			then 
 				# No process running yet
-				echo "Desc 48 run on ${TODAY}"  >>  ${MASSPROCESSDESCDIR2}/_Desc_48_last_Mass.txt	2>/dev/null
+				echo "Desc 48 40 Mhz run on ${TODAY}"  >>  ${MASSPROCESSDESCDIR2}/_Desc_48_40Mhz_last_Mass.txt	2>/dev/null
 				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEDESC2} ${PARAMPROCESSDESC2} > /dev/null 2>&1 &
 			else 
-				echo "Desc 48 attempt aborted on ${TODAY} because other Mass Process in progress"  >>  ${MASSPROCESSDESCDIR2}/_Desc_48_last_aborted.txt
+				echo "Desc 48 40 Mhz attempt aborted on ${TODAY} because other Mass Process in progress"  >>  ${MASSPROCESSDESCDIR2}/_Desc_48_40Mhz_last_aborted.txt
 		fi
 
 	else 

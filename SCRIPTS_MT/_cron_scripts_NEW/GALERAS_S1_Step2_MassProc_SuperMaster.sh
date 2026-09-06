@@ -75,7 +75,7 @@ if [ ${CHECKREAD} -eq 0 ]
  		if [ ${CHECKASC} -lt 1 ] 
  			then 
  				# No process running yet
- 				echo "Asc run on ${TODAY}"  >>  ${MASSPROCDIRASC}/_Desc_last_MassRun.txt
+ 				echo "Asc run on ${TODAY}"  >>  ${MASSPROCDIRASC}/_Asc_last_MassRun.txt
  				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEASC} ${PARAMPROCESSASC} > /dev/null 2>&1 &
  			else 
  				echo "Asc attempt aborted on ${TODAY} because other Mass Process in progress"  >>  ${MASSPROCDIRASC}/_Asc_last_aborted.txt

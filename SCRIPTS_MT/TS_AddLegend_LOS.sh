@@ -17,6 +17,8 @@
 #				- gnu sed for more compatibility. 
 #				- Python + Numpy + script: CreateColorFrame.py, AmpDefo_map.sh, TimeSerieInfo_HP.sh,AmpTif_map.sh
 #               - Parameter file must be present in "MSBAS/Region/_CombiFiles" to extract 'RateResoSatView' from it
+#				- CreateBackgroundMaps.sh 
+#				- EnviGridInfo.py
 #               
 #
 # Action:
@@ -74,14 +76,18 @@
 #								- delete with -exec rm -f and spare AMSTer.png, as TS_AddLegend_EW_UD.sh 
 # New in Distro V 4.2 20260804:	- spare Legend_*_scale.txt when cleaning _images, so that the 
 #								  colour bar limits survive the runs that reuse the velocity map 
+# New in Distro V 5.0 20260904:	- automatically creates satview.jpg if missing 
+#								- automatically update crop values in TS_parameters.txt to cope with possible crop from header.txt
+# New in Distro V 5.1 20260904:	- DO NOT ADJUST CROP IN TS_parameters.txt because it offsets the results in the GoogleEarth figure !
+#									This offset is only if images are cropped AFTER msbas processing because msbas processing output images at full frame, even if computation is only performed on a crop. 
 # 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro 4.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 04, 2026"
+VER="Distro 5.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 04, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -111,40 +117,166 @@ if [[ ${eps_file} != *".eps" ]]
 		exit 1
 fi
 
+# Some fct
+##########
+	function GetParam()
+		{
+		unset PARAM 
+		PARAM=$1
+		PARAM=`${PATHGNU}/grep -m 1 ${PARAM} ${ParamFile} | cut -f1 -d \# | ${PATHGNU}/gsed "s/	//g" | ${PATHGNU}/gsed "s/ //g"`
+		eval PARAM=${PARAM}
+		echo ${PARAM}
+		}
+	
+	
+	function resolve_link() {
+	    local link="$1"
+	    local target
+	
+	    while [ -L "$link" ]; do
+	        target="$(readlink "$link")"
+	
+	        if [[ "$target" = /* ]]; then
+	            link="$target"
+	        else
+	            link="$(cd "$(dirname "$link")" && printf '%s/%s\n' "$PWD" "$target")"
+	        fi
+	    done
+	
+	    if [ -e "$link" ]; then
+	        printf '%s\n' "$(cd "$(dirname "$link")" && printf '%s/%s\n' "$PWD" "$(basename "$link")")"
+	    fi
+		}
+	
+	# Value(s) of "KEY = ..." in header.txt, all blanks removed (copes with "V_FLAG=0")
+	function HdrValue()
+		{
+		awk -F'=' -v key="$1" '
+			{ k = $1 ; gsub(/[[:space:]]/, "", k) }
+			k == key { v = $2 ; gsub(/[[:space:]]/, "", v) ; print v ; exit }
+			' "$2"
+		}
+	 
+	# Value of the TS_parameters.txt line whose comment holds the tag $1
+	function PrmValue()
+		{
+		awk -v key="$1" '
+			$1 ~ /^[-+.0-9]+$/ && $0 ~ ("#[ \t]*" key "([^A-Za-z0-9_]|$)") { print $1 ; exit }
+			' "$2"
+		}
+	 
+	# Replace the value of the TS_parameters.txt line whose comment holds the tag $1,
+	# keeping the original spacing and comment untouched
+	function SetPrmValue()
+		{
+		awk -v key="$1" -v new="$2" '
+			$1 ~ /^[-+.0-9]+$/ && $0 ~ ("#[ \t]*" key "([^A-Za-z0-9_]|$)") { sub(/^[[:space:]]*[-+.0-9]+/, new) }
+			{ print }
+			' "$3" > "$3".new  &&  mv -f "$3".new "$3"
+		}
+	 
+
+
 RUNDIR=$(pwd)
 echo "Let's start creating single component time series in the ${RUNDIR} folder'"
 
-RegionFolder=$(dirname ${RUNDIR})
+eval RegionFolder=$(dirname ${RUNDIR})
+
 #ParamFile=${RegionFolder}/_CombiFiles/TS_parameters.txt
 #cp ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images
 # NdO Jan 25 2021
-mkdir -p ${RegionFolder}/_CombiFiles
+
+COMBIFILESDIR="${RegionFolder}/_CombiFiles"
+
+mkdir -p ${COMBIFILESDIR}
+
 # ONLY COPY PARAM FILE IF IT DOES NOT EXIST TO PRESERVE POSSIBLE ADJUSTMENTS ALREADY PERFORMED TO PARAM FILE   
-#cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${RegionFolder}/_CombiFiles/ 2>/dev/null
-#if [ ! -e "${RegionFolder}/_CombiFiles/" ] ; then cp "${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/*" "${RegionFolder}/_CombiFiles/" ; fi 
+#cp -n ${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/* ${COMBIFILESDIR}/ 2>/dev/null
+#if [ ! -e "${COMBIFILESDIR}/" ] ; then cp "${PATH_SCRIPTS}/SCRIPTS_MT/TSCombiFiles/*" "${COMBIFILESDIR}/" ; fi 
 for FILE in "${PATH_SCRIPTS}"/SCRIPTS_MT/TSCombiFiles/* ; do
 	[ -e "${FILE}" ] || continue
-	DEST="${RegionFolder}/_CombiFiles/$(basename "${FILE}")"
+	DEST="${COMBIFILESDIR}/$(basename "${FILE}")"
 	if [ ! -e "${DEST}" ] ; then cp -p "${FILE}" "${DEST}" ; fi
 done
 
+# Create the satview.jpg if it does not exist
+if [ ! -s "${COMBIFILESDIR}/satview.jpg" ]
+	then
+
+		# get the reference from the first deformation map in LOS
+		for BINMAP in "${RUNDIR}"/*.bin ; do
+			if [ -f "${BINMAP}" ] &&  [ -s "${BINMAP}" ] ; then
+				REFMAP=${BINMAP}
+				break
+			fi
+		done
+
+		REGIONNAME="$(basename "${RegionFolder}" | cut -d '_' -f 1)"
+		CreateBackgroundMaps.sh -e ${REFMAP} -d ${COMBIFILESDIR}  -p ${COMBIFILESDIR}/TS_parameters.txt -f 2 -w "${REGIONNAME}" -v sat
+		# Note that TS_parameters.txt is set here with crop size as full image. If crop is applied, it will be updated hare after. 
+fi
+
+# NEVER DO THIS (see what's new in 5.1)
+# Ensure that the crop requested in TS_parameters.txt is consistent with the WINDOW_SIZE stored in a MSBAS header.txt.
+#	# In header.txt :
+#	#	FILE_SIZE   = ncol, nlin			(full size of the images)
+#	#	WINDOW_SIZE = Cmin, Cmax, Rmin, Rmax	(crop, zero-based, bounds included)
+#	#
+#	# hence the crop described by the header is
+#	#	Crop_X = Cmin			Crop_L = Cmax - Cmin + 1
+#	#	Crop_Y = Rmin			Crop_H = Rmax - Rmin + 1
+#	#
+#	# In TS_parameters.txt the four values are searched by the tag written in their trailing comment (# Crop_X, # Crop_Y, # Crop_L, # Crop_H), never by line
+#	# number, so the check keeps working if the file is reordered or commented.
+#	
+#	HDR="${RUNDIR}"/header.txt		# note for EW/UD, header.txt is in either EW or UD 
+#	PRM="${COMBIFILESDIR}/TS_parameters.txt"
+#	
+#	FILESIZE=$(HdrValue FILE_SIZE "${HDR}")
+#	WINDOW=$(HdrValue WINDOW_SIZE "${HDR}")
+#	
+#	if [ -z "${WINDOW}" ]
+#		then
+#			echo "  // No usable WINDOW_SIZE in ${HDR}: crop in ${PRM} left untouched"
+#		else
+#			#NCOL=$(echo "${FILESIZE}" | cut -d, -f1)	# Read from header.txt: FILE_SIZE = 1951, 2751
+#			#NLIN=$(echo "${FILESIZE}" | cut -d, -f2)
+#			 
+#			CMIN=$(echo "${WINDOW}" | cut -d, -f1)	# Read from header.txt: WINDOW_SIZE = 0, 1950, 0, 2750
+#			CMAX=$(echo "${WINDOW}" | cut -d, -f2)
+#			RMIN=$(echo "${WINDOW}" | cut -d, -f3)
+#			RMAX=$(echo "${WINDOW}" | cut -d, -f4)
+#			
+#			EXPECTED_X=${CMIN}
+#			EXPECTED_Y=${RMIN}
+#			EXPECTED_L=$(( CMAX - CMIN + 1 ))
+#			EXPECTED_H=$(( RMAX - RMIN + 1 ))
+#			 
+#			# compare with TS_parameters.txt 
+#			for CROP in "Crop_X ${EXPECTED_X}" "Crop_Y ${EXPECTED_Y}" "Crop_L ${EXPECTED_L}" "Crop_H ${EXPECTED_H}"
+#				do
+#					TAG=$(echo "${CROP}" | cut -d' ' -f1)		# from header.txt, e.g. Crop_X
+#					EXPECTED=$(echo "${CROP}" | cut -d' ' -f2)	# from header.txt, e.g. ${EXPECTED_X}
+#					FOUND=$(PrmValue "${TAG}" "${PRM}")			# from TS_parameters.txt, e.g. 0	from  "0  	# Crop_X (Top left X coordinate of the cropped zone) "
+#			 
+#					# printf tolerates values written as 1000.0 and makes the test numeric
+#					if [ "$(printf "%.0f" "${FOUND}")" -ne "${EXPECTED}" ]
+#						then
+#							echo "${TAG} = ${FOUND} in ${PRM} while header.txt implies ${EXPECTED}"
+#			
+#							SetPrmValue "${TAG}" "${EXPECTED}" "${PRM}"
+#							echo "	--> ${TAG} set to ${EXPECTED}"
+#					fi
+#				done
+#	fi
 
 #if [ ! -e ${RUNDIR}/_images ]; then mkdir ${RUNDIR}/_images; fi
 # NdO Jan 25 2021
 mkdir -p ${RUNDIR}/_images
-#cp ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images/
+#cp ${COMBIFILESDIR}/* ${RUNDIR}/_images/
 
-ParamFile=${RegionFolder}/_CombiFiles/TS_parameters.txt
+ParamFile=${COMBIFILESDIR}/TS_parameters.txt
 
-
-function GetParam()
-	{
-	unset PARAM 
-	PARAM=$1
-	PARAM=`${PATHGNU}/grep -m 1 ${PARAM} ${ParamFile} | cut -f1 -d \# | ${PATHGNU}/gsed "s/	//g" | ${PATHGNU}/gsed "s/ //g"`
-	eval PARAM=${PARAM}
-	echo ${PARAM}
-	}
 
 RateResoSatView=$(GetParam RateResoSatView)
 
@@ -195,10 +327,10 @@ fi
 echo "eps file to be decorated = ${eps_file}"
 echo "Orbit type: ${Orbit}"
 
-#ln -s ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images  >> /dev/null 2>&1
-cp -f ${RegionFolder}/_CombiFiles/* ${RUNDIR}/_images  >> /dev/null 2>&1
+#ln -s ${COMBIFILESDIR}/* ${RUNDIR}/_images  >> /dev/null 2>&1
+cp -f ${COMBIFILESDIR}/* ${RUNDIR}/_images  >> /dev/null 2>&1
 
-# find deformation speed file in this directory
+# find deformation velocity file in this directory
 #-----------------------------------------------
 #PATHFILEDEFO=$(find ${RUNDIR} -type f -name "MSBAS_LINEAR_RATE_LOS.bin")  # !!! remove * !!!
 # NdO Jan 25 2021 
@@ -406,10 +538,10 @@ echo ""
 echo "-----------> Start script to convert eps to jpeg file with crop, legend and interpretation of deformation: "
 
 rm -f ${RUNDIR}/_images/satview.jpg  	# allows to operate from different computers
-#ln -s ${RegionFolder}/_CombiFiles/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
-#ln -s ${RegionFolder}/_CombiFiles/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
-cp -f ${RegionFolder}/_CombiFiles/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
-cp -f ${RegionFolder}/_CombiFiles/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
+##ln -s ${COMBIFILESDIR}/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
+##ln -s ${COMBIFILESDIR}/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
+cp -f ${COMBIFILESDIR}/satview.jpg ${RUNDIR}/_images  >> /dev/null 2>&1
+cp -f ${COMBIFILESDIR}/AMSTer.png ${RUNDIR}/_images  >> /dev/null 2>&1
 
 ${PATH_SCRIPTS}/SCRIPTS_MT/TimeSeriesInfo_HP.sh ${eps_file} ${RUNDIR}/_images/AMPLI_COH_MSBAS_LINEAR_RATE_GEOM_${Orbit}.jpg ${RateResoSatView}  #>> /dev/null 
 

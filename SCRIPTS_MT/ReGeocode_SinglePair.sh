@@ -53,14 +53,15 @@
 #								  Beware slant range sampling has not the same label in 
 #									InSARParameters.txt (Slant range sampling [m]) and 
 #									SLCImageInfo.txt (Range sampling [m]) !!!
+# New in Distro V 5.6 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Feb 11, 2026"
+VER="Distro V5.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -402,7 +403,11 @@ if [ "${INCIDENCE}" == "YES" ]
 		echo "Will geocode incidence again"
 	else 
 		echo "Temporarily rename indidence to avoid automatic geocoding" 
-		if [ -f ${RUNDIR}/i12/InSARProducts/incidence ] ; then mv ${RUNDIR}/i12/InSARProducts/incidence ${RUNDIR}/i12/InSARProducts/BAK_incidence  ; fi
+		# Note 1 insated of i in naming
+		if [ -f ${RUNDIR}/i12/InSARProducts/incidence ] ; then mv ${RUNDIR}/i12/InSARProducts/incidence ${RUNDIR}/i12/InSARProducts/inc1dence  ; fi
+		if [ -f ${RUNDIR}/i12/InSARProducts/localIncidenceAngle ] ; then mv ${RUNDIR}/i12/InSARProducts/localIncidenceAngle ${RUNDIR}/i12/InSARProducts/localInc1denceAngle  ; fi
+		if [ -f ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle ] ; then mv ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle ${RUNDIR}/i12/InSARProducts/geoidalInc1denceAngle  ; fi
+
 fi
 echo ""
 
@@ -827,14 +832,11 @@ cd ${RUNDIR}/i12
 			geoProjection -rk -f=${RADIUSMETHD} ./TextFiles/geoProjectionParameters.txt	| tee -a ${LOGFILE}
 	fi
 
-			
-if [ -f "${RUNDIR}/i12/InSARProducts/BAK_incidence" ] && [ -s "${RUNDIR}/i12/InSARProducts/BAK_incidence" ] 
-	then 
-		EchoTee "Will get back incidence file with original name"
-		EchoTee ""
-		mv ${RUNDIR}/i12/InSARProducts/BAK_incidence ${RUNDIR}/i12/InSARProducts/incidence 
-fi
 
+# Note 1 insated of i in naming			
+if [ -f "${RUNDIR}/i12/InSARProducts/inc1dence" ] ; then EchoTee "Will get back incidence file with original name" ; EchoTee "" ; mv ${RUNDIR}/i12/InSARProducts/inc1dence ${RUNDIR}/i12/InSARProducts/incidence ; fi
+if [ -f "${RUNDIR}/i12/InSARProducts/localInc1denceAngle" ] ; then EchoTee "Will get back localIncidenceAngle file with original name" ; EchoTee "" ; mv ${RUNDIR}/i12/InSARProducts/localInc1denceAngle ${RUNDIR}/i12/InSARProducts/localIncidenceAngle ; fi
+if [ -f "${RUNDIR}/i12/InSARProducts/geoidalInc1denceAngle" ] ; then EchoTee "Will get back geoidalIncidenceAngle file with original name" ; EchoTee "" ; mv ${RUNDIR}/i12/InSARProducts/geoidalInc1denceAngle ${RUNDIR}/i12/InSARProducts/geoidalIncidenceAngle ; fi
 
 # Interpolate if needed
 	# old rough method: interpolate all even if not requested

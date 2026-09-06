@@ -150,12 +150,13 @@
 # New in Distro V 10.0.3 20260714:	- fix path to Fiji for Mac ARM
 # New in Distro V 10.1.0 20260813:	- New fct MoveGeocRenameNoOverwrite: before mv file, check if already exist in target dir and is the same. 
 #										If yes, rename first existing one as file_before_${RUNDATE}_${RNDM1}.ext
+# New in Distro V 10.2.0 20260903:	- InSARprocess with ETAD: check first that both images have the name nr (no zero) of ETAD products 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V10.1.0 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2026"
+FCTVER="Distro V10.2.0 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 03, 2026"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -1810,6 +1811,19 @@ function InSARprocess()
 					SIGMATMP="-C"
 				else 
 					SIGMATMP=""
+			fi
+
+			if [[ "${ETADPROD}" =~ ^(ETAD|ETAD111|ETAD110|ETAD101|ETAD011)$ ]]
+				then
+			    	# Check that ETD products exist 
+			    	NRETADPRODMAS=$(find "${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${MASDIR}/Data" -maxdepth 4 -mindepth 4 -type d -name "ETADData" | wc -l )
+			    	NRETADPRODSLV=$(find "${DATAPATH}/${SATDIR}/${TRKDIR}/NoCrop/${SLVDIR}/Data" -maxdepth 4 -mindepth 4 -type d -name "ETADData" | wc -l )
+					if [[ "${NRETADPRODMAS}" -ne 0 && "${NRETADPRODMAS}" -eq "${NRETADPRODSLV}" ]]; then
+					    EchoTee "Both images have ETAD products and they have the same number of ETAD products => OK"
+					else
+					    EchoTeeRed "Both images DO NOT have ETAD products or they do not have the same number of ETAD products => can't work. Exiting... "
+					    exit
+					fi
 			fi
 
 			case ${ETADPROD} in 

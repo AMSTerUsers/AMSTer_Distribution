@@ -199,12 +199,13 @@
 #								  describe them. They are printed in cm/yr with 2 decimals, as on the 
 #								  bar, instead of the raw full precision limits which ran out of the 
 #								  box 
+# New in Distro V 7.6 20260901:	- add error message if no ${crop}
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V7.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 04, 2026"
+VER="Distro V7.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 01, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -1281,8 +1282,13 @@ do_composite "$combi" "${TimeLine}.jpg" northwest +330+0
 #convert $combi -fill grey -pointsize 60 -font ${font} -draw "text 670,250 'WebSite: http://terra3.ecgs.lu/${WebPage}" $combi
 TimeSeriesInfoHPWebTag
 
+
 #convert $combi $crop -gravity northwest -geometry +30+150 -composite $combi
-do_composite "$combi" "$crop" northwest +30+150
+if [ -s "${crop}" ]
+	then	do_composite "$combi" "$crop" northwest +30+150
+	else	echo "ERROR: velocity thumbnail ${crop} missing --> slot +30+150 left empty" >&2
+fi
+#do_composite "$combi" "$crop" northwest +30+150
 
 # Add logo to timestamp 
 logo=${WorkDir}/AMSTer.png

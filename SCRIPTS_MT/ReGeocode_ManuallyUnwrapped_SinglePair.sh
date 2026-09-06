@@ -55,14 +55,15 @@
 # New in Distro V 4.6 20250604:	- warns in header that it is not appropriate for asymetric zoom and stop ifasymetric
 #								- remove possible path to kml for re-geocoding when performing non Forced geocoding
 # New in Distro V 4.7 20250627:	- Erroneous ChangeGeocParam instead of ChangeParam in removing kml just in case in Closest and Auto 
+# New in Distro V 4.8 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.7 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 27, 2025"
+VER="Distro V4.8 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
 
 
 echo " "
@@ -320,7 +321,8 @@ function RenameAllProducts()
 			
 	echo "Move former results in /i12/ORIGINAL:" 
 	echo "  InSARProducts..."
-		mv -f ${RUNDIR}/i12/InSARProducts/incidence* ${RUNDIR}/i12/ORIGINAL/InSARProducts/ 2>/dev/null
+		#mv -f ${RUNDIR}/i12/InSARProducts/incidence* ${RUNDIR}/i12/ORIGINAL/InSARProducts/ 2>/dev/null
+		mv -f ${RUNDIR}/i12/InSARProducts/*incidence* ${RUNDIR}/i12/ORIGINAL/InSARProducts/ 2>/dev/null
 		mv -f ${RUNDIR}/i12/InSARProducts/deformationMap* ${RUNDIR}/i12/ORIGINAL/InSARProducts/ 2>/dev/null
 		mv -f ${RUNDIR}/i12/InSARProducts/unwrappedPhase.??-??* ${RUNDIR}/i12/ORIGINAL/InSARProducts/ 2>/dev/null
 	echo "  GeoProjection..."		

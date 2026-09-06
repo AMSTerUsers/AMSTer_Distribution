@@ -10,13 +10,15 @@
 # V1.0 (Aug 03, 2020)
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
+
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -50,8 +52,10 @@ byte2float.py snaphuZoneMap
 # Rename snaphuZoneMap in float as a file CIS can geocode
 mv snaphuZoneMapFloat coherence.VV-VV
 
-# Avoid re-geocoding incidence
-mv incidence 1cidence
+# Avoid re-geocoding incidence ; note 1 instead of i
+if [ -f incidence ] ; then mv incidence inc1dence ; fi
+if [ -f localIncidenceAngle ] ; then mv localIncidenceAngle localInc1denceAngle ; fi
+if [ -f geoidalIncidenceAngle ] ; then mv geoidalIncidenceAngle geoidalInc1denceAngle ; fi
 
 cd .. 
 # backup original /TextFiles/geoProjectionParameters.txt
@@ -92,6 +96,9 @@ snaphuZoneMap.UTM.${PIXSIZE}.bil.sh
 cd ..
 # Recover original coherence, incidence and geoProjectionParameters.txt
 mv ./InSARProducts/${ORIGINALCOH}.original ./InSARProducts/${ORIGINALCOH} 
-mv ./InSARProducts/1cidence ./InSARProducts/incidence 
+#mv ./InSARProducts/1cidence ./InSARProducts/incidence 
+if [ -f inc1dence ] ; then mv inc1dence incidence ; fi
+if [ -f localInc1denceAngle ] ; then mv localInc1denceAngle localIncidenceAngle ; fi
+if [ -f geoidalInc1denceAngle ] ; then mv geoidalInc1denceAngle geoidalIncidenceAngle ; fi
 mv ./TextFiles/geoProjectionParameters.original.txt ./TextFiles/geoProjectionParameters.txt 
   
