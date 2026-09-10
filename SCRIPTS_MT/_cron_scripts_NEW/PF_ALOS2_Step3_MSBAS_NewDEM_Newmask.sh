@@ -46,14 +46,26 @@
 #									- reject some pairs in 11D and 13D
 #									- corr bug in mkdir ghost LOS dir that contained tabs and spaces at the end of name
 # New in Distro V 2.0.0 20251209 :	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
-# New in Distro V 2.1.0 2026730 :	- force msbasv4								
+# New in Distro V 2.1.0 20260730 :	- force msbasv4		
+# New in Distro V 2.2.0 20260909 :	- assign MAXTHREADS		
+#									- remove some processing of unused modes 		
+# New in Distro V 2.3.0 20260909 :	- MODELIST is now the ONLY place where the modes to invert are 
+#									  selected. The modes that are not in MODELIST are skipped 
+#									  everywhere by looping with ModeUsed() and USEDSETS instead of 
+#									  hard coding (and hand commenting) each of the 27 modes. 
+#									- the 27 tables and the 27 SET lines in header.txt are still 
+#									  always built, to preserve the numbering of the modes  
+#									- _Last_MassProcessed_Pairs_Time.txt always keeps its 27 lines; 
+#									  unused modes are stored as 0 
+#									- no more error msg from find/stat/test on missing dir or file, 
+#									  neither at first run nor for the unused modes 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.1.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+VER="Distro V2.3.0 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -69,6 +81,9 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 # vvvvvvvvv Hard coded lines vvvvvvvvvvvvvv
 	# set the max number of threads to be used by MSBAS. 
 	####################################################
+
+	MAXTHREADS=128
+
 	#Remember that OPENBLAS is pre-compiled for Ubuntu with max 128 threads
 		# Check OS
 		OS=`uname -a | cut -d " " -f 1 `
@@ -199,6 +214,32 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 				echo "// Request to invert all modes"
 			
 		fi
+		# Test if a mode must be processed, i.e. if it is in MODELIST. 
+		# It accepts either the name of a mode (e.g. 07A) or its position in ALLMODELIST, that is 
+		# the set number i as used in SETi, in ${DEFOMODE}i and in the ith SET line of header.txt. 
+		# Usage:  if ModeUsed "07A" ; then ... ; fi 	or 	if ModeUsed 7 ; then ... ; fi
+		ModeUsed()
+			{
+			MODEASKED="$1"
+			case "${MODEASKED}" in
+				[0-9]|[0-9][0-9]) 	MODEASKED="${ALLMODELIST[$(( MODEASKED - 1 ))]}" ;;
+			esac
+			for MODEINLIST in "${MODELIST[@]}" ; do
+				if [ "${MODEINLIST}" = "${MODEASKED}" ] ; then return 0 ; fi
+			done
+			return 1
+			}
+
+		# List of the set numbers (i.e. the i in SETi and in ${DEFOMODE}i) of the modes to process. 
+		# Used to loop on the modes to process instead of hard coding the 27 modes everywhere. 
+		USEDSETS=""
+		SETNR=1
+		for MODE in "${ALLMODELIST[@]}" ; do
+			if ModeUsed "${MODE}" ; then USEDSETS="${USEDSETS} ${SETNR}" ; fi
+			SETNR=$(( SETNR + 1 ))
+		done
+		echo "// Set numbers of the modes to process: ${USEDSETS}"
+		echo ""
 		
 		#SM Asc
 		SM01A=20230506	# 6811_L_A
@@ -370,34 +411,13 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 					## To avoid new table at each run
 					mv "${TABLE}_After${STARTDATE}_WithBaselines_${MMDDYYYY}.txt" "${TABLE}_After${STARTDATE}_WithBaselines.txt"
 				}
-			StartTableFrom "${TABLE01A}"
-			StartTableFrom "${TABLE02A}"
-			StartTableFrom "${TABLE03A}"
-			StartTableFrom "${TABLE04A}"
-			StartTableFrom "${TABLE05A}"
-			StartTableFrom "${TABLE06A}"
-			StartTableFrom "${TABLE07A}"		# unused because low angle 
-			StartTableFrom "${TABLE08A}"
-			StartTableFrom "${TABLE09A}"
-			StartTableFrom "${TABLE10A}"
-			StartTableFrom "${TABLE11A}"
-			StartTableFrom "${TABLE12A}"
-			StartTableFrom "${TABLE13A}"
-	
-			StartTableFrom "${TABLE01D}"		# unused because low angle 
-			StartTableFrom "${TABLE02D}"
-			StartTableFrom "${TABLE03D}"
-			StartTableFrom "${TABLE04D}"
-			StartTableFrom "${TABLE05D}"		# empty table
-			StartTableFrom "${TABLE06D}"
-			StartTableFrom "${TABLE07D}"		# not much data 
-			StartTableFrom "${TABLE08D}"
-			StartTableFrom "${TABLE09D}"
-			StartTableFrom "${TABLE10D}"
-			StartTableFrom "${TABLE11D}"
-			StartTableFrom "${TABLE12D}"
-			StartTableFrom "${TABLE13D}"
-			StartTableFrom "${TABLE14D}"		# unused because low angle 
+			# Note: this is done for ALL the 27 modes, even those that are not inverted, because 
+			# build_header_msbas_Tables.sh below needs the 27 tables to keep the numbering of the 
+			# sets in header.txt. It is cheap anyway since it only filters a list of pairs. 
+			for MODE in "${ALLMODELIST[@]}" ; do
+				eval TABLE=\"\$TABLE${MODE}\"
+				StartTableFrom "${TABLE}"
+			done
 		fi
 				
 		LABEL="PF" 	# Label for file naming (used for naming zz_ dirs with results and figs etc)
@@ -487,7 +507,7 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 
 	# Path to dir where MSBAS will be computed
 	###########################################
-		MSBASDIR="${PATH_3602}/MSBAS/_${LABEL}_ALOS2_Auto"
+		MSBASDIR="${PATH_3602}/MSBAS/_${LABEL}_ALOS2_ManuelRaw"
 		
 	# Coherence restriction
 	########################		
@@ -603,91 +623,17 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 	mkdir -p "${MSBASDIR}/zz_${ALLCOMP2D}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}_2D/__Combi/"
 
 
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE01A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE01A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE01A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE02A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE02A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE02A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE03A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE03A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE03A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE04A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE04A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE04A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE05A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE05A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE05A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE06A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE06A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE06A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE07A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"			# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE07A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"	# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE07A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"	# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE08A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE08A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE08A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE09A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE09A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE09A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE10A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE10A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE10A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE11A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE11A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE11A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE12A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE12A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE12A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE13A}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE13A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE13A}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
+	# Only the modes to process need their zz_LOS_TS_ dirs 
+	for MODE in "${MODELIST[@]}" ; do
+		eval MODENAME=\"\$MODE${MODE}\"
+		mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODENAME}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
+		mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODENAME}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi"
+		mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODENAME}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
+	done
 
 #	mkdir -p ${MSBASDIR}/zz_LOS_TS_AllAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 #	mkdir -p ${MSBASDIR}/zz_LOS_TS_AllAsc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
 
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"			# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"	# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE01D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"	# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE02D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE03D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE04D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE04D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE04D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE05D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"			# No data 
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE05D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"	# No data 
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE05D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"	# No data 
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE06D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE06D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE06D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE07D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"			# very few data
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE07D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"	# very few data
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE07D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"	# very few data
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE08D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE08D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE08D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE09D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE09D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE09D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE10D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE10D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE10D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE11D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE11D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE11D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE12D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE12D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE12D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE13D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE13D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE13D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE14D}_Auto_${ORDER}_${LAMBDA}_${LABEL}"			# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE14D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/"	# Not used because low angle
-	mkdir -p "${MSBASDIR}/zz_LOS_TS_${MODE14D}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series"	# Not used because low angle
 
 #	mkdir -p ${MSBASDIR}/zz_LOS_TS_AllDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}
 #	mkdir -p ${MSBASDIR}/zz_LOS_TS_AllDesc_Auto_${ORDER}_${LAMBDA}_${LABEL}/__Combi/
@@ -863,6 +809,10 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 		local FORMERLASTTIME=$2
 		local LASTTIME=$3
 		
+		# may be empty at first run or if the mode was not processed yet 
+		if [ "${FORMERLASTTIME}" = "" ] ; then FORMERLASTTIME=0 ; fi
+		if [ "${LASTTIME}" = "" ] ; then LASTTIME=0 ; fi
+		
 		echo ""
 		echo "// Processing ${MODE}"
 		echo "/////////////////////"
@@ -902,6 +852,47 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 				# move all time series in dir 
 				#mv ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/*.txt ${MSBASDIR}/zz_LOS_TS_${MODE}_Auto_${ORDER}_${LAMBDA}_${LABEL}/_Time_series/
 		fi
+		}
+
+	# Ensure that a ${DEFOMODE}i.txt (or ${DEFOMODE}i_Full.txt) file has at least 4 columns and 
+	# keep track of the possible faulty lines in ${DEFOMODE}i_MissingCol.txt. 
+	# Missing or empty files are skipped, which occurs at first run and for the unused modes.
+	Keep4Columns()
+		{
+		FILETOCHECK="$1"
+		if [ ! -s "${FILETOCHECK}" ] 
+			then 
+				echo "// ${FILETOCHECK} is missing or empty; skipped"
+				return 
+		fi
+		mv "${FILETOCHECK}" "${FILETOCHECK%.txt}_all4col.txt"
+		${PATHGNU}/gawk 'NF>=4' "${FILETOCHECK%.txt}_all4col.txt" > "${FILETOCHECK}"
+		${PATHGNU}/gawk 'NF<4' "${FILETOCHECK%.txt}_all4col.txt" > "${FILETOCHECK%.txt}_MissingCol.txt"
+		rm -f "${FILETOCHECK%.txt}_all4col.txt"
+		}
+
+	# Run a script on the ${DEFOMODE}i of each mode to process, NRPARALLEL of them at a time. 
+	# Usage: RunOnUsedSets NRPARALLEL SCRIPT MODEPREFIX MODESUFFIX [EXTRAARG] 
+	#        where the script is called with "${MODEPREFIX}${DEFOMODE}i${MODESUFFIX}" [EXTRAARG]
+	# e.g. : RunOnUsedSets 4 Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/" ""
+	#        RunOnUsedSets 4 _Check_bad_DefoInterpolx2Detrend.sh "" "_Full" "${PATHMASSPROCESS}"
+	RunOnUsedSets()
+		{
+		NRPARALLEL="$1"
+		SCRIPTTORUN="$2"
+		MODEPREFIX="$3"
+		MODESUFFIX="$4"
+		EXTRAARG="$5"
+		NRJOBS=0
+		for SETNR in ${USEDSETS} ; do
+			if [ "${EXTRAARG}" = "" ] 
+				then 	"${SCRIPTTORUN}" "${MODEPREFIX}${DEFOMODE}${SETNR}${MODESUFFIX}" &
+				else 	"${SCRIPTTORUN}" "${MODEPREFIX}${DEFOMODE}${SETNR}${MODESUFFIX}" "${EXTRAARG}" &
+			fi
+			NRJOBS=$(( NRJOBS + 1 ))
+			if [ ${NRJOBS} -ge ${NRPARALLEL} ] ; then wait ; NRJOBS=0 ; fi
+		done
+		wait
 		}
 
 
@@ -950,103 +941,42 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 	function RemoveDuplic()
 		{
 		MASSDIR=$1
-		cd "${MASSDIR}"
+		if [ ! -d "${MASSDIR}" ] 
+			then 
+				echo "// No ${MASSDIR}; skipped"
+				return 
+		fi
+		cd "${MASSDIR}" || return 	# never run the cleaning in the wrong dir 
 		Remove_Duplicate_Pairs_File_All_Modes_But_Ampl.sh
 		}
 		
-	RemoveDuplic "${MASSPROCDIR01A}" &	
-	RemoveDuplic "${MASSPROCDIR02A}" &	
-	RemoveDuplic "${MASSPROCDIR03A}" &	
-	RemoveDuplic "${MASSPROCDIR04A}" &	
-	RemoveDuplic "${MASSPROCDIR05A}" &	
-	RemoveDuplic "${MASSPROCDIR06A}" &	
-	wait	
-	RemoveDuplic "${MASSPROCDIR07A}" &	# Not used because low angle 
-	RemoveDuplic "${MASSPROCDIR08A}" &	
-	RemoveDuplic "${MASSPROCDIR09A}" &	
-	RemoveDuplic "${MASSPROCDIR10A}" &	
-	RemoveDuplic "${MASSPROCDIR11A}" &	
-	RemoveDuplic "${MASSPROCDIR12A}" &	
-	RemoveDuplic "${MASSPROCDIR13A}" &	
-	wait	
-	RemoveDuplic "${MASSPROCDIR01D}" &	# Not used because low angle 
-	RemoveDuplic "${MASSPROCDIR02D}" &	
-	RemoveDuplic "${MASSPROCDIR03D}" &	
-	RemoveDuplic "${MASSPROCDIR04D}" &	
-	RemoveDuplic "${MASSPROCDIR05D}" &	# No data
-	RemoveDuplic "${MASSPROCDIR06D}" &	
-	RemoveDuplic "${MASSPROCDIR07D}" &	# Very few data
-	wait	
-	RemoveDuplic "${MASSPROCDIR08D}" &	
-	RemoveDuplic "${MASSPROCDIR09D}" &	
-	RemoveDuplic "${MASSPROCDIR10D}" &	
-	RemoveDuplic "${MASSPROCDIR11D}" &	
-	RemoveDuplic "${MASSPROCDIR12D}" &	
-	RemoveDuplic "${MASSPROCDIR13D}" &	
-	RemoveDuplic "${MASSPROCDIR14D}" &	# Not used because low angle 
+	NRJOBS=0
+	for MODE in "${MODELIST[@]}" ; do
+		eval MASSPROCDIR=\"\$MASSPROCDIR${MODE}\"
+		RemoveDuplic "${MASSPROCDIR}" &
+		NRJOBS=$(( NRJOBS + 1 ))
+		if [ ${NRJOBS} -ge 7 ] ; then wait ; NRJOBS=0 ; fi
+	done
 	wait
 	
 # Get date (in sec) of last available processed pairs in each MODE
 ##################################################################
-	# get the name of last available processed pair in each MODE
-	LAST01A=`find ${MASSPROCDIR01A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST02A=`find ${MASSPROCDIR02A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST03A=`find ${MASSPROCDIR03A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST04A=`find ${MASSPROCDIR04A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST05A=`find ${MASSPROCDIR05A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST06A=`find ${MASSPROCDIR06A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST07A=`find ${MASSPROCDIR07A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`			# unused because low angle 
-	LAST08A=`find ${MASSPROCDIR08A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST09A=`find ${MASSPROCDIR09A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST10A=`find ${MASSPROCDIR10A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST11A=`find ${MASSPROCDIR11A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST12A=`find ${MASSPROCDIR12A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST13A=`find ${MASSPROCDIR13A}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	
-	LAST01D=`find ${MASSPROCDIR01D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`			# unused because low angle 
-	LAST02D=`find ${MASSPROCDIR02D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST03D=`find ${MASSPROCDIR03D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST04D=`find ${MASSPROCDIR04D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST05D=`find ${MASSPROCDIR05D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`			# no data after 2018
-	LAST06D=`find ${MASSPROCDIR06D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST07D=`find ${MASSPROCDIR07D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`			# not much data 
-	LAST08D=`find ${MASSPROCDIR08D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST09D=`find ${MASSPROCDIR09D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST10D=`find ${MASSPROCDIR10D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST11D=`find ${MASSPROCDIR11D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST12D=`find ${MASSPROCDIR12D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST13D=`find ${MASSPROCDIR13D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`	
-	LAST14D=`find ${MASSPROCDIR14D}/Geocoded/${DEFOMODE}/ -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}'`			# unused because low angle 
-
-	# get date in sec of last available processed pairs in each MODE
-	LAST01ATIME=`stat -c %Y ${LAST01A}`	
-	LAST02ATIME=`stat -c %Y ${LAST02A}`	
-	LAST03ATIME=`stat -c %Y ${LAST03A}`	
-	LAST04ATIME=`stat -c %Y ${LAST04A}`	
-	LAST05ATIME=`stat -c %Y ${LAST05A}`	
-	LAST06ATIME=`stat -c %Y ${LAST06A}`	
-	LAST07ATIME=`stat -c %Y ${LAST07A}`			# unused because low angle 
-	LAST08ATIME=`stat -c %Y ${LAST08A}`	
-	LAST09ATIME=`stat -c %Y ${LAST09A}`	
-	LAST10ATIME=`stat -c %Y ${LAST10A}`	
-	LAST11ATIME=`stat -c %Y ${LAST11A}`	
-	LAST12ATIME=`stat -c %Y ${LAST12A}`	
-	LAST13ATIME=`stat -c %Y ${LAST13A}`	
-
-	LAST01DTIME=`stat -c %Y ${LAST01D}`			# unused because low angle 
-	LAST02DTIME=`stat -c %Y ${LAST02D}`	
-	LAST03DTIME=`stat -c %Y ${LAST03D}`	
-	LAST04DTIME=`stat -c %Y ${LAST04D}`	
-	LAST05DTIME=`stat -c %Y ${LAST05D}`			# no data after 2018
-	LAST06DTIME=`stat -c %Y ${LAST06D}`	
-	LAST07DTIME=`stat -c %Y ${LAST07D}`			# not much data 
-	LAST08DTIME=`stat -c %Y ${LAST08D}`	
-	LAST09DTIME=`stat -c %Y ${LAST09D}`	
-	LAST10DTIME=`stat -c %Y ${LAST10D}`	
-	LAST11DTIME=`stat -c %Y ${LAST11D}`	
-	LAST12DTIME=`stat -c %Y ${LAST12D}`	
-	LAST13DTIME=`stat -c %Y ${LAST13D}`	
-	LAST14DTIME=`stat -c %Y ${LAST14D}`			# unused because low angle 
+	# LAST${MODE}TIME is set to 0 for the modes that are not processed, in order to keep the 
+	# numbering of the 27 modes in _Last_MassProcessed_Pairs_Time.txt 
+	for MODE in "${ALLMODELIST[@]}" ; do
+		LASTTIME=0
+		if ModeUsed "${MODE}" 
+			then 
+				eval MASSPROCDIR=\"\$MASSPROCDIR${MODE}\"
+				# name of the last available processed pair in that MODE
+				LAST=$(find "${MASSPROCDIR}/Geocoded/${DEFOMODE}/" -maxdepth 1 -type f -name "*deg" -printf "%T+ %p\n" 2>/dev/null | sort -r | head -1 | ${PATHGNU}/gawk '{print $2}')
+				if [ -f "${LAST}" ] 
+					then 	LASTTIME=$(stat -c %Y "${LAST}")
+					else 	echo "// No processed pair found for mode ${MODE}; check ${MASSPROCDIR}"
+				fi
+		fi
+		eval LAST${MODE}TIME=\"\${LASTTIME}\"
+	done
 
 
 # Check if first run and if  appropriate, get time of last images in time series
@@ -1055,64 +985,21 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 		then   
 			echo "Existing ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt, hence not the first run"
 			FIRSTRUN=NO
-			FORMERLAST01ATIME=`head -1 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt`
-			FORMERLAST02ATIME=`head -2 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST03ATIME=`head -3 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST04ATIME=`head -4 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST05ATIME=`head -5 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST06ATIME=`head -6 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST07ATIME=`head -7 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST08ATIME=`head -8 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST09ATIME=`head -9 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST10ATIME=`head -10 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST11ATIME=`head -11 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST12ATIME=`head -12 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST13ATIME=`head -13 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-
-			FORMERLAST01DTIME=`head -14 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST02DTIME=`head -15 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST03DTIME=`head -16 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST04DTIME=`head -17 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST05DTIME=`head -18 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST06DTIME=`head -19 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST07DTIME=`head -20 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST08DTIME=`head -21 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST09DTIME=`head -22 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST10DTIME=`head -23 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST11DTIME=`head -24 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST12DTIME=`head -25 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST13DTIME=`head -26 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt | tail -1`
-			FORMERLAST14DTIME=`tail -1 ${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt`
-
+			# _Last_MassProcessed_Pairs_Time.txt holds one line per mode, in the order of 
+			# ALLMODELIST, that is always 27 lines. Only the modes to process are checked for 
+			# new pairs. 
+			NEWPAIRS="NO"
+			MODELINE=1
+			for MODE in "${ALLMODELIST[@]}" ; do
+				FORMERLASTTIME=$(${PATHGNU}/sed -n "${MODELINE}p" "${MSBASDIR}/_Last_MassProcessed_Pairs_Time.txt")
+				if [ "${FORMERLASTTIME}" = "" ] ; then FORMERLASTTIME=0 ; fi
+				eval FORMERLAST${MODE}TIME=\"\${FORMERLASTTIME}\"
+				eval LASTTIME=\"\$LAST${MODE}TIME\"
+				if ModeUsed "${MODE}" && [ "${FORMERLASTTIME}" -ne "${LASTTIME}" ] ; then NEWPAIRS="YES" ; fi
+				MODELINE=$(( MODELINE + 1 ))
+			done
 			
-			if 	[ ${FORMERLAST01ATIME} -eq ${LAST01ATIME} ] && \
-				[ ${FORMERLAST02ATIME} -eq ${LAST02ATIME} ] && \
-				[ ${FORMERLAST03ATIME} -eq ${LAST03ATIME} ] && \
-				[ ${FORMERLAST04ATIME} -eq ${LAST04ATIME} ] && \
-				[ ${FORMERLAST05ATIME} -eq ${LAST05ATIME} ] && \
-				[ ${FORMERLAST06ATIME} -eq ${LAST06ATIME} ] && \
-				[ ${FORMERLAST07ATIME} -eq ${LAST07ATIME} ] && \
-				[ ${FORMERLAST08ATIME} -eq ${LAST08ATIME} ] && \
-				[ ${FORMERLAST09ATIME} -eq ${LAST09ATIME} ] && \
-				[ ${FORMERLAST10ATIME} -eq ${LAST10ATIME} ] && \
-				[ ${FORMERLAST11ATIME} -eq ${LAST11ATIME} ] && \
-				[ ${FORMERLAST12ATIME} -eq ${LAST12ATIME} ] && \
-				[ ${FORMERLAST13ATIME} -eq ${LAST13ATIME} ] && \
-				[ ${FORMERLAST01DTIME} -eq ${LAST01DTIME} ] && \
-				[ ${FORMERLAST02DTIME} -eq ${LAST02DTIME} ] && \
-				[ ${FORMERLAST03DTIME} -eq ${LAST03DTIME} ] && \
-				[ ${FORMERLAST04DTIME} -eq ${LAST04DTIME} ] && \
-				[ ${FORMERLAST05DTIME} -eq ${LAST05DTIME} ] && \
-				[ ${FORMERLAST06DTIME} -eq ${LAST06DTIME} ] && \
-				[ ${FORMERLAST07DTIME} -eq ${LAST07DTIME} ] && \
-				[ ${FORMERLAST08DTIME} -eq ${LAST08DTIME} ] && \
-				[ ${FORMERLAST09DTIME} -eq ${LAST09DTIME} ] && \
-				[ ${FORMERLAST10DTIME} -eq ${LAST10DTIME} ] && \
-				[ ${FORMERLAST11DTIME} -eq ${LAST11DTIME} ] && \
-				[ ${FORMERLAST12DTIME} -eq ${LAST12DTIME} ] && \
-				[ ${FORMERLAST13DTIME} -eq ${LAST13DTIME} ] && \
-				[ ${FORMERLAST14DTIME} -eq ${LAST14DTIME} ] # if no more recent file is available since the last cron processing
-				
+			if [ "${NEWPAIRS}" == "NO" ] 	# no more recent file since the last cron processing
 				then
 					echo "MSBAS finished on ${TODAY} without new pairs to process"  >>  ${MSBASDIR}/_last_MSBAS_process.txt
 					echo "MSBAS finished on ${TODAY} without new pairs to process"
@@ -1128,80 +1015,14 @@ MMDDYYYY=$(date +'%m_%d_%Y') # Needed to restrict pairs after give date
 # (clean if required MODEi.txt and Checked_For_CohThreshold_To_Be_Ignored_At_Next_Rebuild_msbas_Header.txt if any)
 	if [ "${FIRSTRUN}" == "NO" ] ; then 
 		echo "Remove Broken Links and Clean txt file in existing ${MSBASDIR}/${DEFOMODE}"
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}1" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}2" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}3" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}4" &
-		wait 
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}5" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}6" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}7" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}8" &
-		wait 
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}9" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}10" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}11" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}12" &
-		wait 
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}13" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}14" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}15" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}16" &
-		wait 
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}17" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}18" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}19" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}20" &
-		wait 
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}21" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}22" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}23" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}24" &
-		wait 
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}25" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}26" &
-		Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}27" &
-		wait
+		RunOnUsedSets 4 Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/" ""
 
 		echo "Possible broken links in former existing MODEi dir are cleaned"
 		echo ""
 
 		#Need also for the _Full ones (that is without coh threshold)	
 		if [ ${IFCOH} == "YES" ] ; then 
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}1_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}2_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}3_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}4_Full" &
-			wait 
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}5_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}6_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}7_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}8_Full" &
-			wait 
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}9_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}10_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}11_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}12_Full" &
-			wait 
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}13_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}14_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}15_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}16_Full" &
-			wait 
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}17_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}18_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}19_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}20_Full" &
-			wait 
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}21_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}22_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}23_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}24_Full" &
-			wait 
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}25_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}26_Full" &
-			Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/${DEFOMODE}27_Full" &
-			wait
+			RunOnUsedSets 4 Remove_BrokenLinks_and_Clean_txt_file.sh "${MSBASDIR}/" "_Full"
 			echo "Possible broken links in former existing MODEi_Full dir are cleaned"
 			echo ""
 		fi
@@ -1213,179 +1034,18 @@ cd ${MSBASDIR}
 
 # Remove possible lines with less that 4 columns
 	if [ "${FIRSTRUN}" == "NO" ] ; then 
-		mv "${DEFOMODE}1.txt" "${DEFOMODE}1_all4col.txt"
-		mv "${DEFOMODE}2.txt" "${DEFOMODE}2_all4col.txt"
-		mv "${DEFOMODE}3.txt" "${DEFOMODE}3_all4col.txt"
-		mv "${DEFOMODE}4.txt" "${DEFOMODE}4_all4col.txt"	
-		mv "${DEFOMODE}5.txt" "${DEFOMODE}5_all4col.txt"
-		mv "${DEFOMODE}6.txt" "${DEFOMODE}6_all4col.txt"
-		mv "${DEFOMODE}7.txt" "${DEFOMODE}7_all4col.txt"		# Low angle
-		mv "${DEFOMODE}8.txt" "${DEFOMODE}8_all4col.txt"	
-		mv "${DEFOMODE}9.txt" "${DEFOMODE}9_all4col.txt"
-		mv "${DEFOMODE}10.txt" "${DEFOMODE}10_all4col.txt"
-		mv "${DEFOMODE}11.txt" "${DEFOMODE}11_all4col.txt"
-		mv "${DEFOMODE}12.txt" "${DEFOMODE}12_all4col.txt"	
-		mv "${DEFOMODE}13.txt" "${DEFOMODE}13_all4col.txt"
-		mv "${DEFOMODE}14.txt" "${DEFOMODE}14_all4col.txt"		# Low angle
-		mv "${DEFOMODE}15.txt" "${DEFOMODE}15_all4col.txt"
-		mv "${DEFOMODE}16.txt" "${DEFOMODE}16_all4col.txt"	
-		mv "${DEFOMODE}17.txt" "${DEFOMODE}17_all4col.txt"
-		mv "${DEFOMODE}18.txt" "${DEFOMODE}18_all4col.txt"		# no data after 2018
-		mv "${DEFOMODE}19.txt" "${DEFOMODE}19_all4col.txt"
-		mv "${DEFOMODE}20.txt" "${DEFOMODE}20_all4col.txt"		# few recent data
-		mv "${DEFOMODE}21.txt" "${DEFOMODE}21_all4col.txt"
-		mv "${DEFOMODE}22.txt" "${DEFOMODE}22_all4col.txt"
-		mv "${DEFOMODE}23.txt" "${DEFOMODE}23_all4col.txt"
-		mv "${DEFOMODE}24.txt" "${DEFOMODE}24_all4col.txt"	
-		mv "${DEFOMODE}25.txt" "${DEFOMODE}25_all4col.txt"
-		mv "${DEFOMODE}26.txt" "${DEFOMODE}26_all4col.txt"
-		mv "${DEFOMODE}27.txt" "${DEFOMODE}27_all4col.txt"		# Low angle
-		
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}1_all4col.txt" > "${DEFOMODE}1.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}2_all4col.txt" > "${DEFOMODE}2.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}3_all4col.txt" > "${DEFOMODE}3.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}4_all4col.txt" > "${DEFOMODE}4.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}5_all4col.txt" > "${DEFOMODE}5.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}6_all4col.txt" > "${DEFOMODE}6.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}7_all4col.txt" > "${DEFOMODE}7.txt" 	# Low angle
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}8_all4col.txt" > "${DEFOMODE}8.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}9_all4col.txt" > "${DEFOMODE}9.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}10_all4col.txt" > "${DEFOMODE}10.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}11_all4col.txt" > "${DEFOMODE}11.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}12_all4col.txt" > "${DEFOMODE}12.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}13_all4col.txt" > "${DEFOMODE}13.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}14_all4col.txt" > "${DEFOMODE}14.txt" 	# Low angle
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}15_all4col.txt" > "${DEFOMODE}15.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}16_all4col.txt" > "${DEFOMODE}16.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}17_all4col.txt" > "${DEFOMODE}17.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}18_all4col.txt" > "${DEFOMODE}18.txt" 	# no data after 2018
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}19_all4col.txt" > "${DEFOMODE}19.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}20_all4col.txt" > "${DEFOMODE}20.txt" 	# few recent data
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}21_all4col.txt" > "${DEFOMODE}21.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}22_all4col.txt" > "${DEFOMODE}22.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}23_all4col.txt" > "${DEFOMODE}23.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}24_all4col.txt" > "${DEFOMODE}24.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}25_all4col.txt" > "${DEFOMODE}25.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}26_all4col.txt" > "${DEFOMODE}26.txt" 	
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}27_all4col.txt" > "${DEFOMODE}27.txt" 	# Low angle
-	
-		rm -f "${DEFOMODE}1_all4col.txt"
-		rm -f "${DEFOMODE}2_all4col.txt"
-		rm -f "${DEFOMODE}3_all4col.txt"
-		rm -f "${DEFOMODE}4_all4col.txt"	
-		rm -f "${DEFOMODE}5_all4col.txt"
-		rm -f "${DEFOMODE}6_all4col.txt"
-		rm -f "${DEFOMODE}7_all4col.txt"	# Low angle
-		rm -f "${DEFOMODE}8_all4col.txt"
-		rm -f "${DEFOMODE}9_all4col.txt"
-		rm -f "${DEFOMODE}10_all4col.txt"	
-		rm -f "${DEFOMODE}11_all4col.txt"	
-		rm -f "${DEFOMODE}12_all4col.txt"	
-		rm -f "${DEFOMODE}13_all4col.txt"	
-		rm -f "${DEFOMODE}14_all4col.txt"	# Low angle
-		rm -f "${DEFOMODE}15_all4col.txt"	
-		rm -f "${DEFOMODE}16_all4col.txt"	
-		rm -f "${DEFOMODE}17_all4col.txt"	
-		rm -f "${DEFOMODE}18_all4col.txt"	# no data a
-		rm -f "${DEFOMODE}19_all4col.txt"	
-		rm -f "${DEFOMODE}20_all4col.txt"	# few recen
-		rm -f "${DEFOMODE}21_all4col.txt"	
-		rm -f "${DEFOMODE}22_all4col.txt"	
-		rm -f "${DEFOMODE}23_all4col.txt"	
-		rm -f "${DEFOMODE}24_all4col.txt"	
-		rm -f "${DEFOMODE}25_all4col.txt"	
-		rm -f "${DEFOMODE}26_all4col.txt"	
-		rm -f "${DEFOMODE}27_all4col.txt"	# Low angle
+		for SETNR in ${USEDSETS} ; do
+			Keep4Columns "${MSBASDIR}/${DEFOMODE}${SETNR}.txt"
+		done
 	
 		echo "All lines in former existing MODEi.txt have 4 columns"
 		echo ""
 
 		#Need also for the _Full ones (that is without coh threshold)
 		if [ ${IFCOH} == "YES" ] ; then 
-			mv "${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full.txt" "${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full_all4col.txt"
-			mv "${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full.txt" "${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full_all4col.txt"
-			mv "${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full.txt" "${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full_all4col.txt"
-			mv "${MSBASDIR}/${DEFOMODE}4_Full/${DEFOMODE}4_Full.txt" "${MSBASDIR}/${DEFOMODE}4_Full/${DEFOMODE}4_Full_all4col.txt"
-			mv "${MSBASDIR}/${DEFOMODE}5_Full/${DEFOMODE}5_Full.txt" "${MSBASDIR}/${DEFOMODE}5_Full/${DEFOMODE}5_Full_all4col.txt"
-			mv "${MSBASDIR}/${DEFOMODE}6_Full/${DEFOMODE}6_Full.txt" "${MSBASDIR}/${DEFOMODE}6_Full/${DEFOMODE}6_Full_all4col.txt"
-			mv "${MSBASDIR}/${DEFOMODE}7_Full/${DEFOMODE}7_Full.txt" "${MSBASDIR}/${DEFOMODE}7_Full/${DEFOMODE}7_Full_all4col.txt"		# Low angle
-			mv "${MSBASDIR}/${DEFOMODE}8_Full/${DEFOMODE}8_Full.txt" "${MSBASDIR}/${DEFOMODE}8_Full/${DEFOMODE}8_Full_all4col.txt"
-			mv "${MSBASDIR}/${DEFOMODE}9_Full/${DEFOMODE}9_Full.txt" "${MSBASDIR}/${DEFOMODE}9_Full/${DEFOMODE}9_Full_all4col.txt"		
-			mv "${MSBASDIR}/${DEFOMODE}10_Full/${DEFOMODE}10_Full.txt" "${MSBASDIR}/${DEFOMODE}10_Full/${DEFOMODE}10_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}11_Full/${DEFOMODE}11_Full.txt" "${MSBASDIR}/${DEFOMODE}11_Full/${DEFOMODE}11_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}12_Full/${DEFOMODE}12_Full.txt" "${MSBASDIR}/${DEFOMODE}12_Full/${DEFOMODE}12_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}13_Full/${DEFOMODE}13_Full.txt" "${MSBASDIR}/${DEFOMODE}13_Full/${DEFOMODE}13_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}14_Full/${DEFOMODE}14_Full.txt" "${MSBASDIR}/${DEFOMODE}14_Full/${DEFOMODE}14_Full_all4col.txt"	# Low angle
-			mv "${MSBASDIR}/${DEFOMODE}15_Full/${DEFOMODE}15_Full.txt" "${MSBASDIR}/${DEFOMODE}15_Full/${DEFOMODE}15_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}16_Full/${DEFOMODE}16_Full.txt" "${MSBASDIR}/${DEFOMODE}16_Full/${DEFOMODE}16_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}17_Full/${DEFOMODE}17_Full.txt" "${MSBASDIR}/${DEFOMODE}17_Full/${DEFOMODE}17_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}18_Full/${DEFOMODE}18_Full.txt" "${MSBASDIR}/${DEFOMODE}18_Full/${DEFOMODE}18_Full_all4col.txt"	# no data a
-			mv "${MSBASDIR}/${DEFOMODE}19_Full/${DEFOMODE}19_Full.txt" "${MSBASDIR}/${DEFOMODE}19_Full/${DEFOMODE}19_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}20_Full/${DEFOMODE}20_Full.txt" "${MSBASDIR}/${DEFOMODE}20_Full/${DEFOMODE}20_Full_all4col.txt"	# few recen
-			mv "${MSBASDIR}/${DEFOMODE}21_Full/${DEFOMODE}21_Full.txt" "${MSBASDIR}/${DEFOMODE}21_Full/${DEFOMODE}21_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}22_Full/${DEFOMODE}22_Full.txt" "${MSBASDIR}/${DEFOMODE}22_Full/${DEFOMODE}22_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}23_Full/${DEFOMODE}23_Full.txt" "${MSBASDIR}/${DEFOMODE}23_Full/${DEFOMODE}23_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}24_Full/${DEFOMODE}24_Full.txt" "${MSBASDIR}/${DEFOMODE}24_Full/${DEFOMODE}24_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}25_Full/${DEFOMODE}25_Full.txt" "${MSBASDIR}/${DEFOMODE}25_Full/${DEFOMODE}25_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}26_Full/${DEFOMODE}26_Full.txt" "${MSBASDIR}/${DEFOMODE}26_Full/${DEFOMODE}26_Full_all4col.txt"	
-			mv "${MSBASDIR}/${DEFOMODE}27_Full/${DEFOMODE}27_Full.txt" "${MSBASDIR}/${DEFOMODE}27_Full/${DEFOMODE}27_Full_all4col.txt"	# Low angle
-
-	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}4_Full/${DEFOMODE}4_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}4_Full/${DEFOMODE}4_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}5_Full/${DEFOMODE}5_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}5_Full/${DEFOMODE}5_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}6_Full/${DEFOMODE}6_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}6_Full/${DEFOMODE}6_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}7_Full/${DEFOMODE}7_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}7_Full/${DEFOMODE}7_Full.txt"		# Low angle
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}8_Full/${DEFOMODE}8_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}8_Full/${DEFOMODE}8_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}9_Full/${DEFOMODE}9_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}9_Full/${DEFOMODE}9_Full.txt"
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}10_Full/${DEFOMODE}10_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}10_Full/${DEFOMODE}10_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}11_Full/${DEFOMODE}11_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}11_Full/${DEFOMODE}11_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}12_Full/${DEFOMODE}12_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}12_Full/${DEFOMODE}12_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}13_Full/${DEFOMODE}13_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}13_Full/${DEFOMODE}13_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}14_Full/${DEFOMODE}14_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}14_Full/${DEFOMODE}14_Full.txt" 	# Low angle
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}15_Full/${DEFOMODE}15_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}15_Full/${DEFOMODE}15_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}16_Full/${DEFOMODE}16_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}16_Full/${DEFOMODE}16_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}17_Full/${DEFOMODE}17_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}17_Full/${DEFOMODE}17_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}18_Full/${DEFOMODE}18_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}18_Full/${DEFOMODE}18_Full.txt" 	# no data a
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}19_Full/${DEFOMODE}19_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}19_Full/${DEFOMODE}19_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}20_Full/${DEFOMODE}20_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}20_Full/${DEFOMODE}20_Full.txt" 	# few recen
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}21_Full/${DEFOMODE}21_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}21_Full/${DEFOMODE}21_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}22_Full/${DEFOMODE}22_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}22_Full/${DEFOMODE}22_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}23_Full/${DEFOMODE}23_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}23_Full/${DEFOMODE}23_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}24_Full/${DEFOMODE}24_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}24_Full/${DEFOMODE}24_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}25_Full/${DEFOMODE}25_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}25_Full/${DEFOMODE}25_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}26_Full/${DEFOMODE}26_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}26_Full/${DEFOMODE}26_Full.txt" 	
-			${PATHGNU}/gawk 'NF>=4' "${MSBASDIR}/${DEFOMODE}27_Full/${DEFOMODE}27_Full_all4col.txt" > "${MSBASDIR}/${DEFOMODE}27_Full/${DEFOMODE}27_Full.txt" 	# Low angle
-			
-			rm -f "${MSBASDIR}/${DEFOMODE}1_Full/${DEFOMODE}1_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}2_Full/${DEFOMODE}2_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}3_Full/${DEFOMODE}3_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}4_Full/${DEFOMODE}4_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}5_Full/${DEFOMODE}5_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}6_Full/${DEFOMODE}6_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}7_Full/${DEFOMODE}7_Full_all4col.txt" 	# Low angle
-			rm -f "${MSBASDIR}/${DEFOMODE}8_Full/${DEFOMODE}8_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}9_Full/${DEFOMODE}9_Full_all4col.txt" 
-			rm -f "${MSBASDIR}/${DEFOMODE}10_Full/${DEFOMODE}10_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}11_Full/${DEFOMODE}11_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}12_Full/${DEFOMODE}12_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}13_Full/${DEFOMODE}13_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}14_Full/${DEFOMODE}14_Full_all4col.txt"	# Low angle
-			rm -f "${MSBASDIR}/${DEFOMODE}15_Full/${DEFOMODE}15_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}16_Full/${DEFOMODE}16_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}17_Full/${DEFOMODE}17_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}18_Full/${DEFOMODE}18_Full_all4col.txt"	# no data a
-			rm -f "${MSBASDIR}/${DEFOMODE}19_Full/${DEFOMODE}19_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}20_Full/${DEFOMODE}20_Full_all4col.txt"	# few recen
-			rm -f "${MSBASDIR}/${DEFOMODE}21_Full/${DEFOMODE}21_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}22_Full/${DEFOMODE}22_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}23_Full/${DEFOMODE}23_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}24_Full/${DEFOMODE}24_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}25_Full/${DEFOMODE}25_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}26_Full/${DEFOMODE}26_Full_all4col.txt"	
-			rm -f "${MSBASDIR}/${DEFOMODE}27_Full/${DEFOMODE}27_Full_all4col.txt"	# Low angle
+			for SETNR in ${USEDSETS} ; do
+				Keep4Columns "${MSBASDIR}/${DEFOMODE}${SETNR}_Full/${DEFOMODE}${SETNR}_Full.txt"
+			done
 
 			echo "All lines in former existing MODEi_Full.txt have 4 columns"
 			echo ""
@@ -1394,80 +1054,14 @@ cd ${MSBASDIR}
 # Remove lines in MSBAS/MODEi.txt file associated to possible broken links or duplicated lines with same name though wrong BP (e.g. after S1 orb update) 
 		cd ${MSBASDIR}
 		echo "Remove lines in existing MSBAS/MODEi.txt file associated to possible broken links or duplicated lines"
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}1" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}2" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}3" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}4" "${PATHMASSPROCESS}" &
-		wait 
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}5" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}6" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}7" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}8" "${PATHMASSPROCESS}" &
-		wait 
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}9" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}10" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}11" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}12" "${PATHMASSPROCESS}" &
-		wait 
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}13" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}14" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}15" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}16" "${PATHMASSPROCESS}" &
-		wait 
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}17" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}18" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}19" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}20" "${PATHMASSPROCESS}" &
-		wait 
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}21" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}22" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}23" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}24" "${PATHMASSPROCESS}" &
-		wait 
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}25" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}26" "${PATHMASSPROCESS}" &
-		_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}27" "${PATHMASSPROCESS}" &
-		wait
+		RunOnUsedSets 4 _Check_bad_DefoInterpolx2Detrend.sh "" "" "${PATHMASSPROCESS}"
 
 		echo "All lines in former existing MODEi.txt are ok"
 		echo ""
 
 		#Need also for the _Full ones (that is without coh threshold)
 		if [ ${IFCOH} == "YES" ] ; then 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}1_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}2_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}3_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}4_Full" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}5_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}6_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}7_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}8_Full" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}9_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}10_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}11_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}12_Full" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}13_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}14_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}15_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}16_Full" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}17_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}18_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}19_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}20_Full" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}21_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}22_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}23_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}24_Full" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}25_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}26_Full" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}27_Full" "${PATHMASSPROCESS}" &
-			wait
+			RunOnUsedSets 4 _Check_bad_DefoInterpolx2Detrend.sh "" "_Full" "${PATHMASSPROCESS}"
 			echo "All lines in former existing MODEi_Full.txt are ok"
 			echo ""	
 		fi
@@ -1513,156 +1107,14 @@ cd ${MSBASDIR}
 
 	# Check again that files are OK
 		# ensure that format is ok, that is with 4 columns 
-		mv "${DEFOMODE}1.txt" "${DEFOMODE}1_all4col.txt"
-		mv "${DEFOMODE}2.txt" "${DEFOMODE}2_all4col.txt"
-		mv "${DEFOMODE}3.txt" "${DEFOMODE}3_all4col.txt"
-		mv "${DEFOMODE}4.txt" "${DEFOMODE}4_all4col.txt"	
-		mv "${DEFOMODE}5.txt" "${DEFOMODE}5_all4col.txt"
-		mv "${DEFOMODE}6.txt" "${DEFOMODE}6_all4col.txt"
-		mv "${DEFOMODE}7.txt" "${DEFOMODE}7_all4col.txt"
-		mv "${DEFOMODE}8.txt" "${DEFOMODE}8_all4col.txt"	
-		mv "${DEFOMODE}9.txt" "${DEFOMODE}9_all4col.txt"
-		mv "${DEFOMODE}10.txt" "${DEFOMODE}10_all4col.txt"
-		mv "${DEFOMODE}11.txt" "${DEFOMODE}11_all4col.txt"
-		mv "${DEFOMODE}12.txt" "${DEFOMODE}12_all4col.txt"	
-		mv "${DEFOMODE}13.txt" "${DEFOMODE}13_all4col.txt"
-		mv "${DEFOMODE}14.txt" "${DEFOMODE}14_all4col.txt"
-		mv "${DEFOMODE}15.txt" "${DEFOMODE}15_all4col.txt"
-		mv "${DEFOMODE}16.txt" "${DEFOMODE}16_all4col.txt"	
-		mv "${DEFOMODE}17.txt" "${DEFOMODE}17_all4col.txt"
-		mv "${DEFOMODE}18.txt" "${DEFOMODE}18_all4col.txt"
-		mv "${DEFOMODE}19.txt" "${DEFOMODE}19_all4col.txt"
-		mv "${DEFOMODE}20.txt" "${DEFOMODE}20_all4col.txt"	
-		mv "${DEFOMODE}21.txt" "${DEFOMODE}21_all4col.txt"
-		mv "${DEFOMODE}22.txt" "${DEFOMODE}22_all4col.txt"
-		mv "${DEFOMODE}23.txt" "${DEFOMODE}23_all4col.txt"
-		mv "${DEFOMODE}24.txt" "${DEFOMODE}24_all4col.txt"	
-		mv "${DEFOMODE}25.txt" "${DEFOMODE}25_all4col.txt"
-		mv "${DEFOMODE}26.txt" "${DEFOMODE}26_all4col.txt"
-		mv "${DEFOMODE}27.txt" "${DEFOMODE}27_all4col.txt"
-		
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}1_all4col.txt" > "${DEFOMODE}1.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}2_all4col.txt" > "${DEFOMODE}2.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}3_all4col.txt" > "${DEFOMODE}3.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}4_all4col.txt" > "${DEFOMODE}4.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}5_all4col.txt" > "${DEFOMODE}5.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}6_all4col.txt" > "${DEFOMODE}6.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}7_all4col.txt" > "${DEFOMODE}7.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}8_all4col.txt" > "${DEFOMODE}8.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}9_all4col.txt" > "${DEFOMODE}9.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}10_all4col.txt" > "${DEFOMODE}10.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}11_all4col.txt" > "${DEFOMODE}11.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}12_all4col.txt" > "${DEFOMODE}12.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}13_all4col.txt" > "${DEFOMODE}13.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}14_all4col.txt" > "${DEFOMODE}14.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}15_all4col.txt" > "${DEFOMODE}15.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}16_all4col.txt" > "${DEFOMODE}16.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}17_all4col.txt" > "${DEFOMODE}17.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}18_all4col.txt" > "${DEFOMODE}18.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}19_all4col.txt" > "${DEFOMODE}19.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}20_all4col.txt" > "${DEFOMODE}20.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}21_all4col.txt" > "${DEFOMODE}21.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}22_all4col.txt" > "${DEFOMODE}22.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}23_all4col.txt" > "${DEFOMODE}23.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}24_all4col.txt" > "${DEFOMODE}24.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}25_all4col.txt" > "${DEFOMODE}25.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}26_all4col.txt" > "${DEFOMODE}26.txt" 
-		${PATHGNU}/gawk 'NF>=4' "${DEFOMODE}27_all4col.txt" > "${DEFOMODE}27.txt" 		
-		
-		# keep track of prblms
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}1_all4col.txt" > "${DEFOMODE}1_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}2_all4col.txt" > "${DEFOMODE}2_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}3_all4col.txt" > "${DEFOMODE}3_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}4_all4col.txt" > "${DEFOMODE}4_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}5_all4col.txt" > "${DEFOMODE}5_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}6_all4col.txt" > "${DEFOMODE}6_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}7_all4col.txt" > "${DEFOMODE}7_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}8_all4col.txt" > "${DEFOMODE}8_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}9_all4col.txt" > "${DEFOMODE}9_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}10_all4col.txt" > "${DEFOMODE}10_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}11_all4col.txt" > "${DEFOMODE}11_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}12_all4col.txt" > "${DEFOMODE}12_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}13_all4col.txt" > "${DEFOMODE}13_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}14_all4col.txt" > "${DEFOMODE}14_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}15_all4col.txt" > "${DEFOMODE}15_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}16_all4col.txt" > "${DEFOMODE}16_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}17_all4col.txt" > "${DEFOMODE}17_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}18_all4col.txt" > "${DEFOMODE}18_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}19_all4col.txt" > "${DEFOMODE}19_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}20_all4col.txt" > "${DEFOMODE}20_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}21_all4col.txt" > "${DEFOMODE}21_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}22_all4col.txt" > "${DEFOMODE}22_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}23_all4col.txt" > "${DEFOMODE}23_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}24_all4col.txt" > "${DEFOMODE}24_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}25_all4col.txt" > "${DEFOMODE}25_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}26_all4col.txt" > "${DEFOMODE}26_MissingCol.txt" 
-		${PATHGNU}/gawk 'NF<4' "${DEFOMODE}27_all4col.txt" > "${DEFOMODE}27_MissingCol.txt" 		
-
-		rm -f "${DEFOMODE}1_all4col.txt"
-		rm -f "${DEFOMODE}2_all4col.txt"
-		rm -f "${DEFOMODE}3_all4col.txt"
-		rm -f "${DEFOMODE}4_all4col.txt"	
-		rm -f "${DEFOMODE}5_all4col.txt"
-		rm -f "${DEFOMODE}6_all4col.txt"
-		rm -f "${DEFOMODE}7_all4col.txt"
-		rm -f "${DEFOMODE}8_all4col.txt"	
-		rm -f "${DEFOMODE}9_all4col.txt"
-		rm -f "${DEFOMODE}10_all4col.txt"
-		rm -f "${DEFOMODE}11_all4col.txt"
-		rm -f "${DEFOMODE}12_all4col.txt"
-		rm -f "${DEFOMODE}13_all4col.txt"
-		rm -f "${DEFOMODE}14_all4col.txt"
-		rm -f "${DEFOMODE}15_all4col.txt"
-		rm -f "${DEFOMODE}16_all4col.txt"
-		rm -f "${DEFOMODE}17_all4col.txt"
-		rm -f "${DEFOMODE}18_all4col.txt"
-		rm -f "${DEFOMODE}19_all4col.txt"
-		rm -f "${DEFOMODE}20_all4col.txt"
-		rm -f "${DEFOMODE}21_all4col.txt"
-		rm -f "${DEFOMODE}22_all4col.txt"
-		rm -f "${DEFOMODE}23_all4col.txt"
-		rm -f "${DEFOMODE}24_all4col.txt"
-		rm -f "${DEFOMODE}25_all4col.txt"
-		rm -f "${DEFOMODE}26_all4col.txt"
-		rm -f "${DEFOMODE}27_all4col.txt"
+		for SETNR in ${USEDSETS} ; do
+			Keep4Columns "${MSBASDIR}/${DEFOMODE}${SETNR}.txt"
+		done
 		
 		# Need again to check for duplicated lines with different Bp in Col 2 resulting from orbit update 
 		if [ "${IFCOH}" == "YES" ] ; then 
 			echo "Remove lines in newly created MSBAS/MODEi.txt file associated to possible broken links or duplicated lines"
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}1" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}2" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}3" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}4" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}5" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}6" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}7" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}8" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}9" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}10" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}11" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}12" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}13" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}14" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}15" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}16" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}17" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}18" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}19" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}20" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}21" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}22" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}23" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}24" "${PATHMASSPROCESS}" &
-			wait 
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}25" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}26" "${PATHMASSPROCESS}" &
-			_Check_bad_DefoInterpolx2Detrend.sh "${DEFOMODE}27" "${PATHMASSPROCESS}" &
-			wait
+			RunOnUsedSets 4 _Check_bad_DefoInterpolx2Detrend.sh "" "" "${PATHMASSPROCESS}"
 
 			echo "All lines in new MODEi.txt should be ok"
 			echo ""	
@@ -1853,33 +1305,10 @@ cd ${MSBASDIR}
 # 		fi
 
 		# Make baseline plot  
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET01}" "${MSBASDIR}/${DEFOMODE}1.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET02}" "${MSBASDIR}/${DEFOMODE}2.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET03}" "${MSBASDIR}/${DEFOMODE}3.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET04}" "${MSBASDIR}/${DEFOMODE}4.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET05}" "${MSBASDIR}/${DEFOMODE}5.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET06}" "${MSBASDIR}/${DEFOMODE}6.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET07}" "${MSBASDIR}/${DEFOMODE}7.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET08}" "${MSBASDIR}/${DEFOMODE}8.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET09}" "${MSBASDIR}/${DEFOMODE}9.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET10}" "${MSBASDIR}/${DEFOMODE}10.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET11}" "${MSBASDIR}/${DEFOMODE}11.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET12}" "${MSBASDIR}/${DEFOMODE}12.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET13}" "${MSBASDIR}/${DEFOMODE}13.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET14}" "${MSBASDIR}/${DEFOMODE}14.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET15}" "${MSBASDIR}/${DEFOMODE}15.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET16}" "${MSBASDIR}/${DEFOMODE}16.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET17}" "${MSBASDIR}/${DEFOMODE}17.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET18}" "${MSBASDIR}/${DEFOMODE}18.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET19}" "${MSBASDIR}/${DEFOMODE}19.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET20}" "${MSBASDIR}/${DEFOMODE}20.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET21}" "${MSBASDIR}/${DEFOMODE}21.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET22}" "${MSBASDIR}/${DEFOMODE}22.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET23}" "${MSBASDIR}/${DEFOMODE}23.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET24}" "${MSBASDIR}/${DEFOMODE}24.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET25}" "${MSBASDIR}/${DEFOMODE}25.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET26}" "${MSBASDIR}/${DEFOMODE}26.txt" 
-		PlotBaselineGeocMSBASmodeTXT.sh "${SET27}" "${MSBASDIR}/${DEFOMODE}27.txt" 
+		for SETNR in ${USEDSETS} ; do
+			eval SETDIR=\"\$SET$(printf "%02d" "${SETNR}")\"
+			PlotBaselineGeocMSBASmodeTXT.sh "${SETDIR}" "${MSBASDIR}/${DEFOMODE}${SETNR}.txt" 
+		done
 		
 		# Now msbas single points (with error bars) times series and plots are in dir. Let's add the description to the naming
 		cp "${TIMESERIESPTSDESCR}" "${MSBASDIR}/zz_${ALLCOMP}_TS_Auto_${ORDER}_${LAMBDA}_${LABEL}/"
@@ -1919,34 +1348,11 @@ cd ${MSBASDIR}
 		cat "${MSBASDIR}/header_all_modes.txt" | ${PATHGNU}/gsed "s/SET = /#SET = /g" > "${MSBASDIR}/header_none.txt"	# This allows computing LoS of rejected modes as well
 		
 		#   Change "#SET = " with "SET = " for only the mode one wants to keep 
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR01A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE01A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR02A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE02A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR03A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE03A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR04A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE04A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR05A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE05A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR06A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE06A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR07A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE07A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR08A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE08A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR09A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE09A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR10A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE10A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR11A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE11A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR12A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE12A}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR13A}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE13A}.txt"
- 
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR01D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE01D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR02D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE02D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR03D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE03D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR04D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE04D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR05D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE05D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR06D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE06D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR07D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE07D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR08D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE08D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR09D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE09D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR10D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE10D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR11D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE11D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR12D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE12D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR13D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE13D}.txt"
-		cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${LINENR14D}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODE14D}.txt"
+		for MODE in "${MODELIST[@]}" ; do
+			eval MODENAME=\"\$MODE${MODE}\"
+			eval MODELINENR=\"\$LINENR${MODE}\"
+			cat "${MSBASDIR}/header_none.txt" | ${PATHGNU}/gsed "${MODELINENR}"' s/#SET = /SET = /' > "${MSBASDIR}/header_${MODENAME}.txt"
+		done
 
 		# Several Asc or Desc modes ? 
 		# All Asc 
@@ -2007,44 +1413,20 @@ cd ${MSBASDIR}
 #
 		#rm -f ${MSBASDIR}/header_none.txt ${MSBASDIR}/header_tmp.txt
 
-		# Asc modes
- 				FILEPAIRS=${DOUBLEDIFFPAIRSASC}
+		# LOS of each mode to process (Asc and Desc)
+ 				for MODE in "${MODELIST[@]}" ; do
+ 					case "${MODE}" in
+ 						*A) 	FILEPAIRS="${DOUBLEDIFFPAIRSASC}" 	;;
+ 						*D) 	FILEPAIRS="${DOUBLEDIFFPAIRSDESC}" 	;;
+ 					esac
+ 					eval MODENAME=\"\$MODE${MODE}\"
+ 					eval FORMERTIME=\"\$FORMERLAST${MODE}TIME\"
+ 					eval LASTTIME=\"\$LAST${MODE}TIME\"
+ 					MSBASmode "${MODENAME}" "${FORMERTIME}" "${LASTTIME}"
+ 				done
  
- 				MSBASmode "${MODE01A}" "${FORMERLAST01ATIME}" "${LAST01ATIME}"	# May need to put here the mode instead of its var name ? Or eval in fct 
-   				MSBASmode "${MODE02A}" "${FORMERLAST02ATIME}" "${LAST02ATIME}"
- 				MSBASmode "${MODE03A}" "${FORMERLAST03ATIME}" "${LAST03ATIME}"
- 				MSBASmode "${MODE04A}" "${FORMERLAST04ATIME}" "${LAST04ATIME}"
- 				MSBASmode "${MODE05A}" "${FORMERLAST05ATIME}" "${LAST05ATIME}"
- 				MSBASmode "${MODE06A}" "${FORMERLAST06ATIME}" "${LAST06ATIME}"
-# 				MSBASmode "${MODE07A}" "${FORMERLAST07ATIME}" "${LAST07ATIME}"
- 				MSBASmode "${MODE08A}" "${FORMERLAST08ATIME}" "${LAST08ATIME}"
- 				MSBASmode "${MODE09A}" "${FORMERLAST09ATIME}" "${LAST09ATIME}"
- 				MSBASmode "${MODE10A}" "${FORMERLAST10ATIME}" "${LAST10ATIME}"
- 				MSBASmode "${MODE11A}" "${FORMERLAST11ATIME}" "${LAST11ATIME}"
- 				MSBASmode "${MODE12A}" "${FORMERLAST12ATIME}" "${LAST12ATIME}"
- 				MSBASmode "${MODE13A}" "${FORMERLAST13ATIME}" "${LAST13ATIME}"
-
  		###		MSBASmode AllAsc				
- 				
-		# Desc modes
-  				FILEPAIRS=${DOUBLEDIFFPAIRSDESC}
-
-# 				MSBASmode  "${MODE01D}" "${FORMERLAST01DTIME}" "${LAST01DTIME}"
-   				MSBASmode  "${MODE02D}" "${FORMERLAST02DTIME}" "${LAST02DTIME}"
- 				MSBASmode  "${MODE03D}" "${FORMERLAST03DTIME}" "${LAST03DTIME}"
- 				MSBASmode  "${MODE04D}" "${FORMERLAST04DTIME}" "${LAST04DTIME}"
-# 				MSBASmode  "${MODE05D}" "${FORMERLAST05DTIME}" "${LAST05DTIME}"
- 				MSBASmode  "${MODE06D}" "${FORMERLAST06DTIME}" "${LAST06DTIME}"
-# 				MSBASmode  "${MODE07D}" "${FORMERLAST07DTIME}" "${LAST07DTIME}"
- 				MSBASmode  "${MODE08D}" "${FORMERLAST08DTIME}" "${LAST08DTIME}"
- 				MSBASmode  "${MODE09D}" "${FORMERLAST09DTIME}" "${LAST09DTIME}"
- 				MSBASmode  "${MODE10D}" "${FORMERLAST10DTIME}" "${LAST10DTIME}"
- 				MSBASmode  "${MODE11D}" "${FORMERLAST11DTIME}" "${LAST11DTIME}"
- 				MSBASmode  "${MODE12D}" "${FORMERLAST12DTIME}" "${LAST12DTIME}"
- 				MSBASmode  "${MODE13D}" "${FORMERLAST13DTIME}" "${LAST13DTIME}"
-# 				MSBASmode  "${MODE14D}" "${FORMERLAST14DTIME}" "${LAST14DTIME}"
-    
-   		###		MSBASmode AllDesc 				
+ 		###		MSBASmode AllDesc 				
 
  
  		# Back to normal for next run and get out
@@ -2053,34 +1435,12 @@ cd ${MSBASDIR}
 				TODAY=`date`
 				echo "MSBAS finished on ${TODAY}"  >>  ${MSBASDIR}/_last_MSBAS_process.txt
 
-				echo "${LAST01ATIME}" > "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST02ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST03ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST04ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST05ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST06ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST07ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST08ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST09ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST10ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST11ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST12ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST13ATIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-
-				echo "${LAST01DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST02DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST03DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST04DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST05DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST06DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST07DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST08DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST09DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST10DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST11DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST12DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST13DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
-				echo "${LAST14DTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
+				# one line per mode, in the order of ALLMODELIST, i.e. always 27 lines 
+				rm -f "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
+				for MODE in "${ALLMODELIST[@]}" ; do
+					eval LASTTIME=\"\$LAST${MODE}TIME\"
+					echo "${LASTTIME}" >> "${MSBASDIR}"/_Last_MassProcessed_Pairs_Time.txt
+				done
 
 
 	# EW_UD i.e. 2D 

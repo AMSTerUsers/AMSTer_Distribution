@@ -90,6 +90,9 @@
 # New in Distro V 1.0 20260903:	- creation
 # New in Distro V 1.1 20260903:	- interactive 3D view (-i): rotate, zoom and change the
 #				  vertical exaggeration before saving the figure
+# New in Distro V 1.2 20260909:	- the ENVI header built from an AMSTer DEM.txt is kept in
+#				  the temporary directory instead of beside the DEM, which
+#				  must not be described by a .txt and a .hdr at the same time
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -111,8 +114,8 @@ from matplotlib.colors import LightSource, Normalize
 from matplotlib.ticker import MaxNLocator
 
 PRG = os.path.basename(sys.argv[0])
-VER = "Distro V1.1 AMSTer script utilities"
-AUT = "Nicolas d'Oreye, (c)2016-2026, Last modified on Sep 03, 2026"
+VER = "Distro V1.2 AMSTer script utilities"
+AUT = "Nicolas d'Oreye, (c)2016-2026, Last modified on Sep 09, 2026"
 
 # ENVI "data type" -> numpy type
 ENVI_DTYPES = {1: "u1", 2: "i2", 3: "i4", 4: "f4", 5: "f8",
@@ -126,8 +129,8 @@ def die(msg):
 # -----------------------------------------------------------------------------------------
 # ENVI headers
 # -----------------------------------------------------------------------------------------
-def find_hdr(datafile):
-	"""Return the ENVI header of datafile.
+def hdr_candidates(datafile):
+	"""Return the possible names of the ENVI header of datafile.
 
 	AMSTer names the header after the data file, sometimes with the dots of the
 	file name replaced by underscores (e.g. ...Head253.4deg -> ...Head253_4deg.hdr).
@@ -139,10 +142,19 @@ def find_hdr(datafile):
 	             os.path.splitext(datafile)[0] + ".hdr"):
 		if name not in candidates:
 			candidates.append(name)
+	return candidates
+
+
+def find_hdr(datafile, mandatory=True):
+	"""Return the ENVI header of datafile, or None if there is none and mandatory is False."""
+	candidates = hdr_candidates(datafile)
 	for hdr in candidates:
 		if os.path.isfile(hdr):
 			return hdr
-	die("no ENVI header found for %s (looked for %s)" % (datafile, ", ".join(candidates)))
+	if mandatory:
+		die("no ENVI header found for %s (looked for %s)"
+		    % (datafile, ", ".join(candidates)))
+	return None
 
 
 def parse_envi_hdr(hdrfile):
@@ -260,21 +272,37 @@ class Raster(object):
 # -----------------------------------------------------------------------------------------
 # Resampling on the grid of the deformation map
 # -----------------------------------------------------------------------------------------
-def dem_envi_from_txt(demtxt):
-	"""Create the ENVI header of an AMSTer DEM from its DEM.txt, and return the binary."""
+def dem_envi_from_txt(demtxt, tmpdir):
+	"""Return an ENVI readable DEM (a binary having a .hdr) for an AMSTer DEM.txt.
+
+	The ENVI header is built in tmpdir, beside a symbolic link to the DEM binary, and
+	is thrown away with tmpdir at the end of the run. The directory of the original DEM
+	is left untouched: a DEM must not be described by both an AMSTer .txt header and an
+	ENVI .hdr, as AMSTer tools reading that directory could then pick the wrong one -
+	and a stale .hdr would silently outlive any later edit of the .txt.
+
+	A .hdr already sitting next to the DEM is the user's own and is used as it is.
+	"""
 	dem = demtxt[:-4]
 	if not os.path.isfile(dem):
 		die("%s does not exist - the DEM binary must sit next to its .txt header" % dem)
-	if os.path.isfile(dem + ".hdr"):
+	existing = find_hdr(dem, mandatory=False)
+	if existing:
 		return dem
 	if shutil.which("DEM_AMSTer_txt2Envi_hdr.sh") is None:
-		die("no %s.hdr and DEM_AMSTer_txt2Envi_hdr.sh is not in the PATH - "
+		die("no ENVI header for %s and DEM_AMSTer_txt2Envi_hdr.sh is not in the PATH - "
 		    "convert the DEM header first" % dem)
-	print("Creating the ENVI header of the DEM from %s" % demtxt)
-	run(["DEM_AMSTer_txt2Envi_hdr.sh", demtxt])
-	if not os.path.isfile(dem + ".hdr"):
-		die("DEM_AMSTer_txt2Envi_hdr.sh did not create %s.hdr" % dem)
-	return dem
+	print("Creating a temporary ENVI header of the DEM from %s" % demtxt)
+	link = os.path.join(tmpdir, os.path.basename(dem))
+	os.symlink(os.path.abspath(dem), link)		# the binary is not copied: it is large
+	shutil.copy2(demtxt, link + ".txt")
+	run(["DEM_AMSTer_txt2Envi_hdr.sh", link + ".txt"])
+	stray = find_hdr(dem, mandatory=False)
+	if stray:					# written next to the original after all
+		shutil.move(stray, link + ".hdr")
+	if find_hdr(link, mandatory=False) is None:
+		die("DEM_AMSTer_txt2Envi_hdr.sh did not create the ENVI header of %s" % dem)
+	return link
 
 
 def enable_gui_backend():
@@ -608,14 +636,15 @@ def main():
 		if shutil.which(tool) is None:
 			die("%s is not in the PATH (GDAL binaries are required)" % tool)
 
-	demfile = dem_envi_from_txt(args.dem) if args.dem.endswith(".txt") else args.dem
-
-	ref = Raster(args.data)					# the grid of the figure
-	dem_src = Raster(demfile)
-	coh_src = Raster(args.coherence) if args.coherence else None
-
 	tmpdir = tempfile.mkdtemp(prefix="Plot_Envi_on_DEM_")
 	try:
+		demfile = (dem_envi_from_txt(args.dem, tmpdir)
+		           if args.dem.endswith(".txt") else args.dem)
+
+		ref = Raster(args.data)				# the grid of the figure
+		dem_src = Raster(demfile)
+		coh_src = Raster(args.coherence) if args.coherence else None
+
 		wkt = target_srs_file(ref, tmpdir)
 		dem = resample_on(dem_src, ref, wkt, args.dem_resampling, tmpdir, "DEM").read()
 		coh = None

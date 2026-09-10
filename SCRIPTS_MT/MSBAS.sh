@@ -49,13 +49,21 @@
 # New in Distro V 4.4 20260409:	- ensures that PARAMNAME always starts with a _
 # New in Distro V 5.0 20260730:	- also for msbasv10
 #								- some cleaning 
+# New in Distro V 5.1 20260909:	- PARAMNAME: more robust check of leading _ (also was assigned to unused COMMENT) 
+#								- fix problem of handling msbasvN_3D: 
+#									dispatch header conversion on the version NUMBER, so that any
+#								  	msbasvN_suffix (e.g. msbasv4_3D, msbasv10_3D) is handled
+#								- idem for the envi to tif conversion (any version >= 10)
+#								- get the version from ${2#--} instead of cut -d - -f3 (dash safe)
+#								- accept a single param being the version instead of the comment
+#								- quote PARAMNAME in the TS dir clean-up
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+VER="Distro V5.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -109,7 +117,7 @@ if [ $# -eq 2 ] ; then
 			LastMsbasV
 		else
 			echo "Request specific msbas version $@."
-			MSBAS=`echo $@ | cut -d - -f3`
+			MSBAS="${2#--}"
 			# Check if exist
 			CHECKMSBAS=`which ${MSBAS} | wc -l`
 			if [ ${CHECKMSBAS} -eq 0 ] 
@@ -127,7 +135,7 @@ if [ $# -eq 3 ] ; then
 			PIXFILELIST="$2"
 			
 			echo "and 3rd must be the msbas version"
-			MSBAS=`echo $3 | cut -d - -f3`
+			MSBAS="${3#--}"
 			# Check if exist
 			CHECKMSBAS=`which ${MSBAS} | wc -l`
 			if [ ${CHECKMSBAS} -eq 0 ] 
@@ -137,7 +145,7 @@ if [ $# -eq 3 ] ; then
 			fi 			 
 		else
 			echo "2nd param seems to be the msbas version"
-			MSBAS=`echo $2 | cut -d - -f3`
+			MSBAS="${2#--}"
 			# Check if exist
 			CHECKMSBAS=`which ${MSBAS} | wc -l`
 			if [ ${CHECKMSBAS} -eq 0 ] 
@@ -151,11 +159,30 @@ if [ $# -eq 3 ] ; then
 fi
 
 if [ $# -eq 0 ] || [ $# -eq 1 ] ; then 
-	LastMsbasV
+	# a lonely param may be the msbas version instead of the comment
+	case "${PARAMNAME}" in
+		--msbasv*)	
+			MSBAS="${PARAMNAME#--}"
+			PARAMNAME=""
+			if [ `which ${MSBAS} | wc -l` -eq 0 ] ; then 
+				echo "Requested ${MSBAS} does not exist. Let's take the most recent version then..."
+				LastMsbasV
+			fi ;;
+		*)	LastMsbasV ;;
+	esac
 fi
 
-if [[ $PARAMNAME != _* ]]; then
-  COMMENT="_$PARAMNAME"
+# Make PARAMNAME usable in dir names: always starts with _
+if [ -n "${PARAMNAME}" ] ; then
+	SAFEPARAMNAME=$(printf '%s' "${PARAMNAME}" | tr -s '[:space:]' '_')
+	if [ "${SAFEPARAMNAME}" != "${PARAMNAME}" ] ; then
+		echo "WARNING: white space in comment. Using ${SAFEPARAMNAME} instead of ${PARAMNAME}"
+		PARAMNAME="${SAFEPARAMNAME}"
+	fi
+	case "${PARAMNAME}" in
+		_*)	;;						# already starts with _
+		*)	PARAMNAME="_${PARAMNAME}" ;;
+	esac
 fi
 
 echo
@@ -251,35 +278,31 @@ headerv3to10 ()
 }
 
 # run (m)sbas
-case ${MSBAS} in 
-	msbas)
-		echo "run msbas V1"
-		headerv4to3
-		;;
-	msbasv2)
-		echo "run msbas V2"
-		headerv4to3
-		;;
-	msbasv3)
-		echo "run msbas V3"
-		headerv4to3
-		;;
-	msbasv4)
-		echo "run msbas V4"
-		headerv3to4
-		;;
-	msbasv1*)
-		echo "run msbas =< V10"
-		echo " // BEWARE: mvsbas v10 invert by pixel and hence is way much slower than v4 !"
-		headerv3to10
-		;;
+# get the version nr: msbas = 1, msbasvN[_suffix] = N  (e.g. msbasv4_3D -> 4)
+case "${MSBAS}" in
+	msbas)		MSBASVERNR=1 ;;
+	msbasv*)	MSBASVERNR=$(printf '%s' "${MSBAS#msbasv}" | ${PATHGNU}/gsed 's/[^0-9].*$//') ;;
+	*)			MSBASVERNR="" ;;
 esac
+if [ -z "${MSBASVERNR}" ] ; then echo "ERROR: can not get a version nr from \"${MSBAS}\"" >&2 ; exit 1 ; fi
+
+echo "run msbas V${MSBASVERNR} (${MSBAS})"
+if [ "${MSBASVERNR}" -le 3 ] 
+	then 
+		headerv4to3
+	elif [ "${MSBASVERNR}" -le 9 ] 
+		then 
+			headerv3to4
+	else 
+		echo " // BEWARE: msbas v10 and above invert by pixel and hence is way much slower than v4 !"
+		headerv3to10
+fi
 
 # Launch inversion
 ##################
 
 # If msbasv10, ensure that all data sets (but the DEM gradients if any) are in tif format
-if [ "${MSBAS}" == "msbasv10" ] 
+if [ "${MSBASVERNR}" -ge 10 ] 
 	then
 		
 		[ -f "header.txt" ] || { echo "ERROR: no header.txt in $PWD" >&2; exit 1; }
@@ -348,25 +371,25 @@ Add_hdr_Files_Less_Ras.sh "${PARAMNAME}" 	"--${MSBAS}"	# sort files in dir - mus
 
 # delete unecessary TS dir
  if [ "$#" -eq 1 ] ; then 
-	if [ -d "zz_LOS_TS${PARAMNAME}" ] && [ "$(ls -A zz_LOS_TS${PARAMNAME})" ]; then
+	if [ -d "zz_LOS_TS${PARAMNAME}" ] && [ "$(ls -A "zz_LOS_TS${PARAMNAME}")" ]; then
 			echo "zz_LOS_TS${PARAMNAME} is not Empty. Keep it."
 		else
 			echo "zz_LOS_TS${PARAMNAME} does not exist or is Empty. Remove it if appropriate."
-			rm -Rf zz_LOS_TS${PARAMNAME} 2>/dev/null
+			rm -Rf "zz_LOS_TS${PARAMNAME}" 2>/dev/null
 	fi
 
-	if [ -d "zz_UD_EW_TS${PARAMNAME}" ] && [ "$(ls -A zz_UD_EW_TS${PARAMNAME})" ]; then
+	if [ -d "zz_UD_EW_TS${PARAMNAME}" ] && [ "$(ls -A "zz_UD_EW_TS${PARAMNAME}")" ]; then
 			 echo "zz_UD_EW_TS${PARAMNAME} is not Empty. Keep it."
 		else
 			echo "zz_UD_EW_TS${PARAMNAME} does not exist or is Empty. Remove it if appropriate."
-			rm -Rf zz_UD_EW_TS${PARAMNAME} 2>/dev/null
+			rm -Rf "zz_UD_EW_TS${PARAMNAME}" 2>/dev/null
 	fi
  
- 	if [ -d "zz_UD_EW_NS_TS${PARAMNAME}" ] && [ "$(ls -A zz_UD_EW_NS_TS${PARAMNAME})" ]; then
+ 	if [ -d "zz_UD_EW_NS_TS${PARAMNAME}" ] && [ "$(ls -A "zz_UD_EW_NS_TS${PARAMNAME}")" ]; then
 			echo "zz_UD_EW_NS_TS${PARAMNAME} is not Empty. Keep it."
 		else
 			echo "zz_UD_EW_NS_TS${PARAMNAME} does not exist or is Empty. Remove it if appropriate."
-			rm -Rf zz_UD_EW_NS_TS${PARAMNAME} 2>/dev/null
+			rm -Rf "zz_UD_EW_NS_TS${PARAMNAME}" 2>/dev/null
 	fi
 	
  	#	rm -Rf zz_LOS_TS${PARAMNAME} zz_UD_EW_TS${PARAMNAME}

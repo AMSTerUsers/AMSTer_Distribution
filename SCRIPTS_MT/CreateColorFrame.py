@@ -76,6 +76,14 @@
 #								  that the whole legend and every valid pixel ended up on the same hue
 #								  (uniformly red map, white where the mask said NoData)
 #								- report the number of usable pixels and the min/max actually used
+# New in Distro V 3.2 20260909:	- read and write the GeoTIFF bands through ReadRaster/WriteRaster
+#								  instead of ReadAsArray/WriteArray, so the script no longer needs
+#								  the osgeo.gdal_array extension. That extension is compiled only
+#								  when numpy headers are present when the GDAL bindings are built,
+#								  and it fails to load whenever numpy or libgdal is changed
+#								  underneath it (ImportError: cannot import name _gdal_array, or
+#								  undefined symbol ...GDALDataset...). ReadRaster/WriteRaster are
+#								  part of the core bindings and exchange plain bytes
 #
 #
 # This script is part of the AMSTer Toolbox 
@@ -103,6 +111,12 @@ SUFFIX = '_2.0'
 # equal to what is actually stored (exact float equality). Such values used to drive min/max
 # and hence flattened the whole colour scale to a single hue.
 MAX_PLAUSIBLE_ABS = 1.0e6
+
+# GDAL data type code -> numpy dtype, used by BandToArray/ArrayToBand below
+GDAL_NUMPY_DTYPE = {
+	1: 'uint8',		2: 'uint16',	3: 'int16',		4: 'uint32',	5: 'int32',
+	6: 'float32',	7: 'float64',	10: 'complex64',	11: 'complex128',
+	}
 
 
 ###############################################################################
@@ -133,6 +147,38 @@ def TiffOutputName(FilePath, Suffix):
 	return Base + Suffix + Ext
 
 
+def BandToArray(Band):
+	"""Read a whole GDAL band as a 2D numpy array, without osgeo.gdal_array.
+
+	   Band.ReadAsArray() lives in the osgeo.gdal_array extension, which is only
+	   compiled when numpy headers are available at GDAL binding build time, and
+	   which stops loading whenever numpy or libgdal changes underneath it.
+	   Band.ReadRaster() is part of the core bindings, always present, and hands
+	   back plain bytes."""
+	DType = GDAL_NUMPY_DTYPE.get(Band.DataType)
+	if DType is None:
+		print("ERROR: unsupported GDAL data type code %i in input band" % Band.DataType)
+		sys.exit(1)
+	Raw = Band.ReadRaster(0, 0, Band.XSize, Band.YSize,
+						  Band.XSize, Band.YSize, Band.DataType)
+	if Raw is None:
+		print("ERROR: GDAL could not read the band")
+		sys.exit(1)
+	return np.frombuffer(Raw, dtype=DType).reshape(Band.YSize, Band.XSize)
+
+
+def ArrayToBand(Band, Arr):
+	"""Write a 2D numpy array to a GDAL band, without osgeo.gdal_array.
+	   The array is cast to whatever type the band was created with."""
+	DType = GDAL_NUMPY_DTYPE.get(Band.DataType)
+	if DType is None:
+		print("ERROR: unsupported GDAL data type code %i in output band" % Band.DataType)
+		sys.exit(1)
+	Buffer = np.ascontiguousarray(Arr, dtype=DType).tobytes()
+	Band.WriteRaster(0, 0, Band.XSize, Band.YSize, Buffer,
+					 Band.XSize, Band.YSize, Band.DataType)
+
+
 def ReadTiff(FilePath):
 	"""Read the first band of a GeoTIFF as a flat float32 array.
 	   NoData is converted to NaN internally.
@@ -151,7 +197,7 @@ def ReadTiff(FilePath):
 		print("WARNING: %s has %d bands; only band 1 is used." % (FilePath, Ds.RasterCount))
 	Band = Ds.GetRasterBand(1)
 	NoData = Band.GetNoDataValue()
-	Arr = Band.ReadAsArray().astype('float32')
+	Arr = BandToArray(Band).astype('float32')
 	NrOfLines, NrOfPixels = Arr.shape
 	RefInfo = {'geotransform': Ds.GetGeoTransform(),
 			   'projection': Ds.GetProjection(),
@@ -208,7 +254,7 @@ def WriteTiff(FilePath, FlatArray, NrOfLines, NrOfPixels, RefInfo):
 		Ds.SetMetadata(RefInfo['metadata'])
 	Band = Ds.GetRasterBand(1)
 	Band.SetNoDataValue(float(NoDataOut))
-	Band.WriteArray(Out.reshape(NrOfLines, NrOfPixels))
+	ArrayToBand(Band, Out.reshape(NrOfLines, NrOfPixels))
 	Band.FlushCache()
 	Band = None
 	Ds = None
@@ -231,7 +277,7 @@ def WriteMaskTiff(FilePath, FlatMask, NrOfLines, NrOfPixels, RefInfo):
 	if RefInfo['projection']:
 		Ds.SetProjection(RefInfo['projection'])
 	Band = Ds.GetRasterBand(1)
-	Band.WriteArray(FlatMask.reshape(NrOfLines, NrOfPixels))
+	ArrayToBand(Band, FlatMask.reshape(NrOfLines, NrOfPixels))
 	Band.FlushCache()
 	Band = None
 	Ds = None

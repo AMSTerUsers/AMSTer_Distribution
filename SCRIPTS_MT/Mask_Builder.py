@@ -17,6 +17,12 @@
 #				- nodata values of the input are masked out as well
 #				- no more 0/0 runtime warnings, proper exit codes
 #				- GDAL_PAM_ENABLED=NO -> no .aux.xml sidecar files
+# New in Distro V 3.1 20260909:	- read and write through ReadRaster/WriteRaster instead of
+#				  ReadAsArray/WriteArray, so the script no longer needs the
+#				  osgeo.gdal_array extension. 
+#				- compare nodata in the dtype of the pixels: GDAL reports it as a
+#				  double, so on a float32 raster the float64 comparison never
+#				  matched and nodata pixels were kept as valid
 #
 # This script is part of the AMSTer Toolbox
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
@@ -35,6 +41,12 @@ import numpy as np
 
 # TIFF / BigTIFF magic numbers (little and big endian)
 TIFF_MAGIC = (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+")
+
+# GDAL data type code -> numpy dtype. Only what a single band raster can hold.
+GDAL_NUMPY_DTYPE = {
+	1: "uint8",	2: "uint16",	3: "int16",	4: "uint32",	5: "int32",
+	6: "float32",	7: "float64",	10: "complex64",	11: "complex128",
+	}
 
 
 def die(msg, code=1):
@@ -71,6 +83,31 @@ def driver_for(path):
 	return "ENVI"
 
 
+def band_to_array(band):
+	"""Band 1 as a 2D numpy array, without osgeo.gdal_array.
+
+	band.ReadAsArray() lives in the osgeo.gdal_array extension, which is compiled
+	only when numpy headers are available at GDAL binding build time, and which
+	breaks whenever numpy or libgdal changes underneath it. ReadRaster() is part of
+	the core bindings, always present, and exchanges plain bytes.
+	"""
+	dtype = GDAL_NUMPY_DTYPE.get(band.DataType)
+	if dtype is None:
+		die("unsupported GDAL data type code %i in input band" % band.DataType)
+	raw = band.ReadRaster(0, 0, band.XSize, band.YSize,
+			      band.XSize, band.YSize, band.DataType)
+	if raw is None:
+		die("GDAL could not read band 1 of the input")
+	return np.frombuffer(raw, dtype=dtype).reshape(band.YSize, band.XSize)
+
+
+def array_to_band(band, arr):
+	"""Write a float32 2D array to a band, without osgeo.gdal_array."""
+	buffer = np.ascontiguousarray(arr, dtype="float32").tobytes()
+	band.WriteRaster(0, 0, band.XSize, band.YSize, buffer,
+			 band.XSize, band.YSize, band.DataType)
+
+
 def build_mask(arr, valid, nodata=None):
 	"""VALID where the pixel is finite, non-zero and not nodata; 0 elsewhere.
 
@@ -80,7 +117,14 @@ def build_mask(arr, valid, nodata=None):
 	data = arr.astype("float64", copy=False)
 	good = np.isfinite(data) & (data != 0.0)
 	if nodata is not None and np.isfinite(nodata):
-		good &= data != nodata
+		if np.issubdtype(arr.dtype, np.floating):
+			# GDAL reports nodata as a C double while the pixels may be float32.
+			# Comparing in float64 then never matches, because float32(-3.4e38)
+			# is -3.3999999521443642e+38, not -3.4e38 -> compare in the dtype the
+			# pixels are actually stored in.
+			good &= arr != arr.dtype.type(nodata)
+		else:
+			good &= data != nodata
 	return np.where(good, valid, 0.0).astype("float32")
 
 
@@ -100,7 +144,7 @@ def run_gdal(gdal, args):
 
 	band = src.GetRasterBand(1)
 	nodata = band.GetNoDataValue()
-	mask = build_mask(band.ReadAsArray(), args.value, nodata)
+	mask = build_mask(band_to_array(band), args.value, nodata)
 
 	drv_name = driver_for(args.output)
 	drv = gdal.GetDriverByName(drv_name)
@@ -120,7 +164,7 @@ def run_gdal(gdal, args):
 		dst.SetProjection(projection)
 
 	dst_band = dst.GetRasterBand(1)
-	dst_band.WriteArray(mask)
+	array_to_band(dst_band, mask)
 	if args.nodata_zero:
 		dst_band.SetNoDataValue(0.0)
 	dst_band.FlushCache()

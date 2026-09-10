@@ -23,13 +23,14 @@
 # New in Distro V 2.2 20231229:	- Check that PATHTOQUANRANTINEDDATA contains subdirs named *.csl + is not empty
 #								- also cp table_0_0_MaxShortest_${MAX}_Without_Quanrantained_Data.txt if no Quarantined data
 # New in Distro V 2.3 20240423:	- display max and mean Bp, Bt and nr of pairs
+# New in Distro V 2.4 20260909:	- mute error msg when no Qurantined data
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 23, 2024"
+VER="Distro V2.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
@@ -75,11 +76,22 @@ rm -f ${PATHTABLEDIR}/allPairsListing_Max${MAX}_NoHdr.txt
 
 # Just in case, remove pairs with images that would be stored in .../SAR_CSL/sat/mode/Quarantained
 # Get the path to original data 
-LASTLINK=$(find . -maxdepth 1 -name '*.csl' -exec basename {} \; | tail -1) 2>/dev/null
-PATHTOQUANRANTINEDDATA=$(readlink -f ${LASTLINK} | ${PATHGNU}/gawk -F"NoCrop" '/NoCrop/{print $1 "Quarantained"}') 2>/dev/null # read target of link and get everything before NoCrop and add Quanrantined at the end
+LASTLINK=$(find . -maxdepth 1 -name '*.csl' -exec basename {} \; 2>/dev/null | tail -1)
 
+PATHTOQUANRANTINEDDATA=""
+if [ -n "${LASTLINK}" ] ; then
+	# Resolve the link target without readlink -f : entering the dir and asking for the
+	# physical working dir resolves all symlinks in the path (POSIX, so Mac and Linux).
+	# Done in a subshell, so the cwd of the script is not affected.
+	CSLREALPATH=$(CDPATH= cd -P -- "${LASTLINK}" 2>/dev/null && pwd -P)
+	if [ -n "${CSLREALPATH}" ] ; then
+		# keep everything before NoCrop and add Quarantained at the end
+		PATHTOQUANRANTINEDDATA=$(printf '%s\n' "${CSLREALPATH}" | ${PATHGNU}/gawk -F"NoCrop" '/NoCrop/{print $1 "Quarantained"}')
+	fi
+fi
 
-if [ -n "$(find "${PATHTOQUANRANTINEDDATA}" -type d -name '*.csl' -print -quit)" ] && [ -n "$(ls -A "${PATHTOQUANRANTINEDDATA}")" ]   # Check that dir contains subdirs named *.csl and is not empty
+# Check that the dir exists and contains at least one subdir named *.csl (hence is not empty)
+if [ -d "${PATHTOQUANRANTINEDDATA}" ] && [ -n "$(find "${PATHTOQUANRANTINEDDATA}" -maxdepth 1 -type d -name '*.csl' -print -quit)" ]
 	then
 		echo " // Remove images from allPairsListing_Max${MAX}.txt  that are in ${PATHTOQUANRANTINEDDATA}."
 		# get the date of img from dir names in /Quarantained  
@@ -107,7 +119,13 @@ if [ -n "$(find "${PATHTOQUANRANTINEDDATA}" -type d -name '*.csl' -print -quit)"
 				fi
 		done < "Quarantained_dates.txt"
 	else 
-		echo " // No quarantined data in ${PATHTOQUANRANTINEDDATA}. Copy allPairsListing_Max${MAX}.txt as allPairsListing_Max${MAX}_Without_Quanrantained_Data.txt"
+		#echo " // No quarantined data. Copy allPairsListing_Max${MAX}.txt as allPairsListing_Max${MAX}_Without_Quanrantained_Data.txt"
+		if [ -d "${PATHTOQUANRANTINEDDATA}" ] || [ -z "${PATHTOQUANRANTINEDDATA}" ]
+			then echo " // No quarantined data found. Copy allPairsListing_Max${MAX}.txt as allPairsListing_Max${MAX}_Without_Quanrantained_Data.txt"
+			else echo " // No quarantined data in ${PATHTOQUANRANTINEDDATA}. Copy allPairsListing_Max${MAX}.txt as allPairsListing_Max${MAX}_Without_Quanrantained_Data.txt"
+		fi		
+		
+		cp -f allPairsListing_Max${MAX}.txt allPairsListing_Max${MAX}_Without_Quanrantained_Data.txt
 		cp -f allPairsListing_Max${MAX}.txt allPairsListing_Max${MAX}_Without_Quanrantained_Data.txt
 		echo " //     and table_max_${MAX}_ForPlot.txt as table_max_${MAX}_ForPlot_Without_Quanrantained_Data.txt"
 		cp -f table_max_${MAX}_ForPlot.txt table_max_${MAX}_ForPlot_Without_Quanrantained_Data.txt

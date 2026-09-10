@@ -33,7 +33,7 @@
 # New in Distro V 3.3 20240704:	- Stop if LOS and EW/UD .bin files are present in the main directory. 
 #								  This is not supposed to happen, hence it must result from a crash. Manual sorting is advised. 
 # New in Distro V 3.4 20240924:	- Debug creating pdf files for simple TS with error bar 
-# New in Distro V 3.5 20240925:	- typo in line to mv MSBAS_*.txt to zz_${ALLCOMP}_TS${PARAMNAME}
+# New in Distro V 3.5 20240925:	- typo in line to mv MSBAS_*.txt to "zz_${ALLCOMP}_TS${PARAMNAME}"
 #								- search for files in *_UD.bin instead of *UD.bin 
 # New in Distro V 3.6 20241008:	- When processing 3D data, because it takes time to close listdir.tmp when performing  
 #									ls *_EW.bin *_UD.bin > listdir.tmp and 
@@ -42,18 +42,20 @@
 # New in Distro V 3.7 20250317:	- debug testing 3D while using msbasV4
 # New in Distro V 3.8 20250317:	- improve yesterday's modification
 # New in Distro V 3.9 20250402:	- make grep case insensitive while searching for Samples
-# New in Distro V 3.10 20250424:	- mv log in zz_EW${PARAMNAME}
+# New in Distro V 3.10 20250424:	- mv log in "zz_EW${PARAMNAME}"
 # New in Distro V 3.11 20250903:	- Use Envi2kmz.sh with option -l to add a legend in kmz
 # New in Distro V 4.0 20260730:	- cope with msbasv10 
 #								- allows forcing msbas version if second param is --msbasvi (where i = version nr)
 # New in Distro V 4.1 20260826:	- typo in countMSBASV10 and case
+# New in Distro V 4.2 20260908:	- accept --msbasvN_3D
+# New in Distro V 4.3 20260908:	- quote all occurrences of PARAMNAME for robustness 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 26, 2026"
+VER="Distro V4.9 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " " 
@@ -61,11 +63,11 @@ echo " "
 PARAMNAME=$1
 VERSION=$2 
 	# check format version 
-	if [ "${VERSION}" != "" ] ; then 
-		if [[ $VERSION =~ ^--msbasv[0-9]+$ ]]; then
-		    VERSION="${VERSION#--}"      # -> msbasvi
+if [ "${VERSION}" != "" ] ; then 
+		if [[ $VERSION =~ ^--msbasv([0-9]+)(_.*)?$ ]]; then
+		    VERSION="msbasv${BASH_REMATCH[1]}"      # -> msbasvN, suffix dropped (ie msbasv4 or msbasv4_3D input leads to msbasv4 flag)
 		else
-		    echo "ERROR: param 2 must be msbas version in the form --msbasvN (N integer), got: $VERSION" >&2
+		    echo "ERROR: param 2 must be msbas version in the form --msbasvN[_suffix] (N integer), got: $VERSION" >&2
 		    exit 1
 		fi
 	fi
@@ -141,8 +143,8 @@ fi
 case ${lname} in 
  	"SBASV10")
 		# No need to list files in listdir.tmp because no HDR will be needed  
- 		mkdir -p zz_LOS${PARAMNAME} 
- 		mkdir -p zz_LOS_TS${PARAMNAME} 
+ 		mkdir -p "zz_LOS${PARAMNAME}" 
+ 		mkdir -p "zz_LOS_TS${PARAMNAME}" 
 		;;
  	"MSBASV10")
 		# No need to list files in listdir.tmp because no HDR will be needed  
@@ -154,9 +156,9 @@ case ${lname} in
 				ENU="NO"
 				ALLCOMP="UD_EW" 
 		fi 
- 		mkdir -p zz_UD${PARAMNAME}
- 		mkdir -p zz_EW${PARAMNAME} 
- 		if [ "${ENU}" == "YES" ] ; then mkdir -p zz_NS${PARAMNAME} ; fi
+ 		mkdir -p "zz_UD${PARAMNAME}"
+ 		mkdir -p "zz_EW${PARAMNAME}" 
+ 		if [ "${ENU}" == "YES" ] ; then mkdir -p "zz_NS${PARAMNAME}" ; fi
 		mkdir -p "zz_${ALLCOMP}_TS${PARAMNAME}" 
 		;;
  	"MSBASV4")
@@ -191,9 +193,9 @@ case ${lname} in
  		ls MSBAS_COND_NUM.bin >> listdir.tmp
  		ls MSBAS_RANK.bin >> listdir.tmp
  		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
- 		mkdir -p zz_UD${PARAMNAME}
- 		mkdir -p zz_EW${PARAMNAME} 
- 		if [ "${ENU}" == "YES" ] ; then mkdir -p zz_NS${PARAMNAME} ; fi
+ 		mkdir -p "zz_UD${PARAMNAME}"
+ 		mkdir -p "zz_EW${PARAMNAME}" 
+ 		if [ "${ENU}" == "YES" ] ; then mkdir -p "zz_NS${PARAMNAME}" ; fi
 		mkdir -p "zz_${ALLCOMP}_TS${PARAMNAME}" 
  		;;
 	"MSBASV2")
@@ -202,8 +204,8 @@ case ${lname} in
 		ls MSBAS_NORM_AXY.bin >> listdir.tmp
 		ls MSBAS_NORM_X.bin >> listdir.tmp	
 		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
-		mkdir -p zz_UD${PARAMNAME}
-		mkdir -p zz_EW${PARAMNAME} 
+		mkdir -p "zz_UD${PARAMNAME}"
+		mkdir -p "zz_EW${PARAMNAME}" 
 		mkdir -p "zz_${ALLCOMP}_TS${PARAMNAME}"
 		;;
  	"SBASV4")
@@ -213,20 +215,20 @@ case ${lname} in
  		ls MSBAS_COND_NUM.bin >> listdir.tmp
  		ls MSBAS_RANK.bin >> listdir.tmp
  		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
- 		mkdir -p zz_LOS${PARAMNAME} 
- 		mkdir -p zz_LOS_TS${PARAMNAME} ;;
+ 		mkdir -p "zz_LOS${PARAMNAME}" 
+ 		mkdir -p "zz_LOS_TS${PARAMNAME}" ;;
 	"SBASV2")
 		ls *_LOS.bin > listdir.tmp
 		ls MSBAS_NORM_AXY.bin >> listdir.tmp
 		ls MSBAS_NORM_X.bin >> listdir.tmp
 		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then ls MSBAS_ZSCORE_MASK.bin >> listdir.tmp ; fi
-		mkdir -p zz_LOS${PARAMNAME} 
-		mkdir -p zz_LOS_TS${PARAMNAME} ;;
+		mkdir -p "zz_LOS${PARAMNAME}" 
+		mkdir -p "zz_LOS_TS${PARAMNAME}" ;;
 	"MSBASV1")
 		ALLCOMP="e_u"
 		ls *.bin > listdir.tmp
-		mkdir -p zz_e${PARAMNAME}
-		mkdir -p zz_u${PARAMNAME} 
+		mkdir -p "zz_e${PARAMNAME}"
+		mkdir -p "zz_u${PARAMNAME}" 
 		mkdir -p "zz_${ALLCOMP}_TS${PARAMNAME}"
 		;;	
 esac
@@ -247,44 +249,44 @@ fi
 case ${lname} in 
 	"MSBASV10")
 		# remove former tif. This is more secure if some dates must be discarded due to coh. threshold 
-		rm -f zz_EW${PARAMNAME}/*_*EW.tif*
-		rm -f zz_UD${PARAMNAME}/*_*UD.tif*
+		rm -f "zz_EW${PARAMNAME}"/*_*EW.tif*
+		rm -f "zz_UD${PARAMNAME}"/*_*UD.tif*
 		# add new ones
-		mv MSBAS*_*EW.tif* zz_EW${PARAMNAME}/
-		mv MSBAS*_*UD.tif* zz_UD${PARAMNAME}/ 
+		mv MSBAS*_*EW.tif* "zz_EW${PARAMNAME}"/
+		mv MSBAS*_*UD.tif* "zz_UD${PARAMNAME}"/ 
 		if [ "${ENU}" == "YES" ] ; then 
-			rm -f zz_NS${PARAMNAME}/MSBAS*_*NS.tif*
-			mv MSBAS*_*NS.tif* zz_NS${PARAMNAME}/
+			rm -f "zz_NS${PARAMNAME}"/MSBAS*_*NS.tif*
+			mv MSBAS*_*NS.tif* "zz_NS${PARAMNAME}"/
 		fi
 
 		echo "Move norms and log and dateTime file in EW${PARAMNAME}"	
-		mv -f MSBAS_NORM_X.tif* zz_EW${PARAMNAME}/ 
-		mv -f MSBAS_NORM_AXY.tif* zz_EW${PARAMNAME}/ 
-		if [ -f MSBAS_COND_NUM.tif ] && [ -s MSBAS_COND_NUM.tif ] ; then mv -f MSBAS_COND_NUM.tif* zz_EW${PARAMNAME}/ ; fi
-		if [ -f MSBAS_RANK.tif ] && [ -s MSBAS_RANK.tif ] ; then mv -f MSBAS_RANK.tif* zz_EW${PARAMNAME}/ ; fi
-		if [ -f MSBAS_ZSCORE_MASK.tif ] && [ -s MSBAS_ZSCORE_MASK.tif ] ; then mv MSBAS_ZSCORE_MASK.tif* zz_EW${PARAMNAME}/ ; fi
-		if [ -f MSBAS_STACK.tif ] && [ -s MSBAS_STACK.tif ] ; then mv -f MSBAS_STACK.tiff* zz_EW${PARAMNAME}/ ; fi
-		if [ -f MSBAS_STACK_STD.tif ] && [ -s MSBAS_STACK_STD.tif ] ; then mv MSBAS_STACK_STD.tif* zz_EW${PARAMNAME}/ ; fi
+		mv -f MSBAS_NORM_X.tif* "zz_EW${PARAMNAME}"/ 
+		mv -f MSBAS_NORM_AXY.tif* "zz_EW${PARAMNAME}"/ 
+		if [ -f MSBAS_COND_NUM.tif ] && [ -s MSBAS_COND_NUM.tif ] ; then mv -f MSBAS_COND_NUM.tif* "zz_EW${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_RANK.tif ] && [ -s MSBAS_RANK.tif ] ; then mv -f MSBAS_RANK.tif* "zz_EW${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_ZSCORE_MASK.tif ] && [ -s MSBAS_ZSCORE_MASK.tif ] ; then mv MSBAS_ZSCORE_MASK.tif* "zz_EW${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_STACK.tif ] && [ -s MSBAS_STACK.tif ] ; then mv -f MSBAS_STACK.tiff* "zz_EW${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_STACK_STD.tif ] && [ -s MSBAS_STACK_STD.tif ] ; then mv MSBAS_STACK_STD.tif* "zz_EW${PARAMNAME}"/ ; fi
 
-		mv -f MSBAS_*TSOUT.txt zz_EW${PARAMNAME}/
-		mv -f MSBAS_TIME_MATRIX.txt zz_EW${PARAMNAME}/
-		mv -f MSBAS_LOG.txt zz_EW${PARAMNAME}/
+		mv -f MSBAS_*TSOUT.txt "zz_EW${PARAMNAME}"/
+		mv -f MSBAS_TIME_MATRIX.txt "zz_EW${PARAMNAME}"/
+		mv -f MSBAS_LOG.txt "zz_EW${PARAMNAME}"/
 
-		cd zz_UD${PARAMNAME}
+		cd "zz_UD${PARAMNAME}"
 		ls *.tif | ${PATHGNU}/grep -v "RATE" > ../datesTime.txt
 		cd ..
 		${PATHGNU}/gsed -i 's/_vUD.tif//g' datesTime.txt
 		${PATHGNU}/gsed -i 's/_UD.tif//g' datesTime.txt
 		${PATHGNU}/gsed -i 's/MSBAS_//g' datesTime.txt		# conatins yyyymmddThhmmss
-		mv datesTime.txt zz_UD${PARAMNAME}/
-		cp header.txt zz_UD${PARAMNAME}/
+		mv datesTime.txt "zz_UD${PARAMNAME}"/
+		cp header.txt "zz_UD${PARAMNAME}"/
 
-		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_${ALLCOMP}_TS${PARAMNAME}/ ; fi	
+		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt "zz_${ALLCOMP}_TS${PARAMNAME}"/ ; fi	
 			
 		# No need to create ratsers because tif can be viewed 
-		if [ -d zz_EW${PARAMNAME} ] ; then 
-			cp header.txt zz_EW${PARAMNAME}/
-			cd zz_EW${PARAMNAME}
+		if [ -d "zz_EW${PARAMNAME}" ] ; then 
+			cp header.txt "zz_EW${PARAMNAME}"/
+			cd "zz_EW${PARAMNAME}"
 
 			#WIDTH=$(gdalinfo MSBAS_LINEAR_RATE_EW.tif | ${PATHGNU}/gawk -F'[ ,]+' '/^Size is/ {print $3}')	# not needed ?
 
@@ -294,9 +296,9 @@ case ${lname} in
 		fi
 
 
-		if [ -d zz_NS${PARAMNAME} ] ; then 
-			cp header.txt zz_NS${PARAMNAME}/
-			cd zz_NS${PARAMNAME}
+		if [ -d "zz_NS${PARAMNAME}" ] ; then 
+			cp header.txt "zz_NS${PARAMNAME}"/
+			cd "zz_NS${PARAMNAME}"
 			#WIDTH=$(gdalinfo MSBAS_LINEAR_RATE_NS.tif | ${PATHGNU}/gawk -F'[ ,]+' '/^Size is/ {print $3}')	# not needed ?
 
 			# make kmz of linear rate
@@ -304,104 +306,104 @@ case ${lname} in
 			cd ..
 		fi
 
-		if [ -d zz_UD${PARAMNAME} ] ; then 
-			cd zz_UD${PARAMNAME}
+		if [ -d "zz_UD${PARAMNAME}" ] ; then 
+			cd "zz_UD${PARAMNAME}"
 
 			# Make a script for creating rasters if needed.
 			# make kmz of linear rate
 			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_UD.bin -l
 
 			cd ..
-			#if [ `ls -1 zz_${ALLCOMP}_TS${PARAMNAME}/MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
-			#	cd zz_${ALLCOMP}_TS${PARAMNAME} 
+			#if [ `ls -1 "zz_${ALLCOMP}_TS${PARAMNAME}"/MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
+			#	cd "zz_${ALLCOMP}_TS${PARAMNAME}" 
 			if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
-				#cd zz_${ALLCOMP}_TS${PARAMNAME} 
+				#cd "zz_${ALLCOMP}_TS${PARAMNAME}" 
 				Plot_All_EW_UP_ts_inDir.sh
 			fi
 		fi
 		;;
 	"SSBASV10")
 		# remove former tif. This is more secure if some dates must be discarded due to coh. threshold 
-		rm -f zz_LOS${PARAMNAME}/*_*LOS.tif*
+		rm -f "zz_LOS${PARAMNAME}"/*_*LOS.tif*
 		# add new ones
-		mv *_*LOS.tif* zz_LOS${PARAMNAME}/ 
-		mv MSBAS_NORM_X.tif* zz_LOS${PARAMNAME}/ 
-		mv MSBAS_NORM_AXY.tif* zz_LOS${PARAMNAME}/ 
-		#if [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_LOS${PARAMNAME}/  >> listdir.tmp ; fi
-		if [ -f MSBAS_ZSCORE_MASK.tif ] && [ -s MSBAS_ZSCORE_MASK.tif ] ; then mv MSBAS_ZSCORE_MASK.tif* zz_LOS${PARAMNAME}/ ; fi
-		mv -f MSBAS_*TSOUT.txt zz_LOS${PARAMNAME}/
-		mv -f MSBAS_TIME_MATRIX.txt zz_LOS${PARAMNAME}/
+		mv *_*LOS.tif* "zz_LOS${PARAMNAME}"/ 
+		mv MSBAS_NORM_X.tif* "zz_LOS${PARAMNAME}"/ 
+		mv MSBAS_NORM_AXY.tif* "zz_LOS${PARAMNAME}"/ 
+		#if [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* "zz_LOS${PARAMNAME}"/  >> listdir.tmp ; fi
+		if [ -f MSBAS_ZSCORE_MASK.tif ] && [ -s MSBAS_ZSCORE_MASK.tif ] ; then mv MSBAS_ZSCORE_MASK.tif* "zz_LOS${PARAMNAME}"/ ; fi
+		mv -f MSBAS_*TSOUT.txt "zz_LOS${PARAMNAME}"/
+		mv -f MSBAS_TIME_MATRIX.txt "zz_LOS${PARAMNAME}"/
 		#if [ ${lname} == "SBASV4" ] ; then  
-		#	mv -f MSBAS_COND_NUM.bin zz_LOS${PARAMNAME}/ 
-		#	mv -f MSBAS_RANK.bin zz_LOS${PARAMNAME}/ 
+		#	mv -f MSBAS_COND_NUM.bin "zz_LOS${PARAMNAME}"/ 
+		#	mv -f MSBAS_RANK.bin "zz_LOS${PARAMNAME}"/ 
 		#fi
-		if [ -f MSBAS_COND_NUM.tif ] && [ -s MSBAS_COND_NUM.tif ] ; then mv -f MSBAS_COND_NUM.tif zz_LOS${PARAMNAME}/ ; fi
-		if [ -f MSBAS_RANK.tif ] && [ -s MSBAS_RANK.tif ] ; then mv -f MSBAS_RANK.tif zz_LOS${PARAMNAME}/ ; fi
-		if [ -f MSBAS_STACK_STD.tif ] && [ -s MSBAS_STACK_STD.tif ] ; then mv -f MSBAS_STACK_STD.tif zz_LOS${PARAMNAME}/ ; fi
-		if [ -f MSBAS_STACK.tif ] && [ -s MSBAS_STACK.tif ] ; then mv -f MSBAS_STACK.tif zz_LOS${PARAMNAME}/ ; fi
-		mv -f MSBAS_LOG.txt zz_LOS${PARAMNAME}/
+		if [ -f MSBAS_COND_NUM.tif ] && [ -s MSBAS_COND_NUM.tif ] ; then mv -f MSBAS_COND_NUM.tif "zz_LOS${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_RANK.tif ] && [ -s MSBAS_RANK.tif ] ; then mv -f MSBAS_RANK.tif "zz_LOS${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_STACK_STD.tif ] && [ -s MSBAS_STACK_STD.tif ] ; then mv -f MSBAS_STACK_STD.tif "zz_LOS${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_STACK.tif ] && [ -s MSBAS_STACK.tif ] ; then mv -f MSBAS_STACK.tif "zz_LOS${PARAMNAME}"/ ; fi
+		mv -f MSBAS_LOG.txt "zz_LOS${PARAMNAME}"/
 		
-		cd zz_LOS${PARAMNAME}
+		cd "zz_LOS${PARAMNAME}"
 		ls *.tif | ${PATHGNU}/grep -v "RATE" > ../datesTime.txt
 		cd ..
 		${PATHGNU}/gsed -i 's/_vLOS.tif//g' datesTime.txt
 		${PATHGNU}/gsed -i 's/_LOS.tif//g' datesTime.txt
 		${PATHGNU}/gsed -i 's/MSBAS_//g' datesTime.txt		# conatins yyyymmddThhmmss
-		mv datesTime.txt zz_LOS${PARAMNAME}/
-		cp header.txt zz_LOS${PARAMNAME}/
+		mv datesTime.txt "zz_LOS${PARAMNAME}"/
+		cp header.txt "zz_LOS${PARAMNAME}"/
 	
-		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_LOS_TS${PARAMNAME}/ ; fi
+		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt "zz_LOS_TS${PARAMNAME}"/ ; fi
 
 		# No need to create ratsers because tif can be viewed 
-		if [ -d zz_LOS${PARAMNAME} ] ; then 
-			cp header.txt zz_LOS${PARAMNAME}/
-			cd zz_LOS${PARAMNAME}
+		if [ -d "zz_LOS${PARAMNAME}" ] ; then 
+			cp header.txt "zz_LOS${PARAMNAME}"/
+			cd "zz_LOS${PARAMNAME}"
 
 			# make kmz of linear rate
 			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_LOS.tif -l
 			cd ..
-			if [ `ls -1 zz_LOS_TS${PARAMNAME}/*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
-				cd zz_LOS_TS${PARAMNAME} 
+			if [ `ls -1 "zz_LOS_TS${PARAMNAME}"/*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
+				cd "zz_LOS_TS${PARAMNAME}" 
 				Plot_All_LOS_ts_inDir.sh
 			fi
 		fi	
 		;;
 	MSBASV4|MSBASV2)
 		# remove former bin and hdr. This is more secure if some dates must be discarded due to coh. threshold 
-		rm -f zz_EW${PARAMNAME}/*_EW.bin*
-		rm -f zz_UD${PARAMNAME}/*_UD.bin*
+		rm -f "zz_EW${PARAMNAME}"/*_EW.bin*
+		rm -f "zz_UD${PARAMNAME}"/*_UD.bin*
 		# add new ones
-		mv MSBAS*_EW.bin* zz_EW${PARAMNAME}/
-		mv MSBAS*_UD.bin* zz_UD${PARAMNAME}/ 
+		mv MSBAS*_EW.bin* "zz_EW${PARAMNAME}"/
+		mv MSBAS*_UD.bin* "zz_UD${PARAMNAME}"/ 
 		if [ "${ENU}" == "YES" ] ; then 
-			rm -f zz_NS${PARAMNAME}/MSBAS*_NS.bin*
-			mv MSBAS*_NS.bin* zz_NS${PARAMNAME}/
+			rm -f "zz_NS${PARAMNAME}"/MSBAS*_NS.bin*
+			mv MSBAS*_NS.bin* "zz_NS${PARAMNAME}"/
 		fi
 
 		echo "Move norms and log and dateTime file in EW${PARAMNAME}"	
-		mv -f MSBAS_NORM_X.bin* zz_EW${PARAMNAME}/ 
-		mv -f MSBAS_NORM_AXY.bin* zz_EW${PARAMNAME}/ 
-		if [ -f MSBAS_COND_NUM.bin ] && [ -s MSBAS_COND_NUM.bin ] ; then mv -f MSBAS_COND_NUM.bin* zz_EW${PARAMNAME}/ ; fi
-		if [ -f MSBAS_RANK.bin ] && [ -s MSBAS_RANK.bin ] ; then mv -f MSBAS_RANK.bin* zz_EW${PARAMNAME}/ ; fi
-		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_EW${PARAMNAME}/ ; fi
-		mv -f MSBAS_TSOUT.txt zz_EW${PARAMNAME}/
-		mv -f MSBAS_TIME_MATRIX.txt zz_EW${PARAMNAME}/
-		mv -f MSBAS_LOG.txt zz_EW${PARAMNAME}/
+		mv -f MSBAS_NORM_X.bin* "zz_EW${PARAMNAME}"/ 
+		mv -f MSBAS_NORM_AXY.bin* "zz_EW${PARAMNAME}"/ 
+		if [ -f MSBAS_COND_NUM.bin ] && [ -s MSBAS_COND_NUM.bin ] ; then mv -f MSBAS_COND_NUM.bin* "zz_EW${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_RANK.bin ] && [ -s MSBAS_RANK.bin ] ; then mv -f MSBAS_RANK.bin* "zz_EW${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* "zz_EW${PARAMNAME}"/ ; fi
+		mv -f MSBAS_TSOUT.txt "zz_EW${PARAMNAME}"/
+		mv -f MSBAS_TIME_MATRIX.txt "zz_EW${PARAMNAME}"/
+		mv -f MSBAS_LOG.txt "zz_EW${PARAMNAME}"/
 
-		cd zz_UD${PARAMNAME}
+		cd "zz_UD${PARAMNAME}"
 		ls *.hdr | ${PATHGNU}/grep -v "RATE" > ../datesTime.txt
 		cd ..
 		${PATHGNU}/gsed -i 's/UD.bin.hdr//g' datesTime.txt
 		${PATHGNU}/gsed -i 's/MSBAS_//g' datesTime.txt
-		mv datesTime.txt zz_UD${PARAMNAME}/
-		cp header.txt zz_UD${PARAMNAME}/
+		mv datesTime.txt "zz_UD${PARAMNAME}"/
+		cp header.txt "zz_UD${PARAMNAME}"/
 
-		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_${ALLCOMP}_TS${PARAMNAME}/ ; fi	
+		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt "zz_${ALLCOMP}_TS${PARAMNAME}"/ ; fi	
 			
 		# Create ratsers 
-		if [ -d zz_EW${PARAMNAME} ] ; then 
-			cp header.txt zz_EW${PARAMNAME}/
-			cd zz_EW${PARAMNAME}
+		if [ -d "zz_EW${PARAMNAME}" ] ; then 
+			cp header.txt "zz_EW${PARAMNAME}"/
+			cd "zz_EW${PARAMNAME}"
 			WIDTH=`${PATHGNU}/grep -i Samples MSBAS_LINEAR_RATE_EW.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
 
 			# Make a script for creating rasters if needed.
@@ -420,9 +422,9 @@ case ${lname} in
 		fi
 
 		# Create ratsers 
-		if [ -d zz_NS${PARAMNAME} ] ; then 
-			cp header.txt zz_NS${PARAMNAME}/
-			cd zz_NS${PARAMNAME}
+		if [ -d "zz_NS${PARAMNAME}" ] ; then 
+			cp header.txt "zz_NS${PARAMNAME}"/
+			cd "zz_NS${PARAMNAME}"
 			WIDTH=`${PATHGNU}/grep -i Samples MSBAS_LINEAR_RATE_NS.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
 
 			# Make a script for creating rasters if needed.
@@ -440,8 +442,8 @@ case ${lname} in
 			cd ..
 		fi
 
-		if [ -d zz_UD${PARAMNAME} ] ; then 
-			cd zz_UD${PARAMNAME}
+		if [ -d "zz_UD${PARAMNAME}" ] ; then 
+			cd "zz_UD${PARAMNAME}"
 
 			# Make a script for creating rasters if needed.
 			echo "ANYFILE=\$1" > _make_ras.sh
@@ -456,46 +458,46 @@ case ${lname} in
 			# make kmz of linear rate
 			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_UD.bin -l
 			cd ..
-			#if [ `ls -1 zz_${ALLCOMP}_TS${PARAMNAME}/MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
-			#	cd zz_${ALLCOMP}_TS${PARAMNAME} 
+			#if [ `ls -1 "zz_${ALLCOMP}_TS${PARAMNAME}"/MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
+			#	cd "zz_${ALLCOMP}_TS${PARAMNAME}" 
 			if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
-				#cd zz_${ALLCOMP}_TS${PARAMNAME} 
+				#cd "zz_${ALLCOMP}_TS${PARAMNAME}" 
 				Plot_All_EW_UP_ts_inDir.sh
 			fi
 		fi	;;
 	SBASV4|SBASV2)
 		# remove former bin and hdr. This is more secure if some dates must be discarded due to coh. threshold 
-		rm -f zz_LOS${PARAMNAME}/*_LOS.bin*
+		rm -f "zz_LOS${PARAMNAME}"/*_LOS.bin*
 		# add new ones
-		mv *_LOS.bin* zz_LOS${PARAMNAME}/ 
-		mv MSBAS_NORM_X.bin* zz_LOS${PARAMNAME}/ 
-		mv MSBAS_NORM_AXY.bin* zz_LOS${PARAMNAME}/ 
-		#if [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_LOS${PARAMNAME}/  >> listdir.tmp ; fi
-		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* zz_LOS${PARAMNAME}/ ; fi
-		mv -f MSBAS_TSOUT.txt zz_LOS${PARAMNAME}/
-		mv -f MSBAS_TIME_MATRIX.txt zz_LOS${PARAMNAME}/
+		mv *_LOS.bin* "zz_LOS${PARAMNAME}"/ 
+		mv MSBAS_NORM_X.bin* "zz_LOS${PARAMNAME}"/ 
+		mv MSBAS_NORM_AXY.bin* "zz_LOS${PARAMNAME}"/ 
+		#if [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* "zz_LOS${PARAMNAME}"/  >> listdir.tmp ; fi
+		if [ -f MSBAS_ZSCORE_MASK.bin ] && [ -s MSBAS_ZSCORE_MASK.bin ] ; then mv MSBAS_ZSCORE_MASK.bin* "zz_LOS${PARAMNAME}"/ ; fi
+		mv -f MSBAS_TSOUT.txt "zz_LOS${PARAMNAME}"/
+		mv -f MSBAS_TIME_MATRIX.txt "zz_LOS${PARAMNAME}"/
 		#if [ ${lname} == "SBASV4" ] ; then  
-		#	mv -f MSBAS_COND_NUM.bin zz_LOS${PARAMNAME}/ 
-		#	mv -f MSBAS_RANK.bin zz_LOS${PARAMNAME}/ 
+		#	mv -f MSBAS_COND_NUM.bin "zz_LOS${PARAMNAME}"/ 
+		#	mv -f MSBAS_RANK.bin "zz_LOS${PARAMNAME}"/ 
 		#fi
-		if [ -f MSBAS_COND_NUM.bin ] && [ -s MSBAS_COND_NUM.bin ] ; then mv -f MSBAS_COND_NUM.bin zz_LOS${PARAMNAME}/ ; fi
-		if [ -f MSBAS_RANK.bin ] && [ -s MSBAS_RANK.bin ] ; then mv -f MSBAS_RANK.bin zz_LOS${PARAMNAME}/ ; fi
+		if [ -f MSBAS_COND_NUM.bin ] && [ -s MSBAS_COND_NUM.bin ] ; then mv -f MSBAS_COND_NUM.bin "zz_LOS${PARAMNAME}"/ ; fi
+		if [ -f MSBAS_RANK.bin ] && [ -s MSBAS_RANK.bin ] ; then mv -f MSBAS_RANK.bin "zz_LOS${PARAMNAME}"/ ; fi
 		
-		#mv MSBAS_*.txt zz_EW${PARAMNAME}/
-		cd zz_LOS${PARAMNAME}
+		#mv MSBAS_*.txt "zz_EW${PARAMNAME}"/
+		cd "zz_LOS${PARAMNAME}"
 		ls *.hdr | ${PATHGNU}/grep -v "RATE" > ../datesTime.txt
 		cd ..
 		${PATHGNU}/gsed -i 's/_LOS.bin.hdr//g' datesTime.txt
 		${PATHGNU}/gsed -i 's/MSBAS_//g' datesTime.txt
-		mv datesTime.txt zz_LOS${PARAMNAME}/
-		cp header.txt zz_LOS${PARAMNAME}/
-		#if [ `ls -1 *.ts 2>/dev/null | wc -l` -gt 1 ] ; then mv *.ts zz_LOS_TS${PARAMNAME}/ ; fi
-		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt zz_LOS_TS${PARAMNAME}/ ; fi
+		mv datesTime.txt "zz_LOS${PARAMNAME}"/
+		cp header.txt "zz_LOS${PARAMNAME}"/
+		#if [ `ls -1 *.ts 2>/dev/null | wc -l` -gt 1 ] ; then mv *.ts "zz_LOS_TS${PARAMNAME}"/ ; fi
+		if [ `ls -1 MSBAS_*.txt 2>/dev/null | wc -l` -gt 1 ] ; then mv MSBAS_*.txt "zz_LOS_TS${PARAMNAME}"/ ; fi
 
 		# Create rasters
-		if [ -d zz_LOS${PARAMNAME} ] ; then 
-			#cp header.txt zz_LOS${PARAMNAME}/
-			cd zz_LOS${PARAMNAME}
+		if [ -d "zz_LOS${PARAMNAME}" ] ; then 
+			#cp header.txt "zz_LOS${PARAMNAME}"/
+			cd "zz_LOS${PARAMNAME}"
 			WIDTH=`${PATHGNU}/grep -i Samples MSBAS_LINEAR_RATE_LOS.bin.hdr | cut -d = -f 2 | ${PATHGNU}/gsed "s/ //"`
 
 			# Make a script for creating rasters if needed.
@@ -512,30 +514,30 @@ case ${lname} in
 			# make kmz of linear rate
 			Envi2ColorKmz.sh MSBAS_LINEAR_RATE_LOS.bin -l
 			cd ..
-			if [ `ls -1 zz_LOS_TS${PARAMNAME}/*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
-				cd zz_LOS_TS${PARAMNAME} 
+			if [ `ls -1 "zz_LOS_TS${PARAMNAME}"/*.txt 2>/dev/null | wc -l` -gt 1 ] ; then 
+				cd "zz_LOS_TS${PARAMNAME}" 
 				Plot_All_LOS_ts_inDir.sh
 			fi
 		fi	;;
 	MSBASV1)
 		# remove former bin and hdr. This is more secure if some dates must be discarded due to coh. threshold 
-		rm -f zz_e${PARAMNAME}/*e.bin*
-		rm -f zz_u${PARAMNAME}//*u.bin*
+		rm -f "zz_e${PARAMNAME}"/*e.bin*
+		rm -f "zz_u${PARAMNAME}"//*u.bin*
 		# add new ones
-		mv *e.bin* zz_e${PARAMNAME}/
-		mv linear_rate_east.bin* zz_e${PARAMNAME}/
-		mv *u.bin* zz_u${PARAMNAME}/ 
-		mv linear_rate_up.bin* zz_u${PARAMNAME}/
-		echo "Move norms and log and dateTime file in zz_e${PARAMNAME}"	
-		mv lambda_norms.txt zz_e${PARAMNAME}/
-		mv *_norm.bin* zz_e${PARAMNAME}/
-		cd zz_u${PARAMNAME}
+		mv *e.bin* "zz_e${PARAMNAME}"/
+		mv linear_rate_east.bin* "zz_e${PARAMNAME}"/
+		mv *u.bin* "zz_u${PARAMNAME}"/ 
+		mv linear_rate_up.bin* "zz_u${PARAMNAME}"/
+		echo "Move norms and log and dateTime file in zz_e${PARAMNAME}"
+		mv lambda_norms.txt "zz_e${PARAMNAME}"/
+		mv *_norm.bin* "zz_e${PARAMNAME}"/
+		cd "zz_u${PARAMNAME}"
 		ls *.hdr > ../dates.txt
 		cd ..
 		${PATHGNU}/gsed -i 's/u.bin.hdr//g' dates.txt
-		mv dates.txt zz_e${PARAMNAME}/
-		cp header.txt zz_e${PARAMNAME}/
-		if [ `ls -1 *.ts 2>/dev/null | wc -l` -gt 1 ] ; then mv *.ts zz_e_u_TS${PARAMNAME}/ ; fi
+		mv dates.txt "zz_e${PARAMNAME}"/
+		cp header.txt "zz_e${PARAMNAME}"/
+		if [ `ls -1 *.ts 2>/dev/null | wc -l` -gt 1 ] ; then mv *.ts "zz_e_u_TS${PARAMNAME}"/ ; fi
 		;;
 esac
 

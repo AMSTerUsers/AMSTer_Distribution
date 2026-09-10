@@ -322,13 +322,22 @@
 #									- cpxfiddle: no more "make -n cpxfiddle" (which only printed what make would do) and 
 #									  the source is moved to Sources_Installed only if the compilation really produced 
 #									  the binary
+# New in Distro V 7.0.4 20260908: 	- Mac: the Xcode developer tools are now checked against the version that the RUNNING 
+#									  macOS expects (Xcode 16 on Sequoia/macOS 15, Xcode 26 on Tahoe/macOS 26, etc.) 
+#									  It required the new fcts RequiredXcodeMajor (expected Xcode major computed from the macOS version, hence 
+#									  valid for the future OS releases as well), InstalledXcodeMajor (highest toolchain really 
+#									  available, from the Command Line Tools receipt and/or from Xcode.app), CheckMacDevTools 
+#									  (compares both and offers the update) and UpdateMacCommandLineTools (installs the newest 
+#									  "Command Line Tools for Xcode-XX" with softwareupdate - xcode-select --install does nothing 
+#									  when an outdated receipt is present - with a clean reinstall as a fallback)
+#									- remove option for DEM and MASK state variable. Now mandatory
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -                         
 ######################################################################################
 PRG=$(basename "$0")
-VER="version 7.0.3 - Interactive Mac/Linux installation of AMSTer Software"
-AUT="Nicolas d'Oreye, (c)2020, Last modified on Aug 25, 2026"
+VER="version 7.0.4 - Interactive Mac/Linux installation of AMSTer Software"
+AUT="Nicolas d'Oreye, (c)2020, Last modified on Sept 08, 2026"
 clear
 echo "${PRG} ${VER}"
 echo "${AUT}"
@@ -498,6 +507,185 @@ function SetupMakeCommand()
 	echo "  //     sudo rm -rf /Library/Developer/CommandLineTools ; sudo xcode-select --install "
 	echo "  // then relaunch ${PRG}. "
 	exit 1
+	}
+
+function RequiredXcodeMajor()
+	{
+	# Echo the major version of Xcode (hence of the Command Line Tools) that the RUNNING macOS expects.
+	#
+	# Apple ships one main Xcode major release per macOS major release:
+	#     10.15 Catalina -> 11      13 Ventura -> 14      26 Tahoe -> 26
+	#     11    Big Sur  -> 12      14 Sonoma  -> 15      27 ...   -> 27
+	#     12    Monterey -> 13      15 Sequoia -> 16
+	# i.e. Xcode = macOS + 1 up to macOS 15 (Sequoia -> Xcode 16), then Xcode = macOS from
+	# macOS 26 on (Tahoe -> Xcode 26), since Apple aligned both numbering schemes in 2025.
+	# It is computed instead of hardcoded so that the next OS releases keep working without
+	# having to edit this script again. Echo 0 when no requirement can be told.
+	if [ "${OSX_MAJOR}" -ge 26 ]
+		then
+			echo "${OSX_MAJOR}"
+		elif [ "${OSX_MAJOR}" -ge 11 ] && [ "${OSX_MAJOR}" -le 15 ]
+		then
+			echo $(( OSX_MAJOR + 1 ))
+		elif [ "${OSX_MAJOR}" -eq 10 ] && [ "${OSX_MINOR}" -ge 15 ]
+		then
+			echo "11"
+		else
+			echo "0"		# older than Catalina, or unexpected numbering (16 to 25): impose nothing
+	fi
+	}
+
+function InstalledXcodeMajor()
+	{
+	# Echo the highest developer toolchain major version really available on this Mac, or nothing.
+	# Two independent sources, each of which provides a complete toolchain:
+	#	- the Command Line Tools package receipt	(e.g. "version: 16.0.0.0.1.1724870825")
+	#	- a full Xcode.app, whose xcodebuild says	(e.g. "Xcode 16.2")
+	local CLTMAJ
+	local XCODEMAJ
+	local BEST
+
+	CLTMAJ=$(pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | awk '/^version:/ { print $2 }' | cut -d. -f1)
+	XCODEMAJ=""
+	if [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild ]
+		then
+			XCODEMAJ=$(/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -version 2>/dev/null | awk '/^Xcode / { print $2 }' | cut -d. -f1)
+	fi
+
+	# keep the highest of the two: a recent Xcode.app is enough even with older Command Line Tools, and vice versa
+	BEST=""
+	if [ "${CLTMAJ}" != "" ] ; then BEST="${CLTMAJ}" ; fi
+	if [ "${XCODEMAJ}" != "" ] && { [ "${BEST}" == "" ] || [ "${XCODEMAJ}" -gt "${BEST}" ] ; } ; then BEST="${XCODEMAJ}" ; fi
+	echo "${BEST}"
+	}
+
+function UpdateMacCommandLineTools()
+	{
+	# Update the Command Line Tools to the version that Apple ships for the running macOS.
+	#	$1 = expected major version (from RequiredXcodeMajor), only used for the messages
+	#
+	# Why not simply "xcode-select --install": it does nothing at all as soon as a receipt is
+	# present, even an outdated one ("command line tools are already installed"). The tools are
+	# delivered as a system update, hence ask softwareupdate for the newest
+	# "Command Line Tools for Xcode-XX" label and install that one. If Apple proposes none,
+	# fall back on removing and reinstalling the tools, which always gives the version of this OS.
+	local XCODEREQ
+	local CLTLABEL
+	local XCODENEW
+	local yn
+
+	XCODEREQ="$1"
+
+	echo "  // Looking for the Command Line Tools update proposed by Apple for macOS ${OSX_VER} (may take a while)... "
+	CLTLABEL=$(softwareupdate --list 2>/dev/null | sed -n 's/.*Label: *\(Command Line Tools for Xcode-.*\)/\1/p' | sed 's/[[:space:]]*$//' | sort -V | tail -1)
+
+	if [ "${CLTLABEL}" == "" ]
+		then
+			echo "  // Apple's software update proposes no Command Line Tools package right now. "
+			echo "  // The tools can then only be refreshed by removing and reinstalling them (/Library/Developer/CommandLineTools). "
+			while true; do
+				read -p "Do you want to remove and reinstall the Command Line Tools now ? [y/n] "  yn
+				case $yn in
+				[Yy]* )
+						echo "  // Please enter your admin password if prompted : "
+						sudo rm -rf /Library/Developer/CommandLineTools
+						xcode-select --install
+						echo "  // Accept the dialog, wait for the end of the installation, then relaunch ${PRG}. "
+						break ;;
+				[Nn]* )
+						echo "  // OK, nothing changed. You can do it later with: "
+						echo "  //     sudo rm -rf /Library/Developer/CommandLineTools ; xcode-select --install "
+						break ;;
+					* )
+						echo "Please answer [y]es or [n]o." ;;
+				esac
+			done
+			return 0
+	fi
+
+	echo "  // Installing ${CLTLABEL} "
+	echo "  // Please enter your admin password if prompted : "
+	sudo softwareupdate --install "${CLTLABEL}"
+
+	XCODENEW=$(InstalledXcodeMajor)
+	if [ "${XCODENEW}" != "" ] && [ "${XCODENEW}" -ge "${XCODEREQ}" ]
+		then
+			echo "  // OK, the Xcode ${XCODENEW} tools are now installed. "
+			# the freshly installed tools must also be the ACTIVE toolchain (and ${MAKEBIN} may point elsewhere)
+			SetupMakeCommand
+		else
+			echo "  // The tools still report Xcode ${XCODENEW:-none} instead of ${XCODEREQ}. "
+			echo "  // Install the full Xcode ${XCODEREQ} from the App Store (or from https://developer.apple.com/xcode), then relaunch ${PRG}. "
+	fi
+	}
+
+function CheckMacDevTools()
+	{
+	# Xcode / Command Line Tools must match the RUNNING macOS, not merely "be installed".
+	#
+	# Why: after a major OS upgrade, the receipt of the FORMER Command Line Tools is still there
+	# (e.g. the Xcode 15 tools kept from Sonoma while the Mac now runs Sequoia/macOS 15, which
+	# expects the Xcode 16 ones). Testing only their presence hence leaves an outdated toolchain
+	# in place: its clang and its SDK do not know the running system and the compilations of
+	# AMSTerEngine, msbas or of the python modules fail much later with obscure errors. So compare
+	# the installed major version with the one expected for this OS and offer to update it.
+	local XCODEREQ
+	local XCODEGOT
+	local yn
+
+	XCODEREQ=$(RequiredXcodeMajor)
+	XCODEGOT=$(InstalledXcodeMajor)
+
+	# 1) No developer tools at all
+	if [ "${XCODEGOT}" == "" ]
+		then
+			echo "  // Xcode Command Line Tools are not installed. Let's install them first. "
+			echo "  // Accept the dialog, wait for the end of the installation, then relaunch ${PRG}. "
+			xcode-select --install
+			return 0
+	fi
+
+	EchoInverted "  // Xcode developer tools are installed and provide the following version: "
+	pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | grep version
+	if [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild ]
+		then
+			/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -version 2>/dev/null | head -1
+	fi
+
+	# 2) Nothing to compare with (macOS older than Catalina, or unexpected numbering)
+	if [ "${XCODEREQ}" == "0" ]
+		then
+			echo "  // No version requirement is known for macOS ${OSX_VER} ; it is your responsability to verify that it is the last one though... "
+			echo
+			return 0
+	fi
+
+	# 3) Too old for the running OS: propose to update
+	if [ "${XCODEGOT}" -lt "${XCODEREQ}" ]
+		then
+			EchoInverted "  // WARNING: macOS ${OSX_VER} expects the Xcode ${XCODEREQ} tools but only the Xcode ${XCODEGOT} ones are installed. "
+			echo "  // This is typical after a major OS upgrade: the former Command Line Tools are kept untouched. "
+			echo "  // Their clang and their SDK do not know your OS, hence compilations of AMSTerEngine, msbas or python modules may fail. "
+			while true; do
+				read -p "Do you want to update the Xcode developer tools to v${XCODEREQ} now ? [y/n] "  yn
+				case $yn in
+				[Yy]* )
+						UpdateMacCommandLineTools "${XCODEREQ}"
+						break ;;
+				[Nn]* )
+						echo "  // OK, keeping the Xcode ${XCODEGOT} tools. Remember that compilations may fail because of that. "
+						break ;;
+					* )
+						echo "Please answer [y]es or [n]o." ;;
+				esac
+			done
+			echo
+			return 0
+	fi
+
+	# 4) Up to date
+	echo "  // This is what macOS ${OSX_VER} expects (Xcode ${XCODEREQ} tools). "
+	echo
 	}
 
 OS=$(uname -a | cut -d " " -f 1 )
@@ -3651,16 +3839,9 @@ if [ "${TYPERUN}" == "I" ] ; then
 				echo ""
 
 				# Need Xcode  - Mac OS X
-				if [ $(pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | grep version | wc -w) -eq 0 ] 
-					then 
-						echo "  // Xcode  is not installed. Let's install it first'"
-						xcode-select --install
-					else 
-						EchoInverted "  // Xcode is installed and has the following version: "
-						pkgutil --pkg-info=com.apple.pkg.CLTools_Executables | grep version
-						echo "  // It is your responsability to verify that it is the last one though... "
-						echo
-				fi
+				# Not only installed, but also the version that the running macOS expects
+				# (e.g. Xcode 16 on Sequoia/macOS 15, Xcode 26 on Tahoe/macOS 26) - see CheckMacDevTools
+				CheckMacDevTools
 				
 				# Check Mac package manager (MacPorts or Homebrew) - Mac OS X
 				if [ "${PKGMGR}" == "brew" ]

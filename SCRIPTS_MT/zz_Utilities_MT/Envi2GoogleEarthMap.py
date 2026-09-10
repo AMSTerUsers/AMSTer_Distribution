@@ -1,7 +1,8 @@
 #!/opt/local/amster_python_env/bin/python
 # -----------------------------------------------------------------------------------------
-# This script wraps a geocoded ENVI raster (velocity or deformation map, e.g. the
-# MSBAS_LINEAR_RATE_* or MSBAS_* products) on a satellite imagery background and
+# This script wraps a geocoded raster (velocity or deformation map, e.g. the
+# MSBAS_LINEAR_RATE_* or MSBAS_* products), given either as an ENVI binary + header
+# pair or as a GeoTIFF, on a satellite imagery background and
 # writes a publication ready figure with a colour scale, a distance scale bar and
 # a frame graduated in UTM coordinates.
 #
@@ -15,11 +16,12 @@
 # so zooming reveals more detail instead of bigger pixels. Closing the window
 # writes the figure as left on screen.
 #
-# Usage:  ./Envi2Map.py ENVI_FILE [OUTPUT_FIGURE] [options]
-#         ./Envi2Map.py --help  for all the options
+# Usage:  ./Envi2GoogleEarthMap.py RASTER_FILE [OUTPUT_FIGURE] [options]
+#         ./Envi2GoogleEarthMap.py --help  for all the options
 #
 # Parameters are :
-#		- Path to the geocoded ENVI binary to map (mandatory, unless --coherence
+#		- Path to the geocoded raster to map: ENVI binary or GeoTIFF, recognised
+#		  from its content and not from its name (mandatory, unless --coherence
 #		  is given alone to map a coherence raster)
 #		- Path to the output figure (optional, default <ENVI_FILE>.png; may also be
 #		  given with -o/--output, which takes precedence. The extension sets the
@@ -34,6 +36,7 @@
 #							mapped itself, in greyscale from 0 to 1
 #		--kind CLASS		rate / deformation / coherence, when the file name does
 #							not say it
+#		--band N			band to map in a multi-band GeoTIFF
 #		--cmap NAME			vik (default) or vik-balanced, or any matplotlib name
 #							vik, vik-balanced, RdYlBu_r, jet
 #		--label / --unit	colour scale title and unit; both deduced from the
@@ -43,12 +46,13 @@
 #		--local-image FILE	use a Google Earth Pro capture or a GeoTIFF instead
 #		-i					interactive window; the figure is written on closing, i.e. 
 #							taking into account manual zoom before closing.
-#       --clim				force color scale limits (e.g. -1 1)
+#		--clim MIN MAX		force the colour scale limits (e.g. --clim -1 1)
 #
 # Dependencies:	- python3 in the AMSTer venv, with numpy, matplotlib, pyproj and Pillow
-#				- osgeo/gdal, only to read the bounds of a GeoTIFF given to --local-image
+#				- osgeo/gdal, to read a GeoTIFF input or the bounds of a GeoTIFF
+#				  given to --local-image. Not needed for ENVI input.
 #				- an internet access for the imagery tiles, unless --local-image or
-#				  --basemap none is used. Tiles are cached in ~/.cache/Envi2Map_tiles
+#				  --basemap none is used. Tiles are cached in ~/.cache/Envi2GoogleEarthMap_tiles
 #				- Resample_ToGrid.sh, if the coherence is not on the data grid
 #
 # New in Distro V 1.0 20260907:	- set up
@@ -59,11 +63,26 @@
 #								  follow the naming convention
 #								- the colour scale arrows are now drawn only on the ends the data
 #								  actually exceed
+# New in Distro V 1.2 20260907:	- the input may be a GeoTIFF as well as an ENVI pair, for the
+#								  data and for the coherence independently; the format is detected
+#								  from the file content, not from its extension
+#								- --band / --coh-band for multi-band GeoTIFF, --coh-hdr for an
+#								  ENVI coherence whose header sits elsewhere
+#								- any projected CRS in metres is accepted, not only UTM; the
+#								  GeoTIFF band nodata is honoured like ENVI data ignore value
+#								- fix: the input and output parameters can now be given in any
+#								  order with respect to the options. argparse matches positionals
+#								  in contiguous chunks, so "in.bin --nodata 0 out.png" used to be
+#								  rejected with "unrecognized arguments: out.png"
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 """
+Wrap a geocoded velocity or deformation map -- ENVI binary + header, or
+GeoTIFF -- on satellite imagery, with a colour scale, a distance scale bar and
+a UTM frame.
+
 Colour scale
 ------------
 The default is "vik" from Crameri's Scientific colour maps: perceptually
@@ -95,8 +114,8 @@ assumption, not a fact: a detrended rate map can legitimately contain exact
 zeros.  When a single value dominates the histogram the script says so and
 tells you what to pass, e.g.
 
-    Envi2Map.py rate.bin --nodata 0
-    Envi2Map.py rate.bin --nodata 0,-9999
+    Envi2GoogleEarthMap.py rate.bin --nodata 0
+    Envi2GoogleEarthMap.py rate.bin --nodata 0,-9999
 
 Background imagery -- three interchangeable sources:
   --basemap esri        Esri World Imagery XYZ tiles (default, no API key)
@@ -112,19 +131,20 @@ Background imagery -- three interchangeable sources:
 Examples
 --------
 # batch: straight to a PNG next to the binary
-./Envi2Map.py MSBAS_LINEAR_RATE_LOS.bin --nodata 0
+./Envi2GoogleEarthMap.py MSBAS_LINEAR_RATE_LOS.bin --nodata 0
 
 # interactive: explore, zoom, then close the window to save what you see
-./Envi2Map.py MSBAS_LINEAR_RATE_LOS.bin --nodata 0 -i --clim -1 1
+./Envi2GoogleEarthMap.py MSBAS_LINEAR_RATE_LOS.bin --nodata 0 -i --clim -1 1
 
 # a Google Earth Pro capture as background
-./Envi2Map.py rate.bin --nodata 0 --local-image ge.jpg \
+./Envi2GoogleEarthMap.py rate.bin --nodata 0 --local-image ge.jpg \
         --image-bounds -63.70 -32.10 -61.85 -30.10
 
 Requires: numpy, matplotlib, pyproj, Pillow  (osgeo/gdal only for GeoTIFF input)
 """
 
 import argparse
+import collections
 import math
 import os
 import re
@@ -137,7 +157,7 @@ import numpy as np
 import matplotlib
 
 PRG = os.path.basename(__file__)
-VER = "Distro V1.1 AMSTer script utilities"
+VER = "Distro V1.2 AMSTer script utilities"
 AUT = "Nicolas d'Oreye, (c)2016-2026, Last modified on Sep 07, 2026"
 
 plt = None          # bound by setup_backend() once the backend is chosen
@@ -411,6 +431,36 @@ def get_cmap(name):
 # 2. Data
 # ----------------------------------------------------------------------------
 
+def apply_nodata(data, tokens, path):
+    """Turn every declared no-data value into NaN, and say which were applied.
+
+    NaN is nodata by definition; the rest come from the format's own
+    declaration (ENVI 'data ignore value' or the GeoTIFF band nodata) plus
+    whatever --nodata adds. Nothing is guessed.
+    """
+    applied = []
+    for tok in tokens:
+        tok = str(tok).strip()
+        if tok == "" or tok.lower() == "none":
+            continue
+        if tok.lower() == "nan":
+            applied.append("NaN")               # already nodata by definition
+            continue
+        try:
+            val = np.float32(float(tok))
+        except ValueError:
+            sys.exit("Cannot read '%s' as a no-data value." % tok)
+        data[data == val] = np.nan
+        applied.append("%g" % val)
+    if applied:
+        # name the file: with --coherence two rasters are loaded and an
+        # unlabelled second line looks like a duplicate
+        sys.stderr.write("No-data in %s: %s\n"
+                         % (os.path.basename(path),
+                            ", ".join(sorted(set(applied)))))
+    return data
+
+
 def load_data(binary_path, hdr, nodata_arg):
     """Read the raster as float32 with every declared nodata turned into NaN.
 
@@ -442,27 +492,7 @@ def load_data(binary_path, hdr, nodata_arg):
         tokens.append(hdr["data ignore value"])
     if nodata_arg:
         tokens.extend(nodata_arg.split(","))
-
-    applied = []
-    for tok in tokens:
-        tok = str(tok).strip()
-        if tok == "" or tok.lower() == "none":
-            continue
-        if tok.lower() == "nan":
-            applied.append("NaN")               # already nodata by definition
-            continue
-        try:
-            val = np.float32(float(tok))
-        except ValueError:
-            sys.exit("Cannot read '%s' as a no-data value." % tok)
-        data[data == val] = np.nan
-        applied.append("%g" % val)
-    if applied:
-        # name the file: with --coherence two rasters are loaded and an
-        # unlabelled second line looks like a duplicate
-        sys.stderr.write("No-data in %s: %s\n"
-                         % (os.path.basename(binary_path),
-                            ", ".join(sorted(set(applied)))))
+    data = apply_nodata(data, tokens, binary_path)
 
     return data
 
@@ -537,32 +567,177 @@ def describe_product(path, label=None, unit=None, kind="auto"):
     return final_label, final_unit, kind
 
 
-def load_coherence(path, ref_hdr, ref_geo, nodata):
+# A raster, however it was stored: the rest of the script only ever needs
+# these, so ENVI and GDAL formats converge here and nothing downstream cares.
+Raster = collections.namedtuple(
+    "Raster", "data x_ul y_ul dx dy epsg crs_label path")
+
+
+def is_tiff(path):
+    """Recognise (Big)TIFF by its magic bytes rather than by extension.
+
+    AMSTer products are not always named with an extension, so trusting the
+    suffix would misread a file whose name happens to end in .tif and refuse
+    a perfectly good one that carries no suffix at all.
+    """
+    try:
+        with open(path, "rb") as fh:
+            magic = fh.read(4)
+    except OSError as exc:
+        sys.exit("Cannot read %s: %s" % (path, exc))
+    return magic in (b"II*\x00", b"MM\x00*",      # classic TIFF
+                     b"II+\x00", b"MM\x00+")      # BigTIFF
+
+
+def crs_label_from_srs(srs):
+    """A short human label for a spatial reference, UTM spelled out if it is."""
+    zone = srs.GetUTMZone()                 # >0 north, <0 south, 0 = not UTM
+    if zone:
+        datum = (srs.GetAttrValue("DATUM") or "")
+        pretty = "WGS84" if "WGS_1984" in datum else datum.replace("_", " ")
+        label = "UTM zone %d%s" % (abs(zone), "N" if zone > 0 else "S")
+        return label + (" / %s" % pretty if pretty else "")
+    return srs.GetName() or "projected CRS"
+
+
+def read_gdal(path, band=1, epsg_override=None, nodata_arg=None):
+    """Read one band of any GDAL-readable raster (GeoTIFF and friends)."""
+    # An ImportError is not the only way gdal can be unusable: osgeo often
+    # imports cleanly while its compiled gdal_array is built against a
+    # different numpy, and the failure then surfaces as a traceback at the
+    # first ReadAsArray. Probe array access here so the diagnosis is a
+    # sentence rather than a stack trace.
+    try:
+        from osgeo import gdal, osr
+        gdal.UseExceptions()
+        from osgeo import gdal_array                # noqa: F401  (probe only)
+    except Exception as exc:
+        sys.exit("Cannot use gdal to read %s:\n  %s\n"
+                 "gdal must be importable and built against the numpy in use "
+                 "(a numpy 1.x / 2.x mismatch shows up exactly like this).\n"
+                 "An ENVI binary + header pair needs no gdal at all."
+                 % (path, exc))
+    try:
+        ds = gdal.Open(path)
+    except Exception as exc:
+        sys.exit("gdal cannot open %s: %s" % (path, exc))
+
+    if band < 1 or band > ds.RasterCount:
+        sys.exit("%s holds %d band(s); --band %d is out of range."
+                 % (path, ds.RasterCount, band))
+    if ds.RasterCount > 1 and band == 1:
+        sys.stderr.write("%s holds %d bands, mapping band 1 (--band to "
+                         "choose).\n" % (os.path.basename(path),
+                                         ds.RasterCount))
+
+    gt = ds.GetGeoTransform()
+    if gt is None:
+        sys.exit("%s carries no geotransform: it is not geocoded." % path)
+    if abs(gt[2]) > 1e-9 or abs(gt[4]) > 1e-9:
+        sys.exit("%s has a rotated geotransform, which this script does not "
+                 "draw. Make it north-up first: gdalwarp -t_srs <same CRS> "
+                 "in.tif out.tif" % path)
+    x_ul, dx, y_ul, dy = gt[0], gt[1], gt[3], -gt[5]
+    if dx <= 0 or dy <= 0:
+        sys.exit("%s has a non-standard pixel orientation (dx %g, dy %g); "
+                 "re-write it north-up with gdalwarp." % (path, gt[1], gt[5]))
+
+    # CRS: metric axes are what make the scale bar and the frame exact, so a
+    # geographic (degree) CRS has to be reprojected rather than silently drawn
+    epsg, label = epsg_override, None
+    srs = osr.SpatialReference(wkt=ds.GetProjection())
+    if epsg_override:
+        label = "EPSG:%s" % epsg_override
+    else:
+        if not ds.GetProjection():
+            sys.exit("%s carries no CRS. Give one with --epsg." % path)
+        if not srs.IsProjected():
+            sys.exit("%s is in a geographic CRS (%s), so its axes are degrees "
+                     "and no metric scale bar is possible.\nReproject first, "
+                     "e.g. gdalwarp -t_srs EPSG:326xx/327xx in.tif out.tif"
+                     % (path, srs.GetName()))
+        units = srs.GetLinearUnits()
+        if abs(units - 1.0) > 1e-6:
+            sys.exit("%s uses %g m map units; this script assumes metres. "
+                     "Reproject with gdalwarp." % (path, units))
+        code = srs.GetAuthorityCode(None)
+        epsg = int(code) if code else None
+        label = crs_label_from_srs(srs)
+        if epsg is None:
+            sys.exit("Cannot resolve an EPSG code for the CRS of %s (%s). "
+                     "Pass --epsg." % (path, label))
+
+    raster = ds.GetRasterBand(band)
+    data = raster.ReadAsArray().astype(np.float32)
+
+    tokens = []
+    fill = raster.GetNoDataValue()
+    if fill is not None:
+        tokens.append(repr(fill))
+    if nodata_arg:
+        tokens.extend(nodata_arg.split(","))
+    data = apply_nodata(data, tokens, path)
+    ds = None
+    return Raster(data, x_ul, y_ul, dx, dy, epsg, label, path)
+
+
+def read_envi(path, hdr_path=None, epsg_override=None, nodata_arg=None):
+    """Read an ENVI binary through its header."""
+    hdr = read_envi_hdr(hdr_path or find_header(path))
+    x_ul, y_ul, dx, dy, epsg, label = geo_from_hdr(hdr, epsg_override)
+    data = load_data(path, hdr, nodata_arg)
+    return Raster(data, x_ul, y_ul, dx, dy, epsg, label, path)
+
+
+def read_raster(path, hdr_path=None, band=1, epsg_override=None,
+                nodata_arg=None):
+    """Read an ENVI pair or a GDAL raster, whichever this file actually is."""
+    if hdr_path:
+        return read_envi(path, hdr_path, epsg_override, nodata_arg)
+    if is_tiff(path):
+        return read_gdal(path, band, epsg_override, nodata_arg)
+    stem, ext = os.path.splitext(path)
+    for cand in (path + ".hdr", stem + ".hdr",
+                 stem + "_" + ext.lstrip(".") + ".hdr"):
+        if os.path.isfile(cand):
+            return read_envi(path, cand, epsg_override, nodata_arg)
+    try:                                   # any other format gdal can open
+        return read_gdal(path, band, epsg_override, nodata_arg)
+    except SystemExit:
+        sys.exit("Cannot read %s: no ENVI header was found next to it and gdal "
+                 "does not recognise the format.\nFor an ENVI binary, put its "
+                 ".hdr beside it or give it with --hdr." % path)
+
+
+def same_grid(a, b):
+    """True when two rasters sit on exactly the same pixel grid."""
+    tol = 0.5 * a.dx
+    return (a.data.shape == b.data.shape
+            and a.epsg == b.epsg
+            and abs(a.dx - b.dx) < 1e-6 and abs(a.dy - b.dy) < 1e-6
+            and abs(a.x_ul - b.x_ul) < tol and abs(a.y_ul - b.y_ul) < tol)
+
+
+def describe_grid(r):
+    return ("%d x %d, %g m, origin %.1f / %.1f, EPSG %s"
+            % (r.data.shape[1], r.data.shape[0], r.dx, r.x_ul, r.y_ul, r.epsg))
+
+
+def load_coherence(path, reference, hdr_path=None, band=1, nodata=None):
     """Load a coherence raster and insist it is on exactly the reference grid.
 
     Silently resampling here would hide a real mismatch, so a differing grid
-    is an error: put the two on one grid first (Resample_ToGrid.sh).
+    is an error: put the two on one grid first (Resample_ToGrid.sh). Format is
+    irrelevant -- an ENVI rate map can be damped by a GeoTIFF coherence and
+    the other way round, as long as the grids agree.
     """
-    hdr = read_envi_hdr(find_header(path))
-    geo = geo_from_hdr(hdr)
-    ref_shape = (int(ref_hdr["samples"]), int(ref_hdr["lines"]))
-    shape = (int(hdr["samples"]), int(hdr["lines"]))
-    tol = 0.5 * ref_geo[2]
-    same = (shape == ref_shape
-            and geo[4] == ref_geo[4]                       # same EPSG
-            and abs(geo[2] - ref_geo[2]) < 1e-6
-            and abs(geo[3] - ref_geo[3]) < 1e-6
-            and abs(geo[0] - ref_geo[0]) < tol             # same origin
-            and abs(geo[1] - ref_geo[1]) < tol)
-    if not same:
+    coh = read_raster(path, hdr_path, band, None, nodata)
+    if not same_grid(reference, coh):
         sys.exit("The coherence grid does not match the data grid:\n"
-                 "  data      %d x %d, %g m, origin %.1f / %.1f, EPSG %d\n"
-                 "  coherence %d x %d, %g m, origin %.1f / %.1f, EPSG %d\n"
+                 "  data      %s\n  coherence %s\n"
                  "Put them on a common grid first (Resample_ToGrid.sh)."
-                 % (ref_shape[0], ref_shape[1], ref_geo[2], ref_geo[0],
-                    ref_geo[1], ref_geo[4],
-                    shape[0], shape[1], geo[2], geo[0], geo[1], geo[4]))
-    return load_data(path, hdr, nodata)
+                 % (describe_grid(reference), describe_grid(coh)))
+    return coh.data
 
 
 def coherence_alpha(coh, lo, hi, alpha_max):
@@ -703,7 +878,7 @@ class TileBasemap:
         path = os.path.join(self.cache_dir, name)
         if not os.path.isfile(path):
             req = urllib.request.Request(
-                url, headers={"User-Agent": "Envi2Map/1.0"})
+                url, headers={"User-Agent": "Envi2GoogleEarthMap/1.2"})
             blob, last = None, None
             for _ in range(3):
                 try:
@@ -1083,16 +1258,21 @@ def parse_args(argv):
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("binary", nargs="?", default=None,
-                   help="geocoded ENVI binary to map. May be omitted if "
-                        "--coherence is given, to map the coherence itself.")
-    p.add_argument("output", nargs="?", default=None,
-                   help="output figure (optional, default <binary>.png). The "
-                        "extension sets the format: png, pdf, svg, eps, jpg...")
+    p.add_argument("files", nargs="*", metavar="INPUT [OUTPUT]",
+                   help="the geocoded raster to map -- an ENVI binary (with "
+                        "its .hdr) or a GeoTIFF, recognised automatically -- "
+                        "and optionally the output figure, whose extension "
+                        "sets the format (png, pdf, svg, eps, jpg...). The "
+                        "input may be omitted if --coherence is given, to map "
+                        "the coherence itself; the output defaults to "
+                        "<input>.png.")
     p.add_argument("-o", "--output", dest="output_opt", default=None,
                    help="same as the second parameter, and takes precedence "
                         "over it")
-    p.add_argument("--hdr", help="ENVI header, if not next to the binary")
+    p.add_argument("--hdr", help="ENVI header, if not next to the binary "
+                                 "(ignored for a GeoTIFF)")
+    p.add_argument("--band", type=int, default=1,
+                   help="band to map in a multi-band GeoTIFF (default 1)")
     p.add_argument("--epsg", help="override the CRS from 'map info'")
 
     p.add_argument("--nodata", default=None,
@@ -1140,6 +1320,10 @@ def parse_args(argv):
                         "fully opaque (default 0.2 0.7)")
     p.add_argument("--coh-nodata", default=None,
                    help="extra no-data value(s) for the coherence raster")
+    p.add_argument("--coh-hdr",
+                   help="ENVI header of the coherence, if not beside it")
+    p.add_argument("--coh-band", type=int, default=1,
+                   help="band to use in a multi-band coherence GeoTIFF")
 
     p.add_argument("--basemap", default="esri",
                    choices=sorted(TILE_SOURCES) + ["none"],
@@ -1152,7 +1336,7 @@ def parse_args(argv):
                    help="lon/lat bounds of --local-image")
     p.add_argument("--zoom", type=int, help="force the tile zoom level")
     p.add_argument("--tile-cache",
-                   default=os.path.expanduser("~/.cache/Envi2Map_tiles"),
+                   default=os.path.expanduser("~/.cache/Envi2GoogleEarthMap_tiles"),
                    help="tile cache directory")
     p.add_argument("--credit", help="override the imagery credit line")
 
@@ -1171,7 +1355,23 @@ def parse_args(argv):
                    help="plot every data pixel instead of block-averaging to "
                         "the figure resolution")
     p.add_argument("--pdf", action="store_true", help="also write a PDF")
-    return p.parse_args(argv)
+    # argparse matches positionals in contiguous chunks, so
+    # "in.bin --nodata 0 out.png" leaves the second positional unplaceable and
+    # is rejected outright. Collecting the leftovers ourselves makes the
+    # parameters order-independent, which is what anyone typing a long command
+    # line will expect.
+    args, extra = p.parse_known_args(argv)
+    stray_options = [a for a in extra if a.startswith("-") and a != "-"]
+    if stray_options:
+        p.error("unrecognized arguments: %s" % " ".join(stray_options))
+    args.files = list(args.files) + [a for a in extra if a not in stray_options]
+
+    if len(args.files) > 2:
+        p.error("expected at most an input and an output, got: %s"
+                % " ".join(args.files))
+    args.binary = args.files[0] if args.files else None
+    args.output = args.files[1] if len(args.files) > 1 else None
+    return args
 
 
 def resolve_output(binary, positional, option):
@@ -1233,23 +1433,23 @@ def main(argv=None):
     except ImportError:
         sys.exit("pyproj is required (pip install pyproj).")
 
-    hdr_path = args.hdr or find_header(args.binary)
-    hdr = read_envi_hdr(hdr_path)
-    x_ul, y_ul, dx, dy, epsg, crs_label = geo_from_hdr(hdr, args.epsg)
+    raster = read_raster(args.binary, args.hdr, args.band, args.epsg,
+                         args.nodata)
+    x_ul, y_ul, dx, dy = raster.x_ul, raster.y_ul, raster.dx, raster.dy
+    epsg, crs_label = raster.epsg, raster.crs_label
 
     label, unit, kind = describe_product(args.binary, args.label, args.unit,
                                          args.kind)
     is_coherence = (kind == "coherence")
     cmap_name = args.cmap or ("gray" if is_coherence else "vik")
 
-    data = load_data(args.binary, hdr, args.nodata)
+    data = raster.data
     suggest_nodata(data, fixed_scale=is_coherence)
 
     coherence = None
     if args.coherence:
-        coherence = load_coherence(args.coherence, hdr,
-                                   (x_ul, y_ul, dx, dy, epsg, crs_label),
-                                   args.coh_nodata)
+        coherence = load_coherence(args.coherence, raster, args.coh_hdr,
+                                   args.coh_band, args.coh_nodata)
 
     # --- geometry -----------------------------------------------------------
     if args.no_crop:

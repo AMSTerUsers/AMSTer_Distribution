@@ -17,13 +17,14 @@
 # New in V1.3 (Feb 15, 2023):	- search dirs with find instead of ls 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
+# New in Distro V 2.1 20260909:	- list only MODES without _
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -32,7 +33,7 @@ echo " "
 rm -f MODES_CKECK_DUPLIC.TXT 
 # Check available modes
 #ls -d Geocoded | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep -v .tif | ${PATHGNU}/grep -v Ampli | ${PATHGNU}/grep -v "test" > MODES_CKECK_DUPLIC.TXT # List all modes 
-find ./Geocoded -maxdepth 1 -mindepth 1 -type d  | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep -v .tif | ${PATHGNU}/grep -v Ampli | ${PATHGNU}/grep -v "test" | ${PATHGNU}/gsed 's/.*\///' > MODES_CKECK_DUPLIC.TXT # List all modes 
+find ./Geocoded -maxdepth 1 -mindepth 1 -type d  | ${PATHGNU}/grep -v .txt | ${PATHGNU}/grep -v .tif | ${PATHGNU}/grep -v Ampli | ${PATHGNU}/grep -v "test" | ${PATHGNU}/gsed 's/.*\///'  | ${PATHGNU}/grep -v "_" > MODES_CKECK_DUPLIC.TXT # List all modes 
 # ${PATHGNU}/grep -v .txt MODES_CKECK_DUPLIC.TXT > MODES_CKECK_DUPLIC_TMP.TXT
 # ${PATHGNU}/grep -v Ampli MODES_CKECK_DUPLIC_TMP.TXT > MODES_CKECK_DUPLIC.TXT
 # rm -f MODES_CKECK_DUPLIC_TMP.TXT
