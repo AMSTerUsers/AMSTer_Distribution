@@ -25,13 +25,16 @@
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 2.1 20260909:	- cosmetic file rename (Serach > Search)
+# New in Distro V 2.2 20261005 (QG and DS):	- Document fixed bug introduced at V2.1 which was considering all files as duplicated and moved to ___Duplicated_ToKill
+#											  If you have run the bugged version and all your files were moved to ___Duplicated_ToKill, you can recover them using 
+#											  Restore_Duplicate_Pairs_ToKill.sh
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
+VER="Distro V2.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 05, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo " "
@@ -45,9 +48,9 @@ if [ "${MODE}" == "Ampli" ]
 		echo "  // Do not clean duplicated Ampli because it will delete ampli files of Primary or Secondary image that would be computed from the same pair" 
 	else 
 		echo "  // Searching for all files containing pair of dates (yyyymmdd_yyyymmdd) and ending with deg... " 
-		touch "${SOURCEDIR}"/List_Pairs_Searched_For_Ducplic.txt
-		${PATHGNU}/find . -maxdepth 1 -type f -name "*deg" -print0 | xargs -0 echo | ${PATHGNU}/grep -Eo "[0-9]{8}_[0-9]{8}" >> "${SOURCEDIR}"/List_Pairs_Searched_For_Ducplic.txt
-		# count how many duplicated lines 
+		#touch "${SOURCEDIR}"/List_Pairs_Searched_For_Ducplic.txt
+		#${PATHGNU}/find . -maxdepth 1 -type f -name "*deg" -print0 | xargs -0 echo | ${PATHGNU}/grep -Eo "[0-9]{8}_[0-9]{8}" >> "${SOURCEDIR}"/List_Pairs_Searched_For_Ducplic.txt
+		${PATHGNU}/find . -maxdepth 1 -type f -name "*deg" -print0 | xargs -0 echo | ${PATHGNU}/grep -Eo "[0-9]{8}_[0-9]{8}" > "${SOURCEDIR}"/List_Pairs_Searched_For_Ducplic.txt		# count how many duplicated lines 
 		NRDUPLIC=`sort "${SOURCEDIR}"/List_Pairs_Searched_For_Ducplic.txt | uniq -cd | wc -l`
 		# count how many lines in total 
 		TOT=`cat "${SOURCEDIR}"/List_Pairs_Searched_For_Ducplic.txt | wc -l`

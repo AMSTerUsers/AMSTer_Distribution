@@ -148,13 +148,14 @@
 #									- name NISAR CSL dir with Frame, Orbit and Rge bandwidth
 # New in Distro V 5.19 20260825:	- add BIOMASS (also accept BIO)
 #									- add INITPOL constrain for NISAR
+# New in Distro V 5.20 20261005:	- debug SAOCOM when pol not as expected 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.19 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
+VER="Distro V5.20 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 05, 2026"
 
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
@@ -895,10 +896,11 @@ case ${SAT} in
 						fi
 				
 						# if data exist in /Data, make a LINK
+						mkdir -p ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop
 						if [ -f "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ] && [ -s "${SAOCOMIMGPATH}/Data/SLCData.${INITPOL}" ]
 							then
 								EchoTee "Data found in ${SAOCOMIMGPATH} for ${SAOCOMDATE} in orbit ${SAOCOMORBIT}, ${SAOCOMMODE} "
-								mkdir -p ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop
+								
 								if [ ! -d ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE}.csl ]
 									then
 										# There is no  ${PARENTCSL}_${SAOCOMORBIT}_${SAOCOMMODE}/NoCrop/${SAOCOMDATE} DIR yet, hence it is a new img; move new img there

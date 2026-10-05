@@ -132,13 +132,14 @@
 #								- properly manage inverted pairs; use a new fct
 #								- rename log file after SUPERMASTER (instead of MAS, which was unset when defined)  
 #								- log now follows the results instead of being left behind 
+# New in Distro V 5.4 20260929:	- typo G(g)etImgMod (since 28 aug 2026)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 04, 2026"
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 29, 2026"
 
 
 echo " "
@@ -1258,7 +1259,7 @@ do
 									GetImgMod ${MASNAME} master  
 								fi
 							else 
-								getImgMod ${MAS} master
+								GetImgMod ${MAS} master
 						fi
 
 						# ln -s ${OUTPUTDATA}/${SUPERMASNAME}_${SLVNAME}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod ${RUNDIR}/i12/InSARProducts/${SLVNAME}.${POLSLV}.mod

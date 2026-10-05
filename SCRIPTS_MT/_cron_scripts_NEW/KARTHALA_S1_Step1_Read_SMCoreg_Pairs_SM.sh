@@ -14,6 +14,7 @@
 # New in Distro V 6.0 20241112:	- add descending orbit (available since request in October)
 # New in Distro V 6.1 20241210:	- Desc orbit only with BT2 and BT2 because acquisition in that mode started after DATECHG
 # New in Distro V 7.0 20251208:	- Add IW (Asc)
+# New in Distro V 7.1 20260929:	- add IW Desc 137
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -40,14 +41,14 @@ BPIW=50
 BTIW=150
 
 IWASC=20250727
-#IWDESC=
+IWDESC=20260802
 
 
 NEWASCPATH=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_A_86/SMCrop_SM_${SMASC}_ComoresIsland_-11.94--11.34_43.22-43.53
 NEWDESCPATH=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_SM_D_35/SMNoCrop_SM_${SMDESC}_ComoresIsland_-11.94--11.34_43.22-43.53
 
 NEWASCPATHIW=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_A_86/SMNoCrop_SM_${IWASC}
-#NEWDESCPATHIW=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_D_35/SMNoCrop_SM_${IWDESC}
+NEWDESCPATHIW=$PATH_1650/SAR_SM/RESAMPLED/S1/KARTHALA_D_137/SMNoCrop_SM_${IWDESC}
 
 # kml for S1 SM
 KML="${PATH_1650}/kml/Karthala/Karthala_crop.kml"
@@ -78,7 +79,7 @@ $PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/S1/KARTHALA_
 ## in Ascending mode 
 $PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/S1/KARTHALA_A_86/LaunchMTparam_S1_Karthala_Asc_Zoom1_ML2_Coreg.txt &
 # in Descending mode 
-#$PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/S1/KARTHALA_D_35/LaunchMTparam_S1_Karthala_Desc_Zoom1_ML2_Coreg.txt &
+$PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/S1/KARTHALA_D_137/LaunchMTparam_S1_Karthala_Desc_Zoom1_ML2_Coreg_ESD.txt &		# With ESD
 
 # Search for pairs
 ##################
@@ -90,7 +91,7 @@ $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh $PATH_1650/SAR_CSL/S1/KARTHALA_SM_D_35/N
 # IW #
 ######
 $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh $PATH_1650/SAR_CSL/S1/KARTHALA_A_86/NoCrop $PATH_1650/SAR_SM/MSBAS/KARTHALA/set5 S1 > /dev/null 2>&1 &
-#$PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh $PATH_1650/SAR_CSL/S1/KARTHALA_D_35/NoCrop $PATH_1650/SAR_SM/MSBAS/KARTHALA/set6 S1 > /dev/null 2>&1 &
+$PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh $PATH_1650/SAR_CSL/S1/KARTHALA_D_137/NoCrop $PATH_1650/SAR_SM/MSBAS/KARTHALA/set7 S1 > /dev/null 2>&1 &
 
 wait
 
@@ -111,9 +112,9 @@ if [ ! -s ${NEWASCPATHIW}/_No_New_Data_Today.txt ] ; then
 	echo "n" | Prepa_MSBAS.sh $PATH_1650/SAR_SM/MSBAS/KARTHALA/set5 ${BPIW} ${BTIW} ${IWASC} > /dev/null 2>&1  &
 fi
 
-#if [ ! -s ${NEWDESCPATHIW}/_No_New_Data_Today.txt ] ; then 
-#	echo "n" | Prepa_MSBAS.sh $PATH_1650/SAR_SM/MSBAS/KARTHALA/set6 ${BPIW} ${BTIW} ${IWDESC} > /dev/null 2>&1  &
-#fi
+if [ ! -s ${NEWDESCPATHIW}/_No_New_Data_Today.txt ] ; then 
+	echo "n" | Prepa_MSBAS.sh $PATH_1650/SAR_SM/MSBAS/KARTHALA/set7 ${BPIW} ${BTIW} ${IWDESC} > /dev/null 2>&1  &
+fi
 
 wait
 
