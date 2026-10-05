@@ -17,6 +17,9 @@
 # New in Distro V 7.0 20251208:	- Add IW (Asc)
 # New in Distro V 7.1 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
 #								- add wait at the end
+# New in Distro V 7.2 20260929:	- add IW Desc 137
+# New in Distro V 7.3 20261005:	- correct date for storing _Mode_last_MassRun.txt for IW comp. 
+#								- corr name of pair table IW desc
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -43,7 +46,7 @@ BPIW=50
 BTIW=150
 
 IWASC=20250727
-#IWDESC=
+IWDESC=20260802
 
 # some files
 ############
@@ -57,7 +60,7 @@ TABLEDESC=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set2/table_0_${BP2}_0_${BT2}.txt
 # mode IW # 
 ###########
 TABLEASCIW=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set5/table_0_${BPIW}_0_${BTIW}.txt
-#TABLEDESC=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set6/table_0_${BPIW}_0_${BTIW}.txt
+TABLEDESCIW=$PATH_1650/SAR_SM/MSBAS/KARTHALA/set7/table_0_${BPIW}_0_${BTIW}.txt
 
 # mode SM #
 ###########
@@ -66,14 +69,14 @@ PARAMPROCESSDESC=$PATH_1650/Param_files/S1/KARTHALA_SM_D_35/LaunchMTparam_S1_SM_
 # mode IW # 
 ###########
 PARAMPROCESSASCIW=$PATH_1650/Param_files/S1/KARTHALA_A_86/LaunchMTparam_S1_Karthala_Asc_Zoom1_ML2_MassProc.txt
-#PARAMPROCESSDESCIW=$PATH_1650/Param_files/S1/KARTHALA__D_35/LaunchMTparam_S1_Karthala_Desc_Zoom1_ML2_MassProc.txt
+PARAMPROCESSDESCIW=$PATH_1650/Param_files/S1/KARTHALA__D_137/LaunchMTparam_S1_Karthala_Desc_Zoom1_ML2_MassProc_ESD.txt
 
 
 PARAMASCNAME=`basename ${PARAMPROCESSASC}`
 PARAMDESCNAME=`basename ${PARAMPROCESSDESC}`
 
 PARAMASCNAMEIW=`basename ${PARAMPROCESSASCIW}`
-#PARAMDESCNAMEIW=`basename ${PARAMPROCESSDESCIW}`
+PARAMDESCNAMEIW=`basename ${PARAMPROCESSDESCIW}`
 
 
 TODAY=`date`
@@ -96,7 +99,7 @@ if [ ${CHECKREAD} -eq 0 ]
 		CHECKDESC=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAME}  | grep -v "Crons_1_2_3.sh" | wc -l`
 		
 		CHECKASCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep "  | ${PATHGNU}/grep ${PARAMASCNAMEIW}  | grep -v "Crons_1_2_3.sh" | wc -l`
-#		CHECKDESCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAMEIW}  | grep -v "Crons_1_2_3.sh" | wc -l`
+		CHECKDESCIW=`ps -eaf | ${PATHGNU}/grep SuperMaster_MassProc.sh | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep ${PARAMDESCNAMEIW}  | grep -v "Crons_1_2_3.sh" | wc -l`
 
 
 		# mode SM #
@@ -127,25 +130,25 @@ if [ ${CHECKREAD} -eq 0 ]
 		if [ ${CHECKASCIW} -lt 1 ] 
 			then 
 				# No process running yet
- 				# if first run, it may crash because $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${SMASCIW}_Zoom1_ML2 does not exist yet, hence create it
- 				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${SMASCIW}_Zoom1_ML2
-				echo "Asc IW run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${SMASCIW}_Zoom1_ML2/_Asc_last_MassRun.txt
+ 				# if first run, it may crash because $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2 does not exist yet, hence create it
+ 				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2
+				echo "Asc IW run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2/_Asc_last_MassRun.txt
 				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEASCIW} ${PARAMPROCESSASCIW} > /dev/null 2>&1 &
 			else 
-				echo "Asc IW attempt aborted on ${TODAY} because other Mass Process in progress"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${SMASCIW}_Zoom1_ML2/_Asc_last_aborted.txt
+				echo "Asc IW attempt aborted on ${TODAY} because other Mass Process in progress"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2/_Asc_last_aborted.txt
 		fi
 		# if riunning yet we will try egain tomorrow
 
-#		if [ ${CHECKDESCIW} -lt 1 ] 
-#			then 
-#				# No process running yet
-#				# if first run, it may crash because $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_35/SMNoCrop_${SMDESCIW}_Zoom1_ML2 does not exist yet, hence create it
-#				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_35/SMNoCrop_${SMDESCIW}_Zoom1_ML2
-#				echo "Desc run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_35/SMNoCrop_${SMDESCIW}_Zoom1_ML2/_Desc_last_MassRun.txt
-#				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEDESCIW} ${PARAMPROCESSDESCIW} > /dev/null 2>&1 &
-#			else 
-#				echo "Desc attempt aborted on ${TODAY} because other Mass Process in progress"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_35/SMNoCrop_${SMDESC}_Zoom1_ML2/_Desc_last_aborted.txt
-#		fi
+		if [ ${CHECKDESCIW} -lt 1 ] 
+			then 
+				# No process running yet
+				# if first run, it may crash because $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_35/SMNoCrop_${IWDESC}_Zoom1_ML2 does not exist yet, hence create it
+				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_${IWDESC}_Zoom1_ML2
+				echo "Desc run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_${IWDESC}_Zoom1_ML2/_Desc_last_MassRun.txt
+				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEDESCIW} ${PARAMPROCESSDESCIW} > /dev/null 2>&1 &
+			else 
+				echo "Desc attempt aborted on ${TODAY} because other Mass Process in progress"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_${SMDESC}_Zoom1_ML2/_Desc_last_aborted.txt
+		fi
 
 
 	else 
@@ -153,8 +156,8 @@ if [ ${CHECKREAD} -eq 0 ]
 		echo "Step2 aborted on ${TODAY} because KATHALA_S1_Step1_Read_SMCoreg_Pairs_SM.sh is still running: wait for tomorrow"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_A_86/SMCrop_SM_${SMASC}_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5/_aborted_because_Read_inProgress.txt
 		echo "Step2 aborted on ${TODAY} because KATHALA_S1_Step1_Read_SMCoreg_Pairs_SM.sh is still running: wait for tomorrow"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_SM_D_35/SMCrop_SM_${SMDESC}_ComoresIsland_-11.94--11.34_43.22-43.53_Zoom1_ML5/_aborted_because_Read_inProgress.txt
 
-		echo "Step2 aborted on ${TODAY} because KATHALA_S1_Step1_Read_SMCoreg_Pairs_SM.sh is still running: wait for tomorrow"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_SM_${SMASCIW}_Zoom1_ML2/_aborted_because_Read_inProgress.txt
-#		echo "Step2 aborted on ${TODAY} because KATHALA_S1_Step1_Read_SMCoreg_Pairs_SM.sh is still running: wait for tomorrow"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_35/SMNoCrop_SM_${SMDESCIW}_Zoom1_ML2/_aborted_because_Read_inProgress.txt
+		echo "Step2 aborted on ${TODAY} because KATHALA_S1_Step1_Read_SMCoreg_Pairs_SM.sh is still running: wait for tomorrow"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_SM_${IWASC}_Zoom1_ML2/_aborted_because_Read_inProgress.txt
+		echo "Step2 aborted on ${TODAY} because KATHALA_S1_Step1_Read_SMCoreg_Pairs_SM.sh is still running: wait for tomorrow"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_SM_${IWDESC}_Zoom1_ML2/_aborted_because_Read_inProgress.txt
 
 
 		exit 0
