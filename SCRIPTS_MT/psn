@@ -31,6 +31,7 @@
 #								- rewrite fct GetAllPIDs which was leaking states between calls because PID and PHD were not reset
 #								- typo PAIRSTOPROCES[$i] 
 #								- cosmetic alignment of SuperMaster_MassProc.sh results in else case 
+# New in Distro V 4.7 20261007:	- also check last compiled version of AMSTer Engine 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 #
@@ -370,18 +371,25 @@ echo "//____________________________"
 	# suppose that sources are where the installer had put it... 
 	eval PATHSOURCES=${PATHAMSTERENGINE}/_Sources_AE/Older/
 
+	# Check compiled version
 	if [ -f ${PATHAMSTERENGINE}/_History.txt ]
 		then 
 			# get version from History file 
 			eval LASTVERSIONMT=`head -1 ${PATHAMSTERENGINE}/_History.txt | ${PATHGNU}/grep -Eo "[0-9]{8}"`
+			echo "Last compiled source of AMSTer Engine is:    ${LASTVERSIONMT}	(at least after info in _History.txt)  "
 		else 
-			# get version from last directory 
-			LASTDIRINFO=`${PATHGNU}/find ${PATHSOURCES} -maxdepth 1 -type d -name "V*" -printf "%T@ %Tc %p\n"  | sort -n | tail -1 `  # get last creater dir
-			#	Get everything after the last /:
-			LASTDIRNAME="${LASTDIRINFO##*/}"
-			eval LASTVERSIONMT=`echo ${LASTDIRNAME} | cut -d "_" -f1`
+			echo "Last compiled source of AMSTer Engine is:    unknown	(there is no  {PATHAMSTERENGINE}/_History.txt)  "
 	fi
-	echo "Last AMSTer Engine version is ${LASTVERSIONMT}"
+
+	# Check last source version
+	# get version from last directory 
+	###LASTDIRINFO=`${PATHGNU}/find ${PATHSOURCES} -maxdepth 1 -type d -name "V*" -printf "%T@ %Tc %p\n"  | sort -n | tail -1 `  # get last creater dir
+	####	Get everything after the last /:
+	###LASTDIRNAME="${LASTDIRINFO##*/}"
+	###eval LASTVERSIONMT=`echo ${LASTDIRNAME} | cut -d "_" -f1`
+	LASTVERSIONMT=$(${PATHGNU}/find "${PATHSOURCES}" -mindepth 1 -maxdepth 1 -type d -name 'V[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*' -exec basename {} \; | cut -c 2-9 | sort -n | tail -n 1)
+
+	echo "Last compressed source of AMSTer Engine is : ${LASTVERSIONMT}	(see ${PATHAMSTERENGINE})"
 	echo
 	
 NOW=$(date)

@@ -133,13 +133,14 @@
 #								- rename log file after SUPERMASTER (instead of MAS, which was unset when defined)  
 #								- log now follows the results instead of being left behind 
 # New in Distro V 5.4 20260929:	- typo G(g)etImgMod (since 28 aug 2026)
+# New in Distro V 5.5 20261007:	- was checking if PATHTODIREVENTSMASKS was a file instead of a dir 
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 29, 2026"
+VER="Distro V5.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 07, 2026"
 
 
 echo " "
@@ -641,7 +642,7 @@ SUPERMASDIR=${SUPERMASNAME}.csl
 	fi
 	if [ "${APPLYMASK}" == "APPLYMASKyes" ] && [ "${PATHTODIREVENTSMASKS}" != "" ] 
 		then
-		   if [ -f "${PATHTODIREVENTSMASKS}" ] && [ -s "${PATHTODIREVENTSMASKS}" ] 
+		   if [ -d "${PATHTODIREVENTSMASKS}" ] 
 		   	then 
 		   		echo "  // OK: You requested a mask with PATHTODIREVENTSMASKS and it exist." 
 			else

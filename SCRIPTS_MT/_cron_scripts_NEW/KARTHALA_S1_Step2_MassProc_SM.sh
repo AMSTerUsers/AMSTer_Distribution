@@ -69,7 +69,7 @@ PARAMPROCESSDESC=$PATH_1650/Param_files/S1/KARTHALA_SM_D_35/LaunchMTparam_S1_SM_
 # mode IW # 
 ###########
 PARAMPROCESSASCIW=$PATH_1650/Param_files/S1/KARTHALA_A_86/LaunchMTparam_S1_Karthala_Asc_Zoom1_ML2_MassProc.txt
-PARAMPROCESSDESCIW=$PATH_1650/Param_files/S1/KARTHALA__D_137/LaunchMTparam_S1_Karthala_Desc_Zoom1_ML2_MassProc_ESD.txt
+PARAMPROCESSDESCIW=$PATH_1650/Param_files/S1/KARTHALA_D_137/LaunchMTparam_S1_Karthala_Desc_Zoom1_ML2_MassProc_ESD.txt
 
 
 PARAMASCNAME=`basename ${PARAMPROCESSASC}`

@@ -151,12 +151,14 @@
 # New in Distro V 10.1.0 20260813:	- New fct MoveGeocRenameNoOverwrite: before mv file, check if already exist in target dir and is the same. 
 #										If yes, rename first existing one as file_before_${RUNDATE}_${RNDM1}.ext
 # New in Distro V 10.2.0 20260903:	- InSARprocess with ETAD: check first that both images have the name nr (no zero) of ETAD products 
+# New in Distro V 10.2.1 20261006:	- if forced geoporjection with kml, keep a backup of the kml as i12/TextFiles/ForcedGeoc_${GEOCKML}
+# New in Distro V 10.2.2 20261007:	- debug cp ForcedGeoc_${GEOCKML} frmo corr here above (was copied with path)
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better... when time.
 # ****************************************************************************************
-FCTVER="Distro V10.2.0 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 03, 2026"
+FCTVER="Distro V10.2.1 AMSTer script utilities"
+FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 06, 2026"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 
@@ -2551,6 +2553,15 @@ function GeocUTM()
 						then 
 							# OK file exists 
 							ChangeParam "Path to a kml file defining the geoProjection area" ${GEOCKML} geoProjectionParameters.txt	
+							# backup kml 
+							GEOCKMLFILE=$(basename "${GEOCKML}")
+							if [ -f ${RUNDIR}/i12/TextFiles/ForcedGeoc_${GEOCKMLFILE} ]
+								then
+									eval RUNDATETMP=`date "+ %m_%d_%Y_%Hh%Mm" | ${PATHGNU}/gsed "s/ //g"`
+									cp ${GEOCKML} ${RUNDIR}/i12/TextFiles/ForcedGeoc_${RUNDATETMP}_${GEOCKMLFILE}
+								else 
+									cp ${GEOCKML} ${RUNDIR}/i12/TextFiles/ForcedGeoc_${GEOCKMLFILE}
+							fi
 						else 
 							EchoTeeYellow "Can't find the kml for defining geocoding area in ${GEOCKML} " 
 							EchoTeeYellow "Try using xMin, xMax, yMin and yMax instead..." 

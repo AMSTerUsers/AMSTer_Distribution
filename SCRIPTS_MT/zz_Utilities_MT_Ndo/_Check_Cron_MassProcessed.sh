@@ -1996,7 +1996,7 @@ if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Funu2D" ] ; then
 				CheckS1
 		done
 	echo "${bold}Funu2D Sentinel-1 Desc 21; satellite C${normal} - new orbits from 2026 06 23"
-		FIRSTIMG=20260711  # YYYYMMDD
+		FIRSTIMG=20260701  # YYYYMMDD
 		SENSOR=C
 		# Check the last images 
 		for i in $(seq 1 ${OLD})			

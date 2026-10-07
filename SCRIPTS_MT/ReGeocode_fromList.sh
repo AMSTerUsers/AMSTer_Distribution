@@ -536,7 +536,7 @@ do
 	HAFULL=`GetParamFromFile "Ambiguity altitude at scene centre" InSARParameters.txt` 
 	HA=`echo "${HAFULL}" | cut -c 1-5`
 	BTFULL=`GetParamFromFile "Temporal baseline" InSARParameters.txt` 
-	if [ ${BTFULL} == "(null)" ] ; then 
+	if [ "${BTFULL}" == "(null)" ] ; then 
 			BT=0
 		else  
 			BT=`echo "${BTFULL}" | cut -c 1-5 | ${PATHGNU}/gsed "s/ //g"`
