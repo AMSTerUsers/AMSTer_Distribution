@@ -4,6 +4,11 @@
 # It expect as input file, the output.txt file created with RegLin_DEM_Defo_all_Maps_In_Geocoded.sh 
 # It plots r2, slope and intercept vs BT, BP and dates
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (see import)
 #				
 #
@@ -12,6 +17,8 @@
 #
 # New in Distro V 1.0 20250121: DS	- save all plots at location of input file
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

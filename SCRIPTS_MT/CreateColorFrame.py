@@ -1,6 +1,12 @@
 #!/opt/local/amster_python_env/bin/python
 # -*-coding:Utf-8 -*
 #import struct
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 #	Dependencies: 
 #	-  Python + Numpy
 #	-  Python + GDAL (osgeo) -> only required for the GeoTIFF mode
@@ -84,6 +90,8 @@
 #								  underneath it (ImportError: cannot import name _gdal_array, or
 #								  undefined symbol ...GDALDataset...). ReadRaster/WriteRaster are
 #								  part of the core bindings and exchange plain bytes
+# New in Distro V 3.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # This script is part of the AMSTer Toolbox 

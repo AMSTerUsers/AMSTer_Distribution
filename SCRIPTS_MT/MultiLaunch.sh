@@ -16,6 +16,11 @@
 #               - LABELX and LABELY: position of date label in amplitude jpg images 
 #				- optional: list of images to process (in the form of yyyymmdd or S1 name)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:
 # 	- MT and MT Tools, at least V20190716. 	
 #	- The FUNCTIONS_FOR_MT.sh file with the function used by the script. Will be called automatically by the script
@@ -38,13 +43,16 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20250523:	- state that it accepts asymetric zoom (either a single real value or NAzMRg, where N and M are reals values if want an asymmetric zoom)
 # New in Distro V 3.2 20250626:	- remove MULTIPLEIMG
+# New in Distro V 3.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on June 26, 2025"
+VER="Distro V3.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

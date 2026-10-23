@@ -9,23 +9,32 @@
 #
 # Parameters: - path to DEM.txt file, that is the DEM header in csl format.  
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- updateParameterFile function from AMSTer Engine 
 #
 #
 # New in Distro V 1.0 20251223: - creation
 # New in Distro V 1.1 20260219: - rename current script from cslDEM2envi.sh into DEM_AMSTer_txt2Envi_hdr.sh 
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2025, Last modified on Feb 19, 2026"
-
+VER="Distro V1.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
-echo " "
+echo " " 
+
+
 
 INPUTDEMTXT="$1"		# path to DEM.txt in CSL format
 

@@ -7,6 +7,11 @@
 # NOTE:	This script requires several adjustments in script body if transferred to another target. 
 #		See all infos about Tracks and Sets
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 2.0.0 20201104 :	- move most of the parameters at the beginning
 # New in Distro V 2.1.0 20201104 :	- check S1 nr of bursts and corner coordinates
 # New in Distro V 2.0.0 20220602 :	- use new Prepa_MSBAS.sh compatible with D Derauw and L. Libert tools for Baseline Ploting
@@ -22,10 +27,22 @@
 # New in Distro V 5.2 20240702:	- enlarge Bp2 from 30 to 70m to account for orbital drift
 # New in Distro V 5.3 20240826:	- read S1 images with option EXACTKML (that is read only brusts exactly overlapping the kml rather than the circumscribed rectangle)
 #								- adapt number of bursts in _Check_ALL_S1_SizeAndCoord_InDir.sh for desc (8 => 6)
+# New in Distro V 5.4 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 source $HOME/.bashrc
 

@@ -21,24 +21,32 @@
 #					Plot_vectorDispl_DEM.py ${WHEREDEM} ${NSDISPL} ${EWDISPL} --scalevalue 0.5 --dwsple 15 --x_min 955 --x_max 1249 --y_min 1005 --y_max 1349 --contour
 #				and after
 #       
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- PlotTS_all_comp.sh
 #
 # New in Distro V 1.1 2024xxxx:	- 
 # New in Distro V 2.0 20250918:	- add NS if any
 # New in Distro V 2.1 20251113:	- OLL was not defined and quote variables
 #								- debug search of 2D or 3D
+# New in Distro V 2.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 13, 2025"
-
+VER="Distro V2.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
 
 DOUBLEDIFFPAIRSEWUD=$1 	# e.g. "${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts/List_DoubleDiff_EW_UD_Region.txt"
 INVERTIONPARAM=$2		# e.g. _Auto_2_0.004_PF

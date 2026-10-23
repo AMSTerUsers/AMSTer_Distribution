@@ -8,6 +8,11 @@
 # 			re-unwrap later has not been tested. Hope nothing would be missing...
 #			Maybe you want to make some tests firsts. 
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: - none
 #
 # Parameter:	- PATH to dir that contains all the PAIR_DIRS from a mass processing
@@ -16,15 +21,22 @@
 #					moderate: keeps unwrapped and coh stuffs (if one wants to re-geocode later; not tested though !) 
 #					light: keep (filtered) interferogram & unwrapped and coh (if one wants to re-unwrap later; not tested though !) 
 #
+# New in Distro V 1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V1.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 
 PAIRDIRS=$1

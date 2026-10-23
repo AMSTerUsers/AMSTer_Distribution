@@ -1,7 +1,14 @@
 #!/opt/local/amster_python_env/bin/python
 # -----------------------------------------------------------------------------------------
 # This script aims at displays some stats after a BaselineCohTable
+#
 # Parameter : Baseline_Coh_table_{kml}.txt
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies : python3  and modules see import below 
 #
 #
@@ -13,6 +20,8 @@
 # New in Distro V2.2 20250306	- Add label to boxplot
 # New in Distro V2.3 20250808	- Fix bug plot label q1, q3
 # New in Distro V3.0 20250813:	- launched from python3 venv
+# New in Distro V3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

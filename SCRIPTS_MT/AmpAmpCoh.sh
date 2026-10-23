@@ -11,6 +11,11 @@
 #
 # Hard coded:	- path to Fiji is defined in .bashrc but the name of the software may differ. See at the end of script
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- Fiji (ImageJ). (!!! /etc/ImageMagick-6/policy.xml --> increase value to 8GiB at line <policy domain="resource" name="disk" value="1GiB"/>)
 #				- gnu sed for more compatibility. 
 #  
@@ -20,6 +25,8 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 2.1 20260714:	- fix path to Fiji for Mac ARM
 # New in Distro V 2.2 20260901:	- update call for FIJI 
+# New in Distro V 2.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
@@ -32,10 +39,11 @@ source ${HOME}/.bashrc
 
 
 PRG=`basename "$0"`
-VER="Distro V2.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2022, Last modified on SEPT 1, 2026"
+VER="Distro V2.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, Maxime Jaspard (c)2016-2022, Last modified on Oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " "
 
 # Check OS

@@ -13,6 +13,11 @@
 #
 # Parameters: - Time serie file (eps file))
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- Fiji (ImageJ). 
 #				- gnu sed for more compatibility. 
 #				- Python + Numpy + script: CreateColorFrame.py, AmpDefo_map.sh, TimeSerieInfo_HP.sh,AmpTif_map.sh
@@ -80,18 +85,22 @@
 #								- automatically update crop values in TS_parameters.txt to cope with possible crop from header.txt
 # New in Distro V 5.1 20260904:	- DO NOT ADJUST CROP IN TS_parameters.txt because it offsets the results in the GoogleEarth figure !
 #									This offset is only if images are cropped AFTER msbas processing because msbas processing output images at full frame, even if computation is only performed on a crop. 
-# 
+# New in Distro V 5.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro 5.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 04, 2026"
-
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 # vvv ----- Hard coded lines to check --- vvv 
 source ${HOME}/.bashrc

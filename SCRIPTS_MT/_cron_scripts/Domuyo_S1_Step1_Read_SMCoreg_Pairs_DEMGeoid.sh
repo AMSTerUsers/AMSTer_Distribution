@@ -6,6 +6,11 @@
 #
 # BEWARE, if it is the first run, you must compute the baseline plot (to get the Global Primary) before starting the coregistration
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 2.0.0 20220602 :	- use new Prepa_MSBAS.sh compatible with D Derauw and L. Libert tools for Baseline Ploting
 # New in Distro V 3.0.0 20230104 :	- Use Read_All_Img.sh V3 which requires 3 more parameters (POl + paths  to RESAMPLED and to SAR_MASSPROCESS) 
 # New in Distro V 3.1.0 20230626 :	- Color tables are now in TemplatesForPlots
@@ -19,12 +24,21 @@
 #									- run _Check_ALL_S1_SizeAndCoord_InDir.sh in parallel
 # New in Distro V 6.0.0 20240530:	- reprocessing with DEM referred to Geoid 
 # New in Distro V 6.1.0 20240624:	- enlarge BP2 (from back to 20220501) to cope with new S1 orbital tube from 05 2024
-
-#
+# New in Distro V 6.1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#				 					  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# NdO (c) 2016/03/25 - could make better... when time.
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V6.1.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
 source $HOME/.bashrc
 
 # Some variables 

@@ -12,9 +12,16 @@
 # 				- input file full path (List_DoubleDiff_EW_UD.txt like file, that is a list of line1 col1 line2 col2 label)
 # 				- output file full path (same structure as input file, that is a list of line1 col1 line2 col2 label)
 
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3 and modules loaded below
 
 # New in V2.0 20250908: - drastic change from the .sh version in order to cope with change in UTM zone
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Delphine Smittarello, (c)2024; NdO 2025

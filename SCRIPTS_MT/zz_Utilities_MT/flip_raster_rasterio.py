@@ -5,10 +5,17 @@
 #
 # Parameters : - 
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- 
 #
 
-#New in Distro V 1.0 202603125:		- setup
+# New in Distro V 1.0 202603125:- setup
+# New in Distro V 1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # N.d'Oreye, v Beta 1.0 2022/08/31 -       

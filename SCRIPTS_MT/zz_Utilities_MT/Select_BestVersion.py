@@ -26,11 +26,19 @@
 # ENVI is read natively (header parsing + numpy), hence no rasterio/GDAL
 # dependency and no .aux.xml sidecar dropped in the data directories.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
+#
 ############################################################################
 # Author: N. d'Oreye + assistant, 2026
 # Scoring logic after Select_bestatmocor.py, D. Smittarello, 2026
 ############################################################################
 # New in V1.1 : - 
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2017-18

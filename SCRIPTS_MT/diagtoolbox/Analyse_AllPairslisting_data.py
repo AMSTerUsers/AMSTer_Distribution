@@ -21,6 +21,11 @@
 #    --BP2          : New baseline (BP) value after the datechange. Optional.
 #    --BT2          : New temporal baseline (BT) value after the datechange. Optional.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies : python3 and modules below
 #
 #
@@ -52,6 +57,8 @@
 # New in Distro V 2.3 20250128: - ajout optionnel date change for BPBT
 # New in Distro V 2.4 20250212: - Cosmetic and improve help
 # New in Distro V 3.0 20250813:	- launched from python3 venv
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # This script is part of the AMSTer Toolbox 

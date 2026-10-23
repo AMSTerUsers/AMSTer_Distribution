@@ -19,6 +19,11 @@
 # Hardcoded: - a lot... se below paragraph named HARD CODED but also adapt below depending on the number of modes 
 #			 - suppose everywhere that modes are DefoInterpolx2Detrend
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- 
 #
 # New in Distro V 2.0:	- based on beta version used for VVP, Domuyo, Lux and PF processing at ECGS
@@ -36,14 +41,21 @@
 # New in Distro V 5.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 5.1.1 20250424 :	- check if correct termination in MSBAS_LOG.txt at right place
-
+# New in Distro V 5.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.1.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 24, 2025"
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
 
 exit 
 THE SCRIPT IS NOT FINISHED... 

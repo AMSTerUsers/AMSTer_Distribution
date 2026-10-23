@@ -5,6 +5,11 @@
 # Parameters: 	- Envi file with path
 #				- optional: % of clipping Min Max color range to make it more dynamic (default = 0.05, that is 5%)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: - gdal
 #				- imagemagick or graphicsmagick
 #				- python script CreateColorTable.py if use graphicsmagick
@@ -13,15 +18,19 @@
 #
 # New in Distro V 1.0:	-  based on Envi2ColorKmz.sh
 # New in Distro V 1.1:	-  optional clipping of min max range color table 
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 1, 2025"
+VER="Distro V1.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " " 
 
 INPUTFILE=$1

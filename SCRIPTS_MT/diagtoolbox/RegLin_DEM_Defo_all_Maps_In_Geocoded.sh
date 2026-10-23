@@ -3,6 +3,11 @@
 # This script computes the linear regression between DEM and deformation for all maps in input dir
 # DEM and DEFO must be of the same size.  
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (see import)
 #				- RegLin_DEM_Defo_modif.py 
 #
@@ -15,6 +20,8 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 2.1 20250121: DS	- Append file name, coefficients and r2 to output file name output.txt in current dir
 # 								DS	- Comment figure display and save as png
+# New in Distro V 2.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

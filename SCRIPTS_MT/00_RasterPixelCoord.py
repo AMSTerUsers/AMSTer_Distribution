@@ -1,7 +1,41 @@
 # https://gis.stackexchange.com/questions/261504/getting-row-col-on-click-of-a-pixel-on-a-qgis-map?noredirect=1&lq=1
 # Slightly modified by AD from Detlev for QT5 and QGIS 3
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
+# Dependencies: - PlotTS.sh  
+#					+TS_AddLegend_LOS.sh 
+#						++ AmpDefo_map.sh 
+#							+3+ CreateColorFrame.py 
+#								+4+AmpTif_map.sh 
+#									+5+CreateColorFrame.py  
+#									+5+__HardCodedLines.sh  
+#									+5+__ImageMagickFcts.sh  
+#								+4+CreateColorFrame.py 
+#							+3+ __HardCodedLines.sh   	<dependencies listed above>
+#							+3+ __ImageMagickFcts.sh  	<dependencies listed above>
+#						++ AmpTif_map.sh  [l. 521]   	<dependencies listed above>
+#						++ CreateBackgroundMaps.sh 
+#							+3+ EnviGridInfo.py 
+#								+4+ EnviGridInfo.py 
+#						++ Mask_Builder.py 
+#						++ TimeSeriesInfo_HP.sh 
+#							+3+ AmpTif_map.sh   		<dependencies listed above>
+#							+3+ CreateColorFrame.py  	<dependencies listed above>
+#							+3+ __HardCodedLines.sh  	<dependencies listed above>
+#							+3+ __ImageMagickFcts.sh  	<dependencies listed above>
+#					+__HardCodedLines.sh  			 	<dependencies listed above>
+#				 - packages PyQt5.QtCore, math, qgis.gui, qgis.utils, os, qgis, subprocess
+#				
 # Works with python3.10
+#
 # New in Distro V 	20231030:	- Rename MasTer Toolbox as AMSTer Software
+# New in Distro V 1.1 	20261013:	- update list of dependencies; recommend using 
+#									  Search_Dependencies.sh for an updated list 
+#
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.

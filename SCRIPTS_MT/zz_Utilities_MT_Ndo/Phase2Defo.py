@@ -11,8 +11,15 @@
 #				- the name of the input file (float 32), with or without its path. It must however be named like TADxxxPhaseCorrection, where xxx is either Geodetic, Ionospheric or Tropospheric.
 #				- the wavelength of the SAR sensor 
 #  
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 #
 # New in Distro V 1.0  20280909: - set up 
+# New in Distro V 1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2025 - could make better with more functions... when time.

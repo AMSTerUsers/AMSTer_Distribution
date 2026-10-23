@@ -7,6 +7,11 @@
 #				- Date of version to update (YYYYMMDD)
 #				- optional: if -p, compile AMSTEer Engine with parallelisation
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	 
 #				- __HardCodedLines.sh for Path to MT directory depending on the Operating Sytem
 #
@@ -34,18 +39,21 @@
 # New in Distro V 7.2 20260702:	- ParalleliseME now passes PKGMGR to make, so InSAR/sources and MSBASTools/sources
 #								  makefiles can select Homebrew (macOS Tahoe/26+) vs MacPorts on Darwin
 #								 (requires updated InSAR/sources/makefile and MSBASTools/sources/makefile with the new PKGMGR branch)
+# New in Distro V 7.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V7.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2023"
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
 echo "Processing launched on $(date) " 
-echo " "
+echo " " 
+
 
 # vvv ----- Hard coded lines to check --- vvv 
 source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh

@@ -12,23 +12,33 @@
 # Parameters: - full path to directory to test where RESAMPLED data are stored, e.g. 
 #				/.../SAR_SM/RESAMPLED/YourSat/YourRegionTrak
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- updateParameterFile from AMSTer Engine
 #
 # New in Distro V 1.0 20251125
 # New in Distro V 2.0 20251127 (NdO):	- add check for S1-IW data
 #										- check that non S1-IW dir are not empty
 #										- store wrong resampled data in file
-#
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# DS (c) 2024/01/16 - could make better with more functions... when time.
-######################################################################################
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.0 AMSTer script utilities" 
-AUT="Delphine Smittarello, (c)2016-2025, Last modified on Nov 25, 2025" 
-echo " " 
-echo "${PRG} ${VER}, ${AUT}" 
+VER="Distro V2.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 modedir="$1"
 

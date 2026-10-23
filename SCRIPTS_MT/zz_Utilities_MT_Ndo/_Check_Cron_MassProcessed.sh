@@ -4,6 +4,11 @@
 # Note that because there is no revisiting time defined for CSK, it takes into account
 # all the X last existing raw images
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- color terminal
 #				- gnu sed and awk	
 #				- python script _Check_kml_in_kml 		
@@ -66,17 +71,21 @@
 #									every one of the OLD iterations, hence after 5 calls 
 #									the first-image date has drifted 35 days. Recompute with FIRSTIMGSHIFT
 # New in Distro V 4.21 20260929: - Debug S1C : remove shift after orbit manoeuvre and select new first image after manoeuvre
+# New in Distro V 4.22 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V4.21 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 29, 2026"
-
+VER="Distro V4.22 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
 
 TARGET=$1		# must be exactly either: Domuyo, PF, LUX, Karthala, Guadeloupe, Funu2D, Funu3D, Galeras, NEPAL
 				#	Optional, i.e. works only as single target:	Laguna, VVP, VVPCSK
@@ -2098,7 +2107,7 @@ if [ "${TARGET}" == "NONE" ] || [ "${TARGET}" == "Funu3D" ] ; then
 				CheckS1
 		done
 	echo "${bold}Funu3D Sentinel-1 Desc 21; satellite C${normal} - new orbits from 2026 06 23"
-		FIRSTIMG=20260711  # YYYYMMDD
+		FIRSTIMG=20260701  # YYYYMMDD
 		SENSOR=C
 		# Check the last images 
 		for i in $(seq 1 ${OLD})			

@@ -17,6 +17,11 @@
 #							If clip min + clip max are too big, they are downscaled proportionally to keep 10% of the range
 #						- if you do not want to clip, then enter 0 
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: - gdal
 #				- imagemagick or graphicsmagick
 #				- python script CreateColorTable.py if use graphicsmagick
@@ -53,15 +58,19 @@
 #									file that would be named step1.tif or color.tif
 #								- GDAL_PAM_ENABLED=NO to avoid creation of .aux.xml beside the input file
 #								- use ${PATHGNU}/sed for in place edition because BSD sed -i requires a suffix
+# New in Distro V 5.4 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " " 
 
 export GDAL_PAM_ENABLED=NO		# do not pollute the data dir with .aux.xml files

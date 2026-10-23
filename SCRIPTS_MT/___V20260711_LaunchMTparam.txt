@@ -52,7 +52,7 @@ SIGMANO		# CALIBSIGMA, if SIGMAYES it will output sigma nought calibrated amplit
 ##############
 			# S1COREGMODE, For S1 only: either S1SM (for coregistering all the S1 on a given Super Master),
 			#              or S1ORBIT (or anything else than S1SM) to skip coreg and rely only on the S1 orbits. 
-			# ESD,For S1: applying Extended Spectral Density (ESDYes), or not (anything else than ESDYes)
+			# ESD,For S1: applying Enhanced Spectral Diversity (ESDYes), or not (anything else than ESDYes)
 64        	# CCOHWIN, Coarse coreg window size (64 by default but may want less for very small crop). Can be set to 0 to skip coarse coreg when using god orbit sat such as TSX, TDX and Envisat
 0.4			# COH, Coarse Coherence threshold coregistration 
 24          # CCDISTANCHOR, Coarse registration range & az distance between anchor points [pix] (eg 24 for large img, 16 for medium and 2-8 for very small crops)

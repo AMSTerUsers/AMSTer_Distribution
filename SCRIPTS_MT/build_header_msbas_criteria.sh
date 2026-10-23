@@ -22,6 +22,11 @@
 #
 # ex: build_header_msbas.sh DefoInterpolx2Detrend 2 150 50 /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Asc/Resampled_20160223_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML4 /Volumes/hp-D3600-Data_Share1/SAR_MASSPROCESS/CSK/Bukavu_Desc/Resampled_20160111_Crop_Funu_-2.473_-2.574_28.821_28.904_Zoom1_ML4 
 #       
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python 
 #				- checkOnlyNaN.py script
 #				- gnu sed and awk for more compatibility. 
@@ -88,14 +93,16 @@
 # New in Distro V 9.6 20250401:	- make grep search case insensitive for Samples and lines 
 #								- check if raster exist before creating link 
 # New in Distro V 9.7 20251202:	- skip PrepareModeI if no hdr file found 
-
+# New in Distro V 9.8 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V9.7 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Dec 02, 2025"
+VER="Distro V9.87 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

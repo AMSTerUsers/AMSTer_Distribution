@@ -2,12 +2,7 @@
 ###############################################################################
 # $Id: flip_raster.py
 #
-# New in Distro V 2.0 20250813:	- launched from python3 venv
-# New in Distro V 2.1 20260216:	-  Silent Python exceptions 
-# New in Distro V 2.2 20260218:	-  replace the use of ReadAsArray and WriteArray 
-# 									with ReadRaster and WriteRaster, which are 
-#									pure GDAL methods and do not require gdal_array.
-#
+
 #
 # Purpose:  Module to flip a raster dataset on the y axis.
 #           Useful for netcdf and surfer grd files with upper y values
@@ -15,6 +10,11 @@
 # Original Author:   Frank Warmerdam, warmerdam@pobox.com
 # Modified By:       Matthew Perry, perrygeo@gmail.com
 # Based on the gdal_merge.py script distributed with GDAL 
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
 #
 ###############################################################################
 # Copyright (c) 2000, Atlantis Scientific Inc. (www.atlsci.com)
@@ -38,6 +38,13 @@
 #        Some doubts about lines 48-51 and 281-284. It seems to be OK though.   
 #
 #
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20260216:	-  Silent Python exceptions 
+# New in Distro V 2.2 20260218:	-  replace the use of ReadAsArray and WriteArray 
+# 									with ReadRaster and WriteRaster, which are 
+#									pure GDAL methods and do not require gdal_array.
+# New in Distro V 2.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 ###############################################################################
 

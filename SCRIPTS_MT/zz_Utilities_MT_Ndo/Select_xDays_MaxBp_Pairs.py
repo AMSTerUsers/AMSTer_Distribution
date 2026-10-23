@@ -31,10 +31,17 @@
 #   For each Primary image, find the Secondary image acquired between +MinDays and +MaxDays days
 #   after the Primary, with |Bp| ≤ MaxBp. If no such Secondary exists, that Primary is skipped.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies : - python3.10 and modules below (see import) 
 #
 # New in Distro V 1.0 20251024:	- created
 # New in Distro V 1.1 20251028:	- new parameter to restrict search to x + MinDays up to x + MaxDays  
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

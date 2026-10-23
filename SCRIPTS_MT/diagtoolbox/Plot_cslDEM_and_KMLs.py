@@ -2,13 +2,22 @@
 # -----------------------------------------------------------------------------------------
 # This script allows you to visualize a Digital Elevation Model (DEM) in AMSTer format and 
 # overlay the contours of polygons contained in multiple KML files listed in a text file.
+#
 # Parameters: DEMfullpath ,file with list of kml paths, result dir
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: python3 and module below
 #
 # New in 1.0 (20250130 - DS): -
 # New in 1.1 (20250212 - DS): - Cosmetic
 # New in 1.2 (20250808 - DS): - make kml-list optional
 # New in Distro V 3.0 20250813:	- launched from python3 venv
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # This script is part of the AMSTer Toolbox

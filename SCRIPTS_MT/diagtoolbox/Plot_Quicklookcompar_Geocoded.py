@@ -5,11 +5,18 @@
 #It takes crop coordinates as an optional argument and displays all 3 maps with respect to this crop. 
 #It takes a coherence threshold as an optional argument and mask all pixels where coherence is below this threshold.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 #Usage : Plot_Quicklookcompar_Geocoded.py GEOCODEDFULLPATH DATE1 DATE2 [--coh_threshold COTH] [–crop XMIN XMAX YMIN YMAX]
 #
 # V 1.0 (20250226)
 # New in Distro V1.1 20250307 - cosmetic and savefig
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # DS

@@ -2,6 +2,11 @@
 # Script to run in cronjob for processing PF ALOS2 images:
 # Runs a mass processing after having checked that no other process is using the same param file (on this computer). 
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 #
 # New in Distro V 1.1 20240404:	- run all mass processing in background. 
 #								  Beware, this is OK for a routine run, i.e. when not all the 26 
@@ -12,13 +17,24 @@
 # New in Distro V 1.2 20240925:	- corr path to log files in $PATH_1660/SAR_MASSPROCESS/ALOS2 instead of S1
 # New in Distro V 1.3 202241230 :	- replace ${PATH_1650}/SAR_SM/MSBAS/PF_oldDEM with ${PATH_1650}/SAR_SM/MSBAS/PF
 # New in Distro V 1.4 20250410:	- change SM for mode 4041 (13D)
+# New in Distro V 1.5 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 1.6 20261014:	- Launch Mass Porcess inside the function can't be in background. 
+#								  The fct is launched in background 
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 10, 2025"
+VER="Distro V1.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 14, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 
 source $HOME/.bashrc
@@ -276,7 +292,7 @@ function LaunchMassProc()
 				#mv ${TABLE}_After20210331_WithBaselines_${MMDDYYYY}.txt ${TABLE}_After20210331_WithBaselines.txt
 
 				# Run on all pairs 
-				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLE} ${PARAM} > /dev/null 2>&1 &
+				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLE} ${PARAM} > /dev/null 2>&1 
 
 			else 
 				echo "${MODE} attempt aborted on ${TODAY} because other Mass Process in progress"  >>  $PATH_1660/SAR_MASSPROCESS/S1/PF_ALOS2_${MODE}/SMNoCrop_SM_${SM}_Zoom1_ML8/_${MODE}_last_aborted.txt

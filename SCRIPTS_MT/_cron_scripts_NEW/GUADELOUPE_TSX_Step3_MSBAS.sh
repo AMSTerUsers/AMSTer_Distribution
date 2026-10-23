@@ -19,21 +19,33 @@
 # Hardcoded: - a lot... se below paragraph named HARD CODED but also adapt below depending on the number of modes 
 #			 - suppose everywhere that modes are ${MSBASMODE}
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- 
+#
 # New in Distro V 1.0 20250122: - Adapt from VVP CSK to Guadeloupe TSX data
 # New in Distro V 1.0.1 20250424 :	- check if correct termination in MSBAS_LOG.txt at right place
-
+# New in Distro V 1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 1.2 20261014:	- Check that the same Step 2 is not running overwrites STOPRUN. 
+#									  A running copy of Step 3 could therefore have beeen ignored.
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.0.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 24, 2025"
-
+VER="Distro V1.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 14, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " "
+
+
 
 source $HOME/.bashrc
 
@@ -391,7 +403,7 @@ TODAY=`date`
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
 	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" | wc -l`
-	if [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
+	if [ "${STOPRUN}" == "NO" ] &&  [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	if [ "${STOPRUN}" == "YES" ] 
 		then 

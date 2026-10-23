@@ -43,12 +43,19 @@
 # WARNING: it must be run in the directory containing all the defo maps. 
 #          IT WILL OVERWRITE THE DEFO MAPS !!!
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Parameters: 	- defo map from part 1 at date = last 1.5 BT   
 #				- defo map from part 2 at date = first 1.5 BT 
 #
-# New in Distro V 1.0  20240729: - set up 
-# New in Distro V 1.1  20240812: - adapt pattern to LOS modes as well
-# New in Distro V 2.0  20250813:	- launched from python3 venv
+# New in Distro V 1.0 20240729: - set up 
+# New in Distro V 1.1 20240812: - adapt pattern to LOS modes as well
+# New in Distro V 2.0 20250813: - launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

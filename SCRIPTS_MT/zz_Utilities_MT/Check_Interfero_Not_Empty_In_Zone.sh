@@ -18,6 +18,11 @@
 #		- path to defo (from mode) files : SAR_MASSPROCESS/SAT/TRK/REGION_ML/Geocoded/DefoInterpolx2Detrend
 #
 #       
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- function getStatForZoneInFile from AMSTer Engine
 #    			- bc (for basic computations in scripts)
 #
@@ -30,17 +35,21 @@
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
+# New in Distro V 3.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 13, 2024"
+VER="Distro V3.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
 
 MODETOCLEAN=$1		# Mode to clean, i.e. MODEi as in MSBAS_RESULTS/MODEi
 KML=$2				# Zone where to test if signal exist  

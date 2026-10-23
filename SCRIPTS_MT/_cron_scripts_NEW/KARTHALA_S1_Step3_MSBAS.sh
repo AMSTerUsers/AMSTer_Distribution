@@ -22,6 +22,11 @@
 # Hardcoded: - a lot... se below paragraph named HARD CODED but also adapt below depending on the number of modes 
 #			 - suppose everywhere that modes are DefoInterpolx2Detrend
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- 
 #
 # New in Distro V 2.0:	- based on beta version used for VVP, Domuyo, Lux and PF processing at ECGS
@@ -46,16 +51,23 @@
 #								- test if another Step3 is running. If yes, stop to avoid overloading the computer
 # New in Distro V 5.3.0 2026730 :	- force msbasv4								
 # New in Distro V 5.4 20260929:	- add IW Desc 137
+# New in Distro V 5.5 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 5.6 20261014:	- Check that the same Step 2 is not running overwrites STOPRUN. 
+#									  A running copy of Step 3 could therefore have beeen ignored.
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.4.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 29, 2026"
+VER="Distro V5.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 14, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " "
+
 
 source $HOME/.bashrc
 
@@ -117,7 +129,7 @@ TODAY=`date`
 		TABLE1=${SET1}/table_0_50_0_150_Till_20220501_0_150_0_150_After_WITHHEADER.txt
 		TABLE2=${SET2}/table_0_150_0_150.txt
 		TABLE3=${SET3}/table_0_50_0_150.txt
-		TABLE3=${SET4}/table_0_50_0_150.txt
+		TABLE4=${SET4}/table_0_50_0_150.txt
 
 		# WARNING: 	build_header_msbas_criteria.sh requires all table files with the same Bp and Bt names, hence one MUST link 
 		#			SM table using 50m 50 days as tables named with 70m 70 days baselines
@@ -438,7 +450,7 @@ TODAY=`date`
 		# echo ${CHECKMB} >> CheckRun.txt
 		# ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" >> CheckRun.txt
 
-	if [ ${CHECKMB} -gt 3 ] ; then # use ${PATHGNU}/grep -v "grep "  instead of ${PATHGNU}/grep -v "grep ${PRG}" because depending on environment, it may miss the second version
+	if [ "${STOPRUN}" == "NO" ] &&  [ ${CHECKMB} -gt 3 ] ; then # use ${PATHGNU}/grep -v "grep "  instead of ${PATHGNU}/grep -v "grep ${PRG}" because depending on environment, it may miss the second version
 			REASON=" another ${PRG} is running" 
 			STOPRUN="YES"
 		else
@@ -461,7 +473,7 @@ TODAY=`date`
 	CHECKMPSM=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
 
 #	if [ ${CHECKMPIW} -ne 0 ] || [ ${CHECKMPSM} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2} or ${CRONJOB2SM})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
-	if [ ${CHECKMPSM} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2} or ${CRONJOB2SM})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
+	if [ "${STOPRUN}" == "NO" ] &&  [ ${CHECKMPSM} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2} or ${CRONJOB2SM})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	if [ "${STOPRUN}" == "YES" ] 
 		then 

@@ -6,6 +6,11 @@
 #
 # This will be fed into the script Envi2ColorKmz.sh 
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Parameters:	- name of the color table to create
 #				- Min value of Envi file to be used as min value in table 
 #				- Max value of Envi file to be used as max value in table 
@@ -19,6 +24,8 @@
 #								- update for val in values loop
 #								- auto format legend 
 #								- ensure no division by 0
+# New in Distro V 2.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

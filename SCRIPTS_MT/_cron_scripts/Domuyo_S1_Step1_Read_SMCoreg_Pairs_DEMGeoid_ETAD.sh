@@ -6,6 +6,11 @@
 # No need to corigister them on a Global Primary (super master) because ETAD plays no role here, hence these steps are commented below. 
 # Compute the compatible pairs for only the images with full ETAD data.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # BEWARE, if it is the first run, you must compute the baseline plot (to get the Global Primary) before starting the coregistration
 #
 # New in Distro V 2.0.0 20220602 :	- use new Prepa_MSBAS.sh compatible with D Derauw and L. Libert tools for Baseline Ploting
@@ -26,11 +31,21 @@
 # New in Distro V 6.2.0 20260109:	- Download ETAD from last existing ETAD before reading them 
 # New in Distro V 6.2.1 20260112:	- debug FIRSTETADASC and FIRSTETADDESC
 # New in Distro V 6.2.2 20260408:	- corr mass process dir 
-#
+# New in Distro V 6.2.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#									  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# NdO (c) 2016/03/25 - could make better... when time.
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V6.2.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
 source $HOME/.bashrc
 
 # Some variables 

@@ -22,24 +22,35 @@
 # Hardcoded: - a lot... se below paragraph named HARD CODED but also adapt below depending on the number of modes 
 #			 - suppose everywhere that modes are DefoInterpolx2Detrend
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- Replot_EW_UD_DoubleDiff_TS_From_Cron_Step3.sh (specific to Reunion Island, i.e. to replot LS points with other EVENTS)
 #				- Replot_LoS_DoubleDiff_TS_From_Cron_Step3.sh (specific to Reunion Island, i.e. to replot LS points with other EVENTS)
 #
 # New in Distro V 1.0 20260127:	- based on version 2D Distro V 5.2.0 (20260115) and cron step3 3D for Funu (V 2.2.0 20260115)
 #								- consider only the North of the Island for the Land slides 
 # New in Distro V 1.1.0 2026730 :	- force msbasv4								
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 1.3 20261014:	- Check that the same Step 2 is not running overwrites STOPRUN. 
+#									  A running copy of Step 3 could therefore have beeen ignored.
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
-
-
+VER="Distro V1.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 14, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " "
+
+
 
 source $HOME/.bashrc
 
@@ -468,7 +479,7 @@ TODAY=`date`
 		# echo ${CHECKMB} >> CheckRun.txt
 		# ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" >> CheckRun.txt
 
-	if [ ${CHECKMB} -gt 3 ] ; then # use ${PATHGNU}/grep -v "grep "  instead of ${PATHGNU}/grep -v "grep ${PRG}" because depending on environment, it may miss the second version
+	if [ "${STOPRUN}" == "NO" ] && [ ${CHECKMB} -gt 3 ] ; then # use ${PATHGNU}/grep -v "grep "  instead of ${PATHGNU}/grep -v "grep ${PRG}" because depending on environment, it may miss the second version
 			REASON=" another ${PRG} is running" 
 			STOPRUN="YES"
 		else
@@ -486,11 +497,11 @@ TODAY=`date`
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
 	CHECKMPIW=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
 	CHECKMPSM=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2SM} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh"  | wc -l`
-	if [ ${CHECKMPIW} -ne 0 ] || [ ${CHECKMPSM} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2} or ${CRONJOB2SM})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
+	if [ "${STOPRUN}" == "NO" ] && [ ${CHECKMPIW} -ne 0 ] || [ ${CHECKMPSM} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2} or ${CRONJOB2SM})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	# Check that no other cron job step 3 2D (SuperMaster_MassProc.sh) is running
 	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2D} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
-	if [ ${CHECKMP} -ne 0 ] ; then REASON=" Same cron job step 3 though in 2D in progress (${CRONJOB3D})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
+	if [ "${STOPRUN}" == "NO" ] && [ ${CHECKMP} -ne 0 ] ; then REASON=" Same cron job step 3 though in 2D in progress (${CRONJOB3D})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	if [ "${STOPRUN}" == "YES" ] 
 		then 

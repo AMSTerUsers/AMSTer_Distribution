@@ -6,6 +6,11 @@
 # Parameters: -	FILETOCHECK 
 #			  - input file format (byte or float32)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (see import)
 #
 # New in Distro V 1.0:	- Based on developpement version and Beta V1.0
@@ -17,6 +22,8 @@
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 3.1 20240918:	- corr check nr of arguments
 # New in Distro V 4.0 20250813:	- launched from python3 venv
+# New in Distro V 4.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # launch command : python thisscript.py param1 param2

@@ -21,6 +21,11 @@
 # Hardcoded: - a lot... se below paragraph named HARD CODED but also adapt below depending on the number of modes 
 #			 - suppose everywhere that modes are DefoInterpol !!
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- awk 
 #				- several scripts from SCRIPTS_MT
 #
@@ -29,16 +34,23 @@
 # New in Distro V 2.1.0 20251125 :	- always limited to 128 threads (see MAXTHREADS) to prevent problems with openblas, which is compiled by default for 128 threads 
 # New in Distro V 2.2.0 2026730 :	- force msbasv4								
 # New in Distro V 3.0.0 20260824 :	- With ESD
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 3.2 20261014:	- Check that the same Step 2 is not running overwrites STOPRUN. 
+#									  A running copy of Step 3 could therefore have beeen ignored.
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 24, 2026"
+VER="Distro V3.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 14, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " "
+
 
 source $HOME/.bashrc
 
@@ -565,7 +577,7 @@ function RemoveDates()
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
 	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | wc -l`
-	if [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
+	if [ "${STOPRUN}" == "NO" ] && [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	if [ "${STOPRUN}" == "YES" ] 
 		then 

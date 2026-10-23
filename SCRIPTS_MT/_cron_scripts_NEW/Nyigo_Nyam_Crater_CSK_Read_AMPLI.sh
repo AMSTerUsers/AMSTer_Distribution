@@ -3,17 +3,33 @@
 # updated on Aug. 12 2021 by NdO to account for the new way of cropping the images with the most recent version of AMSTer Engine. 
 #                                Also takes the new Global Primary (SuperMaster) for Nyam  
 # updated on Jan. 16 2023 by NdO to account for the new DEM etc
-
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 2.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.0 20250311:	- SINCE READING AND SORTING IS NOT PERFORMED ANYMORE AT THE PROCESSING OF INTERFEROMETRIC RESULTS ON VVP, LET'S DO IT HERE NOW
+# New in Distro V 4.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V4.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
 
 
 source $HOME/.bashrc

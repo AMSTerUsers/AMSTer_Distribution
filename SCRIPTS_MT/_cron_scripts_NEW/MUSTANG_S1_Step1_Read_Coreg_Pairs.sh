@@ -2,13 +2,31 @@
 # Script to run in cronjob for processing MUSTANG  images:
 # Read images, corigister them on a Global Primary (SuperMaster) and compute the compatible pairs.
 # It also creates a common baseline plot for  ascending and descending modes. 
-
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 1.0.0 20250811 :	- based on Galeras and Nepal processing
 # New in Distro V 1.1.0 20251027 :	- add longer segments to max 3 shortest baseline plots: 30 days - 180 days and 365 days with max 30m
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 1.3 20261013:	- usage of undefined SMASC1 and SMDESC1 instead of SMASC and SMDESC
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V1.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 source $HOME/.bashrc
 
@@ -107,10 +125,10 @@ wait
 # Compute pairs 
 # Compute pairs only if new data is identified
 if [ ! -s ${NEWASCPATH}/_No_New_Data_Today.txt ] ; then 
-	echo "n" | Prepa_MSBAS.sh ${DIRSET}/set1 ${BP} ${BT} ${SMASC1} ${BP2} ${BT} ${DATECHG} > /dev/null 2>&1  &
+	echo "n" | Prepa_MSBAS.sh ${DIRSET}/set1 ${BP} ${BT} ${SMASC} ${BP2} ${BT} ${DATECHG} > /dev/null 2>&1  &
 fi
 if [ ! -s ${NEWDESCPATH}/_No_New_Data_Today.txt ] ; then 
-	echo "n" | Prepa_MSBAS.sh ${DIRSET}/set2 ${BP} ${BT} ${SMDESC1} ${BP2} ${BT} ${DATECHG} > /dev/null 2>&1  &
+	echo "n" | Prepa_MSBAS.sh ${DIRSET}/set2 ${BP} ${BT} ${SMDESC} ${BP2} ${BT} ${DATECHG} > /dev/null 2>&1  &
 fi
 wait
 

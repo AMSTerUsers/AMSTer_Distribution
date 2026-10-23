@@ -5,6 +5,11 @@
 # NOTE: because LUX_S1_Step1_Read_SMCoreg_Pairs.sh uses RadAll_Img.sh, which also move updated prelim orbit images at all levels in _CLN dir,
 #       and coregister images on Global Primaries (SuperMasters), one check that it is not running anymore before starting.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 #
 # New in Distro V 2.0 20201104:	- move all parameters at the beginning
 # New in Distro V 3.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
@@ -15,10 +20,22 @@
 # New in Distro V 4.1 20240702:	- enlarge Bp2 from 30 to 70m to account for orbital drift
 # New in Distro V 4,2 20260116:	- in check running process, do not take into account Crons_1_2_3.sh 
 #								- add wait at the end
+# New in Distro V 4.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V4.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 source $HOME/.bashrc
 
 cd

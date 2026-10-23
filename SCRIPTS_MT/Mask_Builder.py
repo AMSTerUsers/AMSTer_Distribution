@@ -11,6 +11,11 @@
 #             anything else -> ENVI (a .hdr is written when GDAL is available,
 #                              otherwise plain raw float32 as in the previous versions)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 2.0 20250813:	- launched from python3 venv
 # New in Distro V 3.0 20260730:	- reads GeoTIFF as well as ENVI/raw binary
 #				- writes GeoTIFF or ENVI, geocoding and projection preserved
@@ -23,6 +28,8 @@
 #				- compare nodata in the dtype of the pixels: GDAL reports it as a
 #				  double, so on a float32 raster the float64 comparison never
 #				  matched and nodata pixels were kept as valid
+# New in Distro V 3.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # This script is part of the AMSTer Toolbox
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

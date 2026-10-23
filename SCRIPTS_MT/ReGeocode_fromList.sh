@@ -25,6 +25,11 @@
 # HARD CODED: 	- list of products to gecode
 #				- FIG=FIGyes or FIGno if one wants to recompute the rasters
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- gnu sed and awk for more compatibility. 
 #				- FUNCTIONS_FOR_MT.sh
 #				- RenamePathAfterMove_in_SAR_MASSPROC.sh
@@ -64,17 +69,22 @@
 # 								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
 # New in Distro V 5.4 20250604:	- remove possible path to kml for re-geocoding when performing non Forced geocoding
 # New in Distro V 5.5 20260902:	- Cope with name changed of incidence => localIncidenceAngle and geoidalIncidenceAngle.
-
+# New in Distro V 5.6 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 02, 2026"
+VER="Distro V5.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
+
 
 
 LISTTOGEOC=$1		# a list of dir where to re-run the geocoding either in the form of S1A_174_20141017_A_S1A_174_20141110_A or 20141017_20141110

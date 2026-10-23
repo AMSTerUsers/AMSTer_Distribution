@@ -49,6 +49,11 @@
 #		Add_NS_comp_msbas.sh 10000 Force -DEM=/$PATH_DataSAR/SAR_AUX_FILES/DEM/COPERNICUS/Funu.bil -DEFOMODE=DefoInterpolx2Detrend1
 #		Add_NS_comp_msbas.sh 10000 Force -THRESHOLD=0.8
 #       
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- (GMT and gdal if works with geotif files like Sergey Samsonov - NOT HERE)
 #				- python 3.10 with scipy and numpy modules
 #				- Filter_and_Gradient.py script
@@ -84,18 +89,22 @@
 #								  exists and Force is not requested 
 # New in Distro V 3.1 20260730:	- accept the optional flag -THRESHOLD=value and forward it to 
 #								  Filter_and_Gradient.py as threshold=value (gradient clipping in m/m) 
+# New in Distro V 3.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 29, 2026"
-
+VER="Distro V3.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
+
 
 # vvv ----- Hard coded lines to check --- vvv 
 source $HOME/.bashrc 

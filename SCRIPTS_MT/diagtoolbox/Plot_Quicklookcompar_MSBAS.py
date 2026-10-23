@@ -5,11 +5,18 @@
 # It takes crop coordinates as an optional argument and displays all 3 maps with respect to this crop. 
 # Optionally, it can also display a profile on the maps.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # V1.0 (20250303)
 # New in Distro V1.1 (20250304) -DS - Adjust number of subplot if NS is present or not
 # New in Distro V1.2 (20250305) -DS - option to use UTM for crop and plot + plot a profile position
 # New in Distro V1.3 (20250307) -DS - cosmetic plot and saving as png
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

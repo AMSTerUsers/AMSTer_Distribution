@@ -2,9 +2,16 @@
 # Function to find common time span to both table.txt files
 # It add a delay of 30day before the first date and after the last for plot purposes
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 1.0.1 20240209:  - Cosmetic
 # New in Distro V 1.0.2 20250207:  - replace delimiter \t by r'\s+'
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

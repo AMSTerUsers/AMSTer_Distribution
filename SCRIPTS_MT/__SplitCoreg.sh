@@ -26,6 +26,11 @@
 #       - Nr of parallel splitted processes
 #       - FORCES1DEM: if  FORCE, then recompute DEM for each S1 wide swath image 
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- gnu sed and awk for more compatibility. 
 #   			- seq
 #               - Appel's osascript for opening terminal windows if OS is Mac
@@ -60,17 +65,20 @@
 # New in Distro V 8.2 20250204:	- zap hidden Gremlins making wc to crash
 # New in Distro V 8.3 20250520:	- new param to define crop as GEO or SRA (lines and pixels) coordinates
 #								- state that mass processing with asymetric zoom is not allowed (yet). If needed, this might be implemented later
+# New in Distro V 8.4 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V8.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 20, 2025"
-
+VER="Distro V8.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
-echo " "
+echo " " 
 
 
 

@@ -108,6 +108,11 @@
 #
 # Mac OS X and Linux compatible.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (numpy, see import)
 #				- gdal (gdalwarp, gdalinfo), ONLY when an input has to be
 #				  transformed. Not needed for inputs already in Lat/Long WGS 84.
@@ -119,6 +124,8 @@
 # New in Distro V 1.2:	- inputs not in Lat/Long WGS 84 degrees, or not on the
 #						  grid of FILE1, are transformed with gdalwarp instead of
 #						  being refused; -RESAMPLE= and -KEEPTMP added
+# New in Distro V 1.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2016-2026

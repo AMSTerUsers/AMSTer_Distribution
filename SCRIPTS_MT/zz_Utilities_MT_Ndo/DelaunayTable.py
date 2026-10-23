@@ -20,6 +20,11 @@
 #			be wrong in rarer cases. Consider to use this filtering step from the bash script 
 #			of the same name, that is DelaunayTable.ph
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # V 1.0 (2023/09/19)
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
@@ -27,6 +32,8 @@
 # New in Distro V 2.2 20231223:	- use allPairsListing_Without_Quanrantained_Data.txt
 # New in Distro V 2.3 20240107:	- specific request from Delphine: two tabs between col 8 & 9
 # New in Distro V 3.0 20250813:	- launched from python3 venv
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

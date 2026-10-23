@@ -15,6 +15,11 @@
 #						 -list=filename, it forces to compute only pairs in provided list 
 #						 (filename MUST be in the form of list of PRM_SCD dates)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:
 #    - Data coregistered on a Global Primary (SuperMaster)... of course
 #	 - AMSTerEngine and AMSTerEngine Tools, at least V20190716
@@ -134,19 +139,22 @@
 #								- log now follows the results instead of being left behind 
 # New in Distro V 5.4 20260929:	- typo G(g)etImgMod (since 28 aug 2026)
 # New in Distro V 5.5 20261007:	- was checking if PATHTODIREVENTSMASKS was a file instead of a dir 
+# New in Distro V 5.6 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.5 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 07, 2026"
-
-
+VER="Distro V5.6 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
+
 
 
 PAIRFILE=$1					# File with the compatible pairs; named as table_MinBp_MaxBp_MinBt_MaxBt.txt

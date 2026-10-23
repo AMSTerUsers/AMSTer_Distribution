@@ -23,11 +23,19 @@
 # and defines:
 #	do_composite BASE OVERLAY GRAVITY GEOMETRY	: overlay OVERLAY on BASE, in place
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: ImageMagick 6/7 or GraphicsMagick
 #
 # New in Distro V 1.0 20260804:	- based on the detection block of TimeSeriesInfo_HP.sh V6.5
 #				  (V6.0/V6.1), extended to ImageMagick 7 and to
 #				  GraphicsMagick installations that provide no "convert"
+# New in Distro V 1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # -----------------------------------------------------------------------------------------

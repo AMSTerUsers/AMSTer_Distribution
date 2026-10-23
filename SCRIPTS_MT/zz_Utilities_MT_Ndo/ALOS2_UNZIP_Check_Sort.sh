@@ -21,6 +21,11 @@
 #
 # Hardcoded: - 
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- gsed and  gawk
 #				- bc
 #				- obsolate : solution with zipnote 3.1b (option -w crashed with v3.0) was removed and replaced by unzip and rezip - slower but more secure 
@@ -29,17 +34,24 @@
 # New in Distro V 1.1 20240311:	- more robust if zip files contain zip files...
 # New in Distro V 1.2 20240313:	- check that img does not exit yet also as link in case of frame + or - 1  
 # New in Distro V 1.3 20240403:	- remove path in zip if images are zipped with path 
+# New in Distro V 1.4 20260706:	- support new JAXA delivery format where image files (incl. summary.txt)
+#								  are nested in TOPDIR/SUBDIR/ (+ possible extra .kml). Archive is now
+#								  automatically flattened to root by locating summary.txt, whatever its depth.
+# New in Distro V 1.5 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# NdO (c) 2024/01/09 - could make better with more functions... when time.
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Mar 13, 2024"
-
+VER="Distro V1.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
 
 RAWDATAPATH=$1										# e.g. ..../SAR_DATA/ALOS2/Reunion-FTP/	where zip and non zip may be downloaded
 DATATARGETPATH=$2									# e.g. ..../SAR_DATA/ALOS2_Reunion-UNZIP		where unzip img will be stored in /SPT_ROW_GEOM_LOOKDIR/YYYYMMDD
@@ -130,6 +142,30 @@ function GetInfoFromZip()
 			zip "${ZIPFILE}" *
 			mv "${ZIPFILE}" ${RAWDATAPATH}	
 			cd ${RAWDATAPATH}
+			rm -Rf "tmp_${RNDM}"
+	fi
+
+	# Flatten the archive if the image files are wrapped in one or more subdirectories.
+	# Expected layout: summary.txt + IMG/LED/TRL/VOL/BRS files at the ROOT of the archive.
+	#  - Old deliveries: files flat at root (nothing to do here) or single subpath/ (former -eq 7 case above).
+	#  - New JAXA deliveries: everything nested in TOPDIR/SUBDIR/ , sometimes with an extra .kml at
+	#    TOPDIR level. summary.txt is then NOT at the root, so 'unzip -p ZIP summary.txt' returns nothing
+	#    and the script used to exit with "problem reading info from summary.txt".
+	# This general test locates the dir that actually contains summary.txt and rebuilds a flat archive
+	# (same filename) from its content. Any extra top-level file (e.g. .kml) is dropped, which reproduces
+	# exactly the historical flat file set expected by AMSTer. It also covers the former -eq 7 case.
+	SUMMARYINZIP=$(unzip -qq -l "${ZIPFILE}" | ${PATHGNU}/gawk '{print $NF}' | ${PATHGNU}/ggrep -m1 -E '(^|/)summary\.txt$')	# path of summary.txt inside the zip
+	if [ -n "${SUMMARYINZIP}" ] && [ "${SUMMARYINZIP}" != "summary.txt" ]
+		then
+			INTERNALDIR=$(dirname "${SUMMARYINZIP}")	# subpath(s) that wrap the image files
+			echo "// Image files are wrapped in an internal path (${INTERNALDIR}/); flattening archive to root..."
+			CURDIR=$(pwd)
+			rm -Rf "tmp_${RNDM}"
+			mkdir -p "tmp_${RNDM}"
+			unzip -qq "${ZIPFILE}" -d "tmp_${RNDM}"
+			rm -f "${ZIPFILE}"
+			# rebuild the zip (same name) with the image files flat at the root
+			( cd "tmp_${RNDM}/${INTERNALDIR}" && zip -q -r "${CURDIR}/${ZIPFILE}" . )
 			rm -Rf "tmp_${RNDM}"
 	fi
 

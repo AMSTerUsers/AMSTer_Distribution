@@ -23,6 +23,11 @@
 #		- Add also an interpretation of the sens of displacement between 2 points for each deformation direction. (can be adapted to the region.)
 #		- Move the new time series in (images/Time_Series/TS_all) folder and keep the original one in the specific folder.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies ghost-script should be install ( test by cmd: gs --version)
 # 		- Brew Install ghostscript
 #		- sudo chown -R `whoami` /usr/local/share/ghostscript
@@ -200,16 +205,22 @@
 #								  bar, instead of the raw full precision limits which ran out of the 
 #								  box 
 # New in Distro V 7.6 20260901:	- add error message if no ${crop}
+# New in Distro V 7.7 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
+#
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V7.6 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 01, 2026"
-
+VER="Distro V7.7 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 # vvv ----- Hard coded lines to check --- vvv 
 source ${HOME}/.bashrc

@@ -13,6 +13,11 @@
 #
 # ALL PARAMETERS ARE OPTIONAL BUT COMMENT IS MANDATORY IF ONE USE THE PIX LIST OUTPUT OR FORCE MSBAS VERSION      
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- a header.txt file (built with build_header_msbas_criteria.sh)
 #				- gnu sed and awk for more compatibility. 
 #				- msbas, msbasv2 or msbasv3 
@@ -57,13 +62,16 @@
 #								- get the version from ${2#--} instead of cut -d - -f3 (dash safe)
 #								- accept a single param being the version instead of the comment
 #								- quote PARAMNAME in the TS dir clean-up
+# New in Distro V 5.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
+VER="Distro V5.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 

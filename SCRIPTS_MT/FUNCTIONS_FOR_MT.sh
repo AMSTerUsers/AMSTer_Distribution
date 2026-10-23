@@ -5,6 +5,11 @@
 #     CSL InSARParameters.txt files etc... and adapted to the new processing chain 
 #     making us of data already read in csl format using script Read_All_Img.sh
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: Ensure having
 #	- MT and MT Tools (incl. updateParameterFile), at least V20190716
 #   - gnu sed (gsed) and gnu awk (gawk) for more compatibility. 
@@ -153,12 +158,16 @@
 # New in Distro V 10.2.0 20260903:	- InSARprocess with ETAD: check first that both images have the name nr (no zero) of ETAD products 
 # New in Distro V 10.2.1 20261006:	- if forced geoporjection with kml, keep a backup of the kml as i12/TextFiles/ForcedGeoc_${GEOCKML}
 # New in Distro V 10.2.2 20261007:	- debug cp ForcedGeoc_${GEOCKML} frmo corr here above (was copied with path)
+# New in Distro V 10.2.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								 	  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# NdO (c) 2016/03/07 - could make better... when time.
-# ****************************************************************************************
-FCTVER="Distro V10.2.1 AMSTer script utilities"
-FCTAUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 06, 2026"
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V10.2.3 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 
 # If run on Linux, may not need to use gsed. Can use native sed instead. 
 #   It requires then to make an link e.g.: ln -s yourpath/sed yourpath/gsed in your Linux. 

@@ -19,8 +19,15 @@
 # 	UTM2EnviPosition.py /YourPath/MSBAS_20190130T122227_UD.bin.hdr 361910 3091718 -UTM
 #		should answer something like: 	Pixel Position (Option -UTM): X=2060, Y=770
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 1.0  20241231: - setup 
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

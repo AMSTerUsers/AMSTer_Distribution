@@ -4,6 +4,11 @@
 #
 # Parameters: - name of images to convert
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies : - python3.10 and modules below (see import) 
 #
 # New in Distro V 2.0:	- exporting without the array size as a header (i.e. not as .npy) 
@@ -12,6 +17,8 @@
 # New in Distro V 3.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
 # New in Distro V 4.0 20250813:	- launched from python3 venv
+# New in Distro V 4.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

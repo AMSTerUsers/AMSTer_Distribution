@@ -6,6 +6,11 @@
 # Parameters : - String PARAMNAME used to add to dir names where results will be strore. 
 #                  This can help to remember eg some processing configs.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- A HDR.hdr file has to be present in the dir with the right parameters. 
 #					This can be created by build_header_msbas_criterie.sh
 #				- gsed and gawk
@@ -39,16 +44,19 @@
 # New in Distro V 3.7 20250317:	- debug testing 3D while using msbasV4
 # New in Distro V 3.8 20250317:	- improve yesterday's modification
 # New in Distro V 3.9 20250402:	- make grep case insensitive while searching for Samples
-
+# New in Distro V 3.10 20261012: - Recommend using Search_Dependencies.sh for 
+#								   an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.9 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 04, 2025"
+VER="Distro V3.10 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " " 
 
 PARAMNAME=$1

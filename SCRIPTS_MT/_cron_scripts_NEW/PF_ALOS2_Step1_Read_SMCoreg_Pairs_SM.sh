@@ -9,15 +9,30 @@
 # BEWARE: 
 #	- links in images are for MAC (when 2 PATH NR)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 1.1.0 202241230 :	- replace ${PATH_1650}/SAR_SM/MSBAS/PF_oldDEM with ${PATH_1650}/SAR_SM/MSBAS/PF
 # New in Distro V 1.2 20250410:	- change SM for mode 4041 (13D)
+# New in Distro V 1.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 1.4 20261013:	- descending modes tested NEWASCPATHxxD instead of NEWDESCPATHxxD 
+# New in Distro V 1.5 20261014:	- some wait were missing
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.2 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Apr 10, 2025"
+VER="Distro V1.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 14, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
 
 source $HOME/.bashrc
 
@@ -358,7 +373,7 @@ $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh "${CSLDIR}"/PF_"${MODE10A}"/NoCrop ${SET
 $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh "${CSLDIR}"/PF_"${MODE11A}"/NoCrop ${SETDIR}/set15 ALOS2 > /dev/null 2>&1  &
 $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh "${CSLDIR}"/PF_"${MODE12A}"/NoCrop ${SETDIR}/set16 ALOS2 > /dev/null 2>&1  &
 $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh "${CSLDIR}"/PF_"${MODE13A}"/NoCrop ${SETDIR}/set17 ALOS2 > /dev/null 2>&1  &
-
+wait
 # Link all images to corresponding set dir for 14 descending
 $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh "${CSLDIR}"/PF_"${MODE01D}"/NoCrop ${SETDIR}/set18 ALOS2 > /dev/null 2>&1  &
 $PATH_SCRIPTS/SCRIPTS_MT/lns_All_Img.sh "${CSLDIR}"/PF_"${MODE02D}"/NoCrop ${SETDIR}/set19 ALOS2 > /dev/null 2>&1  &
@@ -415,6 +430,7 @@ wait
 $PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/ALOS2/PF/${MODE12D}/LaunchMTparam_ALOS2_${MODE12D}_Full_Zoom1_ML8_Coreg.txt &
 $PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/ALOS2/PF/${MODE13D}/LaunchMTparam_ALOS2_${MODE13D}_Full_Zoom1_ML8_Coreg.txt &
 $PATH_SCRIPTS/SCRIPTS_MT/SuperMasterCoreg.sh $PATH_1650/Param_files/ALOS2/PF/${MODE14D}/LaunchMTparam_ALOS2_${MODE14D}_Full_Zoom1_ML8_Coreg.txt &
+wait
 
 # Compute pairs 
 # Compute pairs only if new data is identified in ASCENDING
@@ -460,46 +476,46 @@ fi
 
 
 # Compute pairs only if new data is identified in DESCENDING
-if [ ! -s ${NEWASCPATH01D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH01D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set18  ${BP01D} ${BT01D} ${SM01D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH02D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH02D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set19  ${BP02D} ${BT02D} ${SM02D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH03D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH03D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set20  ${BP03D} ${BT03D} ${SM03D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH04D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH04D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set21  ${BP04D} ${BT04D} ${SM04D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH05D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH05D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set22  ${BP05D} ${BT05D} ${SM05D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH06D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH06D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set23 ${BP06D} ${BT06D} ${SM06D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH07D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH07D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set24 ${BP07D} ${BT07D} ${SM07D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH08D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH08D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set25 ${BP08D} ${BT08D} ${SM08D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH09D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH09D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set26 ${BP09D} ${BT09D} ${SM09D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH10D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH10D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set27 ${BP10D} ${BT10D} ${SM10D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH11D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH11D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set28 ${BP11D} ${BT11D} ${SM11D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH12D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH12D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set29 ${BP12D} ${BT12D} ${SM12D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH13D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH13D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set30 ${BP13D} ${BT13D} ${SM13D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
-if [ ! -s ${NEWASCPATH14D}/_No_New_Data_Today.txt ] ; then 
+if [ ! -s ${NEWDESCPATH14D}/_No_New_Data_Today.txt ] ; then 
 	echo "n" | Prepa_MSBAS.sh ${SETDIR}/set31 ${BP14D} ${BT14D} ${SM14D}  > /dev/null 2>&1  & # ${BP2} ${BT2} ${DATECHG}
 fi
 wait

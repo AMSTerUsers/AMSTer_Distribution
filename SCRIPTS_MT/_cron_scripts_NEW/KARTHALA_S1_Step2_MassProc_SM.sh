@@ -7,6 +7,11 @@
 #       Nevertheless because VVP_S1_Step1_Read_SMCoreg_Pairs.sh uses RadAll_Img.sh, which also move updated prelim orbit images at all levels in _CLN dir,
 #       and coregister images on Global Primaries (SuperMasters), one check that it is not running anymore before starting.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 4.0 20230830:	- Rename SCRIPTS_OK directory as SCRIPTS_MT 
 #								- Replace CIS by MT in names 
 #								- Renamed FUNCTIONS_FOR_MT.sh
@@ -20,10 +25,23 @@
 # New in Distro V 7.2 20260929:	- add IW Desc 137
 # New in Distro V 7.3 20261005:	- correct date for storing _Mode_last_MassRun.txt for IW comp. 
 #								- corr name of pair table IW desc
+# New in Distro V 7.4 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 7.5 20261016:	- store Last Mass Run log in right dir 
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V7.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 16, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 source $HOME/.bashrc
 
@@ -131,8 +149,8 @@ if [ ${CHECKREAD} -eq 0 ]
 			then 
 				# No process running yet
  				# if first run, it may crash because $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2 does not exist yet, hence create it
- 				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2
-				echo "Asc IW run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2/_Asc_last_MassRun.txt
+ 				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_SM_${IWASC}_Zoom1_ML2
+				echo "Asc IW run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_SM_${IWASC}_Zoom1_ML2/_Asc_last_MassRun.txt
 				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEASCIW} ${PARAMPROCESSASCIW} > /dev/null 2>&1 &
 			else 
 				echo "Asc IW attempt aborted on ${TODAY} because other Mass Process in progress"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_A_86/SMNoCrop_${IWASC}_Zoom1_ML2/_Asc_last_aborted.txt
@@ -143,8 +161,8 @@ if [ ${CHECKREAD} -eq 0 ]
 			then 
 				# No process running yet
 				# if first run, it may crash because $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_35/SMNoCrop_${IWDESC}_Zoom1_ML2 does not exist yet, hence create it
-				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_${IWDESC}_Zoom1_ML2
-				echo "Desc run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_${IWDESC}_Zoom1_ML2/_Desc_last_MassRun.txt
+				mkdir -p $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_SM_${IWDESC}_Zoom1_ML2
+				echo "Desc run on ${TODAY}"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_SM_${IWDESC}_Zoom1_ML2/_Desc_last_MassRun.txt
 				$PATH_SCRIPTS/SCRIPTS_MT/SuperMaster_MassProc.sh ${TABLEDESCIW} ${PARAMPROCESSDESCIW} > /dev/null 2>&1 &
 			else 
 				echo "Desc attempt aborted on ${TODAY} because other Mass Process in progress"  >>  $PATH_3601/SAR_MASSPROCESS/S1/KARTHALA_D_137/SMNoCrop_${SMDESC}_Zoom1_ML2/_Desc_last_aborted.txt

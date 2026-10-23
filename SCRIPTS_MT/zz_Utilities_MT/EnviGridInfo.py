@@ -19,6 +19,12 @@ Usage:
     MAXZOOM           highest tile zoom level allowed for the tile server
     WKT_OUTPUT_FILE   file where the template projection is written as WKT
 
+For an up to date and detailed list of dependencies (and sub-dependencies), 
+    run the following command (add option -v to also list the commands and calls):
+  		Search_Dependencies /Path/to/This/script 
+	(Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+
+
 Output (on stdout, meant for "eval"):
     NX, NY            template size in pixels
     PIXX, PIXY        template pixel size in map units
@@ -29,6 +35,10 @@ Output (on stdout, meant for "eval"):
     TARGETRES         target ground resolution (m)
     ZOOM              tile zoom level to request
     NTILES            rough number of tiles to be downloaded
+
+New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+								  an updated list of dependencies
+
 """
 
 import json

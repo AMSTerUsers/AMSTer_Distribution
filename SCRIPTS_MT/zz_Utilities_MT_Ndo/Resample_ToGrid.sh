@@ -12,9 +12,9 @@
 # |               with map info, GeoTIFF, ...). Only its grid is used.         |
 # |   INPUT     : georeferenced raster to resample                             |
 # |   OUTPUT    : output ENVI binary. Beware: the GDAL ENVI driver writes the  |
-# |               header by REPLACING the extension (out.r4 -> out.hdr), it     |
-# |               does not append it. Both conventions are read back correctly  |
-# |               by Diff_Envi_DivCos.py.                                       |
+# |               header by REPLACING the extension (out.r4 -> out.hdr), it    |
+# |               does not append it. Both conventions are read back correctly |
+# |               by Diff_Envi_DivCos.py.                                      |
 # |   -R=       : resampling method, default bilinear (near for masks/labels,  |
 # |               bilinear or cubic for smooth fields such as ZTD or angles)   |
 # |   -SRCNODATA= : value flagging voids in INPUT, e.g. 0 for GACOS .ztd.      |
@@ -22,13 +22,35 @@
 # |               otherwise interpolation smears them into valid pixels.       |
 # |   -DSTNODATA= : value written in the empty parts of OUTPUT, default nan    |
 # |                                                                            |
-# | The target grid is read with gdalinfo, NOT by parsing the header, because   |
+# | The target grid is read with gdalinfo, NOT by parsing the header, because  |
 # | ENVI "map info" refers to pixel (1,1) while a GDAL geotransform refers to  |
 # | the outer corner: parsing by hand is the classical source of half pixel    |
 # | shifts. The grid of the result is verified against REFERENCE at the end.   |
+# | 																		   |
+# | For an up to date and detailed list of dependencies (and sub-dependencies),| 
+# |    run the following command (add option -v to also list the commands and calls): |
+# |  		Search_Dependencies /Path/to/This/script 						   |
+# | 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished) |
+# | 																		   |
 # |                                                                            |
 # | Mac OS X and Linux compatible (bash 3.2 safe); needs gdal + python3.       |
 # +----------------------------------------------------------------------------+
+# New in Distro V 1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# NdO (c) 2016/03/07 - could make better with more functions... when time.
+# -----------------------------------------------------------------------------------------
+PRG=`basename "$0"`
+VER="Distro V.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
+echo " "
+echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 set -u
 
 PRG=$(basename "$0")

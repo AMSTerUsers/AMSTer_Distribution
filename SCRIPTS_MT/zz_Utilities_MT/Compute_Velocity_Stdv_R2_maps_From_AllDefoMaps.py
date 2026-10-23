@@ -14,6 +14,11 @@
 
 # Parameters:	- none
 #  
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 
 # New in Distro V 1.0  20240730: - set up 
 # New in Distro V 1.1  20240731: - discards pixels where there are 3 successive identical  
@@ -29,6 +34,8 @@
 # New in Distro V 2.0 20250813:	- launched from python3 venv
 # New in Distro V 3.0 20260202:	- rewritten to make it much faster using vectorized implementation 
 #								  numerically equivalent to scipy.linregress
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

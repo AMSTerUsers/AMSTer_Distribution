@@ -5,6 +5,11 @@
 #This script compares data from two directories (CSL and MSBAS) to identify differences in dates and modes within subdirectories. It also loads event information from a file and filters the data based on a date range.
 #The filtered data is then compared, and the results are saved as CSV files.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 #Input Parameters:
 #-----------------
 #- <DIR_INFO_CSL>: Directory containing CSL data.
@@ -64,15 +69,17 @@
 #To run the script with the required arguments:
 #python Check_images.py /path/to/CSL /path/to/MSBAS 20220101 20221231 /path/to/eventsfile /path/to/results modelist.txt rejected_modes.txt
 #
-## New in Distro V 1.1 20250212:   - Make events and reject optionnal
-## New in Distro V 1.2 20250808:   - bug fix plot two dataframes CSL_filtered
-## New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 1.1 20250212:   - Make events and reject optionnal
+# New in Distro V 1.2 20250808:   - bug fix plot two dataframes CSL_filtered
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
-##
-##
-## AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-## DS (c) 2025/02/12 
-# """
+#
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# DS
+######################################################################################
 
 import sys
 import os

@@ -23,8 +23,15 @@
 #				- optional; if add -p option, it will save the plot of target and bursts overlap in the directory with all the bursts kml
 #				  even if the overlap is OK. This might be useful when you suspect more bursts than needed
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in V1.1 25 Feb 2025: 	- also OK with target kml that are not polygon
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

@@ -21,6 +21,11 @@
 # Hardcoded: - a lot... se below paragraph named HARD CODED but also adapt below depending on the number of modes 
 #			 - suppose everywhere that modes are DefoInterpol !!
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- awk 
 #				- several scripts from SCRIPTS_MT
 #
@@ -29,18 +34,22 @@
 # New in Distro V 2.2.0 20260115:	- in check running process, do not take into account Crons_1_2_3.sh 
 #									- check that flag file does not exist in SAR_MASSPROCESS (created from iMac27 ) to attest of running cron 1 or 2
 #									- test if another Step3 is running. If yes, stop to avoid overloading the computer
-									
 # New in Distro V 2.3.0 2026730 :	- force msbasv4								
+# New in Distro V 2.4 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+# New in Distro V 2.5 20261014:	- Check that the same Step 2 is not running overwrites STOPRUN. 
+#									  A running copy of Step 3 could therefore have beeen ignored.
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Jul 30, 2026"
-
+VER="Distro V2.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 14, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " "
 
 
@@ -445,7 +454,7 @@ YYYY=$(date +%Y)
 		# echo ${CHECKMB} >> CheckRun.txt
 		# ps -Af | ${PATHGNU}/grep ${PRG} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "/dev/null" >> CheckRun.txt
 
-	if [ ${CHECKMB} -gt 3 ] ; then # use ${PATHGNU}/grep -v "grep "  instead of ${PATHGNU}/grep -v "grep ${PRG}" because depending on environment, it may miss the second version
+	if [ "${STOPRUN}" == "NO" ] &&  [ ${CHECKMB} -gt 3 ] ; then # use ${PATHGNU}/grep -v "grep "  instead of ${PATHGNU}/grep -v "grep ${PRG}" because depending on environment, it may miss the second version
 			REASON=" another ${PRG} is running" 
 			STOPRUN="YES"
 		else
@@ -458,11 +467,11 @@ YYYY=$(date +%Y)
 
 	# Check that no other cron job step 2 (SuperMaster_MassProc.sh) is running
 	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
-	if [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
+	if [ "${STOPRUN}" == "NO" ] &&  [ ${CHECKMP} -ne 0 ] ; then REASON=" SuperMaster_MassProc.sh in progress (from ${CRONJOB2})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 	# Check that no other cron job step 3 2D (SuperMaster_MassProc.sh) is running
 	CHECKMP=`ps -eaf | ${PATHGNU}/grep ${CRONJOB2D} | ${PATHGNU}/grep -v "grep " | ${PATHGNU}/grep -v "kate" | ${PATHGNU}/grep -v "/dev/null" | grep -v "Crons_1_2_3.sh" | wc -l`
-	if [ ${CHECKMP} -ne 0 ] ; then REASON=" Same cron job step 3 though in 2D in progress (${CRONJOB3D})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
+	if [ "${STOPRUN}" == "NO" ] &&  [ ${CHECKMP} -ne 0 ] ; then REASON=" Same cron job step 3 though in 2D in progress (${CRONJOB3D})" ; STOPRUN="YES" ; else STOPRUN="NO" ; fi 
 
 
 

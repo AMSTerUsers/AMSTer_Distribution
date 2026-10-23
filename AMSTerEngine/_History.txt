@@ -1,8 +1,69 @@
+/* AMSTerEngine20261022 (© DD @SAREOS & al.)*/
+/* **************************************** */
+Bug correction in common superposition calculation. Bug introduced when refurbishing and simplifying the calculation. 
+
+/* AMSTerEngine20261014 (© DD @SAREOS & al.)*/
+/* **************************************** */
+Still a small correction in image superposition calculation when registrating to a super master using a kml. 
+
+/* AMSTerEngine20261013 (© DD @SAREOS & al.)*/
+/* **************************************** */
+Correction of a bug recently introduced in the calculation of the common superposition area when dealing with a super master. 
+Correction of bug recently introduced leading to wrong output file name of filtered interferogram.
+
+/* AMSTerEngine20261008 (© DD @SAREOS & al.)*/
+/* **************************************** */
+Small bug correction in calculation of default fine coregistration window size. 
+
+/* AMSTerEngine20261007 (© DD @SAREOS & al.)*/
+/* **************************************** */
+paramInSAR: Correction of a bug recently introduced preventing detection of masks and DEM into .csl images.
+        Correction made by simplifying .csl image structure and modifying some .csl image mangement routines.
+
+/* AMSTerEngine20261002 (© DD @SAREOS & al.)*/
+/* **************************************** */
+Detection and correction of a very very very old (20 years...) potential memory leak in paramLib.c
+Leak appeared in cohtrack. Now corrected.
+Valgrind check passed successfully. 
+
+/* AMSTerEngine20261001 (© DD @SAREOS & al.)*/
+/* **************************************** */
+cohTrack: addition of an output directory parameter.
+        aoi kml management added.
+
+/* AMSTerEngine20260930 (© DD @SAREOS & al.)*/
+/* **************************************** */
+cutAndZoom: Change in sensor ID. Addition of the word "sample". This to allow cohtrack considering cut S1 images as normal ones. 
+
+/* AMSTerEngine20260928 (© DD @SAREOS & al.)*/
+/* **************************************** */
+cohTrack: Addition of max numer of threads detection in burst deramping routine within SIInSARLib. 
+    Since function call was coming from cohTrack, number of available threads was not set. 
+
+/* AMSTerEngine20260914 (© DD @SAREOS & al.)*/
+/* **************************************** */
+ICEYEDataReader, BIOMASSDataReader and slantRangeDEM : cast errors detected compiling on Window Subsystem for Linux
+
+/* AMSTerEngine20260908 (© DD @SAREOS & al.)*/
+/* **************************************** */
+Naissance de Violette cette nuit à 3h44 !
+slantRangeDEM: Simplification and automatization of the process. 
+    It may now be lauched from an InSAR processing directory in which case, resampling parameters are chosen with respect to InSAR box averaging parameters.
+    SlantRangeDEM srd.txt file is then created within master image info directory. 
+geoProjection: Bug correction leading to a crash when using homemade InSAR DEM as external DEM, provided used phaseUnwrapping method was the homemade branch cut.
+interpolation: Recomputing of the common superposition of images after interpolation process is disabled. 
+    This common superposition is now computed only after coregistration which is more logical.
+cohTrack: Correction of the tracking interval calculation to stay within requested interval. 
+
+/* AMSTerEngine20260907 (© DD @SAREOS & al.)*/
+/* **************************************** */
+geoProjection: bug correction leading to systematic crash in case incidence files did not exists. 
+
 /* AMSTerEngine20260901 (© DD @SAREOS & al.)*/
 /* **************************************** */
 cohTrack: Debugging. Correction of an indexing error left since authorizing non symetrical intervals around reference registration.
-		Correction in naming convention to take local slopes into account for displacements metric conversion. 
-		Since August 13 version, incidence file is named localIncidenceAngle.
+        Correction in naming convention to take local slopes into account for displacements metric conversion. 
+        Since August 13 version, incidence file is named localIncidenceAngle.
 
 /* AMSTerEngine20260826 (© DD @SAREOS & al.)*/
 /* **************************************** */
@@ -11,8 +72,8 @@ SentinelDataDownloader: Bugs correction to ocorrectly build COPERNICUS request o
 /* AMSTerEngine20260825 (© DD @SAREOS & al.)*/
 /* **************************************** */
 BIOMASSDataReader: Missing function prototype leading to compilation error on Mac mow corrected.
-	Memory leaks corrections.
-	Increase of the size of the ZSTD buffer to avoid memory corruption.
+    Memory leaks corrections.
+    Increase of the size of the ZSTD buffer to avoid memory corruption.
 S1Coregidtration: Forgotten function prototype added in ESDLib.h
 SentinelDataDownloader: Now the program stops if no data listing is returned by COPERNICUS server to avoir crash. 
 
@@ -20,12 +81,12 @@ SentinelDataDownloader: Now the program stops if no data listing is returned by 
 /* **************************************** */
 BIOMASSDataReader : First release. Requires the installation of libzstd-dev and LERC. 
 For LERC library : 
-	git clone --depth 1 https://github.com/Esri/lerc.git
-	cmake lerc -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -B lerc/build
-	make -C lerc/build -j4
-	sudo cp lerc/build/libLerc.so.4 /usr/local/lib/
-	sudo ldconfig
-	
+    git clone --depth 1 https://github.com/Esri/lerc.git
+    cmake lerc -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -B lerc/build
+    make -C lerc/build -j4
+    sudo cp lerc/build/libLerc.so.4 /usr/local/lib/
+    sudo ldconfig
+    
 /* AMSTerEngine20260813 (© DD @SAREOS & al.)*/
 /* **************************************** */
 INSARProductsGeneration: option -i generates two incidence files; the geoidal one given in degrees and the local one given in radian.
@@ -33,7 +94,7 @@ INSARProductsGeneration: option -i generates two incidence files; the geoidal on
 /* AMSTerEngine20260812 (© DD @SAREOS & al.)*/
 /* **************************************** */
 SentinelDataDownloader: bug correction in case upper right corner area of interest is at an integer lattitude or longitude.
-		Now, a slight reduction of the area of interest used for building OData request is imposed to avoid downloading useless periferic tiles that in turn induced wrong tile building of issued AMSTer DEM.
+        Now, a slight reduction of the area of interest used for building OData request is imposed to avoid downloading useless periferic tiles that in turn induced wrong tile building of issued AMSTer DEM.
 
 /* AMSTerEngine20260803 (© DD @SAREOS & al.)*/
 /* **************************************** */
@@ -47,7 +108,7 @@ initInSAR: Now, full access path to processed files is systematically generated 
 /* AMSTerEngine20260729 (© DD @SAREOS & al.)*/
 /* **************************************** */
 geoProj.c: Still other weighting correction in AVG method. 
-			And bug corrections in omp loops management
+            And bug corrections in omp loops management
 
 /* AMSTerEngine20260728 (© DD @SAREOS & al.)*/
 /* **************************************** */
@@ -58,8 +119,8 @@ geoProj.c: still a refinement in the very old error leading to wrong weighted av
 /* **************************************** */
 geoProj.c: Correction of a ~15 years-old error in TRI resampling leading to a completely wrong weighted averaged resampled value on borders of NOVALUE zones.
 S1Coregistration: Correction of an error introduced when adding super master management. 
-	This error lead to systematic coregistration of all polarisation layers in place of limiting process to selected ones.
-	Correction of an error leading to recalculation of the baseline but considering the area of interest of last managed burst area of interest. 
+    This error lead to systematic coregistration of all polarisation layers in place of limiting process to selected ones.
+    Correction of an error leading to recalculation of the baseline but considering the area of interest of last managed burst area of interest. 
 
 
 /* AMSTerEngine20260720 (© DD @SAREOS & al.)*/
@@ -78,8 +139,8 @@ slantRangeDEM: Bug correction of external float files slant range projection. In
 /* AMSTerEngine20260604 (© DD & SAREOS) */
 /* ************************************ */
 fff: floatFileFiltering
-	Small utility to filter a float file by a moving average or a moving median window of given size. 
-	Both filters manage NaN numbers exluding them from the filtering. An additional other no-data value can also be used.
+    Small utility to filter a float file by a moving average or a moving median window of given size. 
+    Both filters manage NaN numbers exluding them from the filtering. An additional other no-data value can also be used.
 
 90: Happy birthday Mum!
 
@@ -133,28 +194,28 @@ Options are:
 /* AMSTerEngine20260601 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack: Conversion in metric values tacking local slope into account is activated by -p flag. 
-		-i flag is used to force recomputing InSAR products stacks, taking updated InSARParameters.txt into account.
+        -i flag is used to force recomputing InSAR products stacks, taking updated InSARParameters.txt into account.
 
 /* AMSTerEngine20260531 (© DD & SAREOS) */
 /* ************************************ */
 InSARProductsGeneration: Now, if requesting to issue the local incidence angle, it is computed taking local slope into account and is issued in radian. 
-		Sine of the so-computed incidence angle (with respect to the local normal) is used as normalization value for calibration in sigma0.
-		It can also be used as normalization value to convert range displacement measured in pixels by coherence tracking into metric value.
+        Sine of the so-computed incidence angle (with respect to the local normal) is used as normalization value for calibration in sigma0.
+        It can also be used as normalization value to convert range displacement measured in pixels by coherence tracking into metric value.
 cohTrack: Tracked shift values are now converted in metric values.
-		If using flag -i, conversion takes the local slope into account provided local incidence file is available in reference InSAR processing. 
+        If using flag -i, conversion takes the local slope into account provided local incidence file is available in reference InSAR processing. 
 
 /* AMSTerEngine20260527 (© DD & SAREOS) */
 /* ************************************ */
 InSARProductsGeneration: Addition of the resampling of slant range projected float files with respect to InSAR processing.
-		External float files can be projected in slant range with respect to the master image using slantRangeDEM. 
-		These files are saved with the extension .slantRange within the master image. 
-		These .slantRange files are then resampled at end of InSARProductsGeneration like the externalDEM, so to have the same dimensions and sampling tahn any other InSAR products. 
-		If willing to make this resampling based on an existing InSAR processing without recalculating the existing InSAR products, just use option -r.
+        External float files can be projected in slant range with respect to the master image using slantRangeDEM. 
+        These files are saved with the extension .slantRange within the master image. 
+        These .slantRange files are then resampled at end of InSARProductsGeneration like the externalDEM, so to have the same dimensions and sampling tahn any other InSAR products. 
+        If willing to make this resampling based on an existing InSAR processing without recalculating the existing InSAR products, just use option -r.
 
 /* AMSTerEngine20260526 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack: Tuning. In cohTrack through centroidization, only mapping points with coherence above coherence treshold are considered. 
-		No other selection criterion is considered. 
+        No other selection criterion is considered. 
 
 /* AMSTerEngine20260522 (© DD & SAREOS) */
 /* ************************************ */
@@ -165,7 +226,7 @@ cohTrack: Addition of tracking by centroidization (option -C) and tracking on ma
 basicFilter.c: development of a median filter accepting NaN or another excluding value. 
 InSARProductsGeneration: Use of this median filter can be activated for coherence through InSARParameters.txt file under key value pair "Median filter size [pix]" under coherence parameter section. 
 cohTrack: addition of option -i to recompute interferometric products on existing interpolated stack.
-		Addition of transfer of InSAR product generation parameters to stack processing to cope with -i flag. 
+        Addition of transfer of InSAR product generation parameters to stack processing to cope with -i flag. 
 
 /* AMSTerEngine20260514 (© DD & SAREOS) */
 /* ************************************ */
@@ -174,15 +235,15 @@ SentinelDataDownloader: Correction of an error recently introduced: End date was
 /* AMSTerEngine20260513 (© DD & SAREOS) */
 /* ************************************ */
 initInSAR and InSARProductGeneration: Corrections and modifications in kml management. Now, if a kml is given in input, area of interest is correctly computed at initialisation
-		and is correctly updated in InSARParameters.txt file. In the same way, aoi is recomputed at each call of InSARProductsGeneration 
-		taking kml given in InSARParameters.txt file into account if available. This allows changing kml at will at each processing. 
+        and is correctly updated in InSARParameters.txt file. In the same way, aoi is recomputed at each call of InSARProductsGeneration 
+        taking kml given in InSARParameters.txt file into account if available. This allows changing kml at will at each processing. 
 
 /* AMSTerEngine20260512 (© DD & SAREOS) */
 /* ************************************ */
 SentinelDataDownloader: Modification to cope with COPERNICUS new distribution policy and collection name change for public Copernicus Contributing Mission data to allow getting COPERNICUS DEM. 
 cohTrack: modification in the way to calculate the range. Previously, it was calculated as the difference between the max and the min value on a line by line and a column by column basis. 
-	Therefore, a very good column or line with smooth curve with a maximum could rejected having a low range since the minimum for this line or column could be close to the max in case sampling does not go far enough from the max location. 
-	Now, a background coherence value is computed as the mean of the coherence values on the border of the maping and range is computed as the difference between the column or line maximum and this background. 
+    Therefore, a very good column or line with smooth curve with a maximum could rejected having a low range since the minimum for this line or column could be close to the max in case sampling does not go far enough from the max location. 
+    Now, a background coherence value is computed as the mean of the coherence values on the border of the maping and range is computed as the difference between the column or line maximum and this background. 
 
 /* AMSTerEngine20260511 (© DD & SAREOS) */
 /* ************************************ */
@@ -191,17 +252,17 @@ Modification of kml projection in slant range. Now, if read height value in exte
 /* AMSTerEngine20260504 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack: bug correction / modification of parameter file reading. Missing brackets in sampling parameters lead to pimmediat program crash. 
-		Now, sampling parameters can be given with or without brackets in parameter file. 
-		Brackets are still mandatory if given as command line parameters. 
-		Addition of differential phase management. Tracked differential phase is now also issued. 
-		No tested. Should work but might crash. 
-		May the fourth be with you and cross the fingers. 
+        Now, sampling parameters can be given with or without brackets in parameter file. 
+        Brackets are still mandatory if given as command line parameters. 
+        Addition of differential phase management. Tracked differential phase is now also issued. 
+        No tested. Should work but might crash. 
+        May the fourth be with you and cross the fingers. 
 
 /* AMSTerEngine20260429 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: Correction of relative orbit calculation to cope with S1D relative orbital shift.
 cutAndZoom: Correction of a bug in the calculation of heights at kml polygon summits. An infinite loop could be initiate due to wrong name in function call. 
-	 + Simplification of function openExternalDEMFile call. 
+     + Simplification of function openExternalDEMFile call. 
 
 /* AMSTerEngine20260428 (© DD & SAREOS) */
 /* ************************************ */
@@ -215,17 +276,17 @@ cohTrack: Addition of some lines to extract ETAD range and azimuth differential 
 /* AMSTerEngine20260417 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack: Previous version not fully working as any very first version...
-	Bug correction in parameters reading and in cohTrack directories naming. 
+    Bug correction in parameters reading and in cohTrack directories naming. 
 
 /* AMSTerEngine20260415 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack: First fully working version. 
-	Addition of parameter for NaN masking of non computed shifts in place of setting them to zero.
+    Addition of parameter for NaN masking of non computed shifts in place of setting them to zero.
 
 /* AMSTerEngine20260413 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack: Bug correction in the determination of the integer location of the max.
-		Addition of a quadratic interpolation of the phase to issue the tracked interferogram.
+        Addition of a quadratic interpolation of the phase to issue the tracked interferogram.
 
 /* AMSTerEngine20260409 (© DD & SAREOS) */
 /* ************************************ */
@@ -247,16 +308,16 @@ slantRangeDEM: Bug correction in recursive handling of float files to be project
 /* AMSTerEngine20260325 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: correction of two bugs recently introduced: 
-		Polarization scheme was not read at frameInfoImage creation step (not transferd from read polarization mode) 
-		Burst files were not initially created due to a change recently introduced to avoid recreating empty burst files when those ones were trashed because not usefull anymore. 
+        Polarization scheme was not read at frameInfoImage creation step (not transferd from read polarization mode) 
+        Burst files were not initially created due to a change recently introduced to avoid recreating empty burst files when those ones were trashed because not usefull anymore. 
 geoProjection: Correction of a bug introduced recently leading to wrong interferometric file name determination. 
 
 
 /* AMSTerEngine20260318 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: Now, filtered products are automatically projected if present. 
-			Also, if a requested file is not found, e.g. coherence.VV-VV, all files containing the word "coherence" will be projected. 
-			The same for files with name containing "interf" and "residualPhase". This to allow modifying names before projection without having to change names within InSARParameters.txt file.
+            Also, if a requested file is not found, e.g. coherence.VV-VV, all files containing the word "coherence" will be projected. 
+            The same for files with name containing "interf" and "residualPhase". This to allow modifying names before projection without having to change names within InSARParameters.txt file.
 
 /* AMSTerEngine20260318 (© DD & SAREOS) */
 /* ************************************ */
@@ -271,8 +332,8 @@ Cut and zoom: Addition of cropped kml saving.
 /* ************************************ */
 NISARDataReader: Correction in listing RSLC .h5 images in input directory. 
 S1Coregistration: Modification in infoImage management and merging to correctly take into account requested polarization scheme.
-		Wrong merging of frameInfo could lead to requesting non available polarization, which in turn lead to errors in master image concatenation. 
-		Correction in burst file management: In case burst were previously trashed, file pointer are not initialized to avoid creating useless empty burst files. 
+        Wrong merging of frameInfo could lead to requesting non available polarization, which in turn lead to errors in master image concatenation. 
+        Correction in burst file management: In case burst were previously trashed, file pointer are not initialized to avoid creating useless empty burst files. 
 
 /* AMSTerEngine20260310 (© DD & SAREOS) */
 /* ************************************ */
@@ -282,13 +343,13 @@ S1Coregistration: Bug correction in master concatenation in case of coregistrati
 /* ************************************ */
 NISARDataReader : Sub selection of .h5 image to read only slc images avoiding trying to read QA_STATS files.
 slantRangeDem : Addition of the slant range projection of any float files georeferenced on WGS84 in lon lat found in a given directtory.
-		Directory under concern is given through key /* External float files directory */ in the parameter file.
+        Directory under concern is given through key /* External float files directory */ in the parameter file.
 
 
 /* AMSTerEngine20260302 (© DD & SAREOS) */
 /* ************************************ */
 S1Coregistration : addition of an option in initInSAR_GEO function to avoid recomputing common superposition of images. 
-			This because we need to keep it as given  of on-super master coregistration and / or to respect user's choice.
+            This because we need to keep it as given  of on-super master coregistration and / or to respect user's choice.
 
 /* AMSTerEngine20260228 (© DD & SAREOS) */
 /* ************************************ */
@@ -297,30 +358,30 @@ cohTrack : bug corrections induced by changes made in S1Coregistration for coreg
 /* AMSTerEngine20260224 (© DD & SAREOS) */
 /* ************************************ */
 S1OrbitManagement : Correction of a specific error (Nicolas's rare ability to point such ones) 
-					that may occurre when dealing with a kml limiting the acquisition time which in turn
-					induce considering the wrong orbit file. 
-					Now, orbit file determination is strictly determined with respect to initial image time.
-					Not from image time cut out considering kml. 
+                    that may occurre when dealing with a kml limiting the acquisition time which in turn
+                    induce considering the wrong orbit file. 
+                    Now, orbit file determination is strictly determined with respect to initial image time.
+                    Not from image time cut out considering kml. 
 
 /* AMSTerEngine20260223 (© DD & SAREOS) */
 /* ************************************ */
 SentinelDataDownloader: bug correction: non initialized "Collection" pointer lead to systematic crash. 
-		correction : ETAD downloading was erroneously dissabled when introducing modification to allow DEM download. 
+        correction : ETAD downloading was erroneously dissabled when introducing modification to allow DEM download. 
 cohTrack : implementation of stats calculation. To be continued. 
 
 /* AMSTerEngine20260213 (© DD & SAREOS) */
 /* ************************************ */
 geoidal2EllipsoidalDEM: small bug correction to consider egm96-5.pgm file if present. File name was misspelled. 
-	Correct expected files names are now displayed if none are found. 
+    Correct expected files names are now displayed if none are found. 
 SentinelDataDownloader: Correction of the usage message. It was still mentioning EGM96 while  using EGM2008 only. 
 
 /* AMSTerEngine20260212 (© DD & SAREOS) */
 /* ************************************ */
 S1Coregistration: Bug correction in case master image must be copied within InSARProducts (due to burst selection or if using -n option (no reramping)).
 Sentinel1DataDownloader: Now, only EGM2008 is considered if downloading COPERNICUS DEM. If EGM2008 is not available, DEM is downloaded and saved uncorrected. 
-		Bug correction: EGM was flipped vertically tile by tile. 
+        Bug correction: EGM was flipped vertically tile by tile. 
 geoidal2EllipsoidalDEM: DEMS are corrected with EGM dépending on DEM origin which is determined from associated text file. 
-		
+        
 
 /* AMSTerEngine20260204 (© DD & SAREOS) */
 /* ************************************ */
@@ -359,7 +420,7 @@ SentinelDataDownloader: Correction of data orientation in DTED DEM management.
 /* AMSTerEngine20260119 (© DD & SAREOS) */
 /* ************************************ */
 SentinelDataDownloader: Addition of option -DEM to download the COPERNICUS DTE_30 DEM as the original SRTM one is not available anymore on previous server.
-	getSRTMDEM is thus removed. Preferable to avoid being dependent on US servers.  
+    getSRTMDEM is thus removed. Preferable to avoid being dependent on US servers.  
 
 /* AMSTerEngine20260109 (© DD & SAREOS) */
 /* ************************************ */
@@ -416,7 +477,7 @@ getStatForZoneInFile: Correction in UTM zone longitude index management. When th
 /* AMSTerEngine20250903 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack: For now, tracking is based on points for which a local max above connexion cleaning threshold is found without locating it using curve fitting. 
-	Addition of hidden -z option to perform coherence tracking on already existing coherence stack to allow changing seuilnet.
+    Addition of hidden -z option to perform coherence tracking on already existing coherence stack to allow changing seuilnet.
 
 /* AMSTerEngine20250902 (© DD & SAREOS) */
 /* ************************************ */
@@ -437,9 +498,9 @@ lazInSAR: Bug correction introduced to the change made initInSAR returning now t
 /* AMSTerEngine20250829 (© DD & SAREOS) */
 /* ************************************ */
 CohTrack developments up to tracking products generation. 
-	Detection of local coherence maximum through curve fitting still missing. 
-	Full 2D scanning ready but still to be unlocked. 
-	
+    Detection of local coherence maximum through curve fitting still missing. 
+    Full 2D scanning ready but still to be unlocked. 
+    
 /* AMSTerEngine20250827 (© DD & SAREOS) */
 /* ************************************ */
 cohTrack bugs correction. 
@@ -497,8 +558,8 @@ initInSAR: double free correction.
 /* AMSTerEngine20250612 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: Some clarification in help message. 
-	Big correction in resampling by averaging. There was an error lasting since years making it totally wrong. 
-	
+    Big correction in resampling by averaging. There was an error lasting since years making it totally wrong. 
+    
 /* AMSTerEngine20250611 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: Some ETAD corrections and verifications. 
@@ -522,7 +583,7 @@ S1DataReaderLib: Bug correction in burst concatenation that occured when reading
 /* AMSTerEngine20250602 (© DD & SAREOS) */
 /* ************************************ */
 S1InSARLib.c: Burst alignment correction to cope with recent modifications. 
-	Correction of InSAR parameter saving in case interpolated save image is smaler than initial one due to burst selection.
+    Correction of InSAR parameter saving in case interpolated save image is smaler than initial one due to burst selection.
 updateS1Orbits: Correction of COPERNICUS credential management in case more than a single account is mentionned in .netrc file.
 getSRTMDEM: Still a correction in destination path when specifying only an output name for the DEM. 
 S1Coregistration: Correction in master image copy in case InSAR burst selection requires it.
@@ -530,22 +591,22 @@ S1Coregistration: Correction in master image copy in case InSAR burst selection 
 /* AMSTerEngine20250528 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReaderLib.c: Big bug correction in burst alignment. Bug present in all versions from 20250424. 
-	Correction of an older bug when saving infoImage.txt. Strangely, this bug should have induced a systematic crash. Revealed only through WSL (Windows Subsystem for Linux). 
+    Correction of an older bug when saving infoImage.txt. Strangely, this bug should have induced a systematic crash. Revealed only through WSL (Windows Subsystem for Linux). 
 getSRTMDEM: Bug correction in destination path when specifying an output name for the DEM. 
 
 /* AMSTerEngine20250521 (© DD & SAREOS) */
 /* ************************************ */
 updateS1Orbit: Adaptation to cope with COPERNICUS credential management change. 
 InSARProductsGeneration: Bug correction in positioning within ETAD burst layers.
-	Bug correction oin sigma0 calibration. Incidence angle was wrongly calculated or even not calculated. 
+    Bug correction oin sigma0 calibration. Incidence angle was wrongly calculated or even not calculated. 
 
 /* AMSTerEngine20250520 (© DD & SAREOS) */
 /* ************************************ */
 InSARProductGeneration: Full ETAD integration.
-	Remark: Option allowing to compute interferogram without orbital phase removal was changed from -E to -N to avoid confusion with ETAD flag. 
+    Remark: Option allowing to compute interferogram without orbital phase removal was changed from -E to -N to avoid confusion with ETAD flag. 
 S1DataDownloader: COPERNICUS credential management change to avoid re-asking them and so waiting for user's input.
-	Bug correction (wrong free) at end of routine. 
-	If already present, ETAD data is re-downloaded in case its size is not correct. 
+    Bug correction (wrong free) at end of routine. 
+    If already present, ETAD data is re-downloaded in case its size is not correct. 
 ETADDataReader: Bug correction: wrong free. 
 
 /* AMSTerEngine20250429 (© DD & SAREOS) */
@@ -556,7 +617,7 @@ S1Coregistration: Correction of bug recently introduced in burst alignment when 
 /* AMSTerEngine20250425 (© DD & SAREOS) */
 /* ************************************ */
 S1Coregistration: Modification of master image burst management when it needs to be copied within working directory. 
-	Now, master and slave images may differ in number of swath in addition to differ in number of burst within each swath. 
+    Now, master and slave images may differ in number of swath in addition to differ in number of burst within each swath. 
 
 /* AMSTerEngine20250424 (© DD & SAREOS) */
 /* ************************************ */
@@ -575,29 +636,29 @@ InSARProductGeneration: Bug correction in mask management. When a slant range Ma
 /* AMSTerEngine20250415 (© DD & SAREOS) */
 /* ************************************ */
 SentinelDataDownloader: renaming of S1DataDownloader into SentinelDataDownloader.
-	Now, S2MSI1C and S2MSI1A data download is also available. 
-	Bug correction leading to a crash at end of process (non allocated pointer freed). 
+    Now, S2MSI1C and S2MSI1A data download is also available. 
+    Bug correction leading to a crash at end of process (non allocated pointer freed). 
 
 /* AMSTerEngine20250414 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: 
-	Valgrind memory check of burst stitching ---> OK. 
-	No error detected. 
-	==30961== HEAP SUMMARY:
-	==30961==     in use at exit: 0 bytes in 0 blocks
-	==30961==   total heap usage: 1,390,268 allocs, 1,390,268 frees, 2,040,258,586 bytes allocated
-	==30961== 
-	==30961== All heap blocks were freed -- no leaks are possible
-	==30961== 
-	==30961== For lists of detected and suppressed errors, rerun with: -s
-	==30961== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+    Valgrind memory check of burst stitching ---> OK. 
+    No error detected. 
+    ==30961== HEAP SUMMARY:
+    ==30961==     in use at exit: 0 bytes in 0 blocks
+    ==30961==   total heap usage: 1,390,268 allocs, 1,390,268 frees, 2,040,258,586 bytes allocated
+    ==30961== 
+    ==30961== All heap blocks were freed -- no leaks are possible
+    ==30961== 
+    ==30961== For lists of detected and suppressed errors, rerun with: -s
+    ==30961== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 
-	Adding some space in sub swath azimuth line storage to tackle possible global range shifts between stitched frames (10 additionnal pixels). 
-	
+    Adding some space in sub swath azimuth line storage to tackle possible global range shifts between stitched frames (10 additionnal pixels). 
+    
 S1DataDownloader: 
-	Bug correction: pointer wrongly freed when not using option -r. 
-	Correction in end date management. 
-	
+    Bug correction: pointer wrongly freed when not using option -r. 
+    Correction in end date management. 
+    
 /* AMSTerEngine20250408 (© DD & SAREOS) */
 /* ************************************ */
 cutAndZoom: Correction in case aoi is all zero and GEO is set. In which case, it is simply considered as SRA.
@@ -610,7 +671,7 @@ EnviSATDataReader: Bulk reading or parameter file-based reading gathered in a si
 /* AMSTerEngine20250401 (© DD & SAREOS) */
 /* ************************************ */
 EnviSATBulkDataReader: Removal of disgraceful (dixit NdO) message concerning not found orbit in case of ERS data reading.
-		Addition of kml generation. 
+        Addition of kml generation. 
 
 /* AMSTerEngine20250328 (© DD & SAREOS) */
 /* ************************************ */
@@ -619,13 +680,13 @@ cutAndZoom: Correction in slant range area management.
 /* AMSTerEngine20250327 (© DD & SAREOS) */
 /* ************************************ */
 S1DataDownloader: Bug correction in destination directory management. 
-		Bug correction in read frame listing management. 
+        Bug correction in read frame listing management. 
 
 /* AMSTerEngine20250320 (© DD & SAREOS) */
 /* ************************************ */
 S1DataDownloader: Allocation bug correction. 
-		Uncommenting dowload makes things works better.
-		Another time management correction.
+        Uncommenting dowload makes things works better.
+        Another time management correction.
 
 /* AMSTerEngine20250320 (© DD & SAREOS) */
 /* ************************************ */
@@ -678,7 +739,7 @@ S1BurstCounter: Bug correction in burst structure comparision with reference ima
 /* ************************************ */
 S1DataDownloader: Correction of a bug leading to a crash if no images were to be read. 
 S1DataReader: Correction of a bug recently introduced in the per burst kml and SLCInfoImage management. 
-	Correction of a bug in handling -s option to read and concatenate burst into image. 
+    Correction of a bug in handling -s option to read and concatenate burst into image. 
 
 /* AMSTerEngine20250127 (© DD & SAREOS) */
 /* ************************************ */
@@ -703,7 +764,7 @@ If destination directory already containes links to S1 images, the first linked 
 /* AMSTerEngine20250120 (© DD & SAREOS) */
 /* ************************************ */
 S1DataDownloader: Correction in saving kml's and SLCImageInfo's text files when merging frames. 
-		Now, listing of already read frames is saved and updated to speed up subsequent reading.  
+        Now, listing of already read frames is saved and updated to speed up subsequent reading.  
 
 /* AMSTerEngine20250117 (© DD & SAREOS) */
 /* ************************************ */
@@ -750,10 +811,10 @@ initInSAR: Suppresion of the mention of used mask in parameter file.
 getSRTM: water body mask is not taken into account anymore in the SRTM tile assembly in order to keep sea height to zero. 
 initInSAR: In geoProjectionParameters.txt, masking is set to "none" by default. 
 geoProjection: Mask management corrected. 
-	If masking parameter is set to "mask" within parameter file, water bodies are avoided in measurement georeferencing and geoprojection. 		Others product will be geoprojected without masking water bodies. This requires a second referencing. 
-	In any case, if a kml is given, the projection frame will be the rectangle circumscribed to the kml.
-	If no kml is given, it is the given frame that prevails. 
-	If no kml is given and all given frame values are set to zero, the frame will be computed from the first georeferencing.
+    If masking parameter is set to "mask" within parameter file, water bodies are avoided in measurement georeferencing and geoprojection.      Others product will be geoprojected without masking water bodies. This requires a second referencing. 
+    In any case, if a kml is given, the projection frame will be the rectangle circumscribed to the kml.
+    If no kml is given, it is the given frame that prevails. 
+    If no kml is given and all given frame values are set to zero, the frame will be computed from the first georeferencing.
 
 /* AMSTerEngine20241108 (© DD & SAREOS) */
 /* ************************************ */
@@ -809,7 +870,7 @@ aggragate thems and save DEM within DEM directory defined by
 EXTERNAL_DEMS_DIR environmental variable
 Saved DEM will have the same name than given kml.
 SRTM tiles are fetched from:
-	https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_HGT.001/2000.02.11/
+    https://e4ftl01.cr.usgs.gov/MEASURES/NASADEM_HGT.001/2000.02.11/
 Add your credentials to your .netrc file correspondingly
 if EXTERNAL_MASKS_DIR environmental variable is defined, waterBody will also be saved
 
@@ -876,13 +937,13 @@ SAOCOMDataReader: correction of rejection of images that do not encompass aoi ba
 /* AMSTerEngine20240531 (© DD & SAREOS) */
 /* ************************************ */
 SAOCOMDataReader: Additiobn of option -I to force selecting only images encompassing the given aoi. 
-	Test is done at listing cleaning step and once again after reading, when the correct image frame without black borders is determined. 
+    Test is done at listing cleaning step and once again after reading, when the correct image frame without black borders is determined. 
 Bug correction in routine readInfoImageFromTextFile: Lat-Lon and UTM aoi weren't correctly read. 
 
 /* AMSTerEngine20240530 (© DD & SAREOS) */
 /* ************************************ */
-SAOCOMDataReader: Addition of option -o for data ordering. In bulk data reader, subdirs are created with respect to heading direction, beam, track and frame number.	
-	So, former image named SAO1A_20191202_042_389_A.csl will be saved in firectory .../Ascending/S3/Track042/Frame389/SAO1A_20191202_A.csl
+SAOCOMDataReader: Addition of option -o for data ordering. In bulk data reader, subdirs are created with respect to heading direction, beam, track and frame number.    
+    So, former image named SAO1A_20191202_042_389_A.csl will be saved in firectory .../Ascending/S3/Track042/Frame389/SAO1A_20191202_A.csl
 
 /* AMSTerEngine20240427 (© DD & SAREOS) */
 /* ************************************ */
@@ -922,19 +983,19 @@ InSARParameter management: Correction of a bug introduced on january 24 leading 
 /* AMSTerEngine20240215 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: Bugs correction: 
-	Former version crashed when the destination directory was not containing any former read S1 images. 
-	Correction in handling a single input zipped file.
-	Messages concerning orbits updates more complete. 
+    Former version crashed when the destination directory was not containing any former read S1 images. 
+    Correction in handling a single input zipped file.
+    Messages concerning orbits updates more complete. 
 
 /* AMSTerEngine20240214 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: Now, listing of frame to be read is first cleaned with respect to frame already read in destination directory. This to avoid to unzip unecessary files. 
-	If willing to circumvent this step forcing rereading all, use the -o option.
+    If willing to circumvent this step forcing rereading all, use the -o option.
 
 /* AMSTerEngine20240213 (© DD & SAREOS) */
 /* ************************************ */
 initInSAR & InSARParameters.txt management: Addition of field named /* Orbit types */ in case S1 orbit types are known.
-	Valgrind check: Loads of leaks corrections.
+    Valgrind check: Loads of leaks corrections.
 
 /* AMSTerEngine20240212 (© DD & SAREOS) */
 /* ************************************ */
@@ -947,7 +1008,7 @@ S1DataDownloader: Correction in COPERNICUS server reconnexion.
 /* AMSTerEngine20240210 (© DD & SAREOS) */
 /* ************************************ */
 S1DataDownloader: Correction in naming. Replacing .SAFE extension by .zip to keep the same name convention than before. 
-	Addition of time laps of 10 minutes if reconnection, retrying only once. 
+    Addition of time laps of 10 minutes if reconnection, retrying only once. 
 
 /* AMSTerEngine20240209 (© DD & SAREOS) */
 /* ************************************ */
@@ -972,8 +1033,8 @@ updateS1Orbits: Addition of some error controls.
 /* AMSTerEngine20231213 (© DD & SAREOS) */
 /* ************************************ */
 updateS1Orbits: fully renewed to cope with new COPERNICUS server ditribution and OData api requests. 
-	A .netrc text file must exists in the user home directory containing the following line: 
-	machine identity.dataspace.copernicus.eu login <your COPERNICUS login> password <your password>
+    A .netrc text file must exists in the user home directory containing the following line: 
+    machine identity.dataspace.copernicus.eu login <your COPERNICUS login> password <your password>
 
 /* AMSTerEngine20231113 (© DD & SAREOS) */
 /* ************************************ */
@@ -987,27 +1048,27 @@ S1DataReader: Adding the possibility of reading a single S1 zipped file in input
 /* AMSTerEngine20231108 (© DD & SAREOS) */
 /* *********************************** */
 SAOCOMDataReader: Priority is given to kml adequacy onto last processing date to ensure keeping the largest area of interest in data selection. 
-		Addition of processing time, orbit number and row (frame) number within info text file if available. 
-		Bug correction. 
+        Addition of processing time, orbit number and row (frame) number within info text file if available. 
+        Bug correction. 
 
 /* AMSTerEngine20231107 (© DD & SAREOS) */
 /* *********************************** */
 CSKDataReader & ICEYEDataReader: Inconsitancy in h5version.h installed under Ubuntu 22.04 or 20.04. In 22.04, H5Ovisit_vers is not defined in place of beeing set to 1 or 2.
-	Modification of compiler directives to cope with this inconsistancy and select the adequate version of function H5Ovisit. 
+    Modification of compiler directives to cope with this inconsistancy and select the adequate version of function H5Ovisit. 
 
 /* AMSTerEngine20231103 (© DD & SAREOS) */
 /* *********************************** */
 SAOCOMDataReader: Bug correction: double free.
-			Correction of cropping. 
+            Correction of cropping. 
 
 /* AMSTerEngine20231101 (© DD & SAREOS) */
 /* ************************************ */
 SAOCOMDataReader: Now, a kml can be given in input to restrict data reading to useful frames. No cropping is performed. 
-		Data selection is performed in three steps. 
-		First, only frames having an intersection with AoI are selected.
-		Second, for a given acquisition date, only the most recently (re-)processed image is kept.
-		Third, since frame numbers within tracks are not consistant, one can still have two selected frames for a given date. 
-		So, only the frame having its center the closest to the centre of the AoI is kept. 
+        Data selection is performed in three steps. 
+        First, only frames having an intersection with AoI are selected.
+        Second, for a given acquisition date, only the most recently (re-)processed image is kept.
+        Third, since frame numbers within tracks are not consistant, one can still have two selected frames for a given date. 
+        So, only the frame having its center the closest to the centre of the AoI is kept. 
 Valgrind check: Several memory leaks corrected in libraries. 
 
 /* MasTerEngine20231018 (© DD & SAREOS) */
@@ -1017,8 +1078,8 @@ CSKDataReader: Removal of hdf5 flag in makefile. Handling replaced through H5Ovi
 /* MasTerEngine20231011 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: Correction of wrong handling of UTM zone in geoProjectionParameters.txt (inversion of zone number and latitude band)
-		Bug correction: erroneously freed pointer. 
-		valgrind check: loads of leaks corrections. 
+        Bug correction: erroneously freed pointer. 
+        valgrind check: loads of leaks corrections. 
 
 /* MasTerEngine20231009 (© DD & SAREOS) */
 /* ************************************ */
@@ -1028,9 +1089,9 @@ fineCoregistration: In case of tracking, values are initiated to NaN.
 /* MasTerEngine20231007 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: Mask handling corrected to cope with 3 level mask. 
-	Now, if asking for masking and if a mask named binarySlantRangeMask is found, it is this one that will be used.
-	Else, it will be the one named slantRangeMask. In which case, all non-zero values lead to masking. 
-	If using homemade phase unwrapping and asking for zone map masking, a corresponding binary zoneMask file will be created. 
+    Now, if asking for masking and if a mask named binarySlantRangeMask is found, it is this one that will be used.
+    Else, it will be the one named slantRangeMask. In which case, all non-zero values lead to masking. 
+    If using homemade phase unwrapping and asking for zone map masking, a corresponding binary zoneMask file will be created. 
 
 /* MasTerEngine20231005 (© DD & SAREOS) */
 /* ************************************ */
@@ -1043,13 +1104,13 @@ geoProjection: bug correction in masked coherence handling.
 /* MasTerEngine20231002 (© DD & SAREOS) */
 /* ************************************ */
 phaseUnwrapping: Correction in 3-level mask management. 
-		The 3-level mask is used in two ways with snaphu. 
-		First, the mask is converted to binary mask taking into account coherence level and saved as binarySlantRangeMask. 
-		Once converted to binary mask, it is used to mask coherence. It is this masked coherence that is sent to snaphu. 
-		Additionally, the mask is send to snaphu through its -M option. 
-		Now, 3-level mask is also applicable to homemade branch cut phase unwrapping. 
-		In case of using snaphu, the mask sent to snaphu is saved as snaphuMask. 
-		It is simply the inverted binarySlantRangeMask as snaphu uses zero to mask. 
+        The 3-level mask is used in two ways with snaphu. 
+        First, the mask is converted to binary mask taking into account coherence level and saved as binarySlantRangeMask. 
+        Once converted to binary mask, it is used to mask coherence. It is this masked coherence that is sent to snaphu. 
+        Additionally, the mask is send to snaphu through its -M option. 
+        Now, 3-level mask is also applicable to homemade branch cut phase unwrapping. 
+        In case of using snaphu, the mask sent to snaphu is saved as snaphuMask. 
+        It is simply the inverted binarySlantRangeMask as snaphu uses zero to mask. 
 geoProjection: geo-projection of maskedCoherence added. 
 
 /* MasTerEngine20230928 (© DD & SAREOS) */
@@ -1068,7 +1129,7 @@ slantRangeDEM: mask can now be of any size.
 /* MasTerEngine202308904 (© DD & SAREOS) */
 /* ************************************ */
 S1Coregistration: Bug correction in master image copy due to new format management. 
-		Memory leaks corrections. 
+        Memory leaks corrections. 
 /* MasTerEngine202308901 (© DD & SAREOS) */
 /* ************************************ */
 S1OrbitUpdater : Cosmetic changes in message log. 
@@ -1112,14 +1173,14 @@ ONDA_S1DataDownloader: Addition of -SM option for Strip Map data download.
 /* MasTerEngine202305023 (© DD & SAREOS) */
 /* ************************************ */
 baselinePlot: Now, baselinePlot only check .csl images within the given directory and not anymore in subdirectories. 
-		Error control improvement to detect if almost an SLCImageInfo.txt textfile is available. 
+        Error control improvement to detect if almost an SLCImageInfo.txt textfile is available. 
 
 /* MasTerEngine202305023 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: Error control improvement in kml management. Stopping if the kml file does not contains a polygon.
 geoProjection: bug correction in kml management when using the one mentioned in InSARParameters. It was correctly used but the reference to it was not copied within the geoProjectionParametersFile. 
-	Additionally, if using clean projection (-C), kml path is now erased if present.
-	However, if using -Ci, the InSAR kml is used for geoprojection while the rest is cleaned. 
+    Additionally, if using clean projection (-C), kml path is now erased if present.
+    However, if using -Ci, the InSAR kml is used for geoprojection while the rest is cleaned. 
 
 /* MasTerEngine202305011 (© DD & SAREOS) */
 /* ************************************ */
@@ -1132,8 +1193,8 @@ interferogramFiltering: Code parallelisation. Correction of some bugs in the mem
 /* MasTerEngine20230503 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: Now, if input directory contains S1 compressed zipped images, each image will be first uncompressed in a temporary directory to then be read. 
-		After reading, the uncompressed file is deleted.
-		Decompression is performed in directory named .tempDir. This latter one is located either in the $USER $HOME directory provided write access is granted or in the input directory provided write access is granted in this latter on or in the destination directory where write access is supposed to be granted.
+        After reading, the uncompressed file is deleted.
+        Decompression is performed in directory named .tempDir. This latter one is located either in the $USER $HOME directory provided write access is granted or in the input directory provided write access is granted in this latter on or in the destination directory where write access is supposed to be granted.
 
 /* MasTerEngine20230420 (© DD & SAREOS) */
 /* ************************************ */
@@ -1156,22 +1217,22 @@ ENVI header management: Correction of a misleading interpretation of hemisphere 
 phaseUnwrapping: Now, path names are expanded when sending them to snaphu.
 lazInSAR: Bug correction at cropping level. Cropping was crashing if no external DEM was given at input. 
 InSAR parameters reading: Removal of program stop in case no slave image is present at requested place. 
-		Replaced by an error message without stopping in case slant range data removal was volontarly done to spare place.
+        Replaced by an error message without stopping in case slant range data removal was volontarly done to spare place.
 
 /* MasTerEngine20230201 (© DD & SAREOS) */
 /* ************************************ */
 CSKDataReader: Addition of CSK second generation data reading.
-		Naming convention change: platformName_yyyymmdd_hl 
-		where platformName is read in the header (e.g. CSKS1 for satelite 1 o CSK mission or SSAR1 for satelite 1 of CSG mission).
-		yyyymmdd is the acquisition date.
-		h is the heading: A or D with respect to ascending or descending pass.
-		l is the look direction: R or L for right or left looking sensor. 
+        Naming convention change: platformName_yyyymmdd_hl 
+        where platformName is read in the header (e.g. CSKS1 for satelite 1 o CSK mission or SSAR1 for satelite 1 of CSG mission).
+        yyyymmdd is the acquisition date.
+        h is the heading: A or D with respect to ascending or descending pass.
+        l is the look direction: R or L for right or left looking sensor. 
 
 /* MasTerEngine20230126 (© DD & SAREOS) */
 /* ************************************ */
 ERSDataReader: Image location step skipped in case of RSAT1 data to avoid crash due to state vectors given in inertial coordinate system.
 RSAT2DataReader : Bug correction in available polarization reading leading to a wrong input file name management.
-		Bug corrections in some file naming when controling the reader using a text file.  
+        Bug corrections in some file naming when controling the reader using a text file.  
 
 /* MasTerEngine20230120 (© DD & SAREOS) */
 /* ************************************ */
@@ -1217,13 +1278,13 @@ phaseUnwrapping: Bug correction in pointer management within biased coherence ca
 /* ************************************ */
 ICEYEDataReader: small leak correction
 ERSDataReader: Addition of bulk reading like other data reader. If using bulk reading file naming convention is ERSi_YYYYMMDD_h.csl
-		Where i is 1 or 2 and h is the heading direction.
+        Where i is 1 or 2 and h is the heading direction.
 
 /* MasTerEngine20221018 (© DD & SAREOS) */
 /* ************************************ */
 getLineThroughStack: Bug correction in MSBAS file management. All ENVI files were considered, not only the MSBAS_YYYYMMDDTHHMMSS* files.
-		Now, if giving any other directory containing ENVI files, not necessarily issued from an MSBAS processing, 
-		it also issue a file giving values accross the stack of file. 
+        Now, if giving any other directory containing ENVI files, not necessarily issued from an MSBAS processing, 
+        it also issue a file giving values accross the stack of file. 
 
 /* MasTerEngine20221017 (© DD & SAREOS) */
 /* ************************************ */
@@ -1241,7 +1302,7 @@ CSLImageFormat.c: Bug correction in CSL image format lib (double free)
 /* MasTerEngine20221001 (© DD & SAREOS) */
 /* ************************************ */
 fineCoregistration: Correction of the -s option reading, which was selected by default...
-		Correction in saving intermediate within under gnuplot text file (reverting line order)
+        Correction in saving intermediate within under gnuplot text file (reverting line order)
 
 /* MasTerEngine20220929 (© DD & SAREOS) */
 /* ************************************ */
@@ -1251,13 +1312,13 @@ fineCoregistration: addition of a non-commented -s option to save some intermedi
 /* MasTerEngine20220920 (© DD & SAREOS) */
 /* ************************************ */
 agregateSRTMTiles: Some tuning in the path management of the external DEM if not within the ${EXTERNAL_DEMS_DIR} directory.
-		Correction of the EGM96 area selection to correctly encompass the whole external DEM.
-		Control of signedness of the sampling. Only positive sampling values are considered.  
+        Correction of the EGM96 area selection to correctly encompass the whole external DEM.
+        Control of signedness of the sampling. Only positive sampling values are considered.  
 
 /* MasTerEngine20220920 (© DD & SAREOS) */
 /* ************************************ */
 TSXDataReader: Bug correction in management of bistatic or pursuite mode data reading.
-		platform name changed in case of bistatic or pm mode to avoid a bug in saving kml aoi. 
+        platform name changed in case of bistatic or pm mode to avoid a bug in saving kml aoi. 
 
 /* MasTerEngine20220914 (© DD & SAREOS) */
 /* ************************************ */
@@ -1291,7 +1352,7 @@ spectralCoh: Adding disjoint sub-bands computation (with 5% overlapp). If both s
 /* MasTerEngine20220827 (© DD & SAREOS) */
 /* ************************************ */
 makefile: Changing optimization level from O3 to O2.
-	Big influence on splitBregmanROF algorithm in terms of time and precision. Strange...
+    Big influence on splitBregmanROF algorithm in terms of time and precision. Strange...
 
 /* MasTerEngine20220826 (© DD & SAREOS) */
 /* ************************************ */
@@ -1316,15 +1377,15 @@ ONDA_S1DataDownloader: Modification in order to request off-line processing only
 /* ************************************ */
 initInSAR: Correction of a bug recently introduced in the management of kml, taking into account summit height or scene average height. 
 cropAndZoom: Correction of a bug preventing to create the interface texte file. Addition of some possibilities in the kml managenent: 
-	If DEM is given and available it is used to determine kml summit height to determine slant range azimuth aoi. 
-	If not given, scene average height is used. 
-	Scene average height may be forced using keyword H=hAvh where hAvg is the requested scene average height. 
-	Option -e allows enlarging the aoi as the union of the one calculated at null altitude and the one calculated at an altitude of 5000m.
+    If DEM is given and available it is used to determine kml summit height to determine slant range azimuth aoi. 
+    If not given, scene average height is used. 
+    Scene average height may be forced using keyword H=hAvh where hAvg is the requested scene average height. 
+    Option -e allows enlarging the aoi as the union of the one calculated at null altitude and the one calculated at an altitude of 5000m.
 
 /* MasTerEngine20220807 (© DD & SAREOS) */
 /* ************************************ */
 geoProjection: Reintroduction of requiered half pixel shift at geoReferencing level to cope with (Q)GIS. 
-		Writing of issued coordinate frame corrected. It was correct in ENVI header but not in updated geoProjectionParameters.txt file.
+        Writing of issued coordinate frame corrected. It was correct in ENVI header but not in updated geoProjectionParameters.txt file.
 
 /* MasTerEngine20220806 (© DD & SAREOS) */
 /* ************************************ */
@@ -1338,7 +1399,7 @@ movingAverageOnSTack: Increase the system limit of open files.
 /* MasTerEngine20220804 (© DD & SAREOS) */
 /* ************************************ */
 CSKDataReader: Bug correction that might lead to not reading some headers attributes.
-		Numerous memory leaks corrections (also in ICEYEDatareader).
+        Numerous memory leaks corrections (also in ICEYEDatareader).
 
 /* MasTerEngine20220726 (© DD & SAREOS) */
 /* ************************************ */
@@ -1351,11 +1412,11 @@ movingAverageOnStack: Bug correction leading to a crash when an infinite value i
 /* MasTerEngine20220724 (© DD & SAREOS) */
 /* ************************************ */
 cutAndZoomCSLImage: 
-	Now, if an external DEM is provided, it is considered to get the height of the four corners of the provided lat-lon area of interest and compute the corresponding slant range - azimuth area of interest.
-	Addition of option -e to enlarge the area of interest, i.e., external DEM or scene average height are not taken into account.
-	Bug correction in the extraction of local heights of a polygon summits within external DEM. 
-	Pay attention if your provided kml or area of interest corners encompass an area of layover, computed slant range - azimuth area of interest may logically be smaller than expected. Better consider a lat lon area of interest with corners or kml summits not in a layover zone to get correct computation. 
-	kml generated with images are now computed scene average height. 
+    Now, if an external DEM is provided, it is considered to get the height of the four corners of the provided lat-lon area of interest and compute the corresponding slant range - azimuth area of interest.
+    Addition of option -e to enlarge the area of interest, i.e., external DEM or scene average height are not taken into account.
+    Bug correction in the extraction of local heights of a polygon summits within external DEM. 
+    Pay attention if your provided kml or area of interest corners encompass an area of layover, computed slant range - azimuth area of interest may logically be smaller than expected. Better consider a lat lon area of interest with corners or kml summits not in a layover zone to get correct computation. 
+    kml generated with images are now computed scene average height. 
 
 /* MasTerEngine20220722 (© DD & SAREOS) */
 /* ************************************ */
@@ -1364,13 +1425,13 @@ All readers: Now, a kml is generated with a polygon delineating the compute area
 /* MasTerEngine20220713 (© DD & SAREOS) */
 /* ************************************ */
 updateS1Orbits: Bug correction leading to a crash when precise orbit dir is empty.
-		Removing --show-progress option to wget since apparently it is not implemented in centos version. 
+        Removing --show-progress option to wget since apparently it is not implemented in centos version. 
 
 /* MasTerEngine20220711 (© DD & SAREOS) */
 /* ************************************ */
 cropAndZoom: Small change in crop area calculation when given in GEO: 
-	Now, the slant range azimuth area of interest is calculated considering the scene average height if not zero. 
-	If scene average heigth is zero, the area of interest is calculated considering the union of the one derived for an altitude of zero and the one derived considering a height of 5000m. 
+    Now, the slant range azimuth area of interest is calculated considering the scene average height if not zero. 
+    If scene average heigth is zero, the area of interest is calculated considering the union of the one derived for an altitude of zero and the one derived considering a height of 5000m. 
 
 /* MasTerEngine20220711 (© DD & SAREOS) */
 /* ************************************ */
@@ -1381,8 +1442,8 @@ initInSAR: very old stuff cleaning in infoImage reading.
 /* MasTerEngine20220702 (© DD & SAREOS) */
 /* ************************************ */
 coarseCoregistration: 
-	Small change in the management of the authorized search area through the estimated error parameter found in the fine coregistration parameters. 
-	This allows lazInSAR better manage and optimize coarse coregistration.
+    Small change in the management of the authorized search area through the estimated error parameter found in the fine coregistration parameters. 
+    This allows lazInSAR better manage and optimize coarse coregistration.
 
 /* MasTerEngine20220630 (© DD & SAREOS) */
 /* ************************************ */
@@ -1396,24 +1457,24 @@ agregateSRTMTiles: Correction of a bug in case EXTERNAL_DEMS_DIR environment var
 /* MasTerEngine20220624 (© DD & SAREOS) */
 /* ************************************ */
 agregateSRTMTiles: Addition of a new environment variable named EARTH_GRAVITATIONAL_MODELS_DIR to manage nowadays EGM96 and futures ones if required. 
-	agregateSRTMTiles will look for file WW15MGH.DAC within directory ${EARTH_GRAVITATIONAL_MODELS_DIR}/EGM96
+    agregateSRTMTiles will look for file WW15MGH.DAC within directory ${EARTH_GRAVITATIONAL_MODELS_DIR}/EGM96
 baselinePlot: Bug correction in sub selection baseline plot in case of change of supermaster. 
 
  /* MasTerEngine20220622 (© DD & SAREOS) */
 /* ************************************ */
 agregateSRTMTiles: 
-	Bug correction in EGM96 handling. Now everything is in mathematical order as it should be. 
-	Addition of a second usage to convert an older existing external DEM previously assembled by an older version of agregateSRTMTiles into ellipsoidal height.
-	Just use: agregateSRTMTiles pathToExistingDEM. If the EXTERNAL_DEMS_DIR environment variable is correctly set, giving the name of DEM is sufficient. 
-	The associated .txt file will be updated to state the change from geoidal to ellipsoidal height. 
+    Bug correction in EGM96 handling. Now everything is in mathematical order as it should be. 
+    Addition of a second usage to convert an older existing external DEM previously assembled by an older version of agregateSRTMTiles into ellipsoidal height.
+    Just use: agregateSRTMTiles pathToExistingDEM. If the EXTERNAL_DEMS_DIR environment variable is correctly set, giving the name of DEM is sufficient. 
+    The associated .txt file will be updated to state the change from geoidal to ellipsoidal height. 
 movingAverageOnStack: 
-	ENVI headers witout defined geographical coordinate systems are also considered. 
+    ENVI headers witout defined geographical coordinate systems are also considered. 
 
 /* MasTerEngine20220602 (© DD & SAREOS) */
 /* ************************************ */
 baselinePlot: Addition of a second way to use it. If using option -r (for restricted), an already performed baseline plot may be filtered with respect 
-	to a sub selection performed by one of the MasTer Toolbox scripts like "restrict_msbas_to_Coh.sh" to get the baseline plot of this latter selection.
-	Usage is thus: baselinePlot -r /pathTo/allreadyPerformed/baselinePlotDir /pathTo/subselection.txt
+    to a sub selection performed by one of the MasTer Toolbox scripts like "restrict_msbas_to_Coh.sh" to get the baseline plot of this latter selection.
+    Usage is thus: baselinePlot -r /pathTo/allreadyPerformed/baselinePlotDir /pathTo/subselection.txt
 
 
 /* MasTerEngine20220601 (© DD & SAREOS) */
@@ -1461,15 +1522,15 @@ baselinePlot: Now, when giving haMin, BpMax is computed to cope with the given v
 S1OrbitUpdater: Modified/adapted to cope with updateS1Orbits.
 Loads (really loads) of memory leaks correction here and there. Still a lot to check.
 crop2Common: New basic tool meant to adapt area of interest of a stack of interferometric processing to common intersection area.
-		InSARParameters.txt files are simply read and modified to adapt AoI to common intersect. Original InSARParameters.tx file kept with .ori extension.  
-		To be used after corregistration to super master and before InSARProcessing to get a stack of slantrange products of same dimension. 
-		Usefull to allow weighting average of slant range DEM, using coherence as local weight or to allow baseline combination.
-		Meant to evolve. 
+        InSARParameters.txt files are simply read and modified to adapt AoI to common intersect. Original InSARParameters.tx file kept with .ori extension.  
+        To be used after corregistration to super master and before InSARProcessing to get a stack of slantrange products of same dimension. 
+        Usefull to allow weighting average of slant range DEM, using coherence as local weight or to allow baseline combination.
+        Meant to evolve. 
 
 /* MasTerEngine20220422 (© DD & SAREOS) */
 /* ************************************ */
 baselinePlot: bug correction in the allocation of image location within the orbital tube. 
-		Some tuning in gnuplot
+        Some tuning in gnuplot
 
 /* MasTerEngine20220422 (© DD & SAREOS) */
 /* ************************************ */
@@ -1479,7 +1540,7 @@ phaseUnwrapping: correction of returned value by branch cut in case this one tak
 /* MasTerEngine20220421 (© DD & SAREOS) */
 /* ************************************ */
 phaseUnwrapping: Correction of a flag mismatch leading to systematic use of mean filtered coherence as biased one in case of snaphu crash.
-		  Correction of dimensions of mean filtered coherence
+          Correction of dimensions of mean filtered coherence
 
 
 /* MasTerEngine20220420 (© DD & SAREOS) */
@@ -1507,7 +1568,7 @@ slantRangeDem: Relaxing and parametrizing layover threshold. Can be given as fra
 /* MasTerEngine20220330 (© DD & SAREOS) */
 /* ************************************ */
 baselinePlot: small bug correction: If destination directory does not exists, it is created. 
-	gnuPlot is executed automatically. 
+    gnuPlot is executed automatically. 
 
 /* MasTerEngine20220327 (© DD & SAREOS) */
 /* ************************************ */
@@ -1520,7 +1581,7 @@ baselinePlot: In-depth verification. Graph correction.
 /* MasTerEngine20220322 (© DD & SAREOS) */
 /* ************************************ */
 baselinePlot: Bug correction--> double free leading to crash.
-	      Correction in table naming.
+          Correction in table naming.
 
 /* MasTerEngine20220316 (© DD & SAREOS) */
 /* ************************************ */
@@ -1533,7 +1594,7 @@ updateS1Orbit: Deeply modified. By default, it is now using ESA server with defa
 /* MasTerEngine20220315 (© DD & SAREOS) */
 /* ************************************ */
 movingAverageOnStack: Possibility to generate a mask is added combining median value below a given threshold and sigma value below a given threshold. 
-	See help for more details. Works really great if willing to generate a mask based on a stack of coherence images. 
+    See help for more details. Works really great if willing to generate a mask based on a stack of coherence images. 
 
 
 /* MasTerEngine20220311 (© DD & SAREOS) */
@@ -1618,14 +1679,14 @@ geoProjection: Now, when asking for UTM projection giving a kml to delimit geopr
 /* MasTerEngine20210928 (© DD & SAREOS) */
 /* ************************************ */
 InSARProductsGeneration: Now the filtered version of the interferogram is destroyed at the end of the calculation as it is only a side product very slightly filtered aiming at improving coherence estimation.
-		Moreover, this filtered working version had a confusing name.
-		Better removing it to really get a filtered version when requested using interferogramFiltering. 
+        Moreover, this filtered working version had a confusing name.
+        Better removing it to really get a filtered version when requested using interferogramFiltering. 
 
 
 /* MasTerEngine20210922 (© DD & SAREOS) */
 /* ************************************ */
 S1DataReader: Bug correction leading to complete misalignment of burst due to erroneous initialization of localization parameter of first selected swath. 
-			This bug only appeared when first bursts of first considered swath is not selected using kml area of interest. 
+            This bug only appeared when first bursts of first considered swath is not selected using kml area of interest. 
 /* MasTerEngine202109120 (© DD & SAREOS) */
 /* ************************************ */
 ERSDataReader: correction of bug introduced on march 2021 in CEOSutils and CEOS headers to cope with RadarSAT1 CEOS data. 
@@ -1686,7 +1747,7 @@ S1Coregistration: Big correction in interpolation management in order to handle 
 /* CIS20210521 (© DD & SAREOS) */
 /* *************************** */
 geoProjection: Now, GEC sampling is given in seconds of arc in place of decimal degrees. 
-			   Additionally, generic file name is automatically determined from projection name and sampling values. 
+               Additionally, generic file name is automatically determined from projection name and sampling values. 
 
 
 /* CIS20210520 (© DD & SAREOS) */
@@ -1697,10 +1758,10 @@ cutAndZoom: AoI selection based on kml is not more based on external DEM. An alt
 /* CIS20210519 (© DD & SAREOS) */
 /* *************************** */
 updateS1Orbits: Corrections to take into account repeated orbit updates on ESA/ASF server. 
-	Management of RESTITUTED orbit local data base to cope with last PRECISE orbit downloaded. 
-S1DataReader : 	Adaptations to cope with both PRECISE and RESTITUTED orbits local database. 
-				Obviously, PRECISE orbits prevails if available.
-				Addition of option -p to allow reading if and only if an orbit update was performed with either RESTITUTED or PRECISE orbit.
+    Management of RESTITUTED orbit local data base to cope with last PRECISE orbit downloaded. 
+S1DataReader :  Adaptations to cope with both PRECISE and RESTITUTED orbits local database. 
+                Obviously, PRECISE orbits prevails if available.
+                Addition of option -p to allow reading if and only if an orbit update was performed with either RESTITUTED or PRECISE orbit.
 
 /* CIS20210512 (© DD & SAREOS) */
 /* *************************** */
@@ -1710,16 +1771,16 @@ updateS1Orbits: Since ESA is updating old Precise orbits, updateS1Orbits checks 
 /* CIS20210510 (© DD & SAREOS) */
 /* *************************** */
 updateS1Orbits: Change in orbits management: Now, restituted orbits are only downloaded if being more recent 
-	than the last available precise orbit. Older ones are withdrawn. 
+    than the last available precise orbit. Older ones are withdrawn. 
 
 /* CIS20210505 (© DD & SAREOS) */
 /* *************************** */
 updateS1Orbits: Due to changes in ESA orbits servers, updateS1PrecisesOrbits is replaced by updateS1Orbits. 
-	This latter one download both precise and restituted orbit in ./POEORB and ./RESORB subdirs respectively. 
-	Those ones will be created if not existing in the orbit root directory now defined through the
-	S1_ORBITS_DIR environment variable in place of S1_PRECISES_ORBITS_DIR variable.
-	Download is performed using ASF server. To allow identification, please check the following page:
-	https://wiki.earthdata.nasa.gov/display/EL/How+To+Access+Data+With+cURL+And+Wget
+    This latter one download both precise and restituted orbit in ./POEORB and ./RESORB subdirs respectively. 
+    Those ones will be created if not existing in the orbit root directory now defined through the
+    S1_ORBITS_DIR environment variable in place of S1_PRECISES_ORBITS_DIR variable.
+    Download is performed using ASF server. To allow identification, please check the following page:
+    https://wiki.earthdata.nasa.gov/display/EL/How+To+Access+Data+With+cURL+And+Wget
 
 /* CIS20210217 (© DD & SAREOS) */
 /* *************************** */
@@ -1770,25 +1831,25 @@ lazInSAR stupid bug correction (freeing an non allocated pointer!)
 /* CIS20210109 (© DD & SAREOS) */
 /* *************************** */
 azimuthFiltering: Addition of a new tool to perform azimuth filtering of master and slave image to their common azimuth spectra. 
-	This is mainly of interest in the case of using ERS2 zero gyro mode data. It is to be launched after InSAR initialization or at least before coregistration.  
+    This is mainly of interest in the case of using ERS2 zero gyro mode data. It is to be launched after InSAR initialization or at least before coregistration.  
 
 /* CIS20201221 (© DD & SAREOS) */
 /* *************************** */
 Supression of sceneAverageHeightCrossCheck. Something not meaningful I still do not understand...
 fineCoregistration: 
-	computing common superposition area before coregistration to avoid trying to coregister areas with only noisy signal. 
-	Adding a control on Gaussian maximum location with respect to previous coregistration. 
-		It cannot be larger than allowed estimated error - 1. In other words, it must lie within explored coherence mapping window. 
+    computing common superposition area before coregistration to avoid trying to coregister areas with only noisy signal. 
+    Adding a control on Gaussian maximum location with respect to previous coregistration. 
+        It cannot be larger than allowed estimated error - 1. In other words, it must lie within explored coherence mapping window. 
 cutAndZoom: Adding reference to external DEM if available within the parameter file.
-	External DEM is used to compute scene average height in order to better localize de area of interest with respect to given kml.
-	Formerly, location was computed considering a scene at sea level whatever the location. 
-	lazInSAR automatically includes all here described modification which allows testing everything in a single run on some predefined tests pairs. 
+    External DEM is used to compute scene average height in order to better localize de area of interest with respect to given kml.
+    Formerly, location was computed considering a scene at sea level whatever the location. 
+    lazInSAR automatically includes all here described modification which allows testing everything in a single run on some predefined tests pairs. 
 
 /* CIS20201218 (© DD & SAREOS) */
 /* *************************** */
 lazInSAR: Integration of a new tool which is in fact a complete rewriting of CIS/MasTer Engine. It consist in a full automation of the whole InSAR processing chain.
-	lazInSAR is meant to evolve to allow any processing tuning. 
-	It was also an occasion to track all the processes and to eliminate loads of little bugs and inconsistencies here and there. 
+    lazInSAR is meant to evolve to allow any processing tuning. 
+    It was also an occasion to track all the processes and to eliminate loads of little bugs and inconsistencies here and there. 
 
 /* CIS20201216 (© DD & SAREOS) */
 /* *************************** */
@@ -1796,8 +1857,8 @@ S1Coregistration: Bug correction in selection of slave bursts in case master ima
 /* CIS20201210 (© DD & SAREOS) */
 /* *************************** */
 initInSAR: 
-	Bug correction previously introduced in destination dir selected
-	Bug correction previously introduced in fine coregistration parameters initialization
+    Bug correction previously introduced in destination dir selected
+    Bug correction previously introduced in fine coregistration parameters initialization
 
 /* CIS20201208 (© DD & SAREOS) */
 /* *************************** */
@@ -1806,10 +1867,10 @@ slantRangeDEM: Correction of a bug introduced in command line flags management
 /* CIS20201207 (© DD & SAREOS) */
 /* *************************** */
 initInSAR: Bug correction in InSAR path initialisation. 
-	If destination dir doesn't exists and if write access is granted, the InSAR directory structure is created at given path. 
-	If destination dir exist and is already an InSAR directory structure, its replaced/reinitialized.
-	If destination dir exist but is not an InSAR directory structure, the InSAR directory structure is created within the given directory with name:
-	i[masterDate]_[slaveDate] with date format YYYYMMDD. 
+    If destination dir doesn't exists and if write access is granted, the InSAR directory structure is created at given path. 
+    If destination dir exist and is already an InSAR directory structure, its replaced/reinitialized.
+    If destination dir exist but is not an InSAR directory structure, the InSAR directory structure is created within the given directory with name:
+    i[masterDate]_[slaveDate] with date format YYYYMMDD. 
 
 /* CIS20201206 (© DD & SAREOS) */
 /* *************************** */
@@ -1818,7 +1879,7 @@ baselinePlot: bug correction in Bp max management
 /* CIS20201203 (© DD & SAREOS) */
 /* *************************** */
 baselinePlot: bug correction and simplification
-		Addition of a home made sorting routine.
+        Addition of a home made sorting routine.
 
 /* CIS20201128 (© DD & SAREOS) */
 /* *************************** */
@@ -1827,27 +1888,27 @@ Addition of a new tool: baselinePlot
 /* CIS20201106 (© DD & SAREOS) */
 /* *************************** */
 Mask management implemented in the same way than external DEM. 
-	--> Addition of a new parameter  /* Associated mask */ in the InSARParametersFile
-	--> May be given in command line as a second file or name, the first on being the DEM
-	--> If mask file is associated with a .txt or .hdr file, mask parameters are read in this latter one. 
+    --> Addition of a new parameter  /* Associated mask */ in the InSARParametersFile
+    --> May be given in command line as a second file or name, the first on being the DEM
+    --> If mask file is associated with a .txt or .hdr file, mask parameters are read in this latter one. 
 
 /* CIS20201105 (© DD & SAREOS) */
 /* *************************** */
 slantRangeDEM: 
-	Functionalization of the whole routine for further incorporation in compound tool.
-	Modification of parameter file handling:
-		Now only full path to the DEM is requested, or simply its name in case $EXTERNAL_DEMS_DIR environment variable is defined.
-		Then, DEM parameters are read in the .hdr or .txt associated file.
-		
+    Functionalization of the whole routine for further incorporation in compound tool.
+    Modification of parameter file handling:
+        Now only full path to the DEM is requested, or simply its name in case $EXTERNAL_DEMS_DIR environment variable is defined.
+        Then, DEM parameters are read in the .hdr or .txt associated file.
+        
 iniInSAR: 
-	Addition of a parameter /* External reference DEM */
-	This parameter may be set directly at command line level giving DEM name or full path.
-	
+    Addition of a parameter /* External reference DEM */
+    This parameter may be set directly at command line level giving DEM name or full path.
+    
 geoProjection: 
-	Bug correction in the case of geoprojection of InSAR products issued from a processing considering a Super Master. 
-	In the case the reference InSAR pair was not subject to an InSAR processing, no external DEM might have been computed.
-	In such case, the external DEM was recomputed in the geometry of the Master and not in the one of the Super Master as it should have been.
-		
+    Bug correction in the case of geoprojection of InSAR products issued from a processing considering a Super Master. 
+    In the case the reference InSAR pair was not subject to an InSAR processing, no external DEM might have been computed.
+    In such case, the external DEM was recomputed in the geometry of the Master and not in the one of the Super Master as it should have been.
+        
 /* CIS20201102 (© DD & SAREOS) */
 /* *************************** */
 ffa: Bug correction in float mask handling. 
@@ -1855,9 +1916,9 @@ ffa: Bug correction in float mask handling.
 /* CIS20201029 (© DD & SAREOS) */
 /* *************************** */
 S1DataReader: Precise orbit management improvements :
-	Also applied to StripMap data
-	Performed for already read data in destination directory.
-	S1DataReaderLog updated correspondingly 
+    Also applied to StripMap data
+    Performed for already read data in destination directory.
+    S1DataReaderLog updated correspondingly 
 
 /* CIS20201016 (© DD & SAREOS) */
 /* *************************** */
@@ -1896,12 +1957,12 @@ SAOCOMDataReader modifications and improvements.
 /* CIS20200815 (© DD & SAREOS) */
 /* *************************** */
 bestPlaneRemoval2 modifs: If using a reference file, sigma between ref and deramped file is displayed.
-	If using option -d, difference between ref and input file is saved with extension .diffRef.
+    If using option -d, difference between ref and input file is saved with extension .diffRef.
 
 /* CIS20200815 (© DD & SAREOS) */
 /* *************************** */
 phaseUnwrapping: #define variables mess up corrections preventing --snaphu --detPhUn combination to work properly. 
-	Management of firstPhaseComponent correction: wrongly created if not existing...
+    Management of firstPhaseComponent correction: wrongly created if not existing...
 SAOCOMDataReader first addition into makefile. Reminder: It still only manages StripMap data. 
 
 /* CIS20200807 (© DD & SAREOS) */
@@ -1913,16 +1974,16 @@ phaseUnwrapping: snaphu conf file adapted to cope with -g option.
 phaseUnwrapping: Option -g added to snaphu management to save snaphu zone map under name snaphuZoneMap in InSARProducts directory. 
 
 AgregateSRTMTiles: 
-	ULXMAP and ULYMap might be written as float while they should be integers, leading to erroneous tile localisation. 
-	Now it is correctly handle. 
-	
+    ULXMAP and ULYMap might be written as float while they should be integers, leading to erroneous tile localisation. 
+    Now it is correctly handle. 
+    
 Whole suite: Emixing some old and new headers leading to S1DataReader crash in version 20200715. Now corrected. 
 
 /* CIS20200715 (© DD & SAREOS) */
 /* *************************** */
 AgregateSRTMTiles: 
-	Bug correction in the alignment of tiles!!
-	Addition of ${EXTERNAL_DEMS_DIR} environment variable management.
+    Bug correction in the alignment of tiles!!
+    Addition of ${EXTERNAL_DEMS_DIR} environment variable management.
 
 /* CIS20200710 (© DD & SAREOS) */
 /* *************************** */
@@ -2028,15 +2089,15 @@ stringLib: Better handling of environment variable and path expansion.
 CSL image management: multiple changes to handle errors and non complete .csl image structures. 
 slantRangeDEM: Modification in mask projection. 
 geoProjection: Modifications in mask handling. Now, mask is selected with keywords [mask] or [zoneMap] in corresponding field in the geoProjectionParameters.txt file. 
-	- zoneMap can be used when homemade phase unwrapping was applied to geo project only a given zone. In that case all the products are geoprojected considering the same mask, i.e. the selected zone.
-	- mask is the default. If a slant range mask is present in the InSAR products directory, it will be used only for projecting the measurement (defo or topo). The other products will be projected without masking. 
+    - zoneMap can be used when homemade phase unwrapping was applied to geo project only a given zone. In that case all the products are geoprojected considering the same mask, i.e. the selected zone.
+    - mask is the default. If a slant range mask is present in the InSAR products directory, it will be used only for projecting the measurement (defo or topo). The other products will be projected without masking. 
 
 /* CIS20200120 (© DD & SAREOS) */
 /* *************************** */
 geoProjection: 
-	Modification in mask handling. Now both char and float masks are accepted.
-	Correction of extrapolation when a mask is given to prevent border errors. 
-	Corrections in clean projection handling [-C] 
+    Modification in mask handling. Now both char and float masks are accepted.
+    Correction of extrapolation when a mask is given to prevent border errors. 
+    Corrections in clean projection handling [-C] 
 
 /* CIS20200115 (© DD & SAREOS) */
 /* *************************** */
@@ -2092,9 +2153,9 @@ InSARProductsGeneration: Correction in area of interest handling. Values imposed
 /* CIS20190729 (© DD & SAREOS) */
 /* *************************** */
 geoProjection: Now, a kml can be given in input to limit geoProjection on a predefine area. Area can still be given manually. However, if give, the kml prevails.
-	Addition of two options : 
-	-C to perform a clean process, removing geoProjection map if already existing
-	-i to consider the kml file given to restrict the InSAR processing as the restricting kml file for the geoProjection process. 
+    Addition of two options : 
+    -C to perform a clean process, removing geoProjection map if already existing
+    -i to consider the kml file given to restrict the InSAR processing as the restricting kml file for the geoProjection process. 
 
 SBInSAR: default parantes are now set to consider the sigmeIntercept as the default quality criterion and the sigma phase to weight the MCA linear regression. 
 
@@ -2386,7 +2447,7 @@ S1OrbitUpdater: New routine that checks within a directory if orbits in .csl ima
 /* *********** */
 initInSAR: a .kml file can be given in input to determine the area of interest on which calculation will be performed. This .kml file can be given either through the text file used for reading or as a command line parameter. 
 TSXDataReader: Modification to handle correctly reading  of multiple frames at same date. A frame index is appended if required. 
-	Suppression of bistatic flag in TSXDataReader text file since this is directly read within the .xml header files and flag correspondingly. 
+    Suppression of bistatic flag in TSXDataReader text file since this is directly read within the .xml header files and flag correspondingly. 
 
 /* CIS20180613 */
 /* *********** */
@@ -2461,9 +2522,9 @@ geoProjection: Correction of a very old allocation bug (don't understand how it 
 /* CIS20180219 */
 /* *********** */
 S1Coregistration: Modification of master image handling to prevent a possible error of mis-registration of external DEM and of product geo-projection. 
-	Now, if InSAR burst selection does not corresponds to master image burst selection at reading, a copy of the master image limited to InSAR burst selection is generated within the InSARProduts directory and used as effective master. 
-	This should still be improved and fully tested in the case of mass processing. But almost it solves the mis-registration error.
-	Rem: If a slant range DEM is associated to the initial master image, it is this one that will be associated to the copy of the master image, taking into account required shifts with respect to InSAR selected bursts. 
+    Now, if InSAR burst selection does not corresponds to master image burst selection at reading, a copy of the master image limited to InSAR burst selection is generated within the InSARProduts directory and used as effective master. 
+    This should still be improved and fully tested in the case of mass processing. But almost it solves the mis-registration error.
+    Rem: If a slant range DEM is associated to the initial master image, it is this one that will be associated to the copy of the master image, taking into account required shifts with respect to InSAR selected bursts. 
 SBInSAR: Bug correction;
 
 /* CIS20180125 */
@@ -2472,14 +2533,14 @@ Reorganization of some libraries.
 S1DataReader: Correction of a bug in S1 data reading with burst stitching [-s]. 
 InSARProductGeneration: Correction of an error in sigma0 calculation
 SBInSAR: Correction of a case where, if asking for additional demodulation, the interpolated image of ful band InSAR processing might be considered in place of the original slave image.
-	Now, if an external slant range DEM is present into the input image, it is also copied in the split images in CSL format to allow normal subsequent InSAR processing with sub images. 
+    Now, if an external slant range DEM is present into the input image, it is also copied in the split images in CSL format to allow normal subsequent InSAR processing with sub images. 
 amplitudeImagesReduction: Start of implementation of S1 calibration. 
 
 /* CIS20180118 */
 /* *********** */
 SBInSARProductGeneration: Modification of the splitting output. Now, split images are saved in CSL format. 
-	If using -d option, additional demodulation is performed to centre spectrum on modified frequencies. 
-	This allows splitting before images coregistration and interpolation to perform classical InSAR process at different frequencies. 
+    If using -d option, additional demodulation is performed to centre spectrum on modified frequencies. 
+    This allows splitting before images coregistration and interpolation to perform classical InSAR process at different frequencies. 
 
 /* CIS20180117 */
 /* *********** */
@@ -2497,7 +2558,7 @@ slantRangeDEM: Correction of a bug in planeGeometry.c. In some cases, intersecti
 /* CIS20180109 */
 /* *********** */
 initInSAR: Bug correction. When using command line parameters, destination directory was wrongly handled.
-			Correction of wrong calculation of default SBInSAR parameters.  
+            Correction of wrong calculation of default SBInSAR parameters.  
 SBInSAR: addition of a -d flag allowing to demodulate each sub-band to its own baseband in case of working with non-coregistered images. 
 
 /* CIS20171221 */
@@ -2507,7 +2568,7 @@ InSARProductsGeneration: Addition of command line option P=XX, where XX describe
 /* CIS20171220 */
 /* *********** */
 geoProjection: Correction of file selection in order to geoproject all data files starting with the same root name. 
-			Addition of a verification to geoproject only files having the same size than the reference one.
+            Addition of a verification to geoproject only files having the same size than the reference one.
 
 
 /* CIS20171211 */
@@ -2530,10 +2591,10 @@ geoProjection: Modification to geo-project all files with generic name given in 
 /* *********** */
 makefile: Main tools compilation added.
 slantRangeDEM: An additional transform linked to a super master image may be taken into account. This allows considering only the orbitography of the super master. 
-			The transform is the one obtained after coregistration of the considered image with its super master. 
+            The transform is the one obtained after coregistration of the considered image with its super master. 
 geoProjection: In case the slant range DEM was generated using a super master, geoprojection also uses super master orbitography. 
-			In this way, all geoprojected images will use a single reference orbitography, which allows avoiding multiple orbitographic erros in time series. 
-			Note that in that case, use of master transform in the InSARParameters file is turned to NO.
+            In this way, all geoprojected images will use a single reference orbitography, which allows avoiding multiple orbitographic erros in time series. 
+            Note that in that case, use of master transform in the InSARParameters file is turned to NO.
 InSARProductGeneration: Use of flag "Is master transform active?" is removed. If transform is null or unitary, it is not applied. 
 amplitudeImagesReduction: Correction of a bug when using third option of calculation (see help). 
 TSXDataReader: Modification to correctly find the .xml header file within data structure to handle automatically TanDEM-X pairs. 
@@ -2602,27 +2663,27 @@ geoProjection: Addition of -g option to geoproject directly on a flat geoid. Use
 S1Coregistration: Correction of some indexation issues.
 S1DataReader: Modification of bulk reading. Now, relative orbit number is computed and saved in the name of the output file.
 initInSAR: Now can work without parameter file giving simply as input parameters the master and slave image in csl format and an output directory.
-			If no output directory is given, the home directory of the master image will be considered. 
-			Full output directory will be generated from dates of input data as /iDate1_Date2. If working with bistatic, use -b flag. 
-			Order of these command line parameters is of no importance. 
+            If no output directory is given, the home directory of the master image will be considered. 
+            Full output directory will be generated from dates of input data as /iDate1_Date2. If working with bistatic, use -b flag. 
+            Order of these command line parameters is of no importance. 
 
 /* CIS20170724 */
 /* *********** */
 S1Coregistration: Important modification in order to correctly take into account only common bursts of two acquisitions. 
-			Now, whatever the read bursts, in each acquisition, coregistration is handled correctly.
+            Now, whatever the read bursts, in each acquisition, coregistration is handled correctly.
 
 /* CIS20170707 */
 /* *********** */
 ALOSDataReader:
-	Suppression of modification introduced in 2013 implying dividing prf by 2 in case of QuadPol. Appeared completely false for ALOS2. 
+    Suppression of modification introduced in 2013 implying dividing prf by 2 in case of QuadPol. Appeared completely false for ALOS2. 
 
 /* CIS201700706 */
 /* *********** */
 PolInSARProductGeneration : 
-	In depth rebuild of the program. Now it works! Addition of matrix inversion routines.
+    In depth rebuild of the program. Now it works! Addition of matrix inversion routines.
 geoProjection: 
-	Addition of option -p to geoProject PolInSARProducts using same flags than for InSARProducts. However, Entropy, anisotropy and Alpha are projected in any case.
-	If an external slant range DEM is not present within the inSAR products, now the routine check if an external slant DEM is associated with the master image and resample it to create the required one within the InSAR products.
+    Addition of option -p to geoProject PolInSARProducts using same flags than for InSARProducts. However, Entropy, anisotropy and Alpha are projected in any case.
+    If an external slant range DEM is not present within the inSAR products, now the routine check if an external slant DEM is associated with the master image and resample it to create the required one within the InSAR products.
 
 /* CIS20170626 */
 /* *********** */
@@ -2673,15 +2734,15 @@ geoProjection: Bug correction in geo referencing. Geo-referencing was always tak
 /* CIS20170428 */
 /* *********** */
 S1DataReader: 
-	Bulk reading implemented. 
-	Usage: S1DataReader inputDir [outputDir] kmlFilePath [-sbwn]
+    Bulk reading implemented. 
+    Usage: S1DataReader inputDir [outputDir] kmlFilePath [-sbwn]
 
 
 /* CIS20170426 */
 /* *********** */
 InSARProductGeneration:
-	Command line flags have been changed. Take care…
-	Mask management: If using the -m flag, results are masked (provided a mask is present within master image). Masked results are interferogram, residual interferogram, filtered interferogram and coherence. 
+    Command line flags have been changed. Take care…
+    Mask management: If using the -m flag, results are masked (provided a mask is present within master image). Masked results are interferogram, residual interferogram, filtered interferogram and coherence. 
 
 PhaseUnwrapping: Mask management improvement. With the -m option, both interferogram to be unwrapped and the coherence are masked like before. Additionally, the unwrapped phase is also masked to hide phase shifts in uniform areas.
 
@@ -2690,8 +2751,8 @@ ffa: addition of a new tool allowing to perform basic float files arithmetics. I
 /* CIS20170425 */
 /* *********** */
 slantRangeDEM: 
-	Now it accepts directly DEM and Mask files in ENVI format. Just give the path to the file. If a corresponding .hdr file exists in the same directory, it will be used. ENVI files will be automatically be flipped vertically to cope with cartesian coordinate system. 
-	Correction of a bug in the slant range referencing. Longitude updating was erroneously performed after NaN values in external DEM.
+    Now it accepts directly DEM and Mask files in ENVI format. Just give the path to the file. If a corresponding .hdr file exists in the same directory, it will be used. ENVI files will be automatically be flipped vertically to cope with cartesian coordinate system. 
+    Correction of a bug in the slant range referencing. Longitude updating was erroneously performed after NaN values in external DEM.
 
 geoProjection: Generated ENVI headers now contain also somme additional info in the "description field" to identify master and slave acquisitions used in the InSAR processing. 
 
@@ -2708,16 +2769,16 @@ S1DataReader: Bug correction—> Routine was crashing if no precise orbit was fo
 /* CIS20170418 */
 /* *********** */
 phaseUnwrapping: 
-	Implementation of mask management with snaphu. If using option -m with snaphu, the mask, if present is used with the interferogram to be unwrapped. 
-	Correction of the zoneMap calculation. 
+    Implementation of mask management with snaphu. If using option -m with snaphu, the mask, if present is used with the interferogram to be unwrapped. 
+    Correction of the zoneMap calculation. 
 updateS1PreciseOrbits: Bug correction.
 
 /* CIS20170414 */
 /* *********** */
 slantRangeDEM: Mask management. If a mask is made available, it is projected in slant range using the external DEM projection.
-	Mask characteristics are given in the sam way than those of the external DEM within the slantRangeDEM parameter file.
-	Mask characteristics are not necessarily the same than the external DEM except the fact it must be given in longitude - latitude on WGS84.
-	If no external DEM is give, the mask is not projected (should be modified to allow flat ground projection of the mask…)
+    Mask characteristics are given in the sam way than those of the external DEM within the slantRangeDEM parameter file.
+    Mask characteristics are not necessarily the same than the external DEM except the fact it must be given in longitude - latitude on WGS84.
+    If no external DEM is give, the mask is not projected (should be modified to allow flat ground projection of the mask…)
 initInSAR: Basic modification to handle TanDEM pairs and consider the slave image as already coregistered.
 InSARProductGeneration: Mask management. If a mask is present within the master image, it is exported with the same dimensions than the other InSAR products.
 
@@ -2786,7 +2847,7 @@ Addition of Goldstein filtering. Goldstein filter is developed as an adaptative 
 Smoothing of the local power spectrum is performed using the range and azimuth filter width. 
 Therefore, the larger the filter parameter the lower the Goldstein filtering.
 Modification of residuesSearch, biasedCoherenceEstimation and phaseUnwrapping: 
-	If used with the -F flag, it is the filter interferogram that is unwrapped
+    If used with the -F flag, it is the filter interferogram that is unwrapped
 
 /* CIS20170118 */
 /* *********** */
@@ -2816,8 +2877,8 @@ SpectralCoh: Initialization of blocs with zeros to avoid error accumulation.
 /* CIS20161004 */
 /* *********** */
 S1DataReader debugging:
-	Corrections in computation of polygon intersects for burst selection. 
-	Correction of allocation/de-allocation errors.
+    Corrections in computation of polygon intersects for burst selection. 
+    Correction of allocation/de-allocation errors.
 Addition of -w option to concatenate subswaths of selected bursts.
 
 

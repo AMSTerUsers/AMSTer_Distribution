@@ -10,6 +10,11 @@
 # - STARTDATE : Start date in format YYYYMMDD (optional)
 # - ENDDATE : End date in format YYYYMMDD (optional)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:
 # - find, grep, wc, basename, awk, sort
 # - List_CSL_Images_In_Mode.sh
@@ -25,16 +30,19 @@
 # New in Distro V 1.2 20250116:   - Adds Region Name and S1 satellite.
 # New in Distro V 1.3 20250305:   - cosmetic ${}
 # New in Distro V 1.4 20250808:   - fix bug * on dir_mode detection
+# New in Distro V 1.5 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
-# DS (c) 2024/01/16 
+# DS (c) 2024/01/16 - could make better with more functions... when time.
 ######################################################################################
-
 PRG=`basename "$0"`
-VER="Distro V4.0 AMSTer script utilities" 
-AUT="Delphine Smittarello, (c)2016-2019, Last modified on Jan 16, 2025" 
+VER="Distro V1.5 AMSTer script utilities" 
+AUT="Delphine Smittarello, (c)2016-2019, Last modified on oct 13, 2026"
 echo " " 
 echo "${PRG} ${VER}, ${AUT}" 
+echo "Processing launched on $(date) " 
 echo " "
 
 

@@ -83,6 +83,11 @@
 #	Plot_Envi_on_DEM.py unwrappedPhase_...deg MyDEM -c coherence_...deg \
 #		--sym --unit "[rad]" --mode both
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- gdalwarp and gdalsrsinfo (GDAL binaries)
 #		- python with numpy and matplotlib (AMSTer python environment)
 #		- DEM_AMSTer_txt2Envi_hdr.sh, only if the DEM is given as DEM.txt
@@ -93,6 +98,8 @@
 # New in Distro V 1.2 20260909:	- the ENVI header built from an AMSTer DEM.txt is kept in
 #				  the temporary directory instead of beside the DEM, which
 #				  must not be described by a .txt and a .hdr at the same time
+# New in Distro V 1.3 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.

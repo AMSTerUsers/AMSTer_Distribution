@@ -43,9 +43,16 @@
 # Both ENVI file naming styles are handled, including the AMSTer quirk where the
 # binary ends in '...Head260.1deg' but the header is '...Head260_1deg.hdr'.
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (numpy, see import)
 #
 # New in Distro V 1.0:	- built with an AI assistance 
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # Nicolas d'Oreye, (c)2016-2026

@@ -12,6 +12,11 @@
 #				- max number of connection (e.g. 3)
 #
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- gnu grep and awk for more compatibility
 #
 # Hard coded:	- 
@@ -24,17 +29,21 @@
 #								- also cp table_0_0_MaxShortest_${MAX}_Without_Quanrantained_Data.txt if no Quarantined data
 # New in Distro V 2.3 20240423:	- display max and mean Bp, Bt and nr of pairs
 # New in Distro V 2.4 20260909:	- mute error msg when no Qurantined data
+# New in Distro V 2.5 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V2.4 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Sept 09, 2026"
+VER="Distro V2.5 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
-echo " "
+echo " " 
+
 
 MSBASTABLE=$1			# path to MSBAS table (e.g. /Volumes/hp-1650-Data_Share1/SAR_SM/MSBAS/VVP/set6/allPairsListing.txt)
 MAX=$2					# max number of connection (e.g. 3)

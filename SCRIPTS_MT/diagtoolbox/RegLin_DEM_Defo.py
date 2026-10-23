@@ -3,6 +3,11 @@
 # This script computes the linear regression between DEM and deformation and 
 # save plot in current directory. DEM and DEFO must be of the same size.  
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (see import)
 #
 # Parameters: DEM DEFO 
@@ -16,6 +21,8 @@
 # 								DS	- Comment figure display and save as png 
 # New in Distro V 2.2 20250218: DS	- Reading dem data type from hdr
 # New in Distro V 3.0 20250813:	- launched from python3 venv
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

@@ -3,6 +3,11 @@
 # This script use slope and intercept stored in results.csv created by Load_and_Plot_Output_DEMDefo
 # to compute a model based on the DEM correlation and remove it from the deformation map. It will write the result as a binary matrix in float32
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (see import)
 #				- Compute_and_Substract_Defo_Dem.py
 #				- mkdir 
@@ -14,6 +19,8 @@
 #
 # New in Distro V 1.0 20250121: DS	- save all plots at location of input file
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

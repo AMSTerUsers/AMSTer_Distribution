@@ -6,6 +6,11 @@
 # Parameters :  - ORIGIN dir (usually TARGET dir from ALL2GIF.sh script)
 #					Usually something like ..YourPath.../SAR_SM/AMPLITUDES/SAT/TRK/REGION
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	 none
 #
 # New in Distro V 1.0:	- Based on developpement version 1.2 and Beta V1.0.2
@@ -22,16 +27,19 @@
 # New in Distro V 3.1 20240813:	- For Mac OSX, use coreutils fct gnproc instead of sysctl -n hw.ncpu 
 # New in Distro V 3.2 20250227:	- replace cp -n with if [ ! -e DEST ] ; then cp SRC DEST ; fi 
 # New in Distro V 3.3 20250530:	- OK with S1C and S1D
+# New in Distro V 3.4 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on May 30, 2025"
-
+VER="Distro V3.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
+echo "Processing launched on $(date) " 
 echo " " 
 
 ORIGIN=$1  # Usually something like ..YourPath.../SAR_SM/AMPLITUDES/SAT/TRK/REGION

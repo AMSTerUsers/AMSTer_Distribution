@@ -2,12 +2,6 @@
 #
 # Some functions for Check_images.py
 #
-# New in Distro V 1.1 20250212:   - Make events dfco optional
-# New in Distro V 2.0 20250813:	- launched from python3 venv
-#
-#
-#
-#
 # Description:
 # The key functionalities of this script include:
 # 1. Reading and parsing files with specific formats (e.g., *_csl_list.txt).
@@ -34,10 +28,23 @@
 # 2. The mode list and rejected modes are provided via external files, and the script reads and filters based on these.
 # 3. The plotting functions are designed to help visualize temporal patterns in the data, with support for custom annotations (such as marking eruptions or intrusions).
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: see modules below
 #
-# AMSTer: SAR & InSAR Automated Mass Processing Software for Multidimensional Time Series
-# DS (c) 2025/02/12
+#
+#
+# New in Distro V 1.1 20250212:   - Make events dfco optional
+# New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#
+# AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
+# DS
+######################################################################################
 
 import os
 import pandas as pd

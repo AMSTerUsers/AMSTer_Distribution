@@ -9,6 +9,11 @@
 #						BEWARE! : In that case, param 2 MUST be  NoForce (or whatever you want) if you do not want to Force recomputing the DEM, or 
 #							 FORCE if you want to Force recomputing the DEM (for S1 wide swath)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:
 #	 - AMSTerEngine and AMSTerEngine Tools, at least V2020426
 #	 - PRAMETERS file, at least V V20200505
@@ -81,18 +86,22 @@
 # New in Distro V 5.1 20260703:	- allows S1coregistration with ESD option 
 # New in Distro V 5.2 20260729:	- Keep computing amplitude for S1 in WIDESWATH mode because it is needed in mass processing 
 # New in Distro V 5.3 20260825:	- Cope with BIOMASS data
+# New in Distro V 5.4 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.3 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 25, 2026"
-
+VER="Distro V5.4 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
+
 
 PARAMFILE=$1				# File with the parameters needed for the run
 FORCES1DEM=$2				# For S1 processing : if FORCE, then recompute DEM for each S1 image 

@@ -6,6 +6,14 @@
 #
 # If the script is provided with two parmeters in the form of two numbers, it displays only 
 # the files between these two numbers (corresponding to their index in the listing of the dir). 
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
+# New in Distro V 1.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 
 import os
 import re

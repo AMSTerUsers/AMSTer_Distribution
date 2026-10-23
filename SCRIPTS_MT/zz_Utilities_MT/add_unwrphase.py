@@ -2,7 +2,14 @@
 ######################################################################################
 # This script add two unwrapped phases
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # New in Distro V 2.0 20250813:	- launched from python3 venv
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 # This script is part of the AMSTer Toolbox 
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

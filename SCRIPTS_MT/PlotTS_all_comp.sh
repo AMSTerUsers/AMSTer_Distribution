@@ -49,6 +49,11 @@
 #					- -vel: for msbasv10: displays time series of *_vCOMP instead of *_COMP.tif
 #
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies : - function getLineThroughStack (AMSTer Engine utilities) at least version 20260730 if need to cope with tif files
 #                - gnuplot
 #                - gnu plot template  plotTS_template_multi.gnu or  plotTS_template_multi_fit.gnu
@@ -106,16 +111,21 @@
 # New in Distro V 9.3 20260624:	- add stdev in linear rate legend
 # New in Distro V 10.0 20260730:	- works with msbasv10 (and tif files)
 # New in Distro V 10.1 20260803:	- allows option -vel for msbasv10
+# New in Distro V 10.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#									  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V10.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Aug 03, 2026"
+VER="Distro V10.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
 
 # vvv ----- Hard coded lines to check --- vvv 
 source ${PATH_SCRIPTS}/SCRIPTS_MT/__HardCodedLines.sh

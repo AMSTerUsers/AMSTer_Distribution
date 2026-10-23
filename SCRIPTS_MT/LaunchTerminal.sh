@@ -12,6 +12,11 @@
 #    x-terminal-emulator -e /PathTo/LaunchTerminal.sh /PathTo/script2.sh [optional arguments here]
 # When you run script1 in terminal1, it should open a new terminal2 and run there script2 with its options
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies : - x-terminal-emulator
 #
 # Note: In principle this could be replaced by adding a function in your script1
@@ -27,7 +32,9 @@
 # New in Distro V 1.0:	- Based on developpement version 
 # New in Distro V 2.0 20231030:	- Rename MasTer Toolbox as AMSTer Software
 #								- rename Master and Slave as Primary and Secondary (though not possible in some variables and files)
-#
+# New in Distro V 2.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------

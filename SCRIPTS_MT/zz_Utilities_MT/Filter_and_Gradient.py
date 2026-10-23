@@ -13,6 +13,11 @@
 #
 # Hardcoded:  - 
 # 
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python3.10 and modules below (see import)
 #
 # launch command : python thisscript.py param1 param2
@@ -36,6 +41,8 @@
 #								- write ENVI headers DEM_grad_north.hdr and DEM_grad_east.hdr with the 
 #								  Gaussian filter width and the clipping threshold added to the description 
 #								  field, while keeping the pre-existing description (e.g. path to original DEM) 
+# New in Distro V 2.5 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series

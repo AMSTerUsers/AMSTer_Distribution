@@ -9,7 +9,7 @@
 #   for the other satellites, that is ERS, ENVISAT, RS1, RADARSAT, CSK, TSX, PAZ and ALOS2 
 # Bulk reading has the advantage to be fast but it will stop at bad image while manual reading would carry on. 
 #
-# S1 and SAOCOM images of more than 6 months are moved to ${RAW}_FORMER/yyyy dirs
+# S1, SAOCOM and NISAR images of more than 6 months are moved to ${RAW}_FORMER/yyyy dirs
 #
 # Parameters : - path to dir with the raw archives to read.   
 #              - path to dir where images in csl format will be stored (usually must end with /NoCrop)
@@ -30,6 +30,11 @@
 #				
 #   NOTE: only the 3 first param must be in the right order. No matter the order of the other parameters. 
 #
+#
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
 #
 # Dependencies:	- AMSTer Engine and AMSTer Engine Tools, at least V20231108. 
 #				- gnu sed and awk for more compatibility
@@ -149,18 +154,24 @@
 # New in Distro V 5.19 20260825:	- add BIOMASS (also accept BIO)
 #									- add INITPOL constrain for NISAR
 # New in Distro V 5.20 20261005:	- debug SAOCOM when pol not as expected 
+# New in Distro V 5.21 20261008:	- move NISAR images acquired > 6 months in ${RAW}_FORMER/_YYYY as for S1 and SAOCOM
+#									- ForceAllYears for NISAR also re-reads images in ${RAW}_FORMER
+# New in Distro V 5.22 20261013:	- Recommend using Search_Dependencies.sh for 
+#									  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V5.20 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 05, 2026"
-
+VER="Distro V5.22 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo "Processing launched on $(date) "
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
+
+
 
 RAW=$1					# path to dir with the raw archives to read (unzipped for S1 !)
 CSL=$2					# path to dir where images in csl format will be stored (usuallu must end with /NoCrop)
@@ -633,14 +644,27 @@ case ${SAT} in
   		fi
   		
 			
-		if [ "${FAY}" == "ForceAllYears" ]	# NOT FOR _FORMER etc... To do ! though ForceAllYears force re-reading all images
+		if [ "${FAY}" == "ForceAllYears" ]
 			then 
-				EchoTeeYellow "Re-read all images in ${RAW}"
+				EchoTee ""
+				EchoTeeYellow "Re-read all recent images in ${RAW}"
 				if [[ "${INITPOL}" == "ALLPOL" ]]
 					then
 						NISARDataReader ${RAW} ${CSL} -r ${NISARFREQ}
 					else
 						NISARDataReader ${RAW} ${CSL} -r P=${INITPOL} ${NISARFREQ}			
+				fi
+				EchoTee ""
+				EchoTeeYellow "Re-read all older images in ${RAW}_FORMER"
+				# Read in ${RAW}_FORMER/_${YYYY}
+				if [ -d ${RAW}_FORMER ]
+					then
+						if [[ "${INITPOL}" == "ALLPOL" ]]
+							then
+								NISARDataReader ${RAW}_FORMER ${CSL} -r ${NISARFREQ}
+							else
+								NISARDataReader ${RAW}_FORMER ${CSL} -r P=${INITPOL} ${NISARFREQ}
+						fi
 				fi
 			else 
 				EchoTeeYellow "Read only new images in ${RAW} not yet in ${PARENTCSL}"
@@ -715,6 +739,47 @@ case ${SAT} in
 						fi  
 				done
 		fi
+
+		EchoTee ""
+		EchoTee "All NISAR img read and sorted; now moving images acquired > 6 months in : "
+		EchoTee "     ${RAW}_FORMER/_YYYY"
+		EchoTee ""
+		cd ${RAW}
+
+		TESTDIR=`basename ${RAW}`
+		if echo "${TESTDIR}" | ${PATHGNU}/grep -q '_[0-9]\{4\}$'
+			then
+				# Dir name contains only _yyyy and hence it is probably run to read only data in _FORMER/_YYYY dir. No need to move to FORMER then
+				EchoTee "Probably reading data from _FORMER/_YYYY dir. No need to move them to FORMER again then."
+			else
+				# List all NISAR images (files or dirs) in RAW, i.e. whose name contains an acquisition date in the form of yyyymmddThhmmss
+				ls ${RAW} 2>/dev/null | ${PATHGNU}/grep -E "[0-9]{8}T[0-9]{6}" > List_Img_To_Sort_tmp.txt
+				if [ ! -s List_Img_To_Sort_tmp.txt ] ; then
+						EchoTee "No recent data ; nothing to move."
+					else
+						for FILENISAR in `cat List_Img_To_Sort_tmp.txt`
+							do
+								# First date in NISAR name is the acquisition start date, e.g. NISAR_L1_PR_RSLC_..._20251012T060910_20251012T060926_...
+								ACQDATE=$(echo ${FILENISAR} | ${PATHGNU}/grep -Eo "[0-9]{8}T[0-9]{6}" | head -1 | cut -d T -f 1)
+
+								YEARFILE=`echo ${ACQDATE} | cut -c 1-4`
+								MMFILE=`echo ${ACQDATE} | cut -c 5-6 | ${PATHGNU}/gsed 's/^0*//'`
+								DATEFILE=`echo "${YEARFILE} + ( ${MMFILE} / 12 ) - 0.0001" | bc -l` # 0.0001 to avoid next year in december
+								YRNOW=`date "+ %Y"`
+								MMNOW=`date "+ %-m"`
+								DATENOW=`echo "${YRNOW} + ( ${MMNOW} / 12 )" | bc -l`
+								DATEHALFYRBFR=`echo "${DATENOW} - 0.5" | bc -l`
+								TST=`echo "${DATEFILE} < ${DATEHALFYRBFR}" | bc -l`
+								if [ ${TST} -eq 1 ]
+									then
+										mkdir -p ${RAW}_FORMER/_${YEARFILE}
+										mv ${FILENISAR} ${RAW}_FORMER/_${YEARFILE}
+								fi
+						done
+				fi
+				rm -f List_Img_To_Sort_tmp.txt
+		fi
+		cd ${CSL}
 
 		echo 		
 		;; 	
@@ -968,7 +1033,7 @@ case ${SAT} in
 		echo
 
 		EchoTee ""
-		EchoTee "All S1 SAOCOM read; now moving images created (no acquired !) > 6 months in : "
+		EchoTee "All SAOCOM read; now moving images created (no acquired !) > 6 months in : "
 		EchoTee "     ${RAW}_FORMER/_YYYY"
 		EchoTee ""
 		cd ${RAW}
@@ -1004,7 +1069,7 @@ case ${SAT} in
 								fi
 						done
 					else
-						"No data recently created ; nothing to move."
+						EchoTee "No data recently created ; nothing to move."
 				fi
 		fi
 		cd ${CSL}

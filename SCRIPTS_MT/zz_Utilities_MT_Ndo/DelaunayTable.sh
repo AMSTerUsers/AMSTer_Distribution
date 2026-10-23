@@ -19,6 +19,11 @@
 # Requirements:	- it must be launched in the /.../SAR_SM/MSBAS/YourRegion/seti directory
 #				- it needs the file allPairsListing.txt in that directory (computed with Prepa_MSBAS.sh)
 #
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- python script DelaunayTable.py
 #
 # New in Distro V 1.1 (Sept 21, 2023):	- do not filter Bp or Bt in python because it seems to cause (rare) problems
@@ -32,16 +37,20 @@
 # New in Distro V 2.6 20240903:	- more mute find error message when there is no quarantine data
 # New in Distro V 3.0 20241030:	- ensure that the Delaunay table contains only once each pair
 #								  and Primary image comes before Secondary image   
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V3.0 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Oct 30, 2024"
+VER="Distro V3.1 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
-echo " "
+echo "Processing launched on $(date) " 
+echo " " 
 
 PARAMFORPYTHON=""
 TITLESTRING=""

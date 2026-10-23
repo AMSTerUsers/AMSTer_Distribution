@@ -2,6 +2,11 @@
 # -----------------------------------------------------------------------------------------
 # This script aims at displaying a comparison of EW, UD (and NS) timelines computed with multiple MSBAS processings.
 # 
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies: python3
 #
 # New in 1.0 (20250130 - DS): -
@@ -10,6 +15,8 @@
 # New in 1.3 (20250213 - DS): - improve to plot NS when it exists
 # New in 2.0 (20250319 - DS): - Change to compare more than 2 dir + ajout plot events
 # New in Distro V 3.0 20250813:	- launched from python3 venv
+# New in Distro V 3.1 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
 #
 #
 # This script is part of the AMSTer Toolbox

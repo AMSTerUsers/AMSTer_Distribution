@@ -17,21 +17,29 @@
 #		- optional; a path to EVENTS table for plotting on the figure (e.g. ${PATH_1650}/EVENTS_TABLES/${LABEL})
 #
 #       
+# For an up to date and detailed list of dependencies (and sub-dependencies), 
+#    run the following command (add option -v to also list the commands and calls):
+#  		Search_Dependencies /Path/to/This/script 
+# 	 (Results are displayed at the Terminal; redirect them to a file with > file.txt if wished)
+#
 # Dependencies:	- PlotTS.sh
 #
 # New in Distro V 1.1 20251114:	- quote variables; cosmetic
+# New in Distro V 1.2 20261013:	- Recommend using Search_Dependencies.sh for 
+#								  an updated list of dependencies
+#									  
 #
 # AMSTer: SAR & InSAR Automated Mass processing Software for Multidimensional Time series
 # NdO (c) 2016/03/07 - could make better with more functions... when time.
 # -----------------------------------------------------------------------------------------
 PRG=`basename "$0"`
-VER="Distro V1.1 AMSTer script utilities"
-AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on Nov 14, 2025"
-
+VER="Distro V1.2 AMSTer script utilities"
+AUT="Nicolas d'Oreye, (c)2016-2019, Last modified on oct 13, 2026"
 echo " "
 echo "${PRG} ${VER}, ${AUT}"
 echo "Processing launched on $(date) " 
 echo " " 
+
 
 FILEPAIRS=$1 			# e.g. "${PATH_SCRIPTS}/SCRIPTS_MT/_cron_scripts/List_DoubleDiff_LOS_Region.txt"
 MODE=$2					# e.g. Asc or 3987_L_D (must be as in the name of the dir in msbas dir)
